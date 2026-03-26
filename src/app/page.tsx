@@ -1,63 +1,118 @@
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+      {/* Navigation */}
+      <nav className="bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm border-b border-zinc-200 dark:border-zinc-700">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Image
+                src="/proof-of-heart-logo.svg"
+                alt="ProofOfHeart Logo"
+                width={200}
+                height={60}
+                className="h-8 w-auto"
+                priority
+              />
+            </div>
+            <div className="flex items-center gap-6">
+              <Link
+                href="/causes"
+                className="text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors font-medium"
+              >
+                Browse Causes
+              </Link>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </nav>
+
+      <main className="container mx-auto px-4 py-16 sm:px-6 lg:px-8">
+        {/* Header with Logo */}
+        <div className="flex justify-center mb-16">
+          <Image
+            src="/proof-of-heart-logo.svg"
+            alt="ProofOfHeart Logo"
+            width={200}
+            height={60}
+            className="h-12 w-auto sm:h-16"
+            priority
+          />
+        </div>
+
+        {/* Hero Section */}
+        <div className="text-center max-w-4xl mx-auto">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-zinc-900 dark:text-zinc-50 mb-6 leading-tight">
+            A decentralized launchpad where the{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-teal-500">
+              community
+            </span>{" "}
+            validates a cause
+          </h1>
+
+          <p className="text-lg sm:text-xl text-zinc-600 dark:text-zinc-400 mb-8 leading-relaxed max-w-3xl mx-auto">
+            ProofOfHeart empowers everyday people to rally behind the causes they believe in.
+            By leveraging blockchain transparency and community-driven governance, it removes
+            gatekeepers from the fundraising process and puts trust back where it belongs: in the hands of the people.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Link
+              href="/causes"
+              className="px-8 py-3 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-semibold rounded-full transition-all duration-200 transform hover:scale-105 shadow-lg"
+            >
+              Explore Causes
+            </Link>
+            <button className="px-8 py-3 border-2 border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-semibold rounded-full transition-all duration-200">
+              Learn More
+            </button>
+          </div>
+        </div>
+
+        {/* Mission Section */}
+        <div className="mt-24 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="text-center p-6 rounded-lg bg-white/50 dark:bg-zinc-800/50 backdrop-blur-sm">
+            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"></path>
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-2">Community First</h3>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">Causes are validated by the people, not by a corporate board.</p>
+          </div>
+
+          <div className="text-center p-6 rounded-lg bg-white/50 dark:bg-zinc-800/50 backdrop-blur-sm">
+            <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-teal-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-2">Radical Transparency</h3>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">Every decision and transaction lives on-chain for anyone to verify.</p>
+          </div>
+
+          <div className="text-center p-6 rounded-lg bg-white/50 dark:bg-zinc-800/50 backdrop-blur-sm">
+            <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path>
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-2">Permissionless</h3>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">Anyone can propose, support, or challenge a cause.</p>
+          </div>
+
+          <div className="text-center p-6 rounded-lg bg-white/50 dark:bg-zinc-800/50 backdrop-blur-sm">
+            <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"></path>
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-2">Trust Through Code</h3>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">Smart contracts enforce the rules, removing the need for intermediaries.</p>
+          </div>
         </div>
       </main>
     </div>
