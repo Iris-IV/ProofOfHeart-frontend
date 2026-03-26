@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import WalletConnection from '../../components/WalletConnection';
 import CauseCard from '../../components/CauseCard';
 import { Cause, Vote } from '../../types';
@@ -145,32 +144,22 @@ export default function CausesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
-      {/* Header */}
-      <header className="bg-white dark:bg-zinc-800 shadow-sm border-b border-zinc-200 dark:border-zinc-700">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <img src="/proof-of-heart-logo.svg" alt="ProofOfHeart" className="h-8 w-auto" />
-              <span className="text-xl font-bold text-zinc-900 dark:text-zinc-50">ProofOfHeart</span>
-            </Link>
-            <WalletConnection
-              onWalletConnected={handleWalletConnected}
-              onWalletDisconnected={handleWalletDisconnected}
-            />
-          </div>
-        </div>
-      </header>
-
+    <div className="bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">
-            Community Causes
-          </h1>
-          <p className="text-lg text-zinc-600 dark:text-zinc-400">
-            Vote on causes that matter to you. Your voice helps validate and fund meaningful initiatives.
-          </p>
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-2">
+              Community Causes
+            </h1>
+            <p className="text-lg text-zinc-600 dark:text-zinc-400">
+              Vote on causes that matter to you. Your voice helps validate and fund meaningful initiatives.
+            </p>
+          </div>
+          <WalletConnection
+            onWalletConnected={handleWalletConnected}
+            onWalletDisconnected={handleWalletDisconnected}
+          />
         </div>
 
         {isLoading && (
