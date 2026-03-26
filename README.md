@@ -4,50 +4,97 @@
 
 ProofOfHeart empowers everyday people to rally behind the causes they believe in. By leveraging blockchain transparency and community-driven governance, it removes gatekeepers from the fundraising process and puts trust back where it belongs: in the hands of the people.
 
-## Vision & Mission
+## 🌟 Vision & Mission
 
-**Vision** — A world where any meaningful cause can receive support without needing permission from a centralized authority.
+- **Vision**: A world where any meaningful cause can receive support without needing permission from a centralized authority.
+- **Mission**: To build an open, transparent launchpad that lets communities discover, validate, and fund causes through decentralized consensus — ensuring that every voice counts and every contribution is accounted for on-chain.
 
-**Mission** — To build an open, transparent launchpad that lets communities discover, validate, and fund causes through decentralized consensus — ensuring that every voice counts and every contribution is accounted for on-chain.
+## 🚀 Core Principles
 
-### Core Principles
+-   **Community First**: Causes are validated by the people, not by a corporate board.
+-   **Radical Transparency**: Every decision and transaction lives on-chain for anyone to verify.
+-   **Permissionless Participation**: Anyone can propose, support, or challenge a cause.
+-   **Trust Through Code**: Smart contracts enforce the rules, removing the need for intermediaries.
 
-- **Community First** — Causes are validated by the people, not by a corporate board.
-- **Radical Transparency** — Every decision and transaction lives on-chain for anyone to verify.
-- **Permissionless Participation** — Anyone can propose, support, or challenge a cause.
-- **Trust Through Code** — Smart contracts enforce the rules, removing the need for intermediaries.
-
-## Tech Stack
+## 🛠 Tech Stack
 
 | Layer | Technology |
 | --- | --- |
-| Framework | [Next.js 16](https://nextjs.org/) (App Router) |
-| Language | TypeScript |
-| Styling | [Tailwind CSS v4](https://tailwindcss.com/) |
-| Animations | [Framer Motion](https://motion.dev/) |
-| Linting | ESLint 9 |
-| Bundler | Turbopack |
+| **Framework** | [Next.js 16](https://nextjs.org/) (App Router) |
+| **Language** | [TypeScript](https://www.typescriptlang.org/) |
+| **Styling** | [Tailwind CSS v4](https://tailwindcss.com/) |
+| **Animations** | [Framer Motion](https://motion.dev/) |
+| **Linting** | [ESLint 9](https://eslint.org/) |
+| **Runtime** | Node.js (v20+) |
 
-## Getting Started
+## 🏗 Architecture
 
+The project follows the standard **Next.js App Router** architecture:
+
+-   `src/app/`: Contains the routes, layouts, and page-specific logic.
+-   `src/components/`: (Planned) Reusable UI components.
+-   `src/hooks/`: (Planned) Custom React hooks for state and API interaction.
+-   `src/utils/`: (Planned) Utility functions and constants.
+-   `public/`: Static assets like images and fonts.
+
+## 🏁 Getting Started
+
+### Prerequisites
+
+-   [Node.js](https://nodejs.org/) (Version 20 or higher)
+-   [npm](https://www.npmjs.com/)
+
+### Installation
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/Iris-IV/ProofOfHeart-frontend.git
+    cd ProofOfHeart-frontend
+    ```
+
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+
+### Local Development
+
+Run the development server:
 ```bash
-# Clone the repository
-git clone https://github.com/Iris-IV/ProofOfHeart-frontend.git
-cd ProofOfHeart-frontend
-
-# Install dependencies
-npm install
-
-# Start the dev server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see the app.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Contributing
+## ⚙️ Configuration
 
-We welcome contributors of all experience levels! Check the [Issues](../../issues) tab for open tasks — many are tagged as `good first issue` to help you get started.
+The project uses environment variables for configuration. Create a `.env.local` file in the root directory:
 
-## License
+```env
+# Example Environment Variables
+NEXT_PUBLIC_API_URL=https://api.proofofheart.org
+# NEXT_PUBLIC_CHAIN_ID=1
+```
 
-<!-- TODO: Add license -->
+## 🤝 Contributing
+
+We welcome contributions! To maintain a clean and consistent codebase, please follow these guidelines:
+
+1.  **Fork the repository** and create your branch from `main`.
+2.  **Naming Convention**: Use descriptive branch names (e.g., `feat/add-onboarding`, `fix/login-error`).
+3.  **Code Style**: 
+    - Use Functional Components with Hooks.
+    - Follow the existing TypeScript patterns.
+    - Run `npm run lint` before committing.
+4.  **Pull Requests**: 
+    - Provide a clear description of the changes.
+    - Reference any related issues.
+    - Ensure your code builds locally (`npm run build`).
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE) (to be added).
+
+---
+
+Built with ❤️ by the ProofOfHeart Community.
