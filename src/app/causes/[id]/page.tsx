@@ -7,7 +7,7 @@ import { Cause, Vote } from '../../../types';
 import { getCauseById } from '../../../lib/mockCauses';
 import { stellarVotingService } from '../../../services/stellarVoting';
 import VotingComponent from '../../../components/VotingComponent';
-import AppHeader from '../../../components/AppHeader';
+import WalletConnection from '../../../components/WalletConnection';
 
 const STATUS_STYLES: Record<Cause['status'], string> = {
   approved: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
@@ -106,7 +106,7 @@ export default function CauseDetailPage() {
   if (notFound) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
-        <AppHeader onWalletConnected={handleWalletConnected} onWalletDisconnected={handleWalletDisconnected} />
+        
         <main className="container mx-auto px-4 py-24 text-center">
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">Cause not found</h1>
           <p className="text-zinc-600 dark:text-zinc-400 mb-8">This cause does not exist or has been removed.</p>
@@ -130,20 +130,23 @@ export default function CauseDetailPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
-      <AppHeader
-        onWalletConnected={handleWalletConnected}
-        onWalletDisconnected={handleWalletDisconnected}
-      />
+      
 
       <main className="container mx-auto px-4 py-8 max-w-5xl">
-        {/* Breadcrumb */}
-        <nav className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 flex items-center gap-2">
-          <Link href="/causes" className="hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors">
-            Causes
-          </Link>
-          <span>›</span>
-          <span className="text-zinc-900 dark:text-zinc-50 truncate max-w-xs">{cause.title}</span>
-        </nav>
+        {/* Breadcrumb + Wallet */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <nav className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+            <Link href="/causes" className="hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors">
+              Causes
+            </Link>
+            <span>›</span>
+            <span className="text-zinc-900 dark:text-zinc-50 truncate max-w-xs">{cause.title}</span>
+          </nav>
+          <WalletConnection
+            onWalletConnected={handleWalletConnected}
+            onWalletDisconnected={handleWalletDisconnected}
+          />
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main content – left 2 cols */}

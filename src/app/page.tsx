@@ -1,47 +1,9 @@
-import Image from "next/image";
 import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
-      {/* Navigation */}
-      <nav className="bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm border-b border-zinc-200 dark:border-zinc-700">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Image
-                src="/proof-of-heart-logo.svg"
-                alt="ProofOfHeart Logo"
-                width={200}
-                height={60}
-                className="h-8 w-auto"
-                priority
-              />
-            </div>
-            <div className="flex items-center gap-6">
-              <Link
-                href="/causes"
-                className="text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors font-medium"
-              >
-                Browse Causes
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
-
+    <div className="bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
       <main className="container mx-auto px-4 py-16 sm:px-6 lg:px-8">
-        {/* Header with Logo */}
-        <div className="flex justify-center mb-16">
-          <Image
-            src="/proof-of-heart-logo.svg"
-            alt="ProofOfHeart Logo"
-            width={200}
-            height={60}
-            className="h-12 w-auto sm:h-16"
-            priority
-          />
-        </div>
 
         {/* Hero Section */}
         <div className="text-center max-w-4xl mx-auto">

@@ -6,7 +6,7 @@ import { Cause, Vote } from '../../types';
 import { mockCauses, CATEGORIES, STATUSES, SORT_OPTIONS } from '../../lib/mockCauses';
 import { stellarVotingService } from '../../services/stellarVoting';
 import CauseCard from '../../components/CauseCard';
-import AppHeader from '../../components/AppHeader';
+import WalletConnection from '../../components/WalletConnection';
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -153,18 +153,19 @@ function CausesContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
-      <AppHeader
-        onWalletConnected={handleWalletConnected}
-        onWalletDisconnected={handleWalletDisconnected}
-      />
-
       <main className="container mx-auto px-4 py-8">
         {/* Page heading */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-2">Community Causes</h1>
-          <p className="text-zinc-600 dark:text-zinc-400">
-            Browse, search, and vote on causes that matter to you.
-          </p>
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-2">Community Causes</h1>
+            <p className="text-zinc-600 dark:text-zinc-400">
+              Browse, search, and vote on causes that matter to you.
+            </p>
+          </div>
+          <WalletConnection
+            onWalletConnected={handleWalletConnected}
+            onWalletDisconnected={handleWalletDisconnected}
+          />
         </div>
 
         {/* Search + filters bar */}
