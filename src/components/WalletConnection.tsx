@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getAddress, isConnected, isAllowed } from '@stellar/freighter-api';
 
 interface WalletConnectionProps {
@@ -13,11 +13,7 @@ export default function WalletConnection({ onWalletConnected, onWalletDisconnect
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    checkWalletConnection();
-  }, []);
-
-  const checkWalletConnection = async () => {
+  const checkWalletConnection = useCallback(async () => {
     try {
       const connected = await isConnected();
       const allowed = await isAllowed();
@@ -31,7 +27,11 @@ export default function WalletConnection({ onWalletConnected, onWalletDisconnect
     } catch (error) {
       console.error('Error checking wallet connection:', error);
     }
-  };
+  }, [onWalletConnected]);
+
+  useEffect(() => {
+    checkWalletConnection();
+  }, [checkWalletConnection]);
 
   const connectWallet = async () => {
     setIsLoading(true);

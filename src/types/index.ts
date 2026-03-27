@@ -2,6 +2,7 @@ export interface Cause {
   id: string;
   title: string;
   description: string;
+  longDescription?: string;
   creator: string;
   createdAt: Date;
   upvotes: number;
@@ -11,6 +12,8 @@ export interface Cause {
   category: string;
   targetAmount?: number;
   currentAmount?: number;
+  imageUrl?: string;
+  tags?: string[];
 }
 
 export interface Vote {
