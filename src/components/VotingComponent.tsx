@@ -1,68 +1,144 @@
 'use client';
 
-import { useState } from 'react';
-import { Campaign, Vote } from '../types';
+import { useState, useEffect, useCallback } from 'react';
+import { Campaign } from '../types';
 import { useToast } from './ToastProvider';
 import { parseContractError } from '../utils/contractErrors';
+import {
+  voteOnCampaign,
+  getApproveVotes,
+  getRejectVotes,
+  hasVoted,
+  verifyWithVotes,
+  getMinVotesQuorum,
+  getApprovalThresholdBps,
+} from '../lib/contractClient';
 
 interface VotingComponentProps {
   campaign: Campaign;
   userWalletAddress: string | null;
-  onVote: (campaignId: number, voteType: 'upvote' | 'downvote') => Promise<void>;
-  userVote?: Vote;
-  isVoting: boolean;
+  /** Called after a successful vote so the parent can refresh campaign data. */
+  onVoteSuccess?: () => void;
+}
+
+interface VoteState {
+  approves: number;
+  rejects: number;
+  quorum: number;
+  thresholdBps: number;
+  alreadyVoted: boolean;
+  isLoading: boolean;
 }
 
 export default function VotingComponent({
   campaign,
   userWalletAddress,
-  onVote,
-  userVote,
-  isVoting,
+  onVoteSuccess,
 }: VotingComponentProps) {
-  const [localVote, setLocalVote] = useState<'upvote' | 'downvote' | null>(
-    userVote?.voteType ?? null
-  );
-  const { showError, showWarning } = useToast();
+  const { showError, showWarning, showSuccess } = useToast();
 
-  const handleVote = async (voteType: 'upvote' | 'downvote') => {
+  const [voteState, setVoteState] = useState<VoteState>({
+    approves: campaign.upvotes,
+    rejects: campaign.downvotes,
+    quorum: 10,
+    thresholdBps: 6000,
+    alreadyVoted: false,
+    isLoading: true,
+  });
+  const [isVoting, setIsVoting] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  // Fetch live vote counts + quorum config + has_voted status
+  const fetchVoteData = useCallback(async () => {
+    setVoteState((s) => ({ ...s, isLoading: true }));
+    try {
+      const [approves, rejects, quorum, thresholdBps] = await Promise.all([
+        getApproveVotes(campaign.id),
+        getRejectVotes(campaign.id),
+        getMinVotesQuorum(),
+        getApprovalThresholdBps(),
+      ]);
+
+      const alreadyVoted = userWalletAddress
+        ? await hasVoted(campaign.id, userWalletAddress)
+        : false;
+
+      setVoteState({ approves, rejects, quorum, thresholdBps, alreadyVoted, isLoading: false });
+    } catch (err) {
+      // Fall back to campaign prop values on error so UI still renders
+      setVoteState((s) => ({
+        ...s,
+        approves: campaign.upvotes,
+        rejects: campaign.downvotes,
+        isLoading: false,
+      }));
+    }
+  }, [campaign.id, campaign.upvotes, campaign.downvotes, userWalletAddress]);
+
+  useEffect(() => {
+    fetchVoteData();
+  }, [fetchVoteData]);
+
+  const totalVotes = voteState.approves + voteState.rejects;
+  const approvalRate =
+    totalVotes > 0 ? Math.round((voteState.approves / totalVotes) * 100) : 0;
+  const quorumMet = totalVotes >= voteState.quorum;
+  const thresholdMet = approvalRate >= voteState.thresholdBps / 100;
+  const canVerify = quorumMet && thresholdMet && campaign.status === 'pending';
+
+  const handleVote = async (approve: boolean) => {
     if (!userWalletAddress) {
       showWarning('Please connect your wallet to vote.');
       return;
     }
-    if (isVoting) return;
+    if (voteState.alreadyVoted) {
+      showWarning('You have already voted on this campaign.');
+      return;
+    }
+    setIsVoting(true);
     try {
-      await onVote(campaign.id, voteType);
-      setLocalVote(voteType);
-    } catch (error) {
-      console.error('Voting failed:', error);
-      showError(parseContractError(error));
+      await voteOnCampaign(campaign.id, userWalletAddress, approve);
+      showSuccess('Your vote has been cast successfully.');
+      await fetchVoteData();
+      onVoteSuccess?.();
+    } catch (err) {
+      showError(parseContractError(err));
+    } finally {
+      setIsVoting(false);
     }
   };
 
-  const getVoteButtonClass = (voteType: 'upvote' | 'downvote') => {
-    const isSelected = localVote === voteType;
-    const base =
-      'flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all duration-200 transform hover:scale-105';
-    if (voteType === 'upvote') {
-      return isSelected
-        ? `${base} bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-2 border-green-300 dark:border-green-700`
-        : `${base} bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-2 border-zinc-300 dark:border-zinc-600 hover:bg-green-50 dark:hover:bg-green-900/20`;
+  const handleVerify = async () => {
+    if (!userWalletAddress) {
+      showWarning('Please connect your wallet to verify.');
+      return;
     }
-    return isSelected
-      ? `${base} bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border-2 border-red-300 dark:border-red-700`
-      : `${base} bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-2 border-zinc-300 dark:border-zinc-600 hover:bg-red-50 dark:hover:bg-red-900/20`;
+    setIsVerifying(true);
+    try {
+      await verifyWithVotes(campaign.id);
+      showSuccess('Campaign verified successfully.');
+      onVoteSuccess?.();
+    } catch (err) {
+      showError(parseContractError(err));
+    } finally {
+      setIsVerifying(false);
+    }
   };
+
+  const btnBase =
+    'flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100';
 
   return (
     <div className="flex flex-col items-center gap-4 p-4 bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-700">
       <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Vote on this cause</h3>
 
+      {/* Vote buttons */}
       <div className="flex gap-3">
         <button
-          onClick={() => handleVote('upvote')}
-          disabled={isVoting || !userWalletAddress}
-          className={getVoteButtonClass('upvote')}
+          onClick={() => handleVote(true)}
+          disabled={isVoting || !userWalletAddress || voteState.alreadyVoted || voteState.isLoading}
+          className={`${btnBase} bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-2 border-zinc-300 dark:border-zinc-600 hover:bg-green-50 dark:hover:bg-green-900/20`}
+          title={voteState.alreadyVoted ? 'You have already voted' : 'Approve this cause'}
         >
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
             <path
@@ -75,9 +151,10 @@ export default function VotingComponent({
         </button>
 
         <button
-          onClick={() => handleVote('downvote')}
-          disabled={isVoting || !userWalletAddress}
-          className={getVoteButtonClass('downvote')}
+          onClick={() => handleVote(false)}
+          disabled={isVoting || !userWalletAddress || voteState.alreadyVoted || voteState.isLoading}
+          className={`${btnBase} bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-2 border-zinc-300 dark:border-zinc-600 hover:bg-red-50 dark:hover:bg-red-900/20`}
+          title={voteState.alreadyVoted ? 'You have already voted' : 'Reject this cause'}
         >
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
             <path
@@ -90,38 +167,58 @@ export default function VotingComponent({
         </button>
       </div>
 
-      <div className="text-center">
-        <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-          {campaign.upvotes - campaign.downvotes}
+      {/* Approval rate bar */}
+      <div className="w-full">
+        <div className="flex justify-between text-sm text-zinc-600 dark:text-zinc-400 mb-1">
+          <span>{voteState.approves} Approve</span>
+          <span>{approvalRate}% approval</span>
+          <span>{voteState.rejects} Reject</span>
         </div>
-        <div className="text-sm text-zinc-600 dark:text-zinc-400">
-          Net votes ({campaign.totalVotes} total)
+        <div className="w-full bg-red-200 dark:bg-red-900/40 rounded-full h-2">
+          <div
+            className="bg-green-500 h-2 rounded-full transition-all duration-300"
+            style={{ width: `${totalVotes > 0 ? approvalRate : 50}%` }}
+          />
         </div>
       </div>
 
-      <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
-        <div
-          className="bg-gradient-to-r from-green-500 to-red-500 h-2 rounded-full transition-all duration-300"
-          style={{
-            width: `${campaign.totalVotes > 0 ? (campaign.upvotes / campaign.totalVotes) * 100 : 50}%`,
-          }}
-        />
+      {/* Quorum progress */}
+      <div className="w-full">
+        <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+          <span>Voting quorum</span>
+          <span>
+            {totalVotes} of {voteState.quorum} votes needed
+          </span>
+        </div>
+        <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+          <div
+            className={`h-1.5 rounded-full transition-all duration-300 ${quorumMet ? 'bg-blue-500' : 'bg-zinc-400'}`}
+            style={{ width: `${Math.min(100, (totalVotes / voteState.quorum) * 100)}%` }}
+          />
+        </div>
       </div>
 
-      <div className="flex justify-between w-full text-sm text-zinc-600 dark:text-zinc-400">
-        <span>{campaign.upvotes} Approve</span>
-        <span>{campaign.downvotes} Reject</span>
-      </div>
+      {/* Verify button — shown only when quorum + threshold are met */}
+      {canVerify && (
+        <button
+          onClick={handleVerify}
+          disabled={isVerifying || !userWalletAddress}
+          className={`${btnBase} w-full justify-center bg-blue-600 hover:bg-blue-700 text-white border-0`}
+        >
+          {isVerifying ? 'Verifying…' : 'Verify with votes'}
+        </button>
+      )}
 
+      {/* Status messages */}
       {!userWalletAddress && (
         <p className="text-sm text-amber-600 dark:text-amber-400 text-center">
           Connect your wallet to vote on this cause
         </p>
       )}
 
-      {userVote && (
+      {voteState.alreadyVoted && (
         <p className="text-sm text-green-600 dark:text-green-400 text-center">
-          You voted to {userVote.voteType} this cause
+          You have already voted on this campaign
         </p>
       )}
     </div>

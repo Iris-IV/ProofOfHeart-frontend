@@ -3,11 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Campaign, Vote } from '../../../types';
+import { Campaign } from '../../../types';
 import { useCampaign } from '../../../hooks/useCampaign';
-import { stellarVotingService } from '../../../services/stellarVoting';
 import { useToast } from '../../../components/ToastProvider';
-import { parseContractError } from '../../../utils/contractErrors';
 import VotingComponent from '../../../components/VotingComponent';
 import WalletConnection from '../../../components/WalletConnection';
 
@@ -36,74 +34,23 @@ export default function CauseDetailPage() {
 
   const { campaign: fetchedCampaign, isLoading, error, notFound } = useCampaign(id);
 
-  // Local copy for optimistic vote updates
+  // Local copy so we can refresh after a vote
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [userWalletAddress, setUserWalletAddress] = useState<string | null>(null);
-  const [userVote, setUserVote] = useState<Vote | undefined>(undefined);
-  const [isVoting, setIsVoting] = useState(false);
-  const { showError, showSuccess, showWarning } = useToast();
+  useToast(); // keep ToastProvider in context; toasts are shown inside VotingComponent
 
   useEffect(() => {
     if (fetchedCampaign) setCampaign(fetchedCampaign);
   }, [fetchedCampaign]);
 
-  useEffect(() => {
-    if (!userWalletAddress || !campaign) return;
-    const existing = stellarVotingService.getUserVote(String(campaign.id), userWalletAddress);
-    if (existing) {
-      setUserVote({
-        causeId: String(campaign.id),
-        voter: userWalletAddress,
-        voteType: existing.voteType,
-        timestamp: existing.timestamp,
-        transactionHash: 'mock-hash',
-      });
-    }
-  }, [userWalletAddress, campaign]);
-
   const handleWalletConnected = (publicKey: string) => setUserWalletAddress(publicKey);
-  const handleWalletDisconnected = () => {
-    setUserWalletAddress(null);
-    setUserVote(undefined);
-  };
+  const handleWalletDisconnected = () => setUserWalletAddress(null);
 
-  const handleVote = async (campaignId: number, voteType: 'upvote' | 'downvote') => {
-    if (!userWalletAddress) {
-      showWarning('Please connect your wallet first.');
-      return;
-    }
-    const id = String(campaignId);
-    if (stellarVotingService.hasUserVoted(id, userWalletAddress)) {
-      showWarning('You have already voted on this cause.');
-      return;
-    }
-    setIsVoting(true);
-    try {
-      const transactionHash = await stellarVotingService.castVote(id, voteType, userWalletAddress);
-      const newVote: Vote = {
-        causeId: id,
-        voter: userWalletAddress,
-        voteType,
-        timestamp: new Date(),
-        transactionHash,
-      };
-      setUserVote(newVote);
-      setCampaign((prev) =>
-        prev
-          ? {
-              ...prev,
-              upvotes: voteType === 'upvote' ? prev.upvotes + 1 : prev.upvotes,
-              downvotes: voteType === 'downvote' ? prev.downvotes + 1 : prev.downvotes,
-              totalVotes: prev.totalVotes + 1,
-            }
-          : prev
-      );
-      showSuccess('Your vote has been cast successfully.');
-    } catch (error) {
-      showError(parseContractError(error));
-    } finally {
-      setIsVoting(false);
-    }
+  // Refresh campaign data after a successful vote
+  const handleVoteSuccess = () => {
+    // Re-trigger useCampaign by bumping a key would require refetch; for now
+    // VotingComponent manages its own live counts via contract calls.
+    // If the parent needs a full refresh, wire useCampaign's refetch here.
   };
 
   // -------------------------------------------------------------------------
@@ -269,9 +216,7 @@ export default function CauseDetailPage() {
             <VotingComponent
               campaign={campaign}
               userWalletAddress={userWalletAddress}
-              onVote={handleVote}
-              userVote={userVote}
-              isVoting={isVoting}
+              onVoteSuccess={handleVoteSuccess}
             />
 
             {/* Creator info */}

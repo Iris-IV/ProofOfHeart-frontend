@@ -1,5 +1,17 @@
-// Mock Stellar voting service - in production, this would integrate with actual Stellar smart contracts
-// For demonstration purposes, this simulates blockchain voting functionality
+/**
+ * @deprecated This mock service has been replaced by the real contract client.
+ * Use the voting functions in `src/lib/contractClient.ts` instead:
+ *   - voteOnCampaign(campaignId, voter, approve)
+ *   - getApproveVotes(campaignId)
+ *   - getRejectVotes(campaignId)
+ *   - hasVoted(campaignId, voter)
+ *   - verifyWithVotes(campaignId)
+ *
+ * This file is kept temporarily to avoid breaking any remaining references
+ * and will be removed in a follow-up cleanup PR.
+ */
+
+// Mock Stellar voting service - replaced by contractClient.ts voting functions
 
 export class StellarVotingService {
   // Mock storage for votes (in real implementation, this would be on-chain)

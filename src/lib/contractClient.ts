@@ -12,9 +12,28 @@ import { Campaign } from '../types';
 // When issue #14 lands, import ContractErrorException and parseContractError from
 // '../utils/contractErrors' to wrap raw Soroban SDK errors before re-throwing.
 
+// ---------------------------------------------------------------------------
+// Mock voting state (mirrors what the contract tracks on-chain)
+// ---------------------------------------------------------------------------
+
+/** { campaignId -> { voter -> approve } } */
+const MOCK_VOTES: Record<number, Record<string, boolean>> = {};
+
+const MOCK_MIN_VOTES_QUORUM = 10;
+const MOCK_APPROVAL_THRESHOLD_BPS = 6000; // 60%
+
 const USE_MOCKS =
   typeof process !== 'undefined' &&
   process.env.NEXT_PUBLIC_USE_MOCKS === 'true';
+
+// ---------------------------------------------------------------------------
+// Voting helpers (mock)
+// ---------------------------------------------------------------------------
+
+function mockVotesFor(campaignId: number) {
+  if (!MOCK_VOTES[campaignId]) MOCK_VOTES[campaignId] = {};
+  return MOCK_VOTES[campaignId];
+}
 
 // ---------------------------------------------------------------------------
 // Mock data (mirrors mockCauses.ts but typed as Campaign)
@@ -175,6 +194,133 @@ export async function getAllCampaigns(): Promise<Campaign[]> {
   // } catch (err) {
   //   throw new Error(parseContractError(err));
   // }
+  throw new Error(
+    'Live contract client is not yet wired up. Add NEXT_PUBLIC_USE_MOCKS=true to .env.local for development.'
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Voting functions
+// ---------------------------------------------------------------------------
+
+/**
+ * Casts a vote on a campaign.
+ * Maps to contract: vote_on_campaign(campaign_id, voter, approve)
+ */
+export async function voteOnCampaign(
+  campaignId: number,
+  voter: string,
+  approve: boolean
+): Promise<void> {
+  if (USE_MOCKS) {
+    await new Promise((r) => setTimeout(r, 800)); // simulate tx latency
+    const votes = mockVotesFor(campaignId);
+    if (voter in votes) throw new Error('You have already voted on this campaign.');
+    votes[voter] = approve;
+    // Reflect in mock campaign data
+    const campaign = MOCK_CAMPAIGNS.find((c) => c.id === campaignId);
+    if (campaign) {
+      if (approve) campaign.upvotes += 1;
+      else campaign.downvotes += 1;
+      campaign.totalVotes += 1;
+    }
+    return;
+  }
+
+  // TODO(#14): Replace with real Soroban contract call, e.g.:
+  // const client = new ProofOfHeartClient({ contractId: CONTRACT_ID, rpc: RPC_URL });
+  // await client.vote_on_campaign({ campaign_id: campaignId, voter, approve });
+  throw new Error(
+    'Live contract client is not yet wired up. Add NEXT_PUBLIC_USE_MOCKS=true to .env.local for development.'
+  );
+}
+
+/**
+ * Returns the number of approve votes for a campaign.
+ * Maps to contract: get_approve_votes(campaign_id) -> u32
+ */
+export async function getApproveVotes(campaignId: number): Promise<number> {
+  if (USE_MOCKS) {
+    const votes = mockVotesFor(campaignId);
+    return Object.values(votes).filter(Boolean).length;
+  }
+
+  // TODO(#14): const result = await client.get_approve_votes({ campaign_id: campaignId });
+  throw new Error(
+    'Live contract client is not yet wired up. Add NEXT_PUBLIC_USE_MOCKS=true to .env.local for development.'
+  );
+}
+
+/**
+ * Returns the number of reject votes for a campaign.
+ * Maps to contract: get_reject_votes(campaign_id) -> u32
+ */
+export async function getRejectVotes(campaignId: number): Promise<number> {
+  if (USE_MOCKS) {
+    const votes = mockVotesFor(campaignId);
+    return Object.values(votes).filter((v) => !v).length;
+  }
+
+  // TODO(#14): const result = await client.get_reject_votes({ campaign_id: campaignId });
+  throw new Error(
+    'Live contract client is not yet wired up. Add NEXT_PUBLIC_USE_MOCKS=true to .env.local for development.'
+  );
+}
+
+/**
+ * Checks whether a voter has already voted on a campaign.
+ * Maps to contract: has_voted(campaign_id, voter) -> bool
+ */
+export async function hasVoted(campaignId: number, voter: string): Promise<boolean> {
+  if (USE_MOCKS) {
+    return voter in mockVotesFor(campaignId);
+  }
+
+  // TODO(#14): const result = await client.has_voted({ campaign_id: campaignId, voter });
+  throw new Error(
+    'Live contract client is not yet wired up. Add NEXT_PUBLIC_USE_MOCKS=true to .env.local for development.'
+  );
+}
+
+/**
+ * Triggers on-chain verification once quorum + threshold are met.
+ * Maps to contract: verify_campaign_with_votes(campaign_id)
+ */
+export async function verifyWithVotes(campaignId: number): Promise<void> {
+  if (USE_MOCKS) {
+    await new Promise((r) => setTimeout(r, 800));
+    const campaign = MOCK_CAMPAIGNS.find((c) => c.id === campaignId);
+    if (campaign) campaign.status = 'approved';
+    return;
+  }
+
+  // TODO(#14): await client.verify_campaign_with_votes({ campaign_id: campaignId });
+  throw new Error(
+    'Live contract client is not yet wired up. Add NEXT_PUBLIC_USE_MOCKS=true to .env.local for development.'
+  );
+}
+
+/**
+ * Returns the minimum number of votes required for quorum.
+ * Maps to contract: get_min_votes_quorum() -> u32
+ */
+export async function getMinVotesQuorum(): Promise<number> {
+  if (USE_MOCKS) return MOCK_MIN_VOTES_QUORUM;
+
+  // TODO(#14): const result = await client.get_min_votes_quorum();
+  throw new Error(
+    'Live contract client is not yet wired up. Add NEXT_PUBLIC_USE_MOCKS=true to .env.local for development.'
+  );
+}
+
+/**
+ * Returns the approval threshold in basis points (e.g. 6000 = 60%).
+ * Maps to contract: get_approval_threshold_bps() -> u32
+ */
+export async function getApprovalThresholdBps(): Promise<number> {
+  if (USE_MOCKS) return MOCK_APPROVAL_THRESHOLD_BPS;
+
+  // TODO(#14): const result = await client.get_approval_threshold_bps();
   throw new Error(
     'Live contract client is not yet wired up. Add NEXT_PUBLIC_USE_MOCKS=true to .env.local for development.'
   );
