@@ -1,25 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { Cause, Vote } from '../types';
+import { Campaign, Vote } from '../types';
 
 interface VotingComponentProps {
-  cause: Cause;
+  campaign: Campaign;
   userWalletAddress: string | null;
-  onVote: (causeId: string, voteType: 'upvote' | 'downvote') => Promise<void>;
+  onVote: (campaignId: number, voteType: 'upvote' | 'downvote') => Promise<void>;
   userVote?: Vote;
   isVoting: boolean;
 }
 
 export default function VotingComponent({
-  cause,
+  campaign,
   userWalletAddress,
   onVote,
   userVote,
-  isVoting
+  isVoting,
 }: VotingComponentProps) {
   const [localVote, setLocalVote] = useState<'upvote' | 'downvote' | null>(
-    userVote?.voteType || null
+    userVote?.voteType ?? null
   );
 
   const handleVote = async (voteType: 'upvote' | 'downvote') => {
@@ -27,11 +27,9 @@ export default function VotingComponent({
       alert('Please connect your wallet to vote');
       return;
     }
-
     if (isVoting) return;
-
     try {
-      await onVote(cause.id, voteType);
+      await onVote(campaign.id, voteType);
       setLocalVote(voteType);
     } catch (error) {
       console.error('Voting failed:', error);
@@ -41,17 +39,16 @@ export default function VotingComponent({
 
   const getVoteButtonClass = (voteType: 'upvote' | 'downvote') => {
     const isSelected = localVote === voteType;
-    const baseClass = "flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all duration-200 transform hover:scale-105";
-
+    const base =
+      'flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all duration-200 transform hover:scale-105';
     if (voteType === 'upvote') {
       return isSelected
-        ? `${baseClass} bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-2 border-green-300 dark:border-green-700`
-        : `${baseClass} bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-2 border-zinc-300 dark:border-zinc-600 hover:bg-green-50 dark:hover:bg-green-900/20`;
-    } else {
-      return isSelected
-        ? `${baseClass} bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border-2 border-red-300 dark:border-red-700`
-        : `${baseClass} bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-2 border-zinc-300 dark:border-zinc-600 hover:bg-red-50 dark:hover:bg-red-900/20`;
+        ? `${base} bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-2 border-green-300 dark:border-green-700`
+        : `${base} bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-2 border-zinc-300 dark:border-zinc-600 hover:bg-green-50 dark:hover:bg-green-900/20`;
     }
+    return isSelected
+      ? `${base} bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border-2 border-red-300 dark:border-red-700`
+      : `${base} bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-2 border-zinc-300 dark:border-zinc-600 hover:bg-red-50 dark:hover:bg-red-900/20`;
   };
 
   return (
@@ -65,7 +62,11 @@ export default function VotingComponent({
           className={getVoteButtonClass('upvote')}
         >
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd"></path>
+            <path
+              fillRule="evenodd"
+              d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
+              clipRule="evenodd"
+            />
           </svg>
           Approve
         </button>
@@ -76,7 +77,11 @@ export default function VotingComponent({
           className={getVoteButtonClass('downvote')}
         >
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"></path>
+            <path
+              fillRule="evenodd"
+              d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+              clipRule="evenodd"
+            />
           </svg>
           Reject
         </button>
@@ -84,10 +89,10 @@ export default function VotingComponent({
 
       <div className="text-center">
         <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-          {cause.upvotes - cause.downvotes}
+          {campaign.upvotes - campaign.downvotes}
         </div>
         <div className="text-sm text-zinc-600 dark:text-zinc-400">
-          Net votes ({cause.totalVotes} total)
+          Net votes ({campaign.totalVotes} total)
         </div>
       </div>
 
@@ -95,14 +100,14 @@ export default function VotingComponent({
         <div
           className="bg-gradient-to-r from-green-500 to-red-500 h-2 rounded-full transition-all duration-300"
           style={{
-            width: `${cause.totalVotes > 0 ? (cause.upvotes / cause.totalVotes) * 100 : 50}%`
+            width: `${campaign.totalVotes > 0 ? (campaign.upvotes / campaign.totalVotes) * 100 : 50}%`,
           }}
-        ></div>
+        />
       </div>
 
       <div className="flex justify-between w-full text-sm text-zinc-600 dark:text-zinc-400">
-        <span>{cause.upvotes} Approve</span>
-        <span>{cause.downvotes} Reject</span>
+        <span>{campaign.upvotes} Approve</span>
+        <span>{campaign.downvotes} Reject</span>
       </div>
 
       {!userWalletAddress && (

@@ -1,3 +1,20 @@
+/** Contract-aligned Campaign type — mirrors the on-chain Soroban struct. */
+export interface Campaign {
+  id: number;
+  title: string;
+  description: string;
+  creator: string;       // Stellar address
+  createdAt: number;     // Unix timestamp (seconds)
+  upvotes: number;
+  downvotes: number;
+  totalVotes: number;
+  status: 'pending' | 'approved' | 'rejected';
+  category: string;
+  targetAmount: number;  // in XLM
+  currentAmount: number; // in XLM
+}
+
+/** @deprecated Use Campaign instead — will be removed once contract integration is complete. */
 export interface Cause {
   id: string;
   title: string;
