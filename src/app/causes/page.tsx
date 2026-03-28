@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Campaign, Vote } from '../../types';
+import { Campaign, Vote, Category } from '../../types';
 import { CATEGORIES, STATUSES, SORT_OPTIONS } from '../../lib/mockCauses';
+import { categoryLabel } from '../../utils/category';
 import { stellarVotingService } from '../../services/stellarVoting';
 import { useCampaigns } from '../../hooks/useCampaigns';
 import { useWallet } from '../../components/WalletContext';
@@ -157,11 +158,13 @@ function CausesContent() {
         (c) =>
           c.title.toLowerCase().includes(q) ||
           c.description.toLowerCase().includes(q) ||
-          c.category.toLowerCase().includes(q)
+          categoryLabel(c.category).toLowerCase().includes(q)
       );
     }
 
-    if (category !== 'all') result = result.filter((c) => c.category === category);
+    if (category !== 'all') {
+      result = result.filter((c) => categoryLabel(c.category) === category);
+    }
     if (status !== 'all') result = result.filter((c) => c.status === status);
 
     switch (sort) {
@@ -260,7 +263,11 @@ function CausesContent() {
               >
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c}>
-                    {c === 'all' ? 'All Categories' : c.charAt(0).toUpperCase() + c.slice(1)}
+                    {c === 'all'
+                      ? 'All Categories'
+                      : c === 'EducationalStartup'
+                      ? 'Educational Startup'
+                      : c}
                   </option>
                 ))}
               </select>

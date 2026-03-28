@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Campaign, Vote } from '../types';
+import { getCategoryIcon, categoryLabel } from '../utils/category';
 import VotingComponent from './VotingComponent';
 
 interface CauseCardProps {
@@ -16,12 +17,6 @@ const STATUS_STYLES: Record<Campaign['status'], string> = {
   approved: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
   rejected: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200',
   pending: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200',
-};
-
-const CATEGORY_ICONS: Record<string, string> = {
-  environment: '🌱',
-  education: '📚',
-  healthcare: '🏥',
 };
 
 function formatDate(ts: number) {
@@ -62,9 +57,9 @@ export default function CauseCard({ campaign, userWalletAddress, onVote, userVot
       <div className="p-5 flex-1">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-2">
-            <span className="text-xl">{CATEGORY_ICONS[campaign.category] ?? '💡'}</span>
-            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 capitalize">
-              {campaign.category}
+            <span className="text-xl">{getCategoryIcon(campaign.category)}</span>
+            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              {categoryLabel(campaign.category)}
             </span>
           </div>
           <span

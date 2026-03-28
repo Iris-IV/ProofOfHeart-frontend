@@ -1,3 +1,10 @@
+export enum Category {
+  Learner = 0,
+  EducationalStartup = 1,
+  Educator = 2,
+  Publisher = 3,
+}
+
 /** Contract-aligned Campaign type — mirrors the on-chain Soroban struct. */
 export interface Campaign {
   id: number;
@@ -9,7 +16,7 @@ export interface Campaign {
   downvotes: number;
   totalVotes: number;
   status: 'pending' | 'approved' | 'rejected';
-  category: string;
+  category: Category;
   targetAmount: number;  // in XLM
   currentAmount: number; // in XLM
 }
@@ -26,7 +33,7 @@ export interface Cause {
   downvotes: number;
   totalVotes: number;
   status: 'pending' | 'approved' | 'rejected';
-  category: string;
+  category: Category;
   targetAmount?: number;
   currentAmount?: number;
   imageUrl?: string;

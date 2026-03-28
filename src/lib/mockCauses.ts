@@ -8,7 +8,7 @@
  * Do NOT add new mock data here. Use contractClient.ts instead.
  */
 
-export const CATEGORIES = ['all', 'environment', 'education', 'healthcare'] as const;
+export const CATEGORIES = ['all', 'Learner', 'EducationalStartup', 'Educator', 'Publisher'] as const;
 export const STATUSES = ['all', 'pending', 'approved', 'rejected'] as const;
 export const SORT_OPTIONS = [
   { value: 'newest', label: 'Newest First' },

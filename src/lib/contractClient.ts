@@ -8,7 +8,7 @@
  * SorobanContractClient calls — no other files need to change.
  */
 
-import { Campaign } from '../types';
+import { Campaign, Category } from '../types';
 // When issue #14 lands, import ContractErrorException and parseContractError from
 // '../utils/contractErrors' to wrap raw Soroban SDK errors before re-throwing.
 
@@ -32,7 +32,7 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     downvotes: 12,
     totalVotes: 57,
     status: 'approved',
-    category: 'environment',
+    category: Category.EducationalStartup,
     targetAmount: 10000,
     currentAmount: 6500,
   },
@@ -47,7 +47,7 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     downvotes: 8,
     totalVotes: 31,
     status: 'pending',
-    category: 'education',
+    category: Category.Learner,
     targetAmount: 5000,
     currentAmount: 1200,
   },
@@ -62,7 +62,7 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     downvotes: 15,
     totalVotes: 82,
     status: 'approved',
-    category: 'healthcare',
+    category: Category.Educator,
     targetAmount: 15000,
     currentAmount: 8900,
   },
@@ -77,7 +77,7 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     downvotes: 5,
     totalVotes: 43,
     status: 'approved',
-    category: 'environment',
+    category: Category.Publisher,
     targetAmount: 8000,
     currentAmount: 3200,
   },
@@ -92,7 +92,7 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     downvotes: 3,
     totalVotes: 17,
     status: 'pending',
-    category: 'healthcare',
+    category: Category.Learner,
     targetAmount: 6000,
     currentAmount: 900,
   },
@@ -107,7 +107,7 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     downvotes: 7,
     totalVotes: 98,
     status: 'approved',
-    category: 'environment',
+    category: Category.EducationalStartup,
     targetAmount: 20000,
     currentAmount: 17500,
   },

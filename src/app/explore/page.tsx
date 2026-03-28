@@ -3,13 +3,8 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useCampaigns } from '../../hooks/useCampaigns';
-import { Campaign } from '../../types';
-
-const CATEGORY_ICONS: Record<string, string> = {
-  environment: '🌱',
-  education: '📚',
-  healthcare: '🏥',
-};
+import { Campaign, Category } from '../../types';
+import { categoryLabel, getCategoryIcon } from '../../utils/category';
 
 const STATUS_STYLES: Record<Campaign['status'], string> = {
   approved: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
@@ -36,11 +31,11 @@ function CampaignRowSkeleton() {
 
 export default function ExplorePage() {
   const { campaigns, isLoading, error, refetch } = useCampaigns();
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeCategory, setActiveCategory] = useState<Category | 'all'>('all');
 
   const categories = useMemo(() => {
     const seen = new Set(campaigns.map((c) => c.category));
-    return ['all', ...Array.from(seen).sort()];
+    return ['all' as const, ...Array.from(seen).sort((a, b) => a - b)];
   }, [campaigns]);
 
   const filtered = useMemo(
@@ -84,7 +79,7 @@ export default function ExplorePage() {
                   : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
               }`}
             >
-              {cat === 'all' ? 'All' : (CATEGORY_ICONS[cat] ?? '') + ' ' + cat.charAt(0).toUpperCase() + cat.slice(1)}
+              {cat === 'all' ? 'All' : `${getCategoryIcon(cat as Category)} ${categoryLabel(cat as Category)}`}
             </button>
           ))}
         </div>
@@ -148,7 +143,7 @@ export default function ExplorePage() {
 
                 {/* Icon */}
                 <span className="text-2xl shrink-0">
-                  {CATEGORY_ICONS[campaign.category] ?? '💡'}
+                  {getCategoryIcon(campaign.category)}
                 </span>
 
                 {/* Title + meta */}
