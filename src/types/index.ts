@@ -8,7 +8,8 @@ export interface Campaign {
   upvotes: number;
   downvotes: number;
   totalVotes: number;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'approved' | 'rejected' | 'pending' | 'cancelled';
+  fundsWithdrawn?: boolean;
   category: string;
   targetAmount: number;  // in XLM
   currentAmount: number; // in XLM
