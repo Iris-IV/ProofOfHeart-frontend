@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { Campaign, Vote } from '../types';
+import { useToast } from './ToastProvider';
+import { parseContractError } from '../utils/contractErrors';
 
 interface VotingComponentProps {
   campaign: Campaign;
@@ -21,10 +23,11 @@ export default function VotingComponent({
   const [localVote, setLocalVote] = useState<'upvote' | 'downvote' | null>(
     userVote?.voteType ?? null
   );
+  const { showError, showWarning } = useToast();
 
   const handleVote = async (voteType: 'upvote' | 'downvote') => {
     if (!userWalletAddress) {
-      alert('Please connect your wallet to vote');
+      showWarning('Please connect your wallet to vote.');
       return;
     }
     if (isVoting) return;
@@ -33,7 +36,7 @@ export default function VotingComponent({
       setLocalVote(voteType);
     } catch (error) {
       console.error('Voting failed:', error);
-      alert('Failed to cast vote. Please try again.');
+      showError(parseContractError(error));
     }
   };
 

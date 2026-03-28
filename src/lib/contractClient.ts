@@ -9,6 +9,8 @@
  */
 
 import { Campaign } from '../types';
+// When issue #14 lands, import ContractErrorException and parseContractError from
+// '../utils/contractErrors' to wrap raw Soroban SDK errors before re-throwing.
 
 const USE_MOCKS =
   typeof process !== 'undefined' &&
@@ -122,9 +124,13 @@ export async function getCampaignCount(): Promise<number> {
   if (USE_MOCKS) return MOCK_CAMPAIGNS.length;
 
   // TODO(#14): Replace with real Soroban contract call, e.g.:
-  // const client = new ProofOfHeartClient({ contractId: CONTRACT_ID, rpc: RPC_URL });
-  // const result = await client.get_campaign_count();
-  // return Number(result);
+  // try {
+  //   const client = new ProofOfHeartClient({ contractId: CONTRACT_ID, rpc: RPC_URL });
+  //   const result = await client.get_campaign_count();
+  //   return Number(result);
+  // } catch (err) {
+  //   throw new Error(parseContractError(err));
+  // }
   throw new Error(
     'Live contract client is not yet wired up. Add NEXT_PUBLIC_USE_MOCKS=true to .env.local for development.'
   );
@@ -138,9 +144,15 @@ export async function getCampaign(id: number): Promise<Campaign | null> {
   if (USE_MOCKS) return MOCK_CAMPAIGNS.find((c) => c.id === id) ?? null;
 
   // TODO(#14): Replace with real Soroban contract call, e.g.:
-  // const client = new ProofOfHeartClient({ contractId: CONTRACT_ID, rpc: RPC_URL });
-  // const result = await client.get_campaign({ id });
-  // return result ?? null;
+  // try {
+  //   const client = new ProofOfHeartClient({ contractId: CONTRACT_ID, rpc: RPC_URL });
+  //   const result = await client.get_campaign({ id });
+  //   return result ?? null;
+  // } catch (err) {
+  //   // Re-throw as ContractErrorException when the contract returns a known code,
+  //   // or as a plain Error with a human-readable message for unexpected failures.
+  //   throw new Error(parseContractError(err));
+  // }
   throw new Error(
     'Live contract client is not yet wired up. Add NEXT_PUBLIC_USE_MOCKS=true to .env.local for development.'
   );
@@ -154,11 +166,15 @@ export async function getAllCampaigns(): Promise<Campaign[]> {
   if (USE_MOCKS) return [...MOCK_CAMPAIGNS];
 
   // TODO(#14): Replace with real Soroban contract call, e.g.:
-  // const count = await getCampaignCount();
-  // const results = await Promise.all(
-  //   Array.from({ length: count }, (_, i) => getCampaign(i + 1))
-  // );
-  // return results.filter((c): c is Campaign => c !== null);
+  // try {
+  //   const count = await getCampaignCount();
+  //   const results = await Promise.all(
+  //     Array.from({ length: count }, (_, i) => getCampaign(i + 1))
+  //   );
+  //   return results.filter((c): c is Campaign => c !== null);
+  // } catch (err) {
+  //   throw new Error(parseContractError(err));
+  // }
   throw new Error(
     'Live contract client is not yet wired up. Add NEXT_PUBLIC_USE_MOCKS=true to .env.local for development.'
   );

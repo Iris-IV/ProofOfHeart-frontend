@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { getAddress, isConnected, isAllowed } from '@stellar/freighter-api';
+import { useToast } from './ToastProvider';
 
 interface WalletContextType {
   publicKey: string | null;
@@ -15,6 +16,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { showError, showWarning, showSuccess } = useToast();
 
   useEffect(() => {
     // Restore session from localStorage
@@ -47,14 +49,14 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     try {
       const connected = await isConnected();
       if (!connected) {
-        alert('Please install Freighter wallet extension');
+        showWarning('Freighter wallet not found. Opening install page…');
         window.open('https://www.freighter.app/', '_blank');
         setIsLoading(false);
         return;
       }
       const allowed = await isAllowed();
       if (!allowed) {
-        alert('Please allow Freighter to connect to this site');
+        showWarning('Please allow Freighter to connect to this site.');
         setIsLoading(false);
         return;
       }
@@ -62,8 +64,9 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       setPublicKey(key.address);
       setIsWalletConnected(true);
       localStorage.setItem('stellar_wallet_public_key', key.address);
+      showSuccess('Wallet connected successfully.');
     } catch (error) {
-      alert('Failed to connect wallet. Please try again.');
+      showError('Failed to connect wallet. Please try again.');
     } finally {
       setIsLoading(false);
     }

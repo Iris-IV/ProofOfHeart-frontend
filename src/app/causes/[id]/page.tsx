@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { Campaign, Vote } from '../../../types';
 import { useCampaign } from '../../../hooks/useCampaign';
 import { stellarVotingService } from '../../../services/stellarVoting';
+import { useToast } from '../../../components/ToastProvider';
+import { parseContractError } from '../../../utils/contractErrors';
 import VotingComponent from '../../../components/VotingComponent';
 import WalletConnection from '../../../components/WalletConnection';
 
@@ -39,6 +41,7 @@ export default function CauseDetailPage() {
   const [userWalletAddress, setUserWalletAddress] = useState<string | null>(null);
   const [userVote, setUserVote] = useState<Vote | undefined>(undefined);
   const [isVoting, setIsVoting] = useState(false);
+  const { showError, showSuccess, showWarning } = useToast();
 
   useEffect(() => {
     if (fetchedCampaign) setCampaign(fetchedCampaign);
@@ -66,12 +69,12 @@ export default function CauseDetailPage() {
 
   const handleVote = async (campaignId: number, voteType: 'upvote' | 'downvote') => {
     if (!userWalletAddress) {
-      alert('Please connect your wallet first');
+      showWarning('Please connect your wallet first.');
       return;
     }
     const id = String(campaignId);
     if (stellarVotingService.hasUserVoted(id, userWalletAddress)) {
-      alert('You have already voted on this cause');
+      showWarning('You have already voted on this cause.');
       return;
     }
     setIsVoting(true);
@@ -95,8 +98,9 @@ export default function CauseDetailPage() {
             }
           : prev
       );
-    } catch {
-      alert('Failed to cast vote. Please try again.');
+      showSuccess('Your vote has been cast successfully.');
+    } catch (error) {
+      showError(parseContractError(error));
     } finally {
       setIsVoting(false);
     }

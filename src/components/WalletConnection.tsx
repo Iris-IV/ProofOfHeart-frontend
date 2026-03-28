@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getAddress, isConnected, isAllowed } from '@stellar/freighter-api';
+import { useToast } from './ToastProvider';
 
 interface WalletConnectionProps {
   onWalletConnected: (publicKey: string) => void;
@@ -12,6 +13,7 @@ export default function WalletConnection({ onWalletConnected, onWalletDisconnect
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { showError, showWarning, showSuccess } = useToast();
 
   const checkWalletConnection = useCallback(async () => {
     try {
@@ -38,7 +40,7 @@ export default function WalletConnection({ onWalletConnected, onWalletDisconnect
     try {
       const connected = await isConnected();
       if (!connected) {
-        alert('Please install Freighter wallet extension');
+        showWarning('Freighter wallet not found. Opening install page…');
         window.open('https://www.freighter.app/', '_blank');
         setIsLoading(false);
         return;
@@ -46,7 +48,7 @@ export default function WalletConnection({ onWalletConnected, onWalletDisconnect
 
       const allowed = await isAllowed();
       if (!allowed) {
-        alert('Please allow Freighter to connect to this site');
+        showWarning('Please allow Freighter to connect to this site.');
         setIsLoading(false);
         return;
       }
@@ -55,9 +57,10 @@ export default function WalletConnection({ onWalletConnected, onWalletDisconnect
       setPublicKey(key.address);
       setIsWalletConnected(true);
       onWalletConnected(key.address);
+      showSuccess('Wallet connected successfully.');
     } catch (error) {
       console.error('Error connecting wallet:', error);
-      alert('Failed to connect wallet. Please try again.');
+      showError('Failed to connect wallet. Please try again.');
     } finally {
       setIsLoading(false);
     }

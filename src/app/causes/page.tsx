@@ -7,6 +7,8 @@ import { CATEGORIES, STATUSES, SORT_OPTIONS } from '../../lib/mockCauses';
 import { stellarVotingService } from '../../services/stellarVoting';
 import { useCampaigns } from '../../hooks/useCampaigns';
 import { useWallet } from '../../components/WalletContext';
+import { useToast } from '../../components/ToastProvider';
+import { parseContractError } from '../../utils/contractErrors';
 import CauseCard from '../../components/CauseCard';
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -63,6 +65,7 @@ function CausesContent() {
   const [userVotes, setUserVotes] = useState<Record<string, Vote>>({});
   const [isVotingFor, setIsVotingFor] = useState<number | null>(null);
   const { publicKey: userWalletAddress } = useWallet();
+  const { showError, showSuccess, showWarning } = useToast();
 
   // Mirror contract data into local state so optimistic vote updates work
   useEffect(() => {
@@ -106,12 +109,12 @@ function CausesContent() {
 
   const handleVote = async (campaignId: number, voteType: 'upvote' | 'downvote') => {
     if (!userWalletAddress) {
-      alert('Please connect your wallet first');
+      showWarning('Please connect your wallet first.');
       return;
     }
     const id = String(campaignId);
     if (stellarVotingService.hasUserVoted(id, userWalletAddress)) {
-      alert('You have already voted on this cause');
+      showWarning('You have already voted on this cause.');
       return;
     }
     setIsVotingFor(campaignId);
@@ -137,8 +140,9 @@ function CausesContent() {
             : c
         )
       );
-    } catch {
-      alert('Failed to cast vote. Please try again.');
+      showSuccess('Your vote has been cast successfully.');
+    } catch (error) {
+      showError(parseContractError(error));
     } finally {
       setIsVotingFor(null);
     }
