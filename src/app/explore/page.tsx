@@ -3,18 +3,15 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useCampaigns } from '../../hooks/useCampaigns';
-import { Campaign } from '../../types';
+import { Category, CATEGORY_LABELS, stroopsToXlm } from '../../types';
+import CampaignStatusBadge from '../../components/CampaignStatusBadge';
+import FundingProgressBar from '../../components/FundingProgressBar';
 
-const CATEGORY_ICONS: Record<string, string> = {
-  environment: '🌱',
-  education: '📚',
-  healthcare: '🏥',
-};
-
-const STATUS_STYLES: Record<Campaign['status'], string> = {
-  approved: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
-  rejected: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200',
-  pending: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200',
+const CATEGORY_ICONS: Record<Category, string> = {
+  [Category.Learner]: '🎓',
+  [Category.EducationalStartup]: '🚀',
+  [Category.Educator]: '👩‍🏫',
+  [Category.Publisher]: '📚',
 };
 
 function formatAddress(addr: string) {
@@ -36,11 +33,11 @@ function CampaignRowSkeleton() {
 
 export default function ExplorePage() {
   const { campaigns, isLoading, error, refetch } = useCampaigns();
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeCategory, setActiveCategory] = useState<'all' | Category>('all');
 
   const categories = useMemo(() => {
     const seen = new Set(campaigns.map((c) => c.category));
-    return ['all', ...Array.from(seen).sort()];
+    return ['all' as const, ...Array.from(seen).sort((a, b) => a - b)];
   }, [campaigns]);
 
   const filtered = useMemo(
@@ -51,13 +48,13 @@ export default function ExplorePage() {
     [campaigns, activeCategory]
   );
 
-  // Sort by approval rate descending for the explore view
+  // Sort by funding progress descending for the explore view
   const sorted = useMemo(
     () =>
       [...filtered].sort((a, b) => {
-        const aRate = a.totalVotes > 0 ? a.upvotes / a.totalVotes : 0;
-        const bRate = b.totalVotes > 0 ? b.upvotes / b.totalVotes : 0;
-        return bRate - aRate;
+        const aProgress = a.funding_goal > BigInt(0) ? Number(a.amount_raised * BigInt(10000) / a.funding_goal) : 0;
+        const bProgress = b.funding_goal > BigInt(0) ? Number(b.amount_raised * BigInt(10000) / b.funding_goal) : 0;
+        return bProgress - aProgress;
       }),
     [filtered]
   );
@@ -76,7 +73,7 @@ export default function ExplorePage() {
         <div className="flex flex-wrap gap-2 mt-6">
           {categories.map((cat) => (
             <button
-              key={cat}
+              key={String(cat)}
               onClick={() => setActiveCategory(cat)}
               className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                 activeCategory === cat
@@ -84,7 +81,7 @@ export default function ExplorePage() {
                   : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
               }`}
             >
-              {cat === 'all' ? 'All' : (CATEGORY_ICONS[cat] ?? '') + ' ' + cat.charAt(0).toUpperCase() + cat.slice(1)}
+              {cat === 'all' ? 'All' : `${CATEGORY_ICONS[cat] ?? ''} ${CATEGORY_LABELS[cat]}`}
             </button>
           ))}
         </div>
@@ -130,46 +127,41 @@ export default function ExplorePage() {
       {/* Campaign list */}
       {!isLoading && !error && sorted.length > 0 && (
         <div className="mt-6 space-y-3">
-          {sorted.map((campaign, idx) => {
-            const approvalRate =
-              campaign.totalVotes > 0
-                ? Math.round((campaign.upvotes / campaign.totalVotes) * 100)
-                : 0;
-            return (
-              <Link
-                key={campaign.id}
-                href={`/causes/${campaign.id}`}
-                className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm transition-all group"
-              >
-                {/* Rank */}
-                <span className="w-6 text-center text-sm font-bold text-zinc-400 dark:text-zinc-500 shrink-0">
-                  {idx + 1}
-                </span>
+          {sorted.map((campaign, idx) => (
+            <Link
+              key={campaign.id}
+              href={`/causes/${campaign.id}`}
+              className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm transition-all group"
+            >
+              {/* Rank */}
+              <span className="w-6 text-center text-sm font-bold text-zinc-400 dark:text-zinc-500 shrink-0">
+                {idx + 1}
+              </span>
 
-                {/* Icon */}
-                <span className="text-2xl shrink-0">
-                  {CATEGORY_ICONS[campaign.category] ?? '💡'}
-                </span>
+              {/* Icon */}
+              <span className="text-2xl shrink-0">
+                {CATEGORY_ICONS[campaign.category] ?? '💡'}
+              </span>
 
-                {/* Title + meta */}
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-zinc-900 dark:text-zinc-50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
-                    {campaign.title}
-                  </p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                    By {formatAddress(campaign.creator)} · {campaign.totalVotes} votes · {approvalRate}% approval
-                  </p>
+              {/* Title + meta */}
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-zinc-900 dark:text-zinc-50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+                  {campaign.title}
+                </p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  By {formatAddress(campaign.creator)} · {stroopsToXlm(campaign.amount_raised).toFixed(1)} / {stroopsToXlm(campaign.funding_goal).toFixed(1)} XLM
+                </p>
+                <div className="mt-1.5">
+                  <FundingProgressBar amountRaised={campaign.amount_raised} fundingGoal={campaign.funding_goal} />
                 </div>
+              </div>
 
-                {/* Status badge */}
-                <span
-                  className={`shrink-0 px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_STYLES[campaign.status]}`}
-                >
-                  {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-                </span>
-              </Link>
-            );
-          })}
+              {/* Status badge */}
+              <div className="shrink-0">
+                <CampaignStatusBadge campaign={campaign} />
+              </div>
+            </Link>
+          ))}
         </div>
       )}
     </div>

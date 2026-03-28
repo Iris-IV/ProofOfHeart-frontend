@@ -1,15 +1,25 @@
 /**
- * @deprecated Mock campaign data has been moved to `src/lib/contractClient.ts`
- * and is gated behind the `NEXT_PUBLIC_USE_MOCKS=true` environment variable.
+ * UI filter constants used by listing pages.
  *
- * This file now only exports the UI filter constants (CATEGORIES, STATUSES,
- * SORT_OPTIONS) which are not mock data and remain safe to import.
- *
- * Do NOT add new mock data here. Use contractClient.ts instead.
+ * Mock campaign data lives in `src/lib/contractClient.ts` and is gated behind
+ * the `NEXT_PUBLIC_USE_MOCKS=true` environment variable.
  */
 
-export const CATEGORIES = ['all', 'environment', 'education', 'healthcare'] as const;
-export const STATUSES = ['all', 'pending', 'approved', 'rejected'] as const;
+import { Category, CATEGORY_LABELS, CampaignStatus } from '../types';
+
+/** Category options for filter dropdowns (enum value → label). */
+export const CATEGORIES = ['all', ...Object.values(CATEGORY_LABELS)] as const;
+
+/** Status options for filter dropdowns. */
+export const STATUSES: readonly ('all' | CampaignStatus)[] = [
+  'all',
+  'active',
+  'funded',
+  'failed',
+  'cancelled',
+  'verified',
+] as const;
+
 export const SORT_OPTIONS = [
   { value: 'newest', label: 'Newest First' },
   { value: 'oldest', label: 'Oldest First' },
