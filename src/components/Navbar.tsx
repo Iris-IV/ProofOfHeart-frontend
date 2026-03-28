@@ -69,9 +69,11 @@ export default function Navbar() {
               </button>
             </div>
           )}
+          {/* TODO: Remove this when we have a better wallet connection solution
           <div className="hidden md:block">
             <WalletConnection onWalletConnected={() => {}} onWalletDisconnected={() => {}} />
           </div>
+          */}
 
           <button
             type="button"
@@ -150,9 +152,11 @@ export default function Navbar() {
                 </button>
               </div>
             )}
+            {/* TODO: Remove this when we have a better wallet connection solution
             <div className="mt-2">
               <WalletConnection onWalletConnected={() => {}} onWalletDisconnected={() => {}} />
             </div>
+            */} 
           </div>
         </div>
       )}
