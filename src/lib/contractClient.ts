@@ -35,6 +35,10 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     category: 'environment',
     targetAmount: 10000,
     currentAmount: 6500,
+    deadline: Math.floor(Date.now() / 1000) + 86400 * 30, // 30 days from now
+    fundingGoal: 10000,
+    amountRaised: 6500,
+    isCancelled: false,
   },
   {
     id: 2,
@@ -50,6 +54,10 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     category: 'education',
     targetAmount: 5000,
     currentAmount: 1200,
+    deadline: Math.floor(Date.now() / 1000) - 86400, // Deadline passed (yesterday)
+    fundingGoal: 5000,
+    amountRaised: 1200,
+    isCancelled: false,
   },
   {
     id: 3,
@@ -65,6 +73,10 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     category: 'healthcare',
     targetAmount: 15000,
     currentAmount: 8900,
+    deadline: Math.floor(Date.now() / 1000) + 86400 * 60, // 60 days from now
+    fundingGoal: 15000,
+    amountRaised: 8900,
+    isCancelled: false,
   },
   {
     id: 4,
@@ -80,6 +92,10 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     category: 'environment',
     targetAmount: 8000,
     currentAmount: 3200,
+    deadline: Math.floor(Date.now() / 1000) + 86400 * 45, // 45 days from now
+    fundingGoal: 8000,
+    amountRaised: 3200,
+    isCancelled: true, // Cancelled — refund eligible
   },
   {
     id: 5,
@@ -95,6 +111,10 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     category: 'healthcare',
     targetAmount: 6000,
     currentAmount: 900,
+    deadline: Math.floor(Date.now() / 1000) + 86400 * 20, // 20 days from now
+    fundingGoal: 6000,
+    amountRaised: 900,
+    isCancelled: false,
   },
   {
     id: 6,
@@ -110,8 +130,17 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     category: 'environment',
     targetAmount: 20000,
     currentAmount: 17500,
+    deadline: Math.floor(Date.now() / 1000) + 86400 * 90, // 90 days from now
+    fundingGoal: 20000,
+    amountRaised: 17500,
+    isCancelled: false,
   },
 ];
+
+// Mock contribution amounts per connected wallet (keyed by "campaignId:contributor")
+const MOCK_CONTRIBUTIONS: Record<string, number> = {};
+// Track which contributors have already claimed refunds
+const MOCK_REFUNDED: Set<string> = new Set();
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -175,6 +204,92 @@ export async function getAllCampaigns(): Promise<Campaign[]> {
   // } catch (err) {
   //   throw new Error(parseContractError(err));
   // }
+  throw new Error(
+    'Live contract client is not yet wired up. Add NEXT_PUBLIC_USE_MOCKS=true to .env.local for development.'
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Contribution / Refund API
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the contribution amount (in XLM) for a given contributor on a
+ * specific campaign. Returns 0 when the contributor has no contribution.
+ */
+export async function getContribution(
+  campaignId: number,
+  contributor: string
+): Promise<number> {
+  if (USE_MOCKS) {
+    // Simulate a small delay
+    await new Promise((r) => setTimeout(r, 300));
+
+    const key = `${campaignId}:${contributor}`;
+
+    // If already refunded, contribution is zeroed
+    if (MOCK_REFUNDED.has(key)) return 0;
+
+    // Auto-seed a mock contribution when the wallet matches the demo address
+    if (!(key in MOCK_CONTRIBUTIONS)) {
+      // Give the connected wallet a mock contribution on refund-eligible campaigns
+      const campaign = MOCK_CAMPAIGNS.find((c) => c.id === campaignId);
+      if (campaign) {
+        const isEligible =
+          campaign.isCancelled ||
+          (Date.now() / 1000 > campaign.deadline &&
+            campaign.amountRaised < campaign.fundingGoal);
+        if (isEligible) {
+          // Seed a random contribution between 50 – 500 XLM
+          MOCK_CONTRIBUTIONS[key] = Math.floor(Math.random() * 451) + 50;
+        }
+      }
+    }
+
+    return MOCK_CONTRIBUTIONS[key] ?? 0;
+  }
+
+  // TODO(#14): Replace with real Soroban contract call
+  throw new Error(
+    'Live contract client is not yet wired up. Add NEXT_PUBLIC_USE_MOCKS=true to .env.local for development.'
+  );
+}
+
+/**
+ * Claims a refund for a contributor on a failed/cancelled campaign.
+ * Returns a mock transaction hash on success.
+ */
+export async function claimRefund(
+  campaignId: number,
+  contributor: string
+): Promise<{ transactionHash: string; refundedAmount: number }> {
+  if (USE_MOCKS) {
+    // Simulate network delay
+    await new Promise((r) => setTimeout(r, 1500));
+
+    const key = `${campaignId}:${contributor}`;
+
+    // Check if already refunded
+    if (MOCK_REFUNDED.has(key)) {
+      throw new Error('Already refunded');
+    }
+
+    const amount = MOCK_CONTRIBUTIONS[key] ?? 0;
+    if (amount === 0) {
+      throw new Error('No contribution found for this campaign.');
+    }
+
+    // Mark as refunded and zero the contribution
+    MOCK_REFUNDED.add(key);
+    MOCK_CONTRIBUTIONS[key] = 0;
+
+    return {
+      transactionHash: `mock_refund_tx_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+      refundedAmount: amount,
+    };
+  }
+
+  // TODO(#14): Replace with real Soroban contract call
   throw new Error(
     'Live contract client is not yet wired up. Add NEXT_PUBLIC_USE_MOCKS=true to .env.local for development.'
   );

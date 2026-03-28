@@ -12,6 +12,18 @@ export interface Campaign {
   category: string;
   targetAmount: number;  // in XLM
   currentAmount: number; // in XLM
+  deadline: number;      // Unix timestamp (seconds) — campaign end date
+  fundingGoal: number;   // funding goal in XLM (mirrors targetAmount on-chain)
+  amountRaised: number;  // total amount raised in XLM
+  isCancelled: boolean;  // true if the campaign was cancelled by creator/admin
+}
+
+/** Result returned after a successful refund claim. */
+export interface RefundResult {
+  campaignId: number;
+  contributor: string;
+  refundedAmount: number; // in XLM
+  transactionHash: string;
 }
 
 /** @deprecated Use Campaign instead — will be removed once contract integration is complete. */

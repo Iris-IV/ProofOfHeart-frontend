@@ -10,6 +10,7 @@ import { useToast } from '../../../components/ToastProvider';
 import { parseContractError } from '../../../utils/contractErrors';
 import VotingComponent from '../../../components/VotingComponent';
 import WalletConnection from '../../../components/WalletConnection';
+import RefundButton from '../../../components/RefundButton';
 
 const STATUS_STYLES: Record<Campaign['status'], string> = {
   approved: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
@@ -209,6 +210,11 @@ export default function CauseDetailPage() {
                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${STATUS_STYLES[campaign.status]}`}>
                   {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
                 </span>
+                {campaign.isCancelled && (
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
+                    Cancelled
+                  </span>
+                )}
               </div>
 
               <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4 leading-tight">
@@ -272,6 +278,12 @@ export default function CauseDetailPage() {
               onVote={handleVote}
               userVote={userVote}
               isVoting={isVoting}
+            />
+
+            {/* Refund claiming (shown only when eligible) */}
+            <RefundButton
+              campaign={campaign}
+              contributor={userWalletAddress}
             />
 
             {/* Creator info */}
