@@ -20,8 +20,10 @@ export function useCampaigns(): UseCampaignsResult {
   useEffect(() => {
     let cancelled = false;
 
-    setIsLoading(true);
-    setError(null);
+    setTimeout(() => {
+      setIsLoading(true);
+      setError(null);
+    }, 0);
 
     getAllCampaigns()
       .then((data) => {

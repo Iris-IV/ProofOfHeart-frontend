@@ -21,17 +21,22 @@ export function useCampaign(id: string | number): UseCampaignResult {
 
   useEffect(() => {
     if (isNaN(numericId)) {
-      setNotFound(true);
-      setIsLoading(false);
+      // Avoid calling setState synchronously in effect
+      setTimeout(() => {
+        setNotFound(true);
+        setIsLoading(false);
+      }, 0);
       return;
     }
 
     let cancelled = false;
 
-    setIsLoading(true);
-    setError(null);
-    setNotFound(false);
-    setCampaign(null);
+    setTimeout(() => {
+      setIsLoading(true);
+      setError(null);
+      setNotFound(false);
+      setCampaign(null);
+    }, 0);
 
     getCampaign(numericId)
       .then((data) => {
