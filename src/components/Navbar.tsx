@@ -11,7 +11,7 @@ const navLinks = [
   { href: "/causes", label: "Explore Causes" },
   { href: "/about", label: "About" },
 ];
-import { useTheme } from "./ThemeProvider";
+import { useTheme } from "@/hooks/useTheme";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
