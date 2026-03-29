@@ -26,6 +26,10 @@ export enum ContractError {
   NoFundsToWithdraw         = 13,
   CampaignAlreadyVerified   = 14,
   ValidationFailed          = 15,
+  AlreadyVoted              = 16,
+  NotTokenHolder            = 17,
+  VotingQuorumNotMet        = 18,
+  VotingThresholdNotMet     = 19,
 }
 
 // ---------------------------------------------------------------------------
@@ -63,6 +67,14 @@ export const errorMessages: Record<ContractError, string> = {
     'This campaign has already been verified.',
   [ContractError.ValidationFailed]:
     'Validation failed. Please check your input and try again.',
+  [ContractError.AlreadyVoted]:
+    'You have already voted on this campaign.',
+  [ContractError.NotTokenHolder]:
+    'You must hold the platform token to vote.',
+  [ContractError.VotingQuorumNotMet]:
+    'Not enough votes have been cast yet.',
+  [ContractError.VotingThresholdNotMet]:
+    'The approval threshold has not been reached.',
 };
 
 const FALLBACK_MESSAGE = 'An unexpected error occurred. Please try again.';

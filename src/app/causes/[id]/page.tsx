@@ -3,25 +3,17 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Campaign, Vote } from '../../../types';
+import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from '../../../types';
 import { useCampaign } from '../../../hooks/useCampaign';
 import { stellarVotingService } from '../../../services/stellarVoting';
 import { useToast } from '../../../components/ToastProvider';
 import { parseContractError } from '../../../utils/contractErrors';
 import VotingComponent from '../../../components/VotingComponent';
 import WalletConnection from '../../../components/WalletConnection';
-
-const STATUS_STYLES: Record<Campaign['status'], string> = {
-  approved: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
-  rejected: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200',
-  pending: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200',
-};
-
-const CATEGORY_ICONS: Record<string, string> = {
-  environment: '🌱',
-  education: '📚',
-  healthcare: '🏥',
-};
+import CampaignStatusBadge from '../../../components/CampaignStatusBadge';
+import DeadlineCountdown from '../../../components/DeadlineCountdown';
+import FundingProgressBar from '../../../components/FundingProgressBar';
+import WithdrawFunds from '../../../components/WithdrawFunds';
 
 function formatDate(ts: number) {
   return new Intl.DateTimeFormat('en-US', {
@@ -41,6 +33,7 @@ export default function CauseDetailPage() {
   const [userWalletAddress, setUserWalletAddress] = useState<string | null>(null);
   const [userVote, setUserVote] = useState<Vote | undefined>(undefined);
   const [isVoting, setIsVoting] = useState(false);
+  const [voteCounts, setVoteCounts] = useState({ upvotes: 0, downvotes: 0, totalVotes: 0 });
   const { showError, showSuccess, showWarning } = useToast();
 
   useEffect(() => {
@@ -88,16 +81,11 @@ export default function CauseDetailPage() {
         transactionHash,
       };
       setUserVote(newVote);
-      setCampaign((prev) =>
-        prev
-          ? {
-              ...prev,
-              upvotes: voteType === 'upvote' ? prev.upvotes + 1 : prev.upvotes,
-              downvotes: voteType === 'downvote' ? prev.downvotes + 1 : prev.downvotes,
-              totalVotes: prev.totalVotes + 1,
-            }
-          : prev
-      );
+      setVoteCounts((prev) => ({
+        upvotes: voteType === 'upvote' ? prev.upvotes + 1 : prev.upvotes,
+        downvotes: voteType === 'downvote' ? prev.downvotes + 1 : prev.downvotes,
+        totalVotes: prev.totalVotes + 1,
+      }));
       showSuccess('Your vote has been cast successfully.');
     } catch (error) {
       showError(parseContractError(error));
@@ -170,13 +158,17 @@ export default function CauseDetailPage() {
     );
   }
 
+  const raised = stroopsToXlm(campaign.amount_raised);
+  const goal = stroopsToXlm(campaign.funding_goal);
   const fundingPct =
-    campaign.targetAmount > 0
-      ? Math.min(100, Math.round((campaign.currentAmount / campaign.targetAmount) * 100))
+    goal > 0
+      ? Math.min(100, Math.round((raised / goal) * 100))
       : 0;
 
   const approvalRate =
-    campaign.totalVotes > 0 ? Math.round((campaign.upvotes / campaign.totalVotes) * 100) : 0;
+    voteCounts.totalVotes > 0 ? Math.round((voteCounts.upvotes / voteCounts.totalVotes) * 100) : 0;
+
+  const categoryLabel = CATEGORY_LABELS[campaign.category] ?? 'Other';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
@@ -202,13 +194,10 @@ export default function CauseDetailPage() {
             {/* Title & status */}
             <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
               <div className="flex flex-wrap items-center gap-3 mb-4">
-                <span className="text-2xl">{CATEGORY_ICONS[campaign.category] ?? '💡'}</span>
-                <span className="capitalize text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                  {campaign.category}
+                <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                  {categoryLabel}
                 </span>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${STATUS_STYLES[campaign.status]}`}>
-                  {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-                </span>
+                <CampaignStatusBadge campaign={campaign} />
               </div>
 
               <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4 leading-tight">
@@ -223,7 +212,7 @@ export default function CauseDetailPage() {
             {/* Stats row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700 text-center">
-                <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{campaign.totalVotes}</div>
+                <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{voteCounts.totalVotes}</div>
                 <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Total Votes</div>
               </div>
               <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700 text-center">
@@ -236,29 +225,31 @@ export default function CauseDetailPage() {
               </div>
               <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700 text-center">
                 <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-                  {campaign.currentAmount.toLocaleString()}
+                  {raised.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                 </div>
                 <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">XLM Raised</div>
               </div>
             </div>
 
+            {/* Deadline countdown */}
+            <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Campaign Deadline</h2>
+              <DeadlineCountdown deadline={campaign.deadline} />
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+                Ends {formatDate(campaign.deadline)}
+              </p>
+            </div>
+
             {/* Funding progress */}
-            {campaign.targetAmount > 0 && (
+            {campaign.funding_goal > BigInt(0) && (
               <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
                 <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-4">
                   Funding Progress
                 </h2>
-                <div className="flex justify-between text-sm text-zinc-600 dark:text-zinc-400 mb-2">
-                  <span>{campaign.currentAmount.toLocaleString()} XLM raised</span>
-                  <span>Goal: {campaign.targetAmount.toLocaleString()} XLM</span>
-                </div>
-                <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-3 mb-2">
-                  <div
-                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-500"
-                    style={{ width: `${fundingPct}%` }}
-                  />
-                </div>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">{fundingPct}% of goal reached</p>
+                <FundingProgressBar
+                  amountRaised={campaign.amount_raised}
+                  fundingGoal={campaign.funding_goal}
+                />
               </div>
             )}
           </div>
@@ -272,6 +263,15 @@ export default function CauseDetailPage() {
               onVote={handleVote}
               userVote={userVote}
               isVoting={isVoting}
+              upvotes={voteCounts.upvotes}
+              downvotes={voteCounts.downvotes}
+              totalVotes={voteCounts.totalVotes}
+            />
+
+            {/* Withdraw Funds — only visible to the campaign creator */}
+            <WithdrawFunds
+              campaign={campaign}
+              userWalletAddress={userWalletAddress}
             />
 
             {/* Creator info */}
@@ -286,7 +286,7 @@ export default function CauseDetailPage() {
                     {campaign.creator.slice(0, 10)}...{campaign.creator.slice(-6)}
                   </p>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    {formatDate(campaign.createdAt)}
+                    Deadline: {formatDate(campaign.deadline)}
                   </p>
                 </div>
               </div>
@@ -299,10 +299,10 @@ export default function CauseDetailPage() {
               </h2>
               <div className="flex justify-between text-sm mb-2">
                 <span className="text-green-600 dark:text-green-400 font-medium">
-                  ✓ Approve ({campaign.upvotes})
+                  ✓ Approve ({voteCounts.upvotes})
                 </span>
                 <span className="text-red-500 dark:text-red-400 font-medium">
-                  ✗ Reject ({campaign.downvotes})
+                  ✗ Reject ({voteCounts.downvotes})
                 </span>
               </div>
               <div className="w-full bg-red-200 dark:bg-red-900/40 rounded-full h-2">
@@ -310,14 +310,14 @@ export default function CauseDetailPage() {
                   className="bg-green-500 h-2 rounded-full transition-all duration-300"
                   style={{
                     width:
-                      campaign.totalVotes > 0
-                        ? `${(campaign.upvotes / campaign.totalVotes) * 100}%`
+                      voteCounts.totalVotes > 0
+                        ? `${(voteCounts.upvotes / voteCounts.totalVotes) * 100}%`
                         : '50%',
                   }}
                 />
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
-                {campaign.totalVotes} total votes cast
+                {voteCounts.totalVotes} total votes cast
               </p>
             </div>
 
