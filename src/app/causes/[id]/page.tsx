@@ -2,6 +2,7 @@ import { Metadata, ResolvingMetadata } from 'next';
 import { getCampaign } from '../../../lib/contractClient';
 import { stroopsToXlm } from '../../../types';
 import CauseDetailClient from './CauseDetailClient';
+import { Link } from 'react-router-dom';
 
 interface PageProps {
   params: { id: string };
