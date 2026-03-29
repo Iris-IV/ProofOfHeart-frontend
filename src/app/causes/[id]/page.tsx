@@ -7,50 +7,120 @@ interface PageProps {
   params: { id: string };
 }
 
-export async function generateMetadata(
-  { params }: PageProps,
-  _parent: ResolvingMetadata
-): Promise<Metadata> {
-  const id = parseInt(params.id, 10);
-  if (isNaN(id)) return {};
+export default function CauseDetailPage() {
+  const { id } = useParams<{ id: string }>();
 
-  try {
-    const campaign = await getCampaign(id);
-    if (!campaign) return { title: 'Cause Not Found | Proof of Heart' };
+  const { campaign: fetchedCampaign, isLoading, error, notFound } = useCampaign(id);
 
-    const raised = stroopsToXlm(campaign.amount_raised);
-    const goal = stroopsToXlm(campaign.funding_goal);
-    const description = `${campaign.description.slice(0, 160)}... Raised ${raised} XLM of ${goal} XLM goal.`;
+  // Local copy for optimistic vote updates
+  const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [userWalletAddress, setUserWalletAddress] = useState<string | null>(null);
+  const [userVote, setUserVote] = useState<Vote | undefined>(undefined);
+  const [isVoting, setIsVoting] = useState(false);
+  const [voteCounts, setVoteCounts] = useState({ upvotes: 0, downvotes: 0, totalVotes: 0 });
+  const { showError, showSuccess, showWarning } = useToast();
 
-    return {
-      title: `${campaign.title} | Proof of Heart`,
-      description,
-      openGraph: {
-        title: campaign.title,
-        description,
-        url: `https://proofofheart.io/causes/${params.id}`,
-        siteName: 'Proof of Heart',
-        images: [
-          {
-            url: `https://proofofheart.io/api/og/campaign/${params.id}`,
-            width: 1200,
-            height: 630,
-            alt: campaign.title,
-          },
-        ],
-        locale: 'en_US',
-        type: 'website',
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title: campaign.title,
-        description,
-        images: [`https://proofofheart.io/api/og/campaign/${params.id}`],
-      },
-    };
-  } catch (err) {
-    console.error('Metadata error:', err);
-    return { title: 'Proof of Heart | Campaign' };
+  useEffect(() => {
+    if (fetchedCampaign) setCampaign(fetchedCampaign);
+  }, [fetchedCampaign]);
+
+  useEffect(() => {
+    if (!userWalletAddress || !campaign) return;
+    const existing = stellarVotingService.getUserVote(String(campaign.id), userWalletAddress);
+    if (existing) {
+      setUserVote({
+        campaignId: String(campaign.id),
+        voter: userWalletAddress,
+        voteType: existing.voteType,
+        timestamp: existing.timestamp,
+        transactionHash: 'mock-hash',
+      });
+    }
+  }, [userWalletAddress, campaign]);
+
+  const handleWalletConnected = (publicKey: string) => setUserWalletAddress(publicKey);
+  const handleWalletDisconnected = () => {
+    setUserWalletAddress(null);
+    setUserVote(undefined);
+  };
+
+  const handleVote = async (campaignId: number, voteType: 'upvote' | 'downvote') => {
+    if (!userWalletAddress) {
+      showWarning('Please connect your wallet first.');
+      return;
+    }
+    const id = String(campaignId);
+    if (stellarVotingService.hasUserVoted(id, userWalletAddress)) {
+      showWarning('You have already voted on this cause.');
+      return;
+    }
+    setIsVoting(true);
+    try {
+      const transactionHash = await stellarVotingService.castVote(id, voteType, userWalletAddress);
+      const newVote: Vote = {
+        campaignId: id,
+        voter: userWalletAddress,
+        voteType,
+        timestamp: new Date(),
+        transactionHash,
+      };
+      setUserVote(newVote);
+      setVoteCounts((prev) => ({
+        upvotes: voteType === 'upvote' ? prev.upvotes + 1 : prev.upvotes,
+        downvotes: voteType === 'downvote' ? prev.downvotes + 1 : prev.downvotes,
+        totalVotes: prev.totalVotes + 1,
+      }));
+      showSuccess('Your vote has been cast successfully.');
+    } catch (error) {
+      showError(parseContractError(error));
+    } finally {
+      setIsVoting(false);
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Render states
+  // -------------------------------------------------------------------------
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+        <main className="container mx-auto px-4 py-8 max-w-5xl">
+          <div className="animate-pulse space-y-6">
+            <div className="h-5 bg-zinc-200 dark:bg-zinc-700 rounded w-48" />
+            <div className="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 p-6 space-y-4">
+              <div className="h-8 bg-zinc-200 dark:bg-zinc-700 rounded w-3/4" />
+              <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-full" />
+              <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-5/6" />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700 h-20" />
+              ))}
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+        <main className="container mx-auto px-4 py-24 text-center">
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">
+            Failed to load cause
+          </h1>
+          <p className="text-zinc-600 dark:text-zinc-400 mb-8">{error}</p>
+          <Link
+            href="/causes"
+            className="px-6 py-3 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors"
+          >
+            ← Back to Causes
+          </Link>
+        </main>
+      </div>
+    );
   }
 }
 
