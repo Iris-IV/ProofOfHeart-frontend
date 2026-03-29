@@ -106,21 +106,15 @@ export function xlmToStroops(xlm: number): bigint {
 }
 
 // ---------------------------------------------------------------------------
-// Voting types — retained for the community voting feature
+// Voting types — UI-only, not part of contract Campaign
 // ---------------------------------------------------------------------------
 
 export interface Vote {
-  causeId: string;
+  campaignId: string;
   voter: string;
   voteType: 'upvote' | 'downvote';
   timestamp: Date;
   transactionHash: string;
 }
 
-export interface VotingResult {
-  causeId: string;
-  upvotes: number;
-  downvotes: number;
-  totalVotes: number;
-  approvalRate: number;
-}
+// VotingResult is deprecated; use local state shape instead if needed
