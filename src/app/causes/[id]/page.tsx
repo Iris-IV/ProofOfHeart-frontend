@@ -13,7 +13,8 @@ import WalletConnection from '../../../components/WalletConnection';
 import CampaignStatusBadge from '../../../components/CampaignStatusBadge';
 import DeadlineCountdown from '../../../components/DeadlineCountdown';
 import FundingProgressBar from '../../../components/FundingProgressBar';
-import WithdrawFunds from '../../../components/WithdrawFunds';
+import { useWallet } from '../../../components/WalletContext';
+import CampaignActions from '../../../components/CampaignActions';
 
 function formatDate(ts: number) {
   return new Intl.DateTimeFormat('en-US', {
@@ -25,12 +26,12 @@ function formatDate(ts: number) {
 
 export default function CauseDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { publicKey: userWalletAddress } = useWallet();
 
   const { campaign: fetchedCampaign, isLoading, error, notFound, refetch } = useCampaign(id);
 
   // Local copy for optimistic vote updates
   const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [userWalletAddress, setUserWalletAddress] = useState<string | null>(null);
   const [userVote, setUserVote] = useState<Vote | undefined>(undefined);
   const [isVoting, setIsVoting] = useState(false);
   const [voteCounts, setVoteCounts] = useState({ upvotes: 0, downvotes: 0, totalVotes: 0 });
@@ -53,12 +54,6 @@ export default function CauseDetailPage() {
       });
     }
   }, [userWalletAddress, campaign]);
-
-  const handleWalletConnected = (publicKey: string) => setUserWalletAddress(publicKey);
-  const handleWalletDisconnected = () => {
-    setUserWalletAddress(null);
-    setUserVote(undefined);
-  };
 
   const handleVote = async (campaignId: number, voteType: 'upvote' | 'downvote') => {
     if (!userWalletAddress) {
@@ -185,10 +180,6 @@ export default function CauseDetailPage() {
             <span>›</span>
             <span className="text-zinc-900 dark:text-zinc-50 truncate max-w-xs">{campaign.title}</span>
           </nav>
-          <WalletConnection
-            onWalletConnected={handleWalletConnected}
-            onWalletDisconnected={handleWalletDisconnected}
-          />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -271,10 +262,10 @@ export default function CauseDetailPage() {
               totalVotes={voteCounts.totalVotes}
             />
 
-            {/* Withdraw Funds — only visible to the campaign creator */}
-            <WithdrawFunds
+            {/* Role-aware actions */}
+            <CampaignActions
               campaign={campaign}
-              userWalletAddress={userWalletAddress}
+              onActionSuccess={refetch}
             />
 
             {/* Creator info */}
