@@ -19,31 +19,31 @@ export function useCampaign(id: string | number): UseCampaignResult {
   const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !isNaN(numericId));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notFound, setNotFound] = useState(false);
+  const [notFound, setNotFound] = useState(() => isNaN(numericId));
   const [tick, setTick] = useState(0);
   const isFirstLoad = useRef(true);
 
+  const [prevId, setPrevId] = useState(numericId);
+  if (numericId !== prevId) {
+    setPrevId(numericId);
+    setCampaign(null);
+    setIsLoading(!isNaN(numericId));
+    setNotFound(isNaN(numericId));
+    setError(null);
+  }
+
   const refetch = useCallback(() => {
+    setIsRefreshing(true);
     setTick((t) => t + 1);
   }, []);
 
   useEffect(() => {
-    if (isNaN(numericId)) {
-      setNotFound(true);
-      setIsLoading(false);
-      return;
-    }
+    if (isNaN(numericId)) return;
 
     let cancelled = false;
-
-    if (isFirstLoad.current) {
-      setIsLoading(true);
-    } else {
-      setIsRefreshing(true);
-    }
 
     getCampaign(numericId)
       .then((data) => {

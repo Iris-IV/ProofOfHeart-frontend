@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from '../../../types';
 import { useCampaign } from '../../../hooks/useCampaign';
@@ -9,7 +8,6 @@ import { stellarVotingService } from '../../../services/stellarVoting';
 import { useToast } from '../../../components/ToastProvider';
 import { parseContractError } from '../../../utils/contractErrors';
 import VotingComponent from '../../../components/VotingComponent';
-import WalletConnection from '../../../components/WalletConnection';
 import CampaignStatusBadge from '../../../components/CampaignStatusBadge';
 import DeadlineCountdown from '../../../components/DeadlineCountdown';
 import FundingProgressBar from '../../../components/FundingProgressBar';

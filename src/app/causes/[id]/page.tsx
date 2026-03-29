@@ -9,7 +9,7 @@ interface PageProps {
 
 export async function generateMetadata(
   { params }: PageProps,
-  parent: ResolvingMetadata
+  _parent: ResolvingMetadata
 ): Promise<Metadata> {
   const id = parseInt(params.id, 10);
   if (isNaN(id)) return {};

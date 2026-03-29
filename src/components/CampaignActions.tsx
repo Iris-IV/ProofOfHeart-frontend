@@ -25,7 +25,7 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
   const { publicKey, connectWallet, isWalletConnected } = useWallet();
   const { admin } = useAdmin();
   const { contribution } = useContribution(campaign.id, publicKey);
-  const { showSuccess, showError, showWarning } = useToast();
+  const { showSuccess, showError } = useToast();
   const [isPending, setIsPending] = useState(false);
 
   const isCreator = publicKey === campaign.creator;

@@ -22,16 +22,13 @@ export function useCampaigns(): UseCampaignsResult {
   const [tick, setTick] = useState(0);
   const isFirstLoad = useRef(true);
 
-  const refetch = useCallback(() => setTick((t) => t + 1), []);
+  const refetch = useCallback(() => {
+    setIsRefreshing(true);
+    setTick((t) => t + 1);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-
-    if (isFirstLoad.current) {
-      setIsLoading(true);
-    } else {
-      setIsRefreshing(true);
-    }
 
     getAllCampaigns()
       .then((data) => {
