@@ -1,3 +1,4 @@
+"use client";
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { getAddress, isConnected, isAllowed } from '@stellar/freighter-api';
 import { useToast } from './ToastProvider';
@@ -39,7 +40,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         setIsWalletConnected(true);
         localStorage.setItem('stellar_wallet_public_key', key.address);
       }
-    } catch (error) {
+    } catch {
       // Not connected
     }
   };
@@ -65,7 +66,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       setIsWalletConnected(true);
       localStorage.setItem('stellar_wallet_public_key', key.address);
       showSuccess('Wallet connected successfully.');
-    } catch (error) {
+    } catch {
       showError('Failed to connect wallet. Please try again.');
     } finally {
       setIsLoading(false);

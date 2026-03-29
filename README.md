@@ -76,7 +76,7 @@ NEXT_PUBLIC_API_URL=https://api.proofofheart.org
 # NEXT_PUBLIC_CHAIN_ID=1
 ```
 
-## 🤝 Contributing
+## 🤝 Contributing!
 
 We welcome contributions! To maintain a clean and consistent codebase, please follow these guidelines:
 

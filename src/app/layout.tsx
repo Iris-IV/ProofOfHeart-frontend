@@ -11,6 +11,8 @@ export const metadata: Metadata = {
     "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
 };
 
+import { ThemeProvider } from "@/components/ThemeProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -19,15 +21,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <ToastProvider>
-          <WalletProvider>
-            <div className="flex min-h-screen flex-col">
-              <Navbar />
-              <main className="flex-1">{children}</main>
-              <Footer />
-            </div>
-          </WalletProvider>
-        </ToastProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <WalletProvider>
+              <div className="flex min-h-screen flex-col">
+                <Navbar />
+                <main className="flex-1">{children}</main>
+                <Footer />
+              </div>
+            </WalletProvider>
+          </ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

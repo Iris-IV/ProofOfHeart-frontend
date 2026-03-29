@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Campaign } from '../types';
-import { getContribution, claimRefund } from '../lib/contractClient';
+import { getContributionXlm, claimRefundXlm } from '../lib/contractClient';
 
 export interface UseRefundResult {
   /** The contributor's refundable amount (XLM). 0 means no refund available. */
@@ -33,9 +33,9 @@ export interface UseRefundResult {
  *  - Its deadline has passed AND the funding goal was NOT reached
  */
 function checkRefundEligibility(campaign: Campaign): boolean {
-  if (campaign.isCancelled) return true;
+  if (campaign.is_cancelled) return true;
   const now = Date.now() / 1000;
-  return now > campaign.deadline && campaign.amountRaised < campaign.fundingGoal;
+  return now > campaign.deadline && campaign.amount_raised < campaign.funding_goal;
 }
 
 /**
@@ -72,7 +72,7 @@ export function useRefund(
     setIsLoadingContribution(true);
     setError(null);
 
-    getContribution(campaign.id, contributor)
+    getContributionXlm(campaign.id, contributor)
       .then((amount) => {
         if (!cancelled) setContributionAmount(amount);
       })
@@ -105,7 +105,7 @@ export function useRefund(
     setError(null);
 
     try {
-      const result = await claimRefund(campaign.id, contributor);
+      const result = await claimRefundXlm(campaign.id, contributor);
       setIsRefunded(true);
       setRefundedAmount(result.refundedAmount);
       setTransactionHash(result.transactionHash);

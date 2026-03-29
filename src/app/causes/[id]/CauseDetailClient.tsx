@@ -13,7 +13,6 @@ import DeadlineCountdown from '../../../components/DeadlineCountdown';
 import FundingProgressBar from '../../../components/FundingProgressBar';
 import { useWallet } from '../../../components/WalletContext';
 import CampaignActions from '../../../components/CampaignActions';
-import RefundButton from '../../../components/RefundButton';
 
 function formatDate(ts: number) {
   return new Intl.DateTimeFormat('en-US', {
@@ -264,12 +263,6 @@ export default function CauseDetailClient({ id }: { id: string }) {
             <CampaignActions
               campaign={campaign}
               onActionSuccess={refetch}
-            />
-
-            {/* Refund claiming */}
-            <RefundButton
-              campaign={campaign}
-              contributor={userWalletAddress}
             />
 
             {/* Creator info */}
