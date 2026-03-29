@@ -26,7 +26,7 @@ function formatDate(ts: number) {
 export default function CauseDetailPage() {
   const { id } = useParams<{ id: string }>();
 
-  const { campaign: fetchedCampaign, isLoading, error, notFound } = useCampaign(id);
+  const { campaign: fetchedCampaign, isLoading, error, notFound, refetch } = useCampaign(id);
 
   // Local copy for optimistic vote updates
   const [campaign, setCampaign] = useState<Campaign | null>(null);
@@ -87,6 +87,9 @@ export default function CauseDetailPage() {
         totalVotes: prev.totalVotes + 1,
       }));
       showSuccess('Your vote has been cast successfully.');
+      
+      // Trigger immediate refetch after successful transaction
+      refetch();
     } catch (error) {
       showError(parseContractError(error));
     } finally {
