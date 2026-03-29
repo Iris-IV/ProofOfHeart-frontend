@@ -6,7 +6,7 @@ export class StellarVotingService {
   private votes: Record<string, { voter: string; voteType: 'upvote' | 'downvote'; timestamp: Date }[]> = {};
 
   async castVote(
-    causeId: string,
+    campaignId: string,
     voteType: 'upvote' | 'downvote',
     voterPublicKey: string
   ): Promise<string> {
@@ -14,16 +14,16 @@ export class StellarVotingService {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Check if user already voted
-    if (this.hasUserVoted(causeId, voterPublicKey)) {
-      throw new Error('User has already voted on this cause');
+    if (this.hasUserVoted(campaignId, voterPublicKey)) {
+      throw new Error('User has already voted on this campaign');
     }
 
     // Record the vote
-    if (!this.votes[causeId]) {
-      this.votes[causeId] = [];
+    if (!this.votes[campaignId]) {
+      this.votes[campaignId] = [];
     }
 
-    this.votes[causeId].push({
+    this.votes[campaignId].push({
       voter: voterPublicKey,
       voteType,
       timestamp: new Date(),
@@ -35,29 +35,29 @@ export class StellarVotingService {
     return mockTransactionHash;
   }
 
-  hasUserVoted(causeId: string, voterPublicKey: string): boolean {
-    const causeVotes = this.votes[causeId];
-    if (!causeVotes) return false;
+  hasUserVoted(campaignId: string, voterPublicKey: string): boolean {
+    const campaignVotes = this.votes[campaignId];
+    if (!campaignVotes) return false;
 
-    return causeVotes.some(vote => vote.voter === voterPublicKey);
+    return campaignVotes.some(vote => vote.voter === voterPublicKey);
   }
 
-  async getVoteCounts(causeId: string): Promise<{ upvotes: number; downvotes: number }> {
-    const causeVotes = this.votes[causeId];
-    if (!causeVotes) return { upvotes: 0, downvotes: 0 };
+  async getVoteCounts(campaignId: string): Promise<{ upvotes: number; downvotes: number }> {
+    const campaignVotes = this.votes[campaignId];
+    if (!campaignVotes) return { upvotes: 0, downvotes: 0 };
 
-    const upvotes = causeVotes.filter(vote => vote.voteType === 'upvote').length;
-    const downvotes = causeVotes.filter(vote => vote.voteType === 'downvote').length;
+    const upvotes = campaignVotes.filter(vote => vote.voteType === 'upvote').length;
+    const downvotes = campaignVotes.filter(vote => vote.voteType === 'downvote').length;
 
     return { upvotes, downvotes };
   }
 
   // Get user's vote for a cause
-  getUserVote(causeId: string, voterPublicKey: string): { voteType: 'upvote' | 'downvote'; timestamp: Date } | null {
-    const causeVotes = this.votes[causeId];
-    if (!causeVotes) return null;
+  getUserVote(campaignId: string, voterPublicKey: string): { voteType: 'upvote' | 'downvote'; timestamp: Date } | null {
+    const campaignVotes = this.votes[campaignId];
+    if (!campaignVotes) return null;
 
-    const userVote = causeVotes.find(vote => vote.voter === voterPublicKey);
+    const userVote = campaignVotes.find(vote => vote.voter === voterPublicKey);
     return userVote || null;
   }
 }
