@@ -120,6 +120,7 @@ export default function DashboardPage() {
                         {vote.transactionHash}
                       </a>
                     )
+                    {vote.voteType === 'upvote' ? 'Upvoted' : 'Downvoted'} on {vote.timestamp.toLocaleDateString()} (tx: {vote.transactionHash})
                   </div>
                 </li>
               );
@@ -151,6 +152,7 @@ export default function DashboardPage() {
                         {fund.tx}
                       </a>
                     )
+                    Donated {fund.amount} XLM on {fund.timestamp.toLocaleDateString()} (tx: {fund.tx})
                   </div>
                 </li>
               );

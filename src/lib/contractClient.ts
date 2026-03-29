@@ -401,6 +401,20 @@ export async function getRevenueClaimed(
     throw new Error(parseContractError(err));
   }
 }
+/**
+ * Fetches the contract admin address.
+ */
+export async function getAdmin(): Promise<string> {
+  if (USE_MOCKS) return 'GADMIN123456789012345678901234567890123456789012345678901234567890';
+
+  try {
+    const result = await invokeViewMethod('get_admin');
+    if (!result) return '';
+    return StellarSdk.Address.fromScVal(result).toString();
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Public API — Write (mutate) functions
@@ -604,6 +618,27 @@ export async function claimRevenue(
 
   try {
     const txResult = await buildAndSubmitTransaction(contributor, op);
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Verify a campaign (admin only).
+ */
+export async function verifyCampaign(campaignId: number): Promise<string> {
+  if (USE_MOCKS) return 'mock_tx_verify_campaign';
+
+  const { address: callerAddress } = await getAddress();
+  const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    'verify_campaign',
+    StellarSdk.nativeToScVal(campaignId, { type: 'u32' }),
+  );
+
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op);
     return txResult.txHash;
   } catch (err) {
     throw new Error(parseContractError(err));

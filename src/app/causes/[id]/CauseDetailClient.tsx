@@ -1,23 +1,18 @@
-import { Metadata, ResolvingMetadata } from 'next';
-import { getCampaign } from '../../../lib/contractClient';
-import { stroopsToXlm } from '../../../types';
-import CauseDetailClient from './CauseDetailClient';
+'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from '../../../types';
-import { explorerTxUrl } from '../../../utils/explorer';
 import { useCampaign } from '../../../hooks/useCampaign';
 import { stellarVotingService } from '../../../services/stellarVoting';
 import { useToast } from '../../../components/ToastProvider';
 import { parseContractError } from '../../../utils/contractErrors';
 import VotingComponent from '../../../components/VotingComponent';
-import WalletConnection from '../../../components/WalletConnection';
 import CampaignStatusBadge from '../../../components/CampaignStatusBadge';
 import DeadlineCountdown from '../../../components/DeadlineCountdown';
 import FundingProgressBar from '../../../components/FundingProgressBar';
-import WithdrawFunds from '../../../components/WithdrawFunds';
+import { useWallet } from '../../../components/WalletContext';
+import CampaignActions from '../../../components/CampaignActions';
 
 function formatDate(ts: number) {
   return new Intl.DateTimeFormat('en-US', {
@@ -25,18 +20,15 @@ function formatDate(ts: number) {
     month: 'long',
     day: 'numeric',
   }).format(new Date(ts * 1000));
-interface PageProps {
-  params: { id: string };
 }
 
-export default function CauseDetailPage() {
-  const { id } = useParams<{ id: string }>();
+export default function CauseDetailClient({ id }: { id: string }) {
+  const { publicKey: userWalletAddress } = useWallet();
 
-  const { campaign: fetchedCampaign, isLoading, error, notFound } = useCampaign(id);
+  const { campaign: fetchedCampaign, isLoading, error, notFound, refetch } = useCampaign(id);
 
   // Local copy for optimistic vote updates
   const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [userWalletAddress, setUserWalletAddress] = useState<string | null>(null);
   const [userVote, setUserVote] = useState<Vote | undefined>(undefined);
   const [isVoting, setIsVoting] = useState(false);
   const [voteCounts, setVoteCounts] = useState({ upvotes: 0, downvotes: 0, totalVotes: 0 });
@@ -51,7 +43,7 @@ export default function CauseDetailPage() {
     const existing = stellarVotingService.getUserVote(String(campaign.id), userWalletAddress);
     if (existing) {
       setUserVote({
-        campaignId: String(campaign.id),
+        causeId: String(campaign.id),
         voter: userWalletAddress,
         voteType: existing.voteType,
         timestamp: existing.timestamp,
@@ -59,12 +51,6 @@ export default function CauseDetailPage() {
       });
     }
   }, [userWalletAddress, campaign]);
-
-  const handleWalletConnected = (publicKey: string) => setUserWalletAddress(publicKey);
-  const handleWalletDisconnected = () => {
-    setUserWalletAddress(null);
-    setUserVote(undefined);
-  };
 
   const handleVote = async (campaignId: number, voteType: 'upvote' | 'downvote') => {
     if (!userWalletAddress) {
@@ -80,7 +66,7 @@ export default function CauseDetailPage() {
     try {
       const transactionHash = await stellarVotingService.castVote(id, voteType, userWalletAddress);
       const newVote: Vote = {
-        campaignId: id,
+        causeId: id,
         voter: userWalletAddress,
         voteType,
         timestamp: new Date(),
@@ -92,9 +78,10 @@ export default function CauseDetailPage() {
         downvotes: voteType === 'downvote' ? prev.downvotes + 1 : prev.downvotes,
         totalVotes: prev.totalVotes + 1,
       }));
-      showSuccess(
-        `Your vote has been cast successfully. <a href="${explorerTxUrl(transactionHash)}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;">View on Explorer</a>`
-      );
+      showSuccess('Your vote has been cast successfully.');
+      
+      // Trigger immediate refetch after successful transaction
+      refetch();
     } catch (error) {
       showError(parseContractError(error));
     } finally {
@@ -146,7 +133,6 @@ export default function CauseDetailPage() {
       </div>
     );
   }
-}
 
   if (notFound || !campaign) {
     return (
@@ -180,7 +166,7 @@ export default function CauseDetailPage() {
   const categoryLabel = CATEGORY_LABELS[campaign.category] ?? 'Other';
 
   return (
-  <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+    <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
       <main className="container mx-auto px-4 py-8 max-w-5xl">
         {/* Breadcrumb + Wallet */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -191,10 +177,6 @@ export default function CauseDetailPage() {
             <span>›</span>
             <span className="text-zinc-900 dark:text-zinc-50 truncate max-w-xs">{campaign.title}</span>
           </nav>
-          <WalletConnection
-            onWalletConnected={handleWalletConnected}
-            onWalletDisconnected={handleWalletDisconnected}
-          />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -277,10 +259,10 @@ export default function CauseDetailPage() {
               totalVotes={voteCounts.totalVotes}
             />
 
-            {/* Withdraw Funds — only visible to the campaign creator */}
-            <WithdrawFunds
+            {/* Role-aware actions */}
+            <CampaignActions
               campaign={campaign}
-              userWalletAddress={userWalletAddress}
+              onActionSuccess={refetch}
             />
 
             {/* Creator info */}
@@ -341,6 +323,4 @@ export default function CauseDetailPage() {
       </main>
     </div>
   );
-export default function Page({ params }: PageProps) {
-  return <CauseDetailClient id={params.id} />;
 }
