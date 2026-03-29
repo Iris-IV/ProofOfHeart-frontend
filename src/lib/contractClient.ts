@@ -14,11 +14,7 @@
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { signTransaction, getAddress } from '@stellar/freighter-api';
 import { Campaign, Category } from '../types';
-import {
-  ContractErrorException,
-  ContractError,
-  parseContractError,
-} from '../utils/contractErrors';
+import { parseContractError } from '../utils/contractErrors';
 
 // ---------------------------------------------------------------------------
 // Environment configuration

@@ -20,8 +20,12 @@ export function useCampaigns(): UseCampaignsResult {
   useEffect(() => {
     let cancelled = false;
 
-    setIsLoading(true);
-    setError(null);
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setIsLoading(true);
+        setError(null);
+      }
+    });
 
     getAllCampaigns()
       .then((data) => {

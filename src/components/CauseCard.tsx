@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Campaign, Vote, CATEGORY_LABELS, deriveCampaignStatus, stroopsToXlm } from '../types';
+import { Campaign, Vote, CATEGORY_LABELS } from '../types';
 import VotingComponent from './VotingComponent';
 import CampaignStatusBadge from './CampaignStatusBadge';
 import FundingProgressBar from './FundingProgressBar';

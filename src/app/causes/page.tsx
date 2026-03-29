@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Campaign, Vote, Category, CATEGORY_LABELS, deriveCampaignStatus, CampaignStatus } from '../../types';
+import { Campaign, Vote, CATEGORY_LABELS, deriveCampaignStatus, CampaignStatus } from '../../types';
 import { SORT_OPTIONS } from '../../lib/mockCauses';
 import { stellarVotingService } from '../../services/stellarVoting';
 import { useCampaigns } from '../../hooks/useCampaigns';
@@ -59,7 +59,6 @@ function CausesContent() {
 
   const debouncedSearch = useDebounce(rawSearch, 300);
 
-  const CATEGORY_OPTIONS = ['all', ...Object.values(Category).filter((v) => typeof v === 'number')] as const;
   const STATUS_OPTIONS: ('all' | CampaignStatus)[] = ['all', 'active', 'cancelled', 'funded', 'failed'];
 
   const { campaigns: rawCampaigns, isLoading, error, refetch } = useCampaigns();

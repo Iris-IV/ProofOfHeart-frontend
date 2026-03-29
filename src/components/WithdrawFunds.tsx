@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Campaign, deriveCampaignStatus, stroopsToXlm } from '../types';
+import { Campaign, stroopsToXlm } from '../types';
 import { withdrawFunds } from '../lib/contractClient';
 import { useToast } from './ToastProvider';
 import { parseContractError } from '../utils/contractErrors';
@@ -31,7 +31,6 @@ export default function WithdrawFunds({
 
   if (!isCreator) return null;
 
-  const status = deriveCampaignStatus(campaign);
   const now = Math.floor(Date.now() / 1000);
   const deadlinePassed = campaign.deadline < now;
   const goalReached = campaign.amount_raised >= campaign.funding_goal;

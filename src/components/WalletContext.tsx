@@ -41,7 +41,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         setIsWalletConnected(true);
         localStorage.setItem('stellar_wallet_public_key', key.address);
       }
-    } catch (error) {
+    } catch {
       // Not connected
     }
   };
@@ -67,7 +67,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       setIsWalletConnected(true);
       localStorage.setItem('stellar_wallet_public_key', key.address);
       showSuccess('Wallet connected successfully.');
-    } catch (error) {
+    } catch {
       showError('Failed to connect wallet. Please try again.');
     } finally {
       setIsLoading(false);

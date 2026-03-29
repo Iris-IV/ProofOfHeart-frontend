@@ -5,7 +5,7 @@
  * the `NEXT_PUBLIC_USE_MOCKS=true` environment variable.
  */
 
-import { Category, CATEGORY_LABELS, CampaignStatus } from '../types';
+import { CATEGORY_LABELS, CampaignStatus } from '../types';
 
 /** Category options for filter dropdowns (enum value → label). */
 export const CATEGORIES = ['all', ...Object.values(CATEGORY_LABELS)] as const;

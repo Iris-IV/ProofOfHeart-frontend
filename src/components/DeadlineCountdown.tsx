@@ -27,7 +27,6 @@ export default function DeadlineCountdown({ deadline }: DeadlineCountdownProps) 
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(() => getTimeLeft(deadline));
 
   useEffect(() => {
-    setTimeLeft(getTimeLeft(deadline));
     const interval = setInterval(() => {
       const remaining = getTimeLeft(deadline);
       setTimeLeft(remaining);

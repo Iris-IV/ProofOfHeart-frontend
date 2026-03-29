@@ -21,17 +21,21 @@ export function useCampaign(id: string | number): UseCampaignResult {
 
   useEffect(() => {
     if (isNaN(numericId)) {
-      setNotFound(true);
-      setIsLoading(false);
+      queueMicrotask(() => {
+        setNotFound(true);
+        setIsLoading(false);
+      });
       return;
     }
 
     let cancelled = false;
 
-    setIsLoading(true);
-    setError(null);
-    setNotFound(false);
-    setCampaign(null);
+    queueMicrotask(() => {
+      setIsLoading(true);
+      setError(null);
+      setNotFound(false);
+      setCampaign(null);
+    });
 
     getCampaign(numericId)
       .then((data) => {
