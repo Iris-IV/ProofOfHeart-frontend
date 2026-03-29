@@ -36,21 +36,20 @@ export function useCampaign(id: string | number): UseCampaignResult {
       setError(null);
       setNotFound(false);
       setCampaign(null);
+      getCampaign(numericId)
+        .then((data) => {
+          if (cancelled) return;
+          if (data === null) setNotFound(true);
+          else setCampaign(data);
+        })
+        .catch((err: unknown) => {
+          if (!cancelled)
+            setError(err instanceof Error ? err.message : 'Failed to load campaign.');
+        })
+        .finally(() => {
+          if (!cancelled) setIsLoading(false);
+        });
     }, 0);
-
-    getCampaign(numericId)
-      .then((data) => {
-        if (cancelled) return;
-        if (data === null) setNotFound(true);
-        else setCampaign(data);
-      })
-      .catch((err) => {
-        if (!cancelled)
-          setError(err instanceof Error ? err.message : 'Failed to load campaign.');
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
 
     return () => {
       cancelled = true;

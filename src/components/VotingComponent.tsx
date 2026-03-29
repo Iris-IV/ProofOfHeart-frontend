@@ -11,6 +11,9 @@ interface VotingComponentProps {
   onVote: (campaignId: number, voteType: 'upvote' | 'downvote') => Promise<void>;
   userVote?: Vote;
   isVoting: boolean;
+  upvotes?: number;
+  downvotes?: number;
+  totalVotes?: number;
 }
 
 export default function VotingComponent({
@@ -19,6 +22,9 @@ export default function VotingComponent({
   onVote,
   userVote,
   isVoting,
+  upvotes = 0,
+  downvotes = 0,
+  totalVotes = 0,
 }: VotingComponentProps) {
   const [localVote, setLocalVote] = useState<'upvote' | 'downvote' | null>(
     userVote?.voteType ?? null
@@ -92,10 +98,10 @@ export default function VotingComponent({
 
       <div className="text-center">
         <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-          {campaign.upvotes - campaign.downvotes}
+          {upvotes - downvotes}
         </div>
         <div className="text-sm text-zinc-600 dark:text-zinc-400">
-          Net votes ({campaign.totalVotes} total)
+          Net votes ({totalVotes} total)
         </div>
       </div>
 
@@ -103,14 +109,14 @@ export default function VotingComponent({
         <div
           className="bg-gradient-to-r from-green-500 to-red-500 h-2 rounded-full transition-all duration-300"
           style={{
-            width: `${campaign.totalVotes > 0 ? (campaign.upvotes / campaign.totalVotes) * 100 : 50}%`,
+            width: `${totalVotes > 0 ? (upvotes / totalVotes) * 100 : 50}%`,
           }}
         />
       </div>
 
       <div className="flex justify-between w-full text-sm text-zinc-600 dark:text-zinc-400">
-        <span>{campaign.upvotes} Approve</span>
-        <span>{campaign.downvotes} Reject</span>
+        <span>{upvotes} Approve</span>
+        <span>{downvotes} Reject</span>
       </div>
 
       {!userWalletAddress && (

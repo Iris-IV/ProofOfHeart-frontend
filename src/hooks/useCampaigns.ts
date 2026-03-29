@@ -21,8 +21,10 @@ export function useCampaigns(): UseCampaignsResult {
     let cancelled = false;
 
     setTimeout(() => {
-      setIsLoading(true);
-      setError(null);
+      if (!cancelled) {
+        setIsLoading(true);
+        setError(null);
+      }
     }, 0);
 
     getAllCampaigns()
