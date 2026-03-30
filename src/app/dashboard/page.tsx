@@ -8,8 +8,6 @@ import { getStellarBalance } from "@/lib/getStellarBalance";
 import RevenueSharingPanel from "@/components/RevenueSharingPanel";
 import MyContributionsSection from "@/components/MyContributionsSection";
 import { basisPointsToPercentage, stroopsToXlm } from "@/types";
-import RevenueSharingPanel from "@/components/RevenueSharingPanel";
-import { basisPointsToPercentage, stroopsToXlm } from "@/types";
 
 export default function DashboardPage() {
   const { publicKey, isWalletConnected } = useWallet();

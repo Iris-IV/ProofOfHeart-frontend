@@ -15,7 +15,6 @@ import { useWallet } from '../../../components/WalletContext';
 import CampaignActions from '../../../components/CampaignActions';
 import RevenueSharingPanel from '../../../components/RevenueSharingPanel';
 import { usePlatformFee } from '../../../hooks/usePlatformFee';
-import RevenueSharingPanel from '../../../components/RevenueSharingPanel';
 
 function formatDate(ts: number) {
   return new Intl.DateTimeFormat('en-US', {
