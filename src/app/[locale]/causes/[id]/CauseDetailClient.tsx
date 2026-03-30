@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from '@/types';
 import { useCampaign } from '@/hooks/useCampaign';
+import { usePlatformFee } from '@/hooks/usePlatformFee';
 import { stellarVotingService } from '@/services/stellarVoting';
 import { useToast } from '@/components/ToastProvider';
 import { parseContractError } from '@/utils/contractErrors';
@@ -26,7 +27,8 @@ function formatDate(ts: number) {
 export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
 
-  const { campaign: fetchedCampaign, isLoading, error, notFound, refetch } = useCampaign(id);
+  const { campaign: fetchedCampaign, isLoading, error, refetch } = useCampaign(Number(id));
+  const { platformFeeBps, isLoading: isPlatformFeeLoading, isFallback } = usePlatformFee();
 
   // Local copy for optimistic vote updates
   const [campaign, setCampaign] = useState<Campaign | null>(null);
