@@ -41,6 +41,14 @@ The project follows the standard **Next.js App Router** architecture:
 
 - Campaign exploration and detail pages backed by the Soroban contract service layer.
 - Wallet-aware creator and contributor actions including withdrawal, refunds, and admin verification.
+- Revenue sharing support for eligible Educational Startup campaigns:
+  creator dashboard deposit flow, contributor claim flow, revenue pool display, and transparent pro-rata breakdowns.
+- Admin dashboard at `/admin` with wallet-gated access, pending campaign verification, platform fee updates, admin transfer, and contract-level stats.
+
+## ✨ Current Frontend Features
+
+- Campaign exploration and detail pages backed by the Soroban contract service layer.
+- Wallet-aware creator and contributor actions including withdrawal, refunds, and admin verification.
 - Platform fee transparency across contribution, withdrawal, and cause detail views, with a 3% fallback until the `get_platform_fee` getter is available on-chain.
 - Wallet dashboard contribution history with per-campaign status, claimable refund/revenue actions, and Stellar explorer transaction links.
 - Revenue sharing support for eligible Educational Startup campaigns:
@@ -84,7 +92,6 @@ The project uses environment variables for configuration. Create a `.env.local` 
 # Example Environment Variables
 NEXT_PUBLIC_API_URL=https://api.proofofheart.org
 # NEXT_PUBLIC_CHAIN_ID=1
-NEXT_PUBLIC_CONTRACT_ID=
 NEXT_PUBLIC_RPC_URL=https://soroban-testnet.stellar.org
 NEXT_PUBLIC_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
 ```
