@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Campaign, Vote } from '../../types';
-import { CATEGORIES, STATUSES, SORT_OPTIONS } from '../../lib/mockCauses';
+import { Campaign, Vote, CATEGORY_LABELS, deriveCampaignStatus, CampaignStatus } from '../../types';
+import { SORT_OPTIONS } from '../../lib/mockCauses';
 import { stellarVotingService } from '../../services/stellarVoting';
 import { useCampaigns } from '../../hooks/useCampaigns';
 import { useWallet } from '../../components/WalletContext';
@@ -60,10 +60,13 @@ function CausesContent() {
 
   const debouncedSearch = useDebounce(rawSearch, 300);
 
+  const STATUS_OPTIONS: ('all' | CampaignStatus)[] = ['all', 'active', 'cancelled', 'funded', 'failed'];
+
   const { campaigns: rawCampaigns, isLoading, error, refetch } = useCampaigns();
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [userVotes, setUserVotes] = useState<Record<string, Vote>>({});
+  const [voteCounts, setVoteCounts] = useState<Record<number, { upvotes: number; downvotes: number; totalVotes: number }>>({});
   const [isVotingFor, setIsVotingFor] = useState<number | null>(null);
   const { publicKey: userWalletAddress } = useWallet();
   const { showError, showSuccess, showWarning } = useToast();
@@ -92,7 +95,7 @@ function CausesContent() {
       const v = stellarVotingService.getUserVote(String(campaign.id), userWalletAddress);
       if (v) {
         votes[campaign.id] = {
-          causeId: String(campaign.id),
+          campaignId: String(campaign.id),
           voter: userWalletAddress,
           voteType: v.voteType,
           timestamp: v.timestamp,
@@ -126,7 +129,7 @@ function CausesContent() {
     try {
       const transactionHash = await stellarVotingService.castVote(id, voteType, userWalletAddress);
       const newVote: Vote = {
-        causeId: id,
+        campaignId: id,
         voter: userWalletAddress,
         voteType,
         timestamp: new Date(),
@@ -209,7 +212,7 @@ function CausesContent() {
         (c) =>
           c.title.toLowerCase().includes(q) ||
           c.description.toLowerCase().includes(q) ||
-          c.category.toLowerCase().includes(q)
+          (CATEGORY_LABELS[c.category] ?? '').toLowerCase().includes(q)
       );
     }
 
@@ -218,27 +221,35 @@ function CausesContent() {
 
     switch (sort) {
       case 'oldest':
-        result.sort((a, b) => a.createdAt - b.createdAt);
+        result.sort((a, b) => a.deadline - b.deadline);
         break;
-      case 'most_voted':
-        result.sort((a, b) => b.totalVotes - a.totalVotes);
-        break;
-      case 'most_funded':
-        result.sort((a, b) => b.currentAmount - a.currentAmount);
-        break;
-      case 'approval_rate':
+      case 'most_voted': {
         result.sort((a, b) => {
-          const aRate = a.totalVotes > 0 ? a.upvotes / a.totalVotes : 0;
-          const bRate = b.totalVotes > 0 ? b.upvotes / b.totalVotes : 0;
+          const aTotal = voteCounts[b.id]?.totalVotes ?? 0;
+          const bTotal = voteCounts[a.id]?.totalVotes ?? 0;
+          return aTotal - bTotal;
+        });
+        break;
+      }
+      case 'most_funded':
+        result.sort((a, b) => Number(b.amount_raised - a.amount_raised));
+        break;
+      case 'approval_rate': {
+        result.sort((a, b) => {
+          const aVotes = voteCounts[a.id];
+          const bVotes = voteCounts[b.id];
+          const aRate = aVotes && aVotes.totalVotes > 0 ? aVotes.upvotes / aVotes.totalVotes : 0;
+          const bRate = bVotes && bVotes.totalVotes > 0 ? bVotes.upvotes / bVotes.totalVotes : 0;
           return bRate - aRate;
         });
         break;
+      }
       default: // newest
-        result.sort((a, b) => b.createdAt - a.createdAt);
+        result.sort((a, b) => b.deadline - a.deadline);
     }
 
     return result;
-  }, [campaigns, debouncedSearch, category, status, sort]);
+  }, [campaigns, debouncedSearch, category, status, sort, voteCounts]);
 
   const hasActiveFilters =
     debouncedSearch || category !== 'all' || status !== 'all' || sort !== 'newest';
@@ -312,9 +323,10 @@ function CausesContent() {
                 onChange={(e) => setCategory(e.target.value)}
                 className="text-sm rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c === 'all' ? 'All Categories' : c.charAt(0).toUpperCase() + c.slice(1)}
+                <option value="all">All Categories</option>
+                {Object.entries(CATEGORY_LABELS).map(([val, label]) => (
+                  <option key={val} value={val}>
+                    {label}
                   </option>
                 ))}
               </select>
@@ -329,7 +341,7 @@ function CausesContent() {
                 onChange={(e) => setStatus(e.target.value)}
                 className="text-sm rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {STATUSES.map((s) => (
+                {STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>
                     {s === 'all' ? 'All Statuses' : s.charAt(0).toUpperCase() + s.slice(1)}
                   </option>

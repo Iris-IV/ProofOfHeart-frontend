@@ -1,9 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Campaign, Vote } from '../types';
+import Link from 'next/link';
+import { Campaign, Vote, CATEGORY_LABELS } from '../types';
 import VotingComponent from './VotingComponent';
-import CancelCampaignModal from './cancelCampaignModal';
+import CampaignStatusBadge from './CampaignStatusBadge';
+import FundingProgressBar from './FundingProgressBar';
+import DeadlineCountdown from './DeadlineCountdown';
 
 interface CauseCardProps {
   campaign: Campaign;
@@ -116,6 +119,20 @@ export default function CauseCard({
               {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
             </span>
           </div>
+  const categoryLabel = CATEGORY_LABELS[campaign.category] ?? 'Other';
+
+  return (
+    <div className="flex flex-col bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 overflow-hidden hover:shadow-md transition-shadow duration-200">
+      {/* Card body */}
+      <div className="p-5 flex-1">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              {categoryLabel}
+            </span>
+          </div>
+          <CampaignStatusBadge campaign={campaign} />
+        </div>
 
           {/* Title */}
           <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 leading-snug line-clamp-2">
@@ -144,6 +161,17 @@ export default function CauseCard({
             <p className="text-xs text-zinc-400 dark:text-zinc-500">
               Goal: ${campaign.targetAmount.toLocaleString()}
             </p>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400 mb-4">
+          <span>By {formatAddress(campaign.creator)}</span>
+          <DeadlineCountdown deadline={campaign.deadline} />
+        </div>
+
+        {campaign.funding_goal > BigInt(0) && (
+          <div className="mb-4">
+            <FundingProgressBar
+              amountRaised={campaign.amount_raised}
+              fundingGoal={campaign.funding_goal}
+            />
           </div>
 
           {/* Creator + date */}

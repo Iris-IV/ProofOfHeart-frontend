@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Campaign } from '../types';
 import { getCampaign } from '../lib/contractClient';
 
@@ -9,7 +9,11 @@ export interface UseCampaignResult {
   isLoading: boolean;
   error: string | null;
   notFound: boolean;
+  refetch: () => void;
+  isRefreshing: boolean;
 }
+
+const POLL_INTERVAL = Number(process.env.NEXT_PUBLIC_POLL_INTERVAL_CAMPAIGN_MS) || 20000;
 
 export function useCampaign(id: string | number): UseCampaignResult {
   const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
@@ -34,12 +38,16 @@ export function useCampaign(id: string | number): UseCampaignResult {
         if (cancelled) return;
         if (data !== null) setCampaign(data);
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         if (!cancelled)
           setError(err instanceof Error ? err.message : 'Failed to load campaign.');
       })
       .finally(() => {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+          setIsRefreshing(false);
+          isFirstLoad.current = false;
+        }
       });
 
     return () => {
