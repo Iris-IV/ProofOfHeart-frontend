@@ -2,18 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from '../../../types';
-import { useCampaign } from '../../../hooks/useCampaign';
-import { stellarVotingService } from '../../../services/stellarVoting';
-import { useToast } from '../../../components/ToastProvider';
-import { parseContractError } from '../../../utils/contractErrors';
-import VotingComponent from '../../../components/VotingComponent';
-import CampaignStatusBadge from '../../../components/CampaignStatusBadge';
-import DeadlineCountdown from '../../../components/DeadlineCountdown';
-import FundingProgressBar from '../../../components/FundingProgressBar';
-import { useWallet } from '../../../components/WalletContext';
-import CampaignActions from '../../../components/CampaignActions';
-import RevenueSharingPanel from '../../../components/RevenueSharingPanel';
+import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from '@/types';
+import { useCampaign } from '@/hooks/useCampaign';
+import { stellarVotingService } from '@/services/stellarVoting';
+import { useToast } from '@/components/ToastProvider';
+import { parseContractError } from '@/utils/contractErrors';
+import VotingComponent from '@/components/VotingComponent';
+import CampaignStatusBadge from '@/components/CampaignStatusBadge';
+import DeadlineCountdown from '@/components/DeadlineCountdown';
+import FundingProgressBar from '@/components/FundingProgressBar';
+import { useWallet } from '@/components/WalletContext';
+import CampaignActions from '@/components/CampaignActions';
+import RevenueSharingPanel from '@/components/RevenueSharingPanel';
 
 function formatDate(ts: number) {
   return new Intl.DateTimeFormat('en-US', {

@@ -2,15 +2,15 @@
 
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Campaign, Vote, CATEGORY_LABELS, CampaignStatus } from '../../types';
-import { SORT_OPTIONS } from '../../lib/mockCauses';
-import { stellarVotingService } from '../../services/stellarVoting';
-import { useCampaigns } from '../../hooks/useCampaigns';
-import { useWallet } from '../../components/WalletContext';
-import { useToast } from '../../components/ToastProvider';
-import { parseContractError } from '../../utils/contractErrors';
-import { cancelCampaign, claimRefund } from '../../lib/contractClient';
-import CauseCard from '../../components/CauseCard';
+import { Campaign, Vote, CATEGORY_LABELS, CampaignStatus } from '@/types';
+import { SORT_OPTIONS } from '@/lib/mockCauses';
+import { stellarVotingService } from '@/services/stellarVoting';
+import { useCampaigns } from '@/hooks/useCampaigns';
+import { useWallet } from '@/components/WalletContext';
+import { useToast } from '@/components/ToastProvider';
+import { parseContractError } from '@/utils/contractErrors';
+import { cancelCampaign, claimRefund } from '@/lib/contractClient';
+import CauseCard from '@/components/CauseCard';
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
