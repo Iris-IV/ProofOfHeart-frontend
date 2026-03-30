@@ -1,19 +1,6 @@
-/**
- * Soroban contract service layer.
- *
- * This module is the single integration point between the frontend and the
- * deployed ProofOfHeart Soroban smart contract.
- *
- * Set NEXT_PUBLIC_USE_MOCKS=true in .env.local to serve mock data during
- * development without a live contract.
- *
- * When NEXT_PUBLIC_USE_MOCKS is false (or absent), all calls go through the
- * Soroban RPC using @stellar/stellar-sdk and are signed via Freighter.
- */
-
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { signTransaction, getAddress } from '@stellar/freighter-api';
-import { Campaign, Category } from '../types';
+import { Campaign, CampaignStatus, Category } from '../types';
 import { parseContractError } from '../utils/contractErrors';
 
 // ---------------------------------------------------------------------------
@@ -29,7 +16,10 @@ const SOROBAN_RPC_URL =
   process.env.NEXT_PUBLIC_RPC_URL ??
   'https://soroban-testnet.stellar.org';
 
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? process.env.NEXT_PUBLIC_CONTRACT_ID ?? '';
+const CONTRACT_ADDRESS =
+  process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ??
+  process.env.NEXT_PUBLIC_CONTRACT_ID ??
+  '';
 
 const NETWORK_PASSPHRASE =
   process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ?? 'Test SDF Network ; September 2015';
@@ -51,10 +41,6 @@ function getServer(): StellarSdk.rpc.Server {
 // Helpers — transaction building & submission
 // ---------------------------------------------------------------------------
 
-/**
- * Build, simulate, sign via Freighter, and submit a Soroban transaction.
- * Returns the full result XDR on success; throws on failure.
- */
 async function buildAndSubmitTransaction(
   sourcePublicKey: string,
   contractOp: StellarSdk.xdr.Operation,
@@ -70,8 +56,6 @@ async function buildAndSubmitTransaction(
   txBuilder.setTimeout(300);
 
   const builtTx = txBuilder.build();
-
-  // Simulate to get the proper footprint and resource fees
   const simulated = await server.simulateTransaction(builtTx);
 
   if (StellarSdk.rpc.Api.isSimulationError(simulated)) {
@@ -83,7 +67,6 @@ async function buildAndSubmitTransaction(
     simulated as StellarSdk.rpc.Api.SimulateTransactionSuccessResponse,
   ).build();
 
-  // Sign with Freighter
   const { signedTxXdr } = await signTransaction(preparedTx.toXDR(), {
     networkPassphrase: NETWORK_PASSPHRASE,
   });
@@ -99,7 +82,6 @@ async function buildAndSubmitTransaction(
     throw new Error('Transaction submission failed.');
   }
 
-  // Poll for completion
   let getResult = await server.getTransaction(submissionResult.hash);
   while (getResult.status === 'NOT_FOUND') {
     await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -113,9 +95,6 @@ async function buildAndSubmitTransaction(
   return getResult as StellarSdk.rpc.Api.GetSuccessfulTransactionResponse;
 }
 
-/**
- * Invoke a read-only (view) contract method (no signing required).
- */
 async function invokeViewMethod(
   method: string,
   args: StellarSdk.xdr.ScVal[] = [],
@@ -123,7 +102,6 @@ async function invokeViewMethod(
   const server = getServer();
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
 
-  // Use a zero-account source for simulation-only calls
   const zeroKeyPair = StellarSdk.Keypair.random();
   const zeroAccount = new StellarSdk.Account(zeroKeyPair.publicKey(), '0');
 
@@ -142,8 +120,7 @@ async function invokeViewMethod(
   }
 
   const successSim = simulated as StellarSdk.rpc.Api.SimulateTransactionSuccessResponse;
-  const retval = successSim.result?.retval;
-  return retval ?? null;
+  return successSim.result?.retval ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -169,6 +146,8 @@ function decodeCampaign(val: StellarSdk.xdr.ScVal): Campaign {
     deadline: Number(fields['deadline'].u64()),
     amount_raised: StellarSdk.scValToBigInt(fields['amount_raised']),
     is_active: fields['is_active'].b(),
+    status: fields['status'].str().toString() as CampaignStatus,
+    created_at: Number(fields['created_at'].u64()),
     funds_withdrawn: fields['funds_withdrawn'].b(),
     is_cancelled: fields['is_cancelled'].b(),
     is_verified: fields['is_verified'].b(),
@@ -179,7 +158,7 @@ function decodeCampaign(val: StellarSdk.xdr.ScVal): Campaign {
 }
 
 // ---------------------------------------------------------------------------
-// Mock data (used when NEXT_PUBLIC_USE_MOCKS=true)
+// Mock data
 // ---------------------------------------------------------------------------
 
 const MOCK_CAMPAIGNS: Campaign[] = [
@@ -187,32 +166,36 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     id: 1,
     title: 'Clean Water for Rural Communities',
     description:
-      'Providing clean water access to 500 families in rural areas affected by drought. This cause aims to install sustainable water filtration systems and educate communities on water conservation techniques.',
+      'Providing clean water access to 500 families in rural areas affected by drought.',
     creator: 'GABC123456789012345678901234567890123456789012345678901234567890',
-    funding_goal: BigInt(100_000_000_000), // 10,000 XLM
+    funding_goal: BigInt(100_000_000_000),
     deadline: Math.floor(Date.now() / 1000) + 86400 * 30,
-    amount_raised: BigInt(65_000_000_000), // 6,500 XLM
+    status: 'active',
+    amount_raised: BigInt(65_000_000_000),
     is_active: true,
     funds_withdrawn: false,
     is_cancelled: false,
     is_verified: true,
     category: Category.Learner,
     has_revenue_sharing: false,
+    created_at: Math.floor(Date.now() / 1000),
     revenue_share_percentage: 0,
   },
   {
     id: 2,
     title: 'Education Technology for Underprivileged Children',
     description:
-      'Equipping schools in low-income areas with tablets and educational software to bridge the digital divide and provide equal learning opportunities to every child.',
+      'Equipping schools in low-income areas with tablets and educational software.',
     creator: 'GDEF123456789012345678901234567890123456789012345678901234567890',
-    funding_goal: BigInt(50_000_000_000), // 5,000 XLM
+    funding_goal: BigInt(50_000_000_000),
     deadline: Math.floor(Date.now() / 1000) + 86400 * 60,
-    amount_raised: BigInt(12_000_000_000), // 1,200 XLM
+    amount_raised: BigInt(12_000_000_000),
     is_active: true,
     funds_withdrawn: false,
     is_cancelled: false,
     is_verified: false,
+    status: 'active',
+    created_at: Math.floor(Date.now() / 1000),
     category: Category.EducationalStartup,
     has_revenue_sharing: true,
     revenue_share_percentage: 500,
@@ -221,12 +204,14 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     id: 3,
     title: 'Medical Supplies for Remote Clinics',
     description:
-      'Delivering essential medical supplies and equipment to clinics in remote areas with limited healthcare access, ensuring that every person can receive basic medical attention.',
+      'Delivering essential medical supplies to clinics in remote areas.',
     creator: 'GHIJ123456789012345678901234567890123456789012345678901234567890',
-    funding_goal: BigInt(150_000_000_000), // 15,000 XLM
+    funding_goal: BigInt(150_000_000_000),
     deadline: Math.floor(Date.now() / 1000) + 86400 * 15,
-    amount_raised: BigInt(89_000_000_000), // 8,900 XLM
+    amount_raised: BigInt(89_000_000_000),
     is_active: true,
+    status: 'active',
+    created_at: Math.floor(Date.now() / 1000),
     funds_withdrawn: false,
     is_cancelled: false,
     is_verified: true,
@@ -237,15 +222,16 @@ const MOCK_CAMPAIGNS: Campaign[] = [
   {
     id: 4,
     title: 'Reforestation of Degraded Lands',
-    description:
-      'Planting 100,000 trees across deforested regions to restore ecosystems, improve air quality, and provide sustainable livelihoods for local farming communities.',
+    description: 'Planting 100,000 trees across deforested regions.',
     creator: 'GKLM123456789012345678901234567890123456789012345678901234567890',
-    funding_goal: BigInt(80_000_000_000), // 8,000 XLM
-    deadline: Math.floor(Date.now() / 1000) - 86400 * 5, // expired
-    amount_raised: BigInt(32_000_000_000), // 3,200 XLM
+    funding_goal: BigInt(80_000_000_000),
+    deadline: Math.floor(Date.now() / 1000) - 86400 * 5,
+    amount_raised: BigInt(32_000_000_000),
     is_active: false,
     funds_withdrawn: false,
     is_cancelled: false,
+    status: 'active',
+    created_at: Math.floor(Date.now() / 1000),
     is_verified: true,
     category: Category.Learner,
     has_revenue_sharing: false,
@@ -254,13 +240,14 @@ const MOCK_CAMPAIGNS: Campaign[] = [
   {
     id: 5,
     title: 'Mental Health Support for Youth',
-    description:
-      'Building free counselling and mental health resource centers for teenagers and young adults in underserved urban neighborhoods.',
+    description: 'Building free counselling centres for teenagers in underserved areas.',
     creator: 'GNOP123456789012345678901234567890123456789012345678901234567890',
-    funding_goal: BigInt(60_000_000_000), // 6,000 XLM
+    funding_goal: BigInt(60_000_000_000),
     deadline: Math.floor(Date.now() / 1000) + 86400 * 45,
-    amount_raised: BigInt(9_000_000_000), // 900 XLM
+    amount_raised: BigInt(9_000_000_000),
     is_active: true,
+    status: 'active',
+    created_at: Math.floor(Date.now() / 1000),
     funds_withdrawn: false,
     is_cancelled: true,
     is_verified: false,
@@ -271,13 +258,14 @@ const MOCK_CAMPAIGNS: Campaign[] = [
   {
     id: 6,
     title: 'Solar Energy for Off-Grid Villages',
-    description:
-      'Installing solar panels and battery storage in 20 villages currently without electricity, enabling access to light, communication, and refrigeration for food/medicine.',
+    description: 'Installing solar panels in 20 villages without electricity.',
     creator: 'GQRS123456789012345678901234567890123456789012345678901234567890',
-    funding_goal: BigInt(200_000_000_000), // 20,000 XLM
-    deadline: Math.floor(Date.now() / 1000) - 86400 * 2, // expired but goal met
-    amount_raised: BigInt(200_000_000_000), // 20,000 XLM
+    funding_goal: BigInt(200_000_000_000),
+    deadline: Math.floor(Date.now() / 1000) - 86400 * 2,
+    amount_raised: BigInt(200_000_000_000),
     is_active: false,
+    status: 'active',
+    created_at: Math.floor(Date.now() / 1000),
     funds_withdrawn: true,
     is_cancelled: false,
     is_verified: true,
@@ -291,12 +279,8 @@ const MOCK_CAMPAIGNS: Campaign[] = [
 // Public API — Read (view) functions
 // ---------------------------------------------------------------------------
 
-/**
- * Returns the total number of campaigns registered on the contract.
- */
 export async function getCampaignCount(): Promise<number> {
   if (USE_MOCKS) return MOCK_CAMPAIGNS.length;
-
   try {
     const result = await invokeViewMethod('get_campaign_count');
     if (!result) return 0;
@@ -306,13 +290,8 @@ export async function getCampaignCount(): Promise<number> {
   }
 }
 
-/**
- * Fetches a single campaign by its numeric ID.
- * Returns null when the contract confirms no campaign exists for that ID.
- */
 export async function getCampaign(id: number): Promise<Campaign | null> {
   if (USE_MOCKS) return MOCK_CAMPAIGNS.find((c) => c.id === id) ?? null;
-
   try {
     const result = await invokeViewMethod('get_campaign', [
       StellarSdk.nativeToScVal(id, { type: 'u32' }),
@@ -326,12 +305,8 @@ export async function getCampaign(id: number): Promise<Campaign | null> {
   }
 }
 
-/**
- * Fetches all campaigns by querying the count then fetching each one.
- */
 export async function getAllCampaigns(): Promise<Campaign[]> {
   if (USE_MOCKS) return [...MOCK_CAMPAIGNS];
-
   try {
     const count = await getCampaignCount();
     const results = await Promise.all(
@@ -343,15 +318,11 @@ export async function getAllCampaigns(): Promise<Campaign[]> {
   }
 }
 
-/**
- * Fetches the contribution amount for a contributor on a campaign.
- */
 export async function getContribution(
   campaignId: number,
   contributor: string,
 ): Promise<bigint> {
   if (USE_MOCKS) return BigInt(0);
-
   try {
     const result = await invokeViewMethod('get_contribution', [
       StellarSdk.nativeToScVal(campaignId, { type: 'u32' }),
@@ -364,12 +335,8 @@ export async function getContribution(
   }
 }
 
-/**
- * Fetches the revenue pool for a campaign.
- */
 export async function getRevenuePool(campaignId: number): Promise<bigint> {
   if (USE_MOCKS) return BigInt(0);
-
   try {
     const result = await invokeViewMethod('get_revenue_pool', [
       StellarSdk.nativeToScVal(campaignId, { type: 'u32' }),
@@ -381,15 +348,11 @@ export async function getRevenuePool(campaignId: number): Promise<bigint> {
   }
 }
 
-/**
- * Fetches the revenue already claimed by a contributor.
- */
 export async function getRevenueClaimed(
   campaignId: number,
   contributor: string,
 ): Promise<bigint> {
   if (USE_MOCKS) return BigInt(0);
-
   try {
     const result = await invokeViewMethod('get_revenue_claimed', [
       StellarSdk.nativeToScVal(campaignId, { type: 'u32' }),
@@ -401,12 +364,9 @@ export async function getRevenueClaimed(
     throw new Error(parseContractError(err));
   }
 }
-/**
- * Fetches the contract admin address.
- */
+
 export async function getAdmin(): Promise<string> {
   if (USE_MOCKS) return 'GADMIN123456789012345678901234567890123456789012345678901234567890';
-
   try {
     const result = await invokeViewMethod('get_admin');
     if (!result) return '';
@@ -420,16 +380,12 @@ export async function getAdmin(): Promise<string> {
 // Public API — Write (mutate) functions
 // ---------------------------------------------------------------------------
 
-/**
- * Initialise the contract (admin only).
- */
 export async function init(
   admin: string,
   token: string,
   platformFee: number,
 ): Promise<string> {
   if (USE_MOCKS) return 'mock_tx_init';
-
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     'init',
@@ -437,7 +393,6 @@ export async function init(
     new StellarSdk.Address(token).toScVal(),
     StellarSdk.nativeToScVal(platformFee, { type: 'u32' }),
   );
-
   try {
     const txResult = await buildAndSubmitTransaction(admin, op);
     return txResult.txHash;
@@ -446,9 +401,6 @@ export async function init(
   }
 }
 
-/**
- * Create a new campaign.
- */
 export async function createCampaign(
   creator: string,
   title: string,
@@ -460,7 +412,6 @@ export async function createCampaign(
   revenueSharePercentage: number,
 ): Promise<string> {
   if (USE_MOCKS) return 'mock_tx_create_campaign';
-
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     'create_campaign',
@@ -473,7 +424,6 @@ export async function createCampaign(
     StellarSdk.nativeToScVal(hasRevenueSharing, { type: 'bool' }),
     StellarSdk.nativeToScVal(revenueSharePercentage, { type: 'u32' }),
   );
-
   try {
     const txResult = await buildAndSubmitTransaction(creator, op);
     return txResult.txHash;
@@ -482,16 +432,12 @@ export async function createCampaign(
   }
 }
 
-/**
- * Contribute to a campaign.
- */
 export async function contribute(
   campaignId: number,
   contributor: string,
   amount: bigint,
 ): Promise<string> {
   if (USE_MOCKS) return 'mock_tx_contribute';
-
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     'contribute',
@@ -499,7 +445,6 @@ export async function contribute(
     new StellarSdk.Address(contributor).toScVal(),
     StellarSdk.nativeToScVal(amount, { type: 'i128' }),
   );
-
   try {
     const txResult = await buildAndSubmitTransaction(contributor, op);
     return txResult.txHash;
@@ -508,20 +453,14 @@ export async function contribute(
   }
 }
 
-/**
- * Withdraw funds from a campaign (creator only, after goal reached).
- * Returns the transaction hash on success.
- */
 export async function withdrawFunds(campaignId: number): Promise<string> {
   if (USE_MOCKS) return 'mock_tx_withdraw_funds';
-
   const { address: callerAddress } = await getAddress();
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     'withdraw_funds',
     StellarSdk.nativeToScVal(campaignId, { type: 'u32' }),
   );
-
   try {
     const txResult = await buildAndSubmitTransaction(callerAddress, op);
     return txResult.txHash;
@@ -532,17 +471,16 @@ export async function withdrawFunds(campaignId: number): Promise<string> {
 
 /**
  * Cancel a campaign (creator only).
+ * Returns the transaction hash on success.
  */
 export async function cancelCampaign(campaignId: number): Promise<string> {
   if (USE_MOCKS) return 'mock_tx_cancel_campaign';
-
   const { address: callerAddress } = await getAddress();
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     'cancel_campaign',
     StellarSdk.nativeToScVal(campaignId, { type: 'u32' }),
   );
-
   try {
     const txResult = await buildAndSubmitTransaction(callerAddress, op);
     return txResult.txHash;
@@ -553,20 +491,19 @@ export async function cancelCampaign(campaignId: number): Promise<string> {
 
 /**
  * Claim a refund from a cancelled or failed campaign.
+ * Returns the transaction hash on success.
  */
 export async function claimRefund(
   campaignId: number,
   contributor: string,
 ): Promise<string> {
   if (USE_MOCKS) return 'mock_tx_claim_refund';
-
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     'claim_refund',
     StellarSdk.nativeToScVal(campaignId, { type: 'u32' }),
     new StellarSdk.Address(contributor).toScVal(),
   );
-
   try {
     const txResult = await buildAndSubmitTransaction(contributor, op);
     return txResult.txHash;
@@ -575,15 +512,11 @@ export async function claimRefund(
   }
 }
 
-/**
- * Deposit revenue into a campaign's revenue pool (creator only).
- */
 export async function depositRevenue(
   campaignId: number,
   amount: bigint,
 ): Promise<string> {
   if (USE_MOCKS) return 'mock_tx_deposit_revenue';
-
   const { address: callerAddress } = await getAddress();
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
@@ -591,7 +524,6 @@ export async function depositRevenue(
     StellarSdk.nativeToScVal(campaignId, { type: 'u32' }),
     StellarSdk.nativeToScVal(amount, { type: 'i128' }),
   );
-
   try {
     const txResult = await buildAndSubmitTransaction(callerAddress, op);
     return txResult.txHash;
@@ -600,22 +532,17 @@ export async function depositRevenue(
   }
 }
 
-/**
- * Claim revenue from a campaign as a contributor.
- */
 export async function claimRevenue(
   campaignId: number,
   contributor: string,
 ): Promise<string> {
   if (USE_MOCKS) return 'mock_tx_claim_revenue';
-
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     'claim_revenue',
     StellarSdk.nativeToScVal(campaignId, { type: 'u32' }),
     new StellarSdk.Address(contributor).toScVal(),
   );
-
   try {
     const txResult = await buildAndSubmitTransaction(contributor, op);
     return txResult.txHash;
@@ -624,105 +551,18 @@ export async function claimRevenue(
   }
 }
 
-/**
- * Verify a campaign (admin only).
- */
 export async function verifyCampaign(campaignId: number): Promise<string> {
   if (USE_MOCKS) return 'mock_tx_verify_campaign';
-
   const { address: callerAddress } = await getAddress();
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     'verify_campaign',
     StellarSdk.nativeToScVal(campaignId, { type: 'u32' }),
   );
-
   try {
     const txResult = await buildAndSubmitTransaction(callerAddress, op);
     return txResult.txHash;
   } catch (err) {
     throw new Error(parseContractError(err));
   }
-}
-
-/**
- * Cancels an active campaign. Requires the connected wallet to be the
- * campaign creator (`creator.require_auth()` on-chain).
- *
- * Only valid when `campaign.fundsWithdrawn === false`. The caller is
- * responsible for verifying this before showing the cancel button.
- *
- * After a successful call, contributors may call `claimRefund` to recover
- * their contributions.
- *
- * @param campaignId - Numeric ID of the campaign to cancel.
- * @param creatorAddress - Public key of the connected wallet (must match creator).
- */
-export async function cancelCampaign(
-  campaignId: number,
-  creatorAddress: string
-): Promise<void> {
-  if (USE_MOCKS) {
-    // Simulate network latency
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    const campaign = MOCK_CAMPAIGNS.find((c) => c.id === campaignId);
-    if (!campaign) throw new Error('Campaign not found.');
-    if (campaign.creator !== creatorAddress) throw new Error('Not authorized.');
-    if (campaign.fundsWithdrawn) throw new Error('Funds already withdrawn.');
-
-    // Mutate mock state so the optimistic update in the page is consistent
-    // when USE_MOCKS is true and the page re-fetches.
-    campaign.status = 'cancelled';
-    return;
-  }
-
-  // TODO(#14): Replace with real Soroban contract call, e.g.:
-  // try {
-  //   const client = new ProofOfHeartClient({ contractId: CONTRACT_ID, rpc: RPC_URL });
-  //   await client.cancel_campaign({ campaign_id: campaignId });
-  // } catch (err) {
-  //   throw new Error(parseContractError(err));
-  // }
-  throw new Error(
-    'Live contract client is not yet wired up. Add NEXT_PUBLIC_USE_MOCKS=true to .env.local for development.'
-  );
-}
-
-/**
- * Claims a refund for a contributor on a cancelled (or failed) campaign.
- * Requires the connected wallet to be a contributor (`contributor.require_auth()`
- * on-chain).
- *
- * Only callable after the campaign has been cancelled or has failed to reach
- * its funding goal by the deadline.
- *
- * @param campaignId - Numeric ID of the campaign.
- * @param contributorAddress - Public key of the contributor claiming the refund.
- */
-export async function claimRefund(
-  campaignId: number
-): Promise<void> {
-  if (USE_MOCKS) {
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    const campaign = MOCK_CAMPAIGNS.find((c) => c.id === campaignId);
-    if (!campaign) throw new Error('Campaign not found.');
-    if (campaign.status !== 'cancelled') {
-      throw new Error('Campaign is not cancelled. Refunds are not yet available.');
-    }
-    // In mock mode, assume any wallet that calls this has a contribution.
-    return;
-  }
-
-  // TODO(#14): Replace with real Soroban contract call, e.g.:
-  // try {
-  //   const client = new ProofOfHeartClient({ contractId: CONTRACT_ID, rpc: RPC_URL });
-  //   await client.claim_refund({ campaign_id: campaignId, contributor: contributorAddress });
-  // } catch (err) {
-  //   throw new Error(parseContractError(err));
-  // }
-  throw new Error(
-    'Live contract client is not yet wired up. Add NEXT_PUBLIC_USE_MOCKS=true to .env.local for development.'
-  );
 }

@@ -68,7 +68,6 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       showSuccess('Wallet connected successfully.');
     } catch {
       showError('Failed to connect wallet. Please try again.');
-      console.error("error is ",error)
     } finally {
       setIsLoading(false);
     }

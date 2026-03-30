@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Campaign, Vote, CATEGORY_LABELS, deriveCampaignStatus, CampaignStatus } from '../../types';
+import { Campaign, Vote, CATEGORY_LABELS, CampaignStatus } from '../../types';
 import { SORT_OPTIONS } from '../../lib/mockCauses';
 import { stellarVotingService } from '../../services/stellarVoting';
 import { useCampaigns } from '../../hooks/useCampaigns';
@@ -66,7 +66,7 @@ function CausesContent() {
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [userVotes, setUserVotes] = useState<Record<string, Vote>>({});
-  const [voteCounts, setVoteCounts] = useState<Record<number, { upvotes: number; downvotes: number; totalVotes: number }>>({});
+  const [voteCounts] = useState<Record<number, { upvotes: number; downvotes: number; totalVotes: number }>>({});
   const [isVotingFor, setIsVotingFor] = useState<number | null>(null);
   const { publicKey: userWalletAddress } = useWallet();
   const { showError, showSuccess, showWarning } = useToast();
@@ -136,18 +136,6 @@ function CausesContent() {
         transactionHash,
       };
       setUserVotes((prev) => ({ ...prev, [campaignId]: newVote }));
-      setCampaigns((prev) =>
-        prev.map((c) =>
-          c.id === campaignId
-            ? {
-                ...c,
-                upvotes:    voteType === 'upvote'   ? c.upvotes + 1   : c.upvotes,
-                downvotes:  voteType === 'downvote' ? c.downvotes + 1 : c.downvotes,
-                totalVotes: c.totalVotes + 1,
-              }
-            : c
-        )
-      );
       showSuccess('Your vote has been cast successfully.');
     } catch (error) {
       showError(parseContractError(error));
@@ -166,7 +154,7 @@ function CausesContent() {
       return;
     }
     try {
-      await cancelCampaign(campaignId, userWalletAddress);
+      await cancelCampaign(campaignId);
 
       // Optimistic update: mark campaign as cancelled immediately so the UI
       // reflects the new state without waiting for a re-fetch.
@@ -216,7 +204,7 @@ function CausesContent() {
       );
     }
 
-    if (category !== 'all') result = result.filter((c) => c.category === category);
+    if (category !== 'all') result = result.filter((c) => String(c.category) === category);
     if (status !== 'all')   result = result.filter((c) => c.status   === status);
 
     switch (sort) {
