@@ -1,0 +1,46 @@
+{
+  "Common": {
+    "home": "Inicio",
+    "explore": "Explorar Causas",
+    "about": "Nosotros",
+    "connectWallet": "Conectar Wallet",
+    "connecting": "Conectando...",
+    "disconnect": "Desconectar",
+    "admin": "Admin",
+    "selectLanguage": "Seleccionar Idioma"
+  },
+  "Home": {
+    "heroTitle": "Validación descentralizada para causas impulsadas por el corazón.",
+    "heroSubtitle": "La comunidad valida, tú contribuyes y el impacto se registra en la cadena.",
+    "startCampaign": "Iniciar una Campaña",
+    "exploreCauses": "Explorar Causas"
+  },
+  "Admin": {
+    "title": "Moderación Administrativa",
+    "subtitle": "Revise y valide las nuevas causas enviadas a la plataforma.",
+    "cause": "Causa",
+    "creator": "Creador",
+    "goal": "Meta",
+    "category": "Categoría",
+    "actions": "Acciones",
+    "approve": "Aprobar Causa",
+    "reject": "Rechazar Causa",
+    "noPending": "No se encontraron causas pendientes. ¡Buen trabajo!",
+    "totalCampaigns": "Total de Campañas",
+    "totalRaised": "Total Recaudado",
+    "activeCampaigns": "Campañas Activas",
+    "platformFee": "Comisión de la Plataforma",
+    "verificationQueue": "Cola de Verificación",
+    "refresh": "Actualizar",
+    "refreshing": "Actualizando...",
+    "reviewDetails": "Revisar Detalles",
+    "updatePlatformFee": "Actualizar Comisión",
+    "feeInBasisPoints": "Comisión en puntos básicos (bps)",
+    "awaitingSignature": "Esperando firma...",
+    "transferAdmin": "Transferir Admin",
+    "newAdminAddress": "Nueva Dirección de Admin",
+    "adminConsole": "Consola de Administración",
+    "responsibility": "Responsabilidad Administrativa",
+    "responsibilityText": "Como administrador, usted es responsable de garantizar que todas las causas cumplan con nuestras pautas comunitarias. La verificación actualiza el estado en la cadena, señalando confianza a los posibles contribuyentes. El rechazo cancelará la campaña y evitará nuevas contribuciones."
+  }
+}

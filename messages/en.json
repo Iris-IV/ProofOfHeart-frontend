@@ -1,0 +1,46 @@
+{
+  "Common": {
+    "home": "Home",
+    "explore": "Explore Causes",
+    "about": "About",
+    "connectWallet": "Connect Wallet",
+    "connecting": "Connecting...",
+    "disconnect": "Disconnect",
+    "admin": "Admin",
+    "selectLanguage": "Select Language"
+  },
+  "Home": {
+    "heroTitle": "Decentralized validation for heart-driven causes.",
+    "heroSubtitle": "The community validates, you contribute, and impact is recorded on-chain.",
+    "startCampaign": "Start a Campaign",
+    "exploreCauses": "Explore Causes"
+  },
+  "Admin": {
+    "title": "Admin Moderation",
+    "subtitle": "Review and validate new causes submitted to the platform.",
+    "cause": "Cause",
+    "creator": "Creator",
+    "goal": "Goal",
+    "category": "Category",
+    "actions": "Actions",
+    "approve": "Approve Cause",
+    "reject": "Reject Cause",
+    "noPending": "No pending causes found. Great job!",
+    "totalCampaigns": "Total Campaigns",
+    "totalRaised": "Total Raised",
+    "activeCampaigns": "Active Campaigns",
+    "platformFee": "Platform Fee",
+    "verificationQueue": "Verification Queue",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing...",
+    "reviewDetails": "Review Details",
+    "updatePlatformFee": "Update Platform Fee",
+    "feeInBasisPoints": "Fee in basis points",
+    "awaitingSignature": "Awaiting signature...",
+    "transferAdmin": "Transfer Admin",
+    "newAdminAddress": "New Admin Address",
+    "adminConsole": "Admin Console",
+    "responsibility": "Admin Responsibility",
+    "responsibilityText": "As an administrator, you are responsible for ensuring all causes meet our community guidelines. Verification updates the status on-chain, signaling trust to potential contributors. Rejection will cancel the campaign and prevent further contributions."
+  }
+}

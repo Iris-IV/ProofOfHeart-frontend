@@ -41,6 +41,10 @@ The project follows the standard **Next.js App Router** architecture:
 
 - Campaign exploration and detail pages backed by the Soroban contract service layer.
 - Wallet-aware creator and contributor actions including withdrawal, refunds, and admin verification.
+- Wallet dashboard contribution history with per-campaign status, claimable refund/revenue actions, and Stellar explorer transaction links.
+- Revenue sharing support for eligible Educational Startup campaigns:
+  creator dashboard deposit flow, contributor claim flow, revenue pool display, and transparent pro-rata breakdowns.
+- Admin dashboard at `/admin` with wallet-gated access, pending campaign verification, platform fee updates, admin transfer, and contract-level stats.
 - Revenue sharing support for eligible Educational Startup campaigns:
   creator dashboard deposit flow, contributor claim flow, revenue pool display, and transparent pro-rata breakdowns.
 - Admin dashboard at `/admin` with wallet-gated access, pending campaign verification, platform fee updates, admin transfer, and contract-level stats.
@@ -110,6 +114,32 @@ We welcome contributions! To maintain a clean and consistent codebase, please fo
     - Provide a clear description of the changes.
     - Reference any related issues.
     - Ensure your code builds locally (`npm run build`).
+
+## 🐳 Docker Support
+
+To ensure a consistent development environment, we support containerization with Docker.
+
+### Local Development
+
+Run the following command to start the application in development mode with hot-reloading:
+
+```bash
+docker-compose up
+```
+
+### Production Build
+
+To build the production image manually:
+
+```bash
+docker build -t proofofheart-frontend .
+```
+
+To run the production container:
+
+```bash
+docker run -p 3000:3000 proofofheart-frontend
+```
 
 ## 📄 License
 
