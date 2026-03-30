@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Campaign, Vote, CATEGORY_LABELS, deriveCampaignStatus, CampaignStatus } from '../../types';
+import { Campaign, Vote, CATEGORY_LABELS, CampaignStatus } from '../../types';
 import { SORT_OPTIONS } from '../../lib/mockCauses';
 import { stellarVotingService } from '../../services/stellarVoting';
 import { useCampaigns } from '../../hooks/useCampaigns';
 import { useWallet } from '../../components/WalletContext';
 import { useToast } from '../../components/ToastProvider';
 import { parseContractError } from '../../utils/contractErrors';
+import { cancelCampaign, claimRefund } from '../../lib/contractClient';
 import CauseCard from '../../components/CauseCard';
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -65,12 +66,12 @@ function CausesContent() {
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [userVotes, setUserVotes] = useState<Record<string, Vote>>({});
-  const [voteCounts, setVoteCounts] = useState<Record<number, { upvotes: number; downvotes: number; totalVotes: number }>>({});
+  const [voteCounts] = useState<Record<number, { upvotes: number; downvotes: number; totalVotes: number }>>({});
   const [isVotingFor, setIsVotingFor] = useState<number | null>(null);
   const { publicKey: userWalletAddress } = useWallet();
   const { showError, showSuccess, showWarning } = useToast();
 
-  // Mirror contract data into local state so optimistic vote updates work
+  // Mirror contract data into local state so optimistic updates work
   useEffect(() => {
     setCampaigns(rawCampaigns);
   }, [rawCampaigns]);
@@ -110,6 +111,10 @@ function CausesContent() {
     else setUserVotes({});
   }, [userWalletAddress, loadUserVotes]);
 
+  // -------------------------------------------------------------------------
+  // Vote handler
+  // -------------------------------------------------------------------------
+
   const handleVote = async (campaignId: number, voteType: 'upvote' | 'downvote') => {
     if (!userWalletAddress) {
       showWarning('Please connect your wallet first.');
@@ -131,17 +136,6 @@ function CausesContent() {
         transactionHash,
       };
       setUserVotes((prev) => ({ ...prev, [campaignId]: newVote }));
-      setVoteCounts((prev) => {
-        const current = prev[campaignId] ?? { upvotes: 0, downvotes: 0, totalVotes: 0 };
-        return {
-          ...prev,
-          [campaignId]: {
-            upvotes: voteType === 'upvote' ? current.upvotes + 1 : current.upvotes,
-            downvotes: voteType === 'downvote' ? current.downvotes + 1 : current.downvotes,
-            totalVotes: current.totalVotes + 1,
-          },
-        };
-      });
       showSuccess('Your vote has been cast successfully.');
     } catch (error) {
       showError(parseContractError(error));
@@ -149,6 +143,53 @@ function CausesContent() {
       setIsVotingFor(null);
     }
   };
+
+  // -------------------------------------------------------------------------
+  // Cancel handler
+  // -------------------------------------------------------------------------
+
+  const handleCancel = async (campaignId: number) => {
+    if (!userWalletAddress) {
+      showWarning('Please connect your wallet first.');
+      return;
+    }
+    try {
+      await cancelCampaign(campaignId);
+
+      // Optimistic update: mark campaign as cancelled immediately so the UI
+      // reflects the new state without waiting for a re-fetch.
+      setCampaigns((prev) =>
+        prev.map((c) =>
+          c.id === campaignId ? { ...c, status: 'cancelled' as const } : c
+        )
+      );
+
+      showSuccess('Campaign cancelled. Contributors can now claim full refunds.');
+    } catch (error) {
+      showError(parseContractError(error));
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Claim refund handler
+  // -------------------------------------------------------------------------
+
+  const handleClaimRefund = async (campaignId: number) => {
+    if (!userWalletAddress) {
+      showWarning('Please connect your wallet first.');
+      return;
+    }
+    try {
+      await claimRefund(campaignId, userWalletAddress);
+      showSuccess('Refund claimed successfully. Funds will appear in your wallet shortly.');
+    } catch (error) {
+      showError(parseContractError(error));
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Filtering + sorting
+  // -------------------------------------------------------------------------
 
   const filteredCampaigns = useMemo(() => {
     let result = [...campaigns];
@@ -163,11 +204,8 @@ function CausesContent() {
       );
     }
 
-    if (category !== 'all') {
-      const catNum = Number(category);
-      result = result.filter((c) => c.category === catNum);
-    }
-    if (status !== 'all') result = result.filter((c) => deriveCampaignStatus(c) === status);
+    if (category !== 'all') result = result.filter((c) => String(c.category) === category);
+    if (status !== 'all')   result = result.filter((c) => c.status   === status);
 
     switch (sort) {
       case 'oldest':
@@ -212,7 +250,7 @@ function CausesContent() {
   };
 
   // -------------------------------------------------------------------------
-  // Render states
+  // Render
   // -------------------------------------------------------------------------
 
   return (
@@ -220,7 +258,9 @@ function CausesContent() {
       <main className="container mx-auto px-4 py-8">
         {/* Page heading */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-2">Community Causes</h1>
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-2">
+            Community Causes
+          </h1>
           <p className="text-zinc-600 dark:text-zinc-400">
             Browse, search, and vote on causes that matter to you.
           </p>
@@ -281,7 +321,9 @@ function CausesContent() {
             </div>
 
             <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Status</label>
+              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                Status
+              </label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
@@ -296,7 +338,9 @@ function CausesContent() {
             </div>
 
             <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Sort by</label>
+              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                Sort by
+              </label>
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
@@ -368,6 +412,8 @@ function CausesContent() {
                     campaign={campaign}
                     userWalletAddress={userWalletAddress}
                     onVote={handleVote}
+                    onCancel={handleCancel}
+                    onClaimRefund={handleClaimRefund}
                     userVote={userVotes[campaign.id]}
                   />
                 ))}

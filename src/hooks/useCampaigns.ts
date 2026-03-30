@@ -7,7 +7,7 @@ import { getAllCampaigns } from '../lib/contractClient';
 export interface UseCampaignsResult {
   campaigns: Campaign[];
   isLoading: boolean;
-  isRefreshing: boolean;
+  isRefreshing?: boolean;
   error: string | null;
   refetch: () => void;
 }
@@ -64,5 +64,5 @@ export function useCampaigns(): UseCampaignsResult {
     return () => clearInterval(interval);
   }, [isLoading, isRefreshing, refetch]);
 
-  return { campaigns, isLoading, isRefreshing, error, refetch };
+  return { campaigns, isLoading, error, refetch };
 }

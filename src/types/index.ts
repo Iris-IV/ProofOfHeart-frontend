@@ -29,12 +29,14 @@ export type CampaignStatus = 'active' | 'cancelled' | 'funded' | 'failed' | 'ver
 
 export interface Campaign {
   id: number;
-  creator: string;                  // Stellar address (G…)
+  creator: string;
   title: string;
   description: string;
-  funding_goal: bigint;             // in stroops (1 XLM = 10_000_000 stroops)
-  deadline: number;                 // Unix timestamp (seconds)
-  amount_raised: bigint;            // in stroops
+  created_at : number; // Unix timestamp in seconds
+  status: CampaignStatus;
+  funding_goal: bigint;
+  deadline: number;
+  amount_raised: bigint;
   is_active: boolean;
   funds_withdrawn: boolean;
   is_cancelled: boolean;

@@ -1,4 +1,4 @@
-"use client";
+'use client'
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { getAddress, isConnected, isAllowed } from '@stellar/freighter-api';
 import { useToast } from './ToastProvider';
