@@ -9,7 +9,7 @@ import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/routing';
 import LanguageSwitcher from "./LanguageSwitcher";
 import { getAdmin } from "@/lib/contractClient";
-import { Menu, X, Moon, Sun, ShieldCheck } from "lucide-react";
+import { Menu, X, Moon, Sun, ShieldCheck, Plus } from "lucide-react";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -95,6 +95,13 @@ export default function Navbar() {
               </button>
             ) : (
               <div className="flex items-center gap-3 pl-2">
+                <Link
+                  href="/causes/new"
+                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/20"
+                >
+                  <Plus size={14} />
+                  {t('createCampaign')}
+                </Link>
                 <div className="flex flex-col items-end">
                   <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-400 dark:text-zinc-500 leading-none mb-1">
                     Connected
@@ -154,6 +161,17 @@ export default function Navbar() {
                 ))}
               </ul>
             </nav>
+
+            {isWalletConnected && (
+              <Link
+                href="/causes/new"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center justify-center gap-2 h-12 w-full rounded-xl bg-blue-600 text-white text-base font-bold hover:bg-blue-700 transition-colors"
+              >
+                <Plus size={18} />
+                {t('createCampaign')}
+              </Link>
+            )}
 
             {!isWalletConnected ? (
               <button
