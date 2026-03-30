@@ -45,6 +45,8 @@ The project follows the standard **Next.js App Router** architecture:
 - Revenue sharing support for eligible Educational Startup campaigns:
   creator dashboard deposit flow, contributor claim flow, revenue pool display, and transparent pro-rata breakdowns.
 - Admin dashboard at `/admin` with wallet-gated access, pending campaign verification, platform fee updates, admin transfer, and contract-level stats.
+- Revenue sharing support for eligible Educational Startup campaigns:
+  creator dashboard deposit flow, contributor claim flow, revenue pool display, and transparent pro-rata breakdowns.
 
 ## 🏁 Getting Started
 
