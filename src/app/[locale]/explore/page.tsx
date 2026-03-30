@@ -6,6 +6,7 @@ import { useCampaigns } from '@/hooks/useCampaigns';
 import { Category, CATEGORY_LABELS, stroopsToXlm } from '@/types';
 import CampaignStatusBadge from '@/components/CampaignStatusBadge';
 import FundingProgressBar from '@/components/FundingProgressBar';
+import { CampaignRowSkeleton } from '@/components/Skeleton';
 
 const CATEGORY_ICONS: Record<Category, string> = {
   [Category.Learner]: '🎓',
@@ -16,19 +17,6 @@ const CATEGORY_ICONS: Record<Category, string> = {
 
 function formatAddress(addr: string) {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-}
-
-function CampaignRowSkeleton() {
-  return (
-    <div className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 animate-pulse">
-      <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-700 shrink-0" />
-      <div className="flex-1 space-y-2">
-        <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-2/3" />
-        <div className="h-3 bg-zinc-200 dark:bg-zinc-700 rounded w-1/2" />
-      </div>
-      <div className="h-5 w-16 bg-zinc-200 dark:bg-zinc-700 rounded-full shrink-0" />
-    </div>
-  );
 }
 
 export default function ExplorePage() {
@@ -75,11 +63,10 @@ export default function ExplorePage() {
             <button
               key={String(cat)}
               onClick={() => setActiveCategory(cat)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                activeCategory === cat
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-              }`}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${activeCategory === cat
+                ? 'bg-blue-600 text-white'
+                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                }`}
             >
               {cat === 'all' ? 'All' : `${CATEGORY_ICONS[cat] ?? ''} ${CATEGORY_LABELS[cat]}`}
             </button>

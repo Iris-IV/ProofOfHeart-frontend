@@ -90,7 +90,6 @@ export default function CauseDetailClient({ id }: { id: string }) {
             <div className="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 p-6 space-y-4">
               <div className="h-8 bg-zinc-200 dark:bg-zinc-700 rounded w-3/4" />
               <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-full" />
-              <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-5/6" />
             </div>
           </div>
         </main>

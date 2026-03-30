@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useWallet } from "@/components/WalletContext";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { getStellarBalance } from "@/lib/getStellarBalance";
+import { DashboardSkeleton, Spinner } from "@/components/Skeleton";
 
 import MyContributionsSection from "@/components/MyContributionsSection";
 
@@ -50,12 +51,7 @@ export default function DashboardPage() {
   const submittedCampaigns = useMemo(() => campaigns.filter((c) => c.creator === publicKey), [campaigns, publicKey]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900 dark:border-zinc-50"></div>
-        <span className="ml-3 text-zinc-600 dark:text-zinc-400">Loading dashboard...</span>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   if (!isWalletConnected || !publicKey) {
@@ -74,7 +70,9 @@ export default function DashboardPage() {
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-2">Wallet Balance</h2>
         {balanceLoading ? (
-          <span className="text-zinc-500 dark:text-zinc-400">Loading balance...</span>
+          <span className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
+            <Spinner className="h-4 w-4 text-blue-500" /> Loading balance…
+          </span>
         ) : balanceError ? (
           <span className="text-red-500">{balanceError}</span>
         ) : (
