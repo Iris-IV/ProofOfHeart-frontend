@@ -8,9 +8,7 @@ import { useContribution } from '../hooks/useContribution';
 import { 
   withdrawFunds, 
   cancelCampaign, 
-  depositRevenue, 
   claimRefund, 
-  claimRevenue, 
   verifyCampaign 
 } from '../lib/contractClient';
 import { useToast } from './ToastProvider';
@@ -86,18 +84,6 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
             >
               Cancel Campaign
             </button>
-            {campaign.has_revenue_sharing && (
-              <button
-                onClick={() => {
-                  const amount = prompt('Enter amount of revenue to deposit (in stroops):');
-                  if (amount) handleAction(() => depositRevenue(campaign.id, BigInt(amount)), 'Revenue deposited!');
-                }}
-                disabled={isPending || campaign.is_cancelled}
-                className="w-full py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors"
-              >
-                Deposit Revenue
-              </button>
-            )}
           </div>
         </div>
       )}
@@ -130,15 +116,6 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
             >
               Claim Refund
             </button>
-            {campaign.has_revenue_sharing && (
-              <button
-                onClick={() => handleAction(() => claimRevenue(campaign.id, publicKey!), 'Revenue claimed!')}
-                disabled={isPending}
-                className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors"
-              >
-                Claim Revenue
-              </button>
-            )}
           </div>
         </div>
       )}

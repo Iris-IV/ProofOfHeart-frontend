@@ -107,6 +107,13 @@ export function xlmToStroops(xlm: number): bigint {
   return BigInt(Math.round(xlm * 10_000_000));
 }
 
+/**
+ * Format basis points as a percentage string for UI display.
+ */
+export function basisPointsToPercentage(basisPoints: number): string {
+  return `${(basisPoints / 100).toFixed(basisPoints % 100 === 0 ? 0 : 2)}%`;
+}
+
 // ---------------------------------------------------------------------------
 // Voting types — UI-only, not part of contract Campaign
 // ---------------------------------------------------------------------------

@@ -376,6 +376,21 @@ export async function getAdmin(): Promise<string> {
   }
 }
 
+/**
+ * Fetches the platform fee in basis points.
+ */
+export async function getPlatformFee(): Promise<number> {
+  if (USE_MOCKS) return 250;
+
+  try {
+    const result = await invokeViewMethod('get_platform_fee');
+    if (!result) return 0;
+    return result.u32();
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Public API — Write (mutate) functions
 // ---------------------------------------------------------------------------
@@ -559,6 +574,48 @@ export async function verifyCampaign(campaignId: number): Promise<string> {
     'verify_campaign',
     StellarSdk.nativeToScVal(campaignId, { type: 'u32' }),
   );
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op);
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Update the platform fee (admin only).
+ */
+export async function updatePlatformFee(platformFee: number): Promise<string> {
+  if (USE_MOCKS) return 'mock_tx_update_platform_fee';
+
+  const { address: callerAddress } = await getAddress();
+  const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    'update_platform_fee',
+    StellarSdk.nativeToScVal(platformFee, { type: 'u32' }),
+  );
+
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op);
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Transfer the admin role to a new address (admin only).
+ */
+export async function updateAdmin(newAdmin: string): Promise<string> {
+  if (USE_MOCKS) return 'mock_tx_update_admin';
+
+  const { address: callerAddress } = await getAddress();
+  const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    'update_admin',
+    new StellarSdk.Address(newAdmin).toScVal(),
+  );
+
   try {
     const txResult = await buildAndSubmitTransaction(callerAddress, op);
     return txResult.txHash;
