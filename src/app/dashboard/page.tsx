@@ -36,13 +36,13 @@ export default function DashboardPage() {
 
   // Mock voting history (replace with real data/service when available)
   const mockVotes = useMemo(() => [
-    { causeId: 1, voter: publicKey, voteType: 'upvote', timestamp: new Date('2024-02-01'), transactionHash: 'tx1' },
-    { causeId: 2, voter: publicKey, voteType: 'downvote', timestamp: new Date('2024-02-10'), transactionHash: 'tx2' },
+    { campaignId: 1, voter: publicKey, voteType: 'upvote', timestamp: new Date('2024-02-01'), transactionHash: 'tx1' },
+    { campaignId: 2, voter: publicKey, voteType: 'downvote', timestamp: new Date('2024-02-10'), transactionHash: 'tx2' },
   ], [publicKey]);
   // Mock funding/donation history (replace with real data/service when available)
   const mockFunding = useMemo(() => [
-    { causeId: 3, amount: 100, timestamp: new Date('2024-02-15'), tx: 'fund1' },
-    { causeId: 1, amount: 50, timestamp: new Date('2024-02-20'), tx: 'fund2' },
+    { campaignId: 3, amount: 100, timestamp: new Date('2024-02-15'), tx: 'fund1' },
+    { campaignId: 1, amount: 50, timestamp: new Date('2024-02-20'), tx: 'fund2' },
   ], []);
   const submittedCauses = useMemo(() => campaigns.filter((c) => c.creator === publicKey), [campaigns, publicKey]);
 
@@ -104,10 +104,10 @@ export default function DashboardPage() {
         ) : (
           <ul className="space-y-2">
             {mockVotes.map((vote, idx) => {
-              const cause = campaigns.find((c) => c.id === vote.causeId);
+              const cause = campaigns.find((c) => c.id === vote.campaignId);
               return (
                 <li key={idx} className="border rounded p-3 bg-zinc-50 dark:bg-zinc-900">
-                  <div className="font-medium">{cause ? cause.title : `Cause #${vote.causeId}`}</div>
+                  <div className="font-medium">{cause ? cause.title : `Campaign #${vote.campaignId}`}</div>
                   <div className="text-sm text-zinc-500 dark:text-zinc-400">
                     {vote.voteType === 'upvote' ? 'Upvoted' : 'Downvoted'} on {vote.timestamp.toLocaleDateString()} (tx: {vote.transactionHash})
                   </div>
@@ -126,10 +126,10 @@ export default function DashboardPage() {
         ) : (
           <ul className="space-y-2">
             {mockFunding.map((fund, idx) => {
-              const cause = campaigns.find((c) => c.id === fund.causeId);
+              const cause = campaigns.find((c) => c.id === fund.campaignId);
               return (
                 <li key={idx} className="border rounded p-3 bg-zinc-50 dark:bg-zinc-900">
-                  <div className="font-medium">{cause ? cause.title : `Cause #${fund.causeId}`}</div>
+                  <div className="font-medium">{cause ? cause.title : `Campaign #${fund.campaignId}`}</div>
                   <div className="text-sm text-zinc-500 dark:text-zinc-400">
                     Donated {fund.amount} XLM on {fund.timestamp.toLocaleDateString()} (tx: {fund.tx})
                   </div>

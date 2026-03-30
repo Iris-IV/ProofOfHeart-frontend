@@ -110,7 +110,7 @@ export function xlmToStroops(xlm: number): bigint {
 // ---------------------------------------------------------------------------
 
 export interface Vote {
-  causeId: string;
+  campaignId: string;
   voter: string;
   voteType: 'upvote' | 'downvote';
   timestamp: Date;
