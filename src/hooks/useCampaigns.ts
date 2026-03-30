@@ -30,6 +30,13 @@ export function useCampaigns(): UseCampaignsResult {
   useEffect(() => {
     let cancelled = false;
 
+    setTimeout(() => {
+      if (!cancelled) {
+        setIsLoading(true);
+        setError(null);
+      }
+    }, 0);
+
     getAllCampaigns()
       .then((data) => {
         if (!cancelled) {

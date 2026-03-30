@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Campaign } from '../types';
 import { getCampaign } from '../lib/contractClient';
 
@@ -8,62 +8,39 @@ export interface UseCampaignResult {
   campaign: Campaign | null;
   isLoading: boolean;
   error: string | null;
-  notFound: boolean;
   refetch: () => void;
-  isRefreshing: boolean;
 }
 
-export function useCampaign(id: string | number): UseCampaignResult {
-  const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
-
-  const isInvalidId = isNaN(numericId);
-
+export function useCampaign(id: number): UseCampaignResult {
   const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [isLoading, setIsLoading] = useState(!isInvalidId);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
 
-  const isFirstLoad = useRef(true);
-
-  const refetch = useCallback(() => {
-    setIsRefreshing(true);
-    setTick((t) => t + 1);
-  }, []);
+  const refetch = useCallback(() => setTick((t) => t + 1), []);
 
   useEffect(() => {
-    if (isInvalidId) return;
-
     let cancelled = false;
+    setTimeout(() => {
+      setIsLoading(true);
+      setError(null);
+    }, 0);
 
-    getCampaign(numericId)
+    getCampaign(id)
       .then((data) => {
-        if (cancelled) return;
-        if (data !== null) setCampaign(data);
+        if (!cancelled) setCampaign(data);
       })
-      .catch((err: unknown) => {
-        if (!cancelled)
-          setError(err instanceof Error ? err.message : 'Failed to load campaign.');
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load campaign.');
       })
       .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-          setIsRefreshing(false);
-          isFirstLoad.current = false;
-        }
+        if (!cancelled) setIsLoading(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [numericId, isInvalidId, tick]);
+  }, [id, tick]);
 
-  return {
-    campaign,
-    isLoading,
-    isRefreshing,
-    error,
-    notFound: isInvalidId || (!isLoading && !error && campaign === null),
-    refetch,
-  };
+  return { campaign, isLoading, error, refetch };
 }

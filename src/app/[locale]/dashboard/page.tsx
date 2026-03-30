@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { explorerTxUrl } from "@/utils/explorer";
 import Link from "next/link";
 import { useWallet } from "@/components/WalletContext";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { getStellarBalance } from "@/lib/getStellarBalance";
-import RevenueSharingPanel from "@/components/RevenueSharingPanel";
-import MyContributionsSection from "@/components/MyContributionsSection";
-import { basisPointsToPercentage, stroopsToXlm } from "@/types";
+import MyContributionsSection from "@/components/MyContributionsSection"; // Re-importing MyContributionsSection
+// ...existing code...
 
 export default function DashboardPage() {
   const { publicKey, isWalletConnected } = useWallet();
@@ -16,7 +16,6 @@ export default function DashboardPage() {
   const [balance, setBalance] = useState<number | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [balanceError, setBalanceError] = useState<string | null>(null);
-
 
   const fetchBalance = useCallback(async () => {
     if (!publicKey) return;
@@ -39,14 +38,14 @@ export default function DashboardPage() {
 
   // Mock voting history (replace with real data/service when available)
   const mockVotes = useMemo(() => [
-    { causeId: 1, voter: publicKey, voteType: 'upvote', timestamp: new Date('2024-02-01'), transactionHash: 'tx1' },
-    { causeId: 2, voter: publicKey, voteType: 'downvote', timestamp: new Date('2024-02-10'), transactionHash: 'tx2' },
+    { campaignId: 1, voter: publicKey, voteType: 'upvote', timestamp: new Date('2024-02-01'), transactionHash: 'tx1' },
+    { campaignId: 2, voter: publicKey, voteType: 'downvote', timestamp: new Date('2024-02-10'), transactionHash: 'tx2' },
   ], [publicKey]);
   const mockFunding = useMemo(() => [
-    { causeId: 3, amount: 100, timestamp: new Date('2024-02-15'), tx: 'fund1' },
-    { causeId: 1, amount: 50, timestamp: new Date('2024-02-20'), tx: 'fund2' },
+    { campaignId: 3, amount: 100, timestamp: new Date('2024-02-15'), tx: 'fund1' },
+    { campaignId: 1, amount: 50, timestamp: new Date('2024-02-20'), tx: 'fund2' },
   ], []);
-  const submittedCauses = useMemo(() => campaigns.filter((c) => c.creator === publicKey), [campaigns, publicKey]);
+  const submittedCampaigns = useMemo(() => campaigns.filter((c) => c.creator === publicKey), [campaigns, publicKey]);
 
   if (loading) {
     return (
@@ -81,39 +80,17 @@ export default function DashboardPage() {
         )}
       </section>
 
-      {/* Submitted Causes */}
+      {/* Submitted Campaigns */}
       <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-2">Your Submitted Causes</h2>
-        {submittedCauses.length === 0 ? (
-          <span className="text-zinc-500 dark:text-zinc-400">You haven&apos;t submitted any causes yet.</span>
+        <h2 className="text-xl font-semibold mb-2">Your Submitted Campaigns</h2>
+        {submittedCampaigns.length === 0 ? (
+          <span className="text-zinc-500 dark:text-zinc-400">You haven&apos;t submitted any campaigns yet.</span>
         ) : (
           <ul className="space-y-2">
-            {submittedCauses.map((cause) => (
-              <li key={cause.id} className="border rounded p-4 bg-zinc-50 dark:bg-zinc-900 space-y-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <div className="font-medium">{cause.title}</div>
-                    <div className="text-sm text-zinc-500 dark:text-zinc-400">{cause.description}</div>
-                    <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-                      Raised {stroopsToXlm(cause.amount_raised).toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM
-                      {cause.has_revenue_sharing ? ` · ${basisPointsToPercentage(cause.revenue_share_percentage)} revenue sharing` : ''}
-                    </div>
-                  </div>
-                  <Link
-                    href={`/causes/${cause.id}`}
-                    className="inline-flex items-center rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                  >
-                    Open Campaign
-                  </Link>
-                </div>
-
-                {cause.has_revenue_sharing && (
-                  <RevenueSharingPanel
-                    campaign={cause}
-                    variant="dashboard"
-                    showContributorControls={false}
-                  />
-                )}
+            {submittedCampaigns.map((campaign) => (
+              <li key={campaign.id} className="border rounded p-3 bg-zinc-50 dark:bg-zinc-900">
+                <div className="font-medium">Campaign #{campaign.id}</div>
+                {/* Add more campaign fields as needed */}
               </li>
             ))}
           </ul>
@@ -130,12 +107,20 @@ export default function DashboardPage() {
         ) : (
           <ul className="space-y-2">
             {mockVotes.map((vote, idx) => {
-              const cause = campaigns.find((c) => c.id === vote.causeId);
+              const campaign = campaigns.find((c) => c.id === vote.campaignId);
               return (
                 <li key={idx} className="border rounded p-3 bg-zinc-50 dark:bg-zinc-900">
-                  <div className="font-medium">{cause ? cause.title : `Cause #${vote.causeId}`}</div>
+                  <div className="font-medium">{campaign ? `Campaign #${campaign.id}` : `Campaign #${vote.campaignId}`}</div>
                   <div className="text-sm text-zinc-500 dark:text-zinc-400">
-                    {vote.voteType === 'upvote' ? 'Upvoted' : 'Downvoted'} on {vote.timestamp.toLocaleDateString()} (tx: {vote.transactionHash})
+                    {vote.voteType === 'upvote' ? 'Upvoted' : 'Downvoted'} on {vote.timestamp.toLocaleDateString()}<br />
+                    <a
+                      href={explorerTxUrl(vote.transactionHash)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      View on Explorer
+                    </a>
                   </div>
                 </li>
               );
@@ -151,12 +136,20 @@ export default function DashboardPage() {
         ) : (
           <ul className="space-y-2">
             {mockFunding.map((fund, idx) => {
-              const cause = campaigns.find((c) => c.id === fund.causeId);
+              const campaign = campaigns.find((c) => c.id === fund.campaignId);
               return (
                 <li key={idx} className="border rounded p-3 bg-zinc-50 dark:bg-zinc-900">
-                  <div className="font-medium">{cause ? cause.title : `Cause #${fund.causeId}`}</div>
+                  <div className="font-medium">{campaign ? `Campaign #${campaign.id}` : `Campaign #${fund.campaignId}`}</div>
                   <div className="text-sm text-zinc-500 dark:text-zinc-400">
-                    Donated {fund.amount} XLM on {fund.timestamp.toLocaleDateString()} (tx: {fund.tx})
+                    Donated {fund.amount} XLM on {fund.timestamp.toLocaleDateString()}<br />
+                    <a
+                      href={explorerTxUrl(fund.tx)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      View on Explorer
+                    </a>
                   </div>
                 </li>
               );

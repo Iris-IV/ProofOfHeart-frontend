@@ -1,11 +1,10 @@
+"use client";
+
+import { useParams } from 'next/navigation';
 import CauseDetailClient from './CauseDetailClient';
 
-interface PageProps {
-  params: Promise<{ id: string }>;
-}
 
-export default async function Page({ params }: PageProps) {
-  const { id } = await params;
-
+export default function Page() {
+  const { id } = useParams<{ id: string }>();
   return <CauseDetailClient id={id} />;
 }

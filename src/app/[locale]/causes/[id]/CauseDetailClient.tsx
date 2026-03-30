@@ -25,8 +25,8 @@ function formatDate(ts: number) {
 
 export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
-
-  const { campaign: fetchedCampaign, isLoading, error, notFound, refetch } = useCampaign(id);
+  const numericId = Number(id);
+  const { campaign: fetchedCampaign, isLoading, error, refetch } = useCampaign(numericId);
 
   // Local copy for optimistic vote updates
   const [campaign, setCampaign] = useState<Campaign | null>(null);
@@ -96,7 +96,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+  <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
         <main className="container mx-auto px-4 py-8 max-w-5xl">
           <div className="animate-pulse space-y-6">
             <div className="h-5 bg-zinc-200 dark:bg-zinc-700 rounded w-48" />
@@ -118,7 +118,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+  <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
         <main className="container mx-auto px-4 py-24 text-center">
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">
             Failed to load cause
@@ -135,9 +135,9 @@ export default function CauseDetailClient({ id }: { id: string }) {
     );
   }
 
-  if (notFound || !campaign) {
+  if (!campaign) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+  <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
         <main className="container mx-auto px-4 py-24 text-center">
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">Cause not found</h1>
           <p className="text-zinc-600 dark:text-zinc-400 mb-8">
@@ -167,7 +167,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const categoryLabel = CATEGORY_LABELS[campaign.category] ?? 'Other';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+  <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
       <main className="container mx-auto px-4 py-8 max-w-5xl">
         {/* Breadcrumb + Wallet */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -277,7 +277,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
             <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Created by</h2>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
+                <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
                   {campaign.creator.slice(1, 3).toUpperCase()}
                 </div>
                 <div>

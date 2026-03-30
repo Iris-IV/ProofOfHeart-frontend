@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Campaign, Vote, CATEGORY_LABELS, CampaignStatus } from '@/types';
+import { explorerTxUrl } from '@/utils/explorer';
 import { SORT_OPTIONS } from '@/lib/mockCauses';
 import { stellarVotingService } from '@/services/stellarVoting';
 import { useCampaigns } from '@/hooks/useCampaigns';
@@ -66,7 +67,7 @@ function CausesContent() {
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [userVotes, setUserVotes] = useState<Record<string, Vote>>({});
-  const [voteCounts] = useState<Record<number, { upvotes: number; downvotes: number; totalVotes: number }>>({});
+  const [voteCounts, setVoteCounts] = useState<Record<number, { upvotes: number; downvotes: number; totalVotes: number }>>({});
   const [isVotingFor, setIsVotingFor] = useState<number | null>(null);
   const { publicKey: userWalletAddress } = useWallet();
   const { showError, showSuccess, showWarning } = useToast();
@@ -136,7 +137,20 @@ function CausesContent() {
         transactionHash,
       };
       setUserVotes((prev) => ({ ...prev, [campaignId]: newVote }));
-      showSuccess('Your vote has been cast successfully.');
+      setVoteCounts((prev: Record<number, { upvotes: number; downvotes: number; totalVotes: number }>) => {
+        const current = prev[campaignId] ?? { upvotes: 0, downvotes: 0, totalVotes: 0 };
+        return {
+          ...prev,
+          [campaignId]: {
+            upvotes: voteType === 'upvote' ? current.upvotes + 1 : current.upvotes,
+            downvotes: voteType === 'downvote' ? current.downvotes + 1 : current.downvotes,
+            totalVotes: current.totalVotes + 1,
+          },
+        };
+      });
+      showSuccess(
+        `Your vote has been cast successfully. <a href="${explorerTxUrl(transactionHash)}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;">View on Explorer</a>`
+      );
     } catch (error) {
       showError(parseContractError(error));
     } finally {
@@ -254,7 +268,7 @@ function CausesContent() {
   // -------------------------------------------------------------------------
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+  <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
       <main className="container mx-auto px-4 py-8">
         {/* Page heading */}
         <div className="mb-6">
