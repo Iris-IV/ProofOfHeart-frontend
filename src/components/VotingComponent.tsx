@@ -64,13 +64,13 @@ export default function VotingComponent({
     <div className="flex flex-col items-center gap-4 p-4 bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-700">
       <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Vote on this cause</h3>
 
-      <div className="flex gap-3">
+      <div className="flex gap-3 w-full">
         <button
           onClick={() => handleVote('upvote')}
           disabled={isVoting || !userWalletAddress}
-          className={getVoteButtonClass('upvote')}
+          className={`${getVoteButtonClass('upvote')} flex-1 min-h-[44px] justify-center`}
         >
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <svg className="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
             <path
               fillRule="evenodd"
               d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
@@ -83,9 +83,9 @@ export default function VotingComponent({
         <button
           onClick={() => handleVote('downvote')}
           disabled={isVoting || !userWalletAddress}
-          className={getVoteButtonClass('downvote')}
+          className={`${getVoteButtonClass('downvote')} flex-1 min-h-[44px] justify-center`}
         >
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <svg className="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
             <path
               fillRule="evenodd"
               d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"

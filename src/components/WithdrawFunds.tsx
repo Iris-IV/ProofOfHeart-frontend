@@ -1,5 +1,5 @@
 'use client';
- 'use client';
+'use client';
 import { explorerTxUrl } from '../utils/explorer';
 
 import { useState } from 'react';
@@ -156,18 +156,18 @@ export default function WithdrawFunds({
             pay {feeAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM in platform fees,
             and receive {creatorAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM.
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <button
               onClick={handleWithdraw}
               disabled={isWithdrawing}
-              className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-3 min-h-[44px] bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isWithdrawing ? 'Processing…' : 'Confirm Withdrawal'}
             </button>
             <button
               onClick={() => setShowConfirm(false)}
               disabled={isWithdrawing}
-              className="px-4 py-2 border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
+              className="px-4 py-3 min-h-[44px] border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
@@ -178,7 +178,7 @@ export default function WithdrawFunds({
           <button
             onClick={() => setShowConfirm(true)}
             disabled={isDisabled}
-            className="w-full px-4 py-2.5 bg-linear-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-sm font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:from-zinc-400 disabled:to-zinc-400"
+            className="w-full px-4 py-3 min-h-[44px] bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-sm font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:from-zinc-400 disabled:to-zinc-400"
           >
             Withdraw Funds
           </button>

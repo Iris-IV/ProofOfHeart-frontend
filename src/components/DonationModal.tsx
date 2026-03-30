@@ -58,12 +58,12 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
             onClick={(e) => e.target === e.currentTarget && step !== 'pending' && onClose()}
         >
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-md border border-zinc-200 dark:border-zinc-700 overflow-hidden">
+            <div className="bg-white dark:bg-zinc-900 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md border border-zinc-200 dark:border-zinc-700 overflow-hidden flex flex-col max-h-[92dvh]">
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700 shrink-0">
                     <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
                         {step === 'confirmed' ? 'Donation Confirmed' : 'Fund This Cause'}
                     </h2>
@@ -71,14 +71,14 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
                         <button
                             onClick={onClose}
                             aria-label="Close"
-                            className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors text-2xl leading-none"
+                            className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors text-2xl leading-none p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
                         >
                             ×
                         </button>
                     )}
                 </div>
 
-                <div className="px-6 py-5 space-y-5">
+                <div className="px-6 py-5 space-y-5 overflow-y-auto">
                     {/* Campaign title */}
                     <p className="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2">{campaign.title}</p>
 
