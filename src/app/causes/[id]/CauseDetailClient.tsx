@@ -13,6 +13,7 @@ import DeadlineCountdown from '../../../components/DeadlineCountdown';
 import FundingProgressBar from '../../../components/FundingProgressBar';
 import { useWallet } from '../../../components/WalletContext';
 import CampaignActions from '../../../components/CampaignActions';
+import DonationModal from '../../../components/DonationModal';
 
 function formatDate(ts: number) {
   return new Intl.DateTimeFormat('en-US', {
@@ -32,6 +33,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const [userVote, setUserVote] = useState<Vote | undefined>(undefined);
   const [isVoting, setIsVoting] = useState(false);
   const [voteCounts, setVoteCounts] = useState({ upvotes: 0, downvotes: 0, totalVotes: 0 });
+  const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const { showError, showSuccess, showWarning } = useToast();
 
   useEffect(() => {
@@ -79,7 +81,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
         totalVotes: prev.totalVotes + 1,
       }));
       showSuccess('Your vote has been cast successfully.');
-      
+
       // Trigger immediate refetch after successful transaction
       refetch();
     } catch (error) {
@@ -259,6 +261,22 @@ export default function CauseDetailClient({ id }: { id: string }) {
               totalVotes={voteCounts.totalVotes}
             />
 
+            {/* Donate button */}
+            {campaign.is_active && !campaign.is_cancelled && (
+              <button
+                onClick={() => {
+                  if (!userWalletAddress) {
+                    showWarning('Please connect your wallet first.');
+                    return;
+                  }
+                  setIsDonationModalOpen(true);
+                }}
+                className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                💜 Fund This Cause
+              </button>
+            )}
+
             {/* Role-aware actions */}
             <CampaignActions
               campaign={campaign}
@@ -321,6 +339,14 @@ export default function CauseDetailClient({ id }: { id: string }) {
           </div>
         </div>
       </main>
+
+      {isDonationModalOpen && (
+        <DonationModal
+          campaign={campaign}
+          onClose={() => setIsDonationModalOpen(false)}
+          onSuccess={refetch}
+        />
+      )}
     </div>
   );
 }
