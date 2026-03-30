@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Campaign, stroopsToXlm } from '../types';
+import { Campaign, basisPointsToPercentage, stroopsToXlm } from '../types';
 import { withdrawFunds } from '../lib/contractClient';
 import { useToast } from './ToastProvider';
 import { parseContractError } from '../utils/contractErrors';
@@ -56,7 +56,7 @@ export default function WithdrawFunds({
   const totalRaised = stroopsToXlm(campaign.amount_raised);
   const feeAmount = totalRaised * (platformFeeBps / 10000);
   const creatorAmount = totalRaised - feeAmount;
-  const feePct = (platformFeeBps / 100).toFixed(1);
+  const feePct = basisPointsToPercentage(platformFeeBps);
 
   const handleWithdraw = async () => {
     setIsWithdrawing(true);
@@ -141,6 +141,9 @@ export default function WithdrawFunds({
         <div className="space-y-3">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Are you sure you want to withdraw? This action cannot be undone.
+            You will withdraw {totalRaised.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM total,
+            pay {feeAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM in platform fees,
+            and receive {creatorAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM.
           </p>
           <div className="flex gap-2">
             <button

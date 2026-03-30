@@ -186,7 +186,7 @@ editing `contractClient.ts`.
 | `get_revenue_pool(campaign_id)` | `getRevenuePool(campaignId)` | `useRevenueSharing(...)` | `/causes/[id]`, `/dashboard` |
 | `get_revenue_claimed(campaign_id, contributor)` | `getRevenueClaimed(campaignId, contributor)` | `useRevenueSharing(...)` | `/causes/[id]`, `/dashboard` |
 | `get_admin()` | `getAdmin()` | `useAdmin()` / server route preload | `/admin` |
-| `get_platform_fee()` | `getPlatformFee()` | — | `/admin` |
+| `get_platform_fee()` | `getPlatformFee()` | `usePlatformFee()` | `/admin`, `/causes/[id]` |
 | `get_approve_votes(campaign_id)` | _pending_ | _pending_ | `/causes/[id]` (community vote UI) |
 | `get_reject_votes(campaign_id)` | _pending_ | _pending_ | `/causes/[id]` (community vote UI) |
 | `has_voted(campaign_id, voter)` | _pending_ | _pending_ | `/causes/[id]` (community vote UI) |
@@ -208,6 +208,14 @@ editing `contractClient.ts`.
 | `update_platform_fee` | `platform_fee` | Platform fee management | `/admin` | Admin wallet only |
 | `update_admin` | `new_admin` | Admin transfer | `/admin` | Admin wallet only |
 | `verify_campaign_with_votes` | `campaign_id` | Trigger vote-based verification | `/causes/[id]` | Anyone |
+
+The cause detail experience now surfaces platform fee transparency in three places:
+
+- Contributor entry: the contribution form explains that the creator pays the platform fee on withdrawal.
+- Creator withdrawal: the confirmation UI shows total raised, fee amount, and creator net proceeds.
+- Cause detail: the page shows the current fee percentage and an estimated fee/net breakdown based on funds raised.
+
+If `get_platform_fee()` is unavailable, the frontend falls back to `300` basis points (`3%`) until the getter is deployed.
 
 ### Business rules to enforce on the frontend (before calling the contract)
 
