@@ -12,6 +12,12 @@ import { useToast } from '@/components/ToastProvider';
 import { parseContractError } from '@/utils/contractErrors';
 import { cancelCampaign, claimRefund } from '@/lib/contractClient';
 import CauseCard from '@/components/CauseCard';
+import { CauseCardSkeleton } from '@/components/Skeleton';
+import { useWallet } from '../../components/WalletContext';
+import { useToast } from '../../components/ToastProvider';
+import { parseContractError } from '../../utils/contractErrors';
+import CauseCard from '../../components/CauseCard';
+import { CauseCardSkeleton } from '@/components/Skeleton';
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -20,30 +26,6 @@ function useDebounce<T>(value: T, delay: number): T {
     return () => clearTimeout(timer);
   }, [value, delay]);
   return debounced;
-}
-
-// ---------------------------------------------------------------------------
-// Loading skeleton
-// ---------------------------------------------------------------------------
-
-function CauseCardSkeleton() {
-  return (
-    <div className="flex flex-col bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 overflow-hidden animate-pulse">
-      <div className="p-5 flex-1 space-y-3">
-        <div className="flex justify-between">
-          <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-24" />
-          <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-16" />
-        </div>
-        <div className="h-5 bg-zinc-200 dark:bg-zinc-700 rounded w-3/4" />
-        <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-full" />
-        <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-5/6" />
-        <div className="h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full w-full mt-4" />
-      </div>
-      <div className="px-5 pb-5">
-        <div className="h-24 bg-zinc-100 dark:bg-zinc-700/50 rounded-lg" />
-      </div>
-    </div>
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -96,7 +78,7 @@ function CausesContent() {
       const v = stellarVotingService.getUserVote(String(campaign.id), userWalletAddress);
       if (v) {
         votes[campaign.id] = {
-          campaignId: String(campaign.id),
+          causeId: String(campaign.id),
           voter: userWalletAddress,
           voteType: v.voteType,
           timestamp: v.timestamp,
@@ -130,7 +112,7 @@ function CausesContent() {
     try {
       const transactionHash = await stellarVotingService.castVote(id, voteType, userWalletAddress);
       const newVote: Vote = {
-        campaignId: id,
+        causeId: id,
         voter: userWalletAddress,
         voteType,
         timestamp: new Date(),
@@ -219,7 +201,7 @@ function CausesContent() {
     }
 
     if (category !== 'all') result = result.filter((c) => String(c.category) === category);
-    if (status !== 'all')   result = result.filter((c) => c.status   === status);
+    if (status !== 'all') result = result.filter((c) => c.status === status);
 
     switch (sort) {
       case 'oldest':
@@ -268,7 +250,7 @@ function CausesContent() {
   // -------------------------------------------------------------------------
 
   return (
-  <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+    <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
       <main className="container mx-auto px-4 py-8">
         {/* Page heading */}
         <div className="mb-6">
