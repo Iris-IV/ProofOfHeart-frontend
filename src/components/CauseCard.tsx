@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { Campaign, Vote } from '../types';
 import VotingComponent from './VotingComponent';
 import CancelCampaignModal from './cancelCampaignModal';

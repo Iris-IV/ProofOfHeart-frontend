@@ -228,8 +228,7 @@ export async function cancelCampaign(
  * @param contributorAddress - Public key of the contributor claiming the refund.
  */
 export async function claimRefund(
-  campaignId: number,
-  contributorAddress: string
+  campaignId: number
 ): Promise<void> {
   if (USE_MOCKS) {
     await new Promise((resolve) => setTimeout(resolve, 800));
