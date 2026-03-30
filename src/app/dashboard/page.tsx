@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useWallet } from "@/components/WalletContext";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { getStellarBalance } from "@/lib/getStellarBalance";
+import RevenueSharingPanel from "@/components/RevenueSharingPanel";
+import { basisPointsToPercentage, stroopsToXlm } from "@/types";
 
 export default function DashboardPage() {
   const { publicKey, isWalletConnected } = useWallet();
@@ -87,9 +89,31 @@ export default function DashboardPage() {
         ) : (
           <ul className="space-y-2">
             {submittedCauses.map((cause) => (
-              <li key={cause.id} className="border rounded p-3 bg-zinc-50 dark:bg-zinc-900">
-                <div className="font-medium">{cause.title}</div>
-                <div className="text-sm text-zinc-500 dark:text-zinc-400">{cause.description}</div>
+              <li key={cause.id} className="border rounded p-4 bg-zinc-50 dark:bg-zinc-900 space-y-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <div className="font-medium">{cause.title}</div>
+                    <div className="text-sm text-zinc-500 dark:text-zinc-400">{cause.description}</div>
+                    <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                      Raised {stroopsToXlm(cause.amount_raised).toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM
+                      {cause.has_revenue_sharing ? ` · ${basisPointsToPercentage(cause.revenue_share_percentage)} revenue sharing` : ''}
+                    </div>
+                  </div>
+                  <Link
+                    href={`/causes/${cause.id}`}
+                    className="inline-flex items-center rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                  >
+                    Open Campaign
+                  </Link>
+                </div>
+
+                {cause.has_revenue_sharing && (
+                  <RevenueSharingPanel
+                    campaign={cause}
+                    variant="dashboard"
+                    showContributorControls={false}
+                  />
+                )}
               </li>
             ))}
           </ul>

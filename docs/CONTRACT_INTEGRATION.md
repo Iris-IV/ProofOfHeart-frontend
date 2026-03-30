@@ -182,9 +182,9 @@ editing `contractClient.ts`.
 | `get_campaign(campaign_id)` | `getCampaign(id)` | `useCampaign(id)` | `/causes/[id]`, `/explore` |
 | `get_campaign` × N | `getAllCampaigns()` | `useCampaigns()` | `/causes`, `/explore` |
 | `get_campaign_count()` | `getCampaignCount()` | (internal) | — |
-| `get_contribution(campaign_id, contributor)` | _pending_ | _pending_ | `/causes/[id]` (contributor view) |
-| `get_revenue_pool(campaign_id)` | _pending_ | _pending_ | `/causes/[id]` (creator view) |
-| `get_revenue_claimed(campaign_id, contributor)` | _pending_ | _pending_ | `/causes/[id]` (contributor view) |
+| `get_contribution(campaign_id, contributor)` | `getContribution(campaignId, contributor)` | `useContribution(...)`, `useRevenueSharing(...)` | `/causes/[id]` (contributor view), `/dashboard` |
+| `get_revenue_pool(campaign_id)` | `getRevenuePool(campaignId)` | `useRevenueSharing(...)` | `/causes/[id]`, `/dashboard` |
+| `get_revenue_claimed(campaign_id, contributor)` | `getRevenueClaimed(campaignId, contributor)` | `useRevenueSharing(...)` | `/causes/[id]`, `/dashboard` |
 | `get_approve_votes(campaign_id)` | _pending_ | _pending_ | `/causes/[id]` (community vote UI) |
 | `get_reject_votes(campaign_id)` | _pending_ | _pending_ | `/causes/[id]` (community vote UI) |
 | `has_voted(campaign_id, voter)` | _pending_ | _pending_ | `/causes/[id]` (community vote UI) |
@@ -199,7 +199,7 @@ editing `contractClient.ts`.
 | `withdraw_funds` | `campaign_id` | Creator withdrawal | `/causes/[id]` (creator view) | Creator wallet |
 | `cancel_campaign` | `campaign_id` | Campaign cancellation | `/causes/[id]` (creator view) | Creator wallet |
 | `claim_refund` | `campaign_id, contributor` | Refund claiming | `/causes/[id]` (contributor view) | Contributor wallet |
-| `deposit_revenue` | `campaign_id, amount` | Revenue deposit | `/causes/[id]` (creator view) | Creator wallet |
+| `deposit_revenue` | `campaign_id, amount` | Revenue deposit | `/dashboard`, `/causes/[id]` (creator view) | Creator wallet |
 | `claim_revenue` | `campaign_id, contributor` | Revenue claim | `/causes/[id]` (contributor view) | Contributor wallet |
 | `vote_on_campaign` | `campaign_id, voter, approve` | Community validation vote | `/causes/[id]` (voting panel) | Token-holding wallet |
 | `verify_campaign` | `campaign_id` | Admin verification | `/admin` _(planned)_ | Admin wallet only |
@@ -242,10 +242,10 @@ pub struct Campaign {                  export interface Campaign {
   pub is_active: bool,        ──────►    status: 'pending'|'approved'|'rejected'; // note 3
   pub is_cancelled: bool,     ──┐
   pub is_verified: bool,      ──┘
-  pub funds_withdrawn: bool,  ──────►    (not yet exposed in TypeScript type)
-  pub category: Category,     ──────►    category: string;       // ⚠ see note 4
-  pub has_revenue_sharing: bool,──────►  (not yet exposed)
-  pub revenue_share_percentage: u32,──►  (not yet exposed)
+  pub funds_withdrawn: bool,  ──────►    funds_withdrawn: boolean;
+  pub category: Category,     ──────►    category: Category;     // ⚠ see note 4
+  pub has_revenue_sharing: bool,──────►  has_revenue_sharing: boolean;
+  pub revenue_share_percentage: u32,──►  revenue_share_percentage: number;
   // no upvotes/downvotes/totalVotes     upvotes: number;        // ⚠ see note 5
 }                                        downvotes: number;
                                          totalVotes: number;
