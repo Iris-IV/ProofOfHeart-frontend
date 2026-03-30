@@ -6,15 +6,16 @@ import { useWallet } from './WalletContext';
 import { useAdmin } from '../hooks/useAdmin';
 import { useContribution } from '../hooks/useContribution';
 import { usePlatformFee } from '../hooks/usePlatformFee';
-import { 
+import {
   contribute,
-  cancelCampaign, 
-  claimRefund, 
-  verifyCampaign 
+  cancelCampaign,
+  claimRefund,
+  verifyCampaign
 } from '../lib/contractClient';
 import { useToast } from './ToastProvider';
 import { parseContractError } from '../utils/contractErrors';
 import WithdrawFunds from './WithdrawFunds';
+import { Spinner } from './Skeleton';
 
 interface CampaignActionsProps {
   campaign: Campaign;
@@ -75,19 +76,9 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
 
   const handleContribute = async () => {
     const parsedAmount = Number(contributionAmount);
-    if (!publicKey) {
-      showWarning('Connect your wallet to contribute.');
-      return;
-    }
-    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      showWarning('Enter a contribution amount greater than 0 XLM.');
-      return;
-    }
-    if (contributionDisabledReason) {
-      showWarning(contributionDisabledReason);
-      return;
-    }
-
+    if (!publicKey) { showWarning('Connect your wallet to contribute.'); return; }
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) { showWarning('Enter a contribution amount greater than 0 XLM.'); return; }
+    if (contributionDisabledReason) { showWarning(contributionDisabledReason); return; }
     setIsPending(true);
     try {
       await contribute(campaign.id, publicKey, xlmToStroops(parsedAmount));
@@ -121,7 +112,7 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
                 step="0.1"
                 inputMode="decimal"
                 value={contributionAmount}
-                onChange={(event) => setContributionAmount(event.target.value)}
+                onChange={(e) => setContributionAmount(e.target.value)}
                 placeholder="Amount in XLM"
                 disabled={isPending || !!contributionDisabledReason}
                 className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-zinc-900 outline-none transition focus:border-blue-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50"
@@ -129,8 +120,9 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
               <button
                 onClick={handleContribute}
                 disabled={isPending || !!contributionDisabledReason}
-                className="rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-zinc-400"
+                className="rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-zinc-400 flex items-center gap-2"
               >
+                {isPending && <Spinner />}
                 {isPending ? 'Processing…' : 'Contribute'}
               </button>
             </div>
@@ -154,32 +146,31 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
             platformFeeBps={platformFeeBps}
             onWithdrawSuccess={onActionSuccess}
           />
-
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-4">Creator Dashboard</h3>
             <div className="flex flex-col gap-3">
-            <button
-              onClick={() => handleAction(() => cancelCampaign(campaign.id), 'Campaign cancelled.')}
-              disabled={isPending || !campaign.is_active || campaign.is_cancelled || campaign.funds_withdrawn}
-              className="w-full py-2 bg-red-600 hover:bg-red-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors"
-            >
-              Cancel Campaign
-            </button>
-          </div>
+              <button
+                onClick={() => handleAction(() => cancelCampaign(campaign.id), 'Campaign cancelled.')}
+                disabled={isPending || !campaign.is_active || campaign.is_cancelled || campaign.funds_withdrawn}
+                className="w-full py-3 min-h-[44px] bg-red-600 hover:bg-red-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                {isPending && <Spinner />} Cancel Campaign
+              </button>
+            </div>
           </div>
         </>
       )}
 
       {/* Admin Actions */}
       {isAdmin && !campaign.is_verified && (
-        <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 border-blue-200 dark:border-blue-900">
-          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-4 text-blue-600">Admin Panel</h3>
+        <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
+          <h3 className="text-lg font-semibold text-blue-600 mb-4">Admin Panel</h3>
           <button
             onClick={() => handleAction(() => verifyCampaign(campaign.id), 'Campaign verified!')}
             disabled={isPending}
-            className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            className="w-full py-3 min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
           >
-            Verify Campaign
+            {isPending && <Spinner />} Verify Campaign
           </button>
         </div>
       )}
@@ -194,9 +185,9 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
               onClick={() => handleAction(() => claimRefund(campaign.id, publicKey!), 'Refund claimed!')}
               disabled={isPending || (campaign.is_active && !isExpired)}
               title={campaign.is_active && !isExpired ? 'Cannot refund while active' : ''}
-              className="w-full py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors"
+              className="w-full py-3 min-h-[44px] bg-amber-600 hover:bg-amber-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
             >
-              Claim Refund
+              {isPending && <Spinner />} Claim Refund
             </button>
           </div>
         </div>
