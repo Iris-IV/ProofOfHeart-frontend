@@ -41,6 +41,7 @@ The project follows the standard **Next.js App Router** architecture:
 
 - Campaign exploration and detail pages backed by the Soroban contract service layer.
 - Wallet-aware creator and contributor actions including withdrawal, refunds, and admin verification.
+- Wallet dashboard contribution history with per-campaign status, claimable refund/revenue actions, and Stellar explorer transaction links.
 - Revenue sharing support for eligible Educational Startup campaigns:
   creator dashboard deposit flow, contributor claim flow, revenue pool display, and transparent pro-rata breakdowns.
 - Admin dashboard at `/admin` with wallet-gated access, pending campaign verification, platform fee updates, admin transfer, and contract-level stats.

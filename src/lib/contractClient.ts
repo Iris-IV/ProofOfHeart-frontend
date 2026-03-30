@@ -15,6 +15,7 @@ import * as StellarSdk from '@stellar/stellar-sdk';
 import { signTransaction, getAddress } from '@stellar/freighter-api';
 import { Campaign, Category } from '../types';
 import { parseContractError } from '../utils/contractErrors';
+import { appendWalletTransaction } from './transactionLog';
 
 // ---------------------------------------------------------------------------
 // Environment configuration
@@ -517,6 +518,12 @@ export async function contribute(
 
   try {
     const txResult = await buildAndSubmitTransaction(contributor, op);
+    appendWalletTransaction({
+      walletAddress: contributor,
+      campaignId,
+      action: 'contribute',
+      txHash: txResult.txHash,
+    });
     return txResult.txHash;
   } catch (err) {
     throw new Error(parseContractError(err));
@@ -584,6 +591,12 @@ export async function claimRefund(
 
   try {
     const txResult = await buildAndSubmitTransaction(contributor, op);
+    appendWalletTransaction({
+      walletAddress: contributor,
+      campaignId,
+      action: 'claim_refund',
+      txHash: txResult.txHash,
+    });
     return txResult.txHash;
   } catch (err) {
     throw new Error(parseContractError(err));
@@ -633,6 +646,12 @@ export async function claimRevenue(
 
   try {
     const txResult = await buildAndSubmitTransaction(contributor, op);
+    appendWalletTransaction({
+      walletAddress: contributor,
+      campaignId,
+      action: 'claim_revenue',
+      txHash: txResult.txHash,
+    });
     return txResult.txHash;
   } catch (err) {
     throw new Error(parseContractError(err));
