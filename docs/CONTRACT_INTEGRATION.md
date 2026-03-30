@@ -185,6 +185,8 @@ editing `contractClient.ts`.
 | `get_contribution(campaign_id, contributor)` | `getContribution(campaignId, contributor)` | `useContribution(...)`, `useRevenueSharing(...)` | `/causes/[id]` (contributor view), `/dashboard` |
 | `get_revenue_pool(campaign_id)` | `getRevenuePool(campaignId)` | `useRevenueSharing(...)` | `/causes/[id]`, `/dashboard` |
 | `get_revenue_claimed(campaign_id, contributor)` | `getRevenueClaimed(campaignId, contributor)` | `useRevenueSharing(...)` | `/causes/[id]`, `/dashboard` |
+| `get_admin()` | `getAdmin()` | `useAdmin()` / server route preload | `/admin` |
+| `get_platform_fee()` | `getPlatformFee()` | — | `/admin` |
 | `get_approve_votes(campaign_id)` | _pending_ | _pending_ | `/causes/[id]` (community vote UI) |
 | `get_reject_votes(campaign_id)` | _pending_ | _pending_ | `/causes/[id]` (community vote UI) |
 | `has_voted(campaign_id, voter)` | _pending_ | _pending_ | `/causes/[id]` (community vote UI) |
@@ -202,7 +204,9 @@ editing `contractClient.ts`.
 | `deposit_revenue` | `campaign_id, amount` | Revenue deposit | `/dashboard`, `/causes/[id]` (creator view) | Creator wallet |
 | `claim_revenue` | `campaign_id, contributor` | Revenue claim | `/causes/[id]` (contributor view) | Contributor wallet |
 | `vote_on_campaign` | `campaign_id, voter, approve` | Community validation vote | `/causes/[id]` (voting panel) | Token-holding wallet |
-| `verify_campaign` | `campaign_id` | Admin verification | `/admin` _(planned)_ | Admin wallet only |
+| `verify_campaign` | `campaign_id` | Admin verification | `/admin` | Admin wallet only |
+| `update_platform_fee` | `platform_fee` | Platform fee management | `/admin` | Admin wallet only |
+| `update_admin` | `new_admin` | Admin transfer | `/admin` | Admin wallet only |
 | `verify_campaign_with_votes` | `campaign_id` | Trigger vote-based verification | `/causes/[id]` | Anyone |
 
 ### Business rules to enforce on the frontend (before calling the contract)

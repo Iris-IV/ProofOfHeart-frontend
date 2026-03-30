@@ -43,6 +43,7 @@ The project follows the standard **Next.js App Router** architecture:
 - Wallet-aware creator and contributor actions including withdrawal, refunds, and admin verification.
 - Revenue sharing support for eligible Educational Startup campaigns:
   creator dashboard deposit flow, contributor claim flow, revenue pool display, and transparent pro-rata breakdowns.
+- Admin dashboard at `/admin` with wallet-gated access, pending campaign verification, platform fee updates, admin transfer, and contract-level stats.
 
 ## 🏁 Getting Started
 
@@ -81,6 +82,9 @@ The project uses environment variables for configuration. Create a `.env.local` 
 # Example Environment Variables
 NEXT_PUBLIC_API_URL=https://api.proofofheart.org
 # NEXT_PUBLIC_CHAIN_ID=1
+NEXT_PUBLIC_CONTRACT_ID=
+NEXT_PUBLIC_RPC_URL=https://soroban-testnet.stellar.org
+NEXT_PUBLIC_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
 ```
 
 ## 🤝 Contributing!
