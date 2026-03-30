@@ -44,7 +44,7 @@ describe('WalletConnection — Connect Wallet flow', () => {
   });
 
   it('shows a loading state while connecting', async () => {
-    let resolveConnect!: (v: { isConnected: boolean; error?: any; }) => void;
+    let resolveConnect!: (v: { isConnected: boolean; error?: unknown; }) => void;
 
     // First call is from the mount check (not connected → stay on connect screen)
     // Second call is from the button click (we hold it pending to observe loading state)
