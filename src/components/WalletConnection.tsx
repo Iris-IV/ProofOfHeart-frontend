@@ -17,10 +17,10 @@ export default function WalletConnection({ onWalletConnected, onWalletDisconnect
 
   const checkWalletConnection = useCallback(async () => {
     try {
-      const connected = await isConnected();
-      const allowed = await isAllowed();
+      const connectedResponse = await isConnected();
+      const allowedResponse = await isAllowed();
 
-      if (connected && allowed) {
+      if (connectedResponse.isConnected && allowedResponse.isAllowed) {
         const key = await getAddress();
         setPublicKey(key.address);
         setIsWalletConnected(true);
@@ -38,16 +38,16 @@ export default function WalletConnection({ onWalletConnected, onWalletDisconnect
   const connectWallet = async () => {
     setIsLoading(true);
     try {
-      const connected = await isConnected();
-      if (!connected) {
+      const connectedResponse = await isConnected();
+      if (!connectedResponse.isConnected) {
         showWarning('Freighter wallet not found. Opening install page…');
         window.open('https://www.freighter.app/', '_blank');
         setIsLoading(false);
         return;
       }
 
-      const allowed = await isAllowed();
-      if (!allowed) {
+      const allowedResponse = await isAllowed();
+      if (!allowedResponse.isAllowed) {
         showWarning('Please allow Freighter to connect to this site.');
         setIsLoading(false);
         return;

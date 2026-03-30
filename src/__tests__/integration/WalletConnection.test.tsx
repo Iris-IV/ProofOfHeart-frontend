@@ -33,8 +33,8 @@ describe('WalletConnection — Connect Wallet flow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Default: Freighter not connected on page load
-    mockIsConnected.mockResolvedValue(false);
-    mockIsAllowed.mockResolvedValue(false);
+    mockIsConnected.mockResolvedValue({ isConnected: false });
+    mockIsAllowed.mockResolvedValue({ isAllowed: false });
     mockGetAddress.mockResolvedValue({ address: TEST_ADDRESS });
   });
 
@@ -44,14 +44,14 @@ describe('WalletConnection — Connect Wallet flow', () => {
   });
 
   it('shows a loading state while connecting', async () => {
-    let resolveConnect!: (v: boolean) => void;
+    let resolveConnect!: (v: { isConnected: boolean; error?: any; }) => void;
 
     // First call is from the mount check (not connected → stay on connect screen)
     // Second call is from the button click (we hold it pending to observe loading state)
     mockIsConnected
-      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce({ isConnected: false })
       .mockImplementationOnce(() => new Promise((r) => { resolveConnect = r; }));
-    mockIsAllowed.mockResolvedValue(true);
+    mockIsAllowed.mockResolvedValue({ isAllowed: true });
     mockGetAddress.mockResolvedValue({ address: TEST_ADDRESS });
 
     renderWalletConnection();
@@ -64,11 +64,11 @@ describe('WalletConnection — Connect Wallet flow', () => {
     expect(screen.getByRole('button', { name: /connecting/i })).toBeDisabled();
 
     // Resolve so the component can finish cleanly
-    await act(async () => { resolveConnect(true); });
+    await act(async () => { resolveConnect({ isConnected: true }); });
   });
 
   it('shows a warning toast and opens install page when Freighter is not installed', async () => {
-    mockIsConnected.mockResolvedValue(false);
+    mockIsConnected.mockResolvedValue({ isConnected: false });
     const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
 
     renderWalletConnection();
@@ -83,8 +83,8 @@ describe('WalletConnection — Connect Wallet flow', () => {
   });
 
   it('shows a warning toast when Freighter is installed but site is not allowed', async () => {
-    mockIsConnected.mockResolvedValue(true);
-    mockIsAllowed.mockResolvedValue(false);
+    mockIsConnected.mockResolvedValue({ isConnected: true });
+    mockIsAllowed.mockResolvedValue({ isAllowed: false });
 
     renderWalletConnection();
     const button = await screen.findByRole('button', { name: /connect wallet/i });
@@ -96,8 +96,8 @@ describe('WalletConnection — Connect Wallet flow', () => {
   });
 
   it('shows the formatted address and disconnect button after successful connection', async () => {
-    mockIsConnected.mockResolvedValue(true);
-    mockIsAllowed.mockResolvedValue(true);
+    mockIsConnected.mockResolvedValue({ isConnected: true });
+    mockIsAllowed.mockResolvedValue({ isAllowed: true });
     mockGetAddress.mockResolvedValue({ address: TEST_ADDRESS });
 
     const { onWalletConnected } = renderWalletConnection();
@@ -115,8 +115,8 @@ describe('WalletConnection — Connect Wallet flow', () => {
   });
 
   it('auto-connects when the wallet is already connected on mount', async () => {
-    mockIsConnected.mockResolvedValue(true);
-    mockIsAllowed.mockResolvedValue(true);
+    mockIsConnected.mockResolvedValue({ isConnected: true });
+    mockIsAllowed.mockResolvedValue({ isAllowed: true });
     mockGetAddress.mockResolvedValue({ address: TEST_ADDRESS });
 
     const { onWalletConnected } = renderWalletConnection();
@@ -130,8 +130,8 @@ describe('WalletConnection — Connect Wallet flow', () => {
   });
 
   it('returns to the disconnected state after clicking Disconnect', async () => {
-    mockIsConnected.mockResolvedValue(true);
-    mockIsAllowed.mockResolvedValue(true);
+    mockIsConnected.mockResolvedValue({ isConnected: true });
+    mockIsAllowed.mockResolvedValue({ isAllowed: true });
     mockGetAddress.mockResolvedValue({ address: TEST_ADDRESS });
 
     const { onWalletDisconnected } = renderWalletConnection();

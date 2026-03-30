@@ -18,6 +18,8 @@ function makeCampaign(overrides: Partial<Campaign> = {}): Campaign {
     category: Category.Learner,
     has_revenue_sharing: false,
     revenue_share_percentage: 0,
+    created_at: Math.floor(Date.now() / 1000),
+    status: 'active',
     ...overrides,
   };
 }
