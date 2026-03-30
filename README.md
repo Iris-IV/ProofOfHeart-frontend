@@ -98,6 +98,32 @@ We welcome contributions! To maintain a clean and consistent codebase, please fo
     - Reference any related issues.
     - Ensure your code builds locally (`npm run build`).
 
+## 🐳 Docker Support
+
+To ensure a consistent development environment, we support containerization with Docker.
+
+### Local Development
+
+Run the following command to start the application in development mode with hot-reloading:
+
+```bash
+docker-compose up
+```
+
+### Production Build
+
+To build the production image manually:
+
+```bash
+docker build -t proofofheart-frontend .
+```
+
+To run the production container:
+
+```bash
+docker run -p 3000:3000 proofofheart-frontend
+```
+
 ## 📄 License
 
 This project is licensed under the [MIT License](LICENSE) (to be added).
