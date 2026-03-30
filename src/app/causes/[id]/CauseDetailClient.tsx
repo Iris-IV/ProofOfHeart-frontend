@@ -13,6 +13,7 @@ import DeadlineCountdown from '../../../components/DeadlineCountdown';
 import FundingProgressBar from '../../../components/FundingProgressBar';
 import { useWallet } from '../../../components/WalletContext';
 import CampaignActions from '../../../components/CampaignActions';
+import RevenueSharingPanel from '../../../components/RevenueSharingPanel';
 
 function formatDate(ts: number) {
   return new Intl.DateTimeFormat('en-US', {
@@ -242,6 +243,13 @@ export default function CauseDetailClient({ id }: { id: string }) {
                   fundingGoal={campaign.funding_goal}
                 />
               </div>
+            )}
+
+            {campaign.has_revenue_sharing && (
+              <RevenueSharingPanel
+                campaign={campaign}
+                onActionSuccess={refetch}
+              />
             )}
           </div>
 

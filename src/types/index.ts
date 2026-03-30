@@ -29,12 +29,14 @@ export type CampaignStatus = 'active' | 'cancelled' | 'funded' | 'failed' | 'ver
 
 export interface Campaign {
   id: number;
-  creator: string;                  // Stellar address (G…)
+  creator: string;
   title: string;
   description: string;
-  funding_goal: bigint;             // in stroops (1 XLM = 10_000_000 stroops)
-  deadline: number;                 // Unix timestamp (seconds)
-  amount_raised: bigint;            // in stroops
+  created_at : number; // Unix timestamp in seconds
+  status: CampaignStatus;
+  funding_goal: bigint;
+  deadline: number;
+  amount_raised: bigint;
   is_active: boolean;
   funds_withdrawn: boolean;
   is_cancelled: boolean;
@@ -103,6 +105,13 @@ export function stroopsToXlm(stroops: bigint): number {
  */
 export function xlmToStroops(xlm: number): bigint {
   return BigInt(Math.round(xlm * 10_000_000));
+}
+
+/**
+ * Format basis points as a percentage string for UI display.
+ */
+export function basisPointsToPercentage(basisPoints: number): string {
+  return `${(basisPoints / 100).toFixed(basisPoints % 100 === 0 ? 0 : 2)}%`;
 }
 
 // ---------------------------------------------------------------------------

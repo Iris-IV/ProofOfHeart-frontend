@@ -6,6 +6,9 @@ import Link from "next/link";
 import { useWallet } from "@/components/WalletContext";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { getStellarBalance } from "@/lib/getStellarBalance";
+import RevenueSharingPanel from "@/components/RevenueSharingPanel";
+import MyContributionsSection from "@/components/MyContributionsSection";
+import { basisPointsToPercentage, stroopsToXlm } from "@/types";
 
 export default function DashboardPage() {
   const { publicKey, isWalletConnected } = useWallet();
@@ -39,7 +42,6 @@ export default function DashboardPage() {
     { campaignId: 1, voter: publicKey, voteType: 'upvote', timestamp: new Date('2024-02-01'), transactionHash: 'tx1' },
     { campaignId: 2, voter: publicKey, voteType: 'downvote', timestamp: new Date('2024-02-10'), transactionHash: 'tx2' },
   ], [publicKey]);
-  // Mock funding/donation history (replace with real data/service when available)
   const mockFunding = useMemo(() => [
     { campaignId: 3, amount: 100, timestamp: new Date('2024-02-15'), tx: 'fund1' },
     { campaignId: 1, amount: 50, timestamp: new Date('2024-02-20'), tx: 'fund2' },
@@ -96,6 +98,8 @@ export default function DashboardPage() {
         )}
       </section>
 
+      <MyContributionsSection walletAddress={publicKey} />
+
       {/* Voting History */}
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-2">Voting History</h2>
@@ -126,7 +130,6 @@ export default function DashboardPage() {
         )}
       </section>
 
-      {/* Funding/Donation History */}
       <section>
         <h2 className="text-xl font-semibold mb-2">Funding/Donation History</h2>
         {mockFunding.length === 0 ? (
@@ -155,6 +158,7 @@ export default function DashboardPage() {
           </ul>
         )}
       </section>
+
     </div>
   );
 }
