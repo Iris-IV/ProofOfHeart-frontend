@@ -275,13 +275,6 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 onActionSuccess={refetch}
               />
             )}
-
-            {campaign.has_revenue_sharing && (
-              <RevenueSharingPanel
-                campaign={campaign}
-                onActionSuccess={refetch}
-              />
-            )}
           </div>
 
           {/* Sidebar – right col */}

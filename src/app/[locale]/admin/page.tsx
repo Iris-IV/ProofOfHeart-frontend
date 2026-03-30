@@ -11,7 +11,7 @@ import {
   verifyCampaign, 
   cancelCampaign 
 } from '@/lib/contractClient';
-import { Campaign, stroopsToXlm, Category, CATEGORY_LABELS, basisPointsToPercentage } from '@/types';
+import { stroopsToXlm, Category, CATEGORY_LABELS, basisPointsToPercentage } from '@/types';
 import { useToast } from '@/components/ToastProvider';
 import { CheckCircle, XCircle, ShieldAlert, Loader2, ExternalLink, Activity, DollarSign, PieChart, RefreshCw, Smartphone } from 'lucide-react';
 import { Link } from '@/i18n/routing';
@@ -20,9 +20,9 @@ import * as StellarSdk from '@stellar/stellar-sdk';
 import { parseContractError } from '@/utils/contractErrors';
 
 export default function AdminDashboard() {
-  const { campaigns, isLoading, refetch, isRefreshing, error: campaignsError } = useCampaigns();
+  const { campaigns, isLoading, refetch, isRefreshing } = useCampaigns();
   const { publicKey, isWalletConnected, connectWallet, isLoading: isWalletLoading } = useWallet();
-  const { showSuccess, showError, showInfo, showWarning } = useToast();
+  const { showSuccess, showError, showWarning } = useToast();
   const t = useTranslations('Admin');
   
   const [adminAddress, setAdminAddress] = useState<string | null>(null);
