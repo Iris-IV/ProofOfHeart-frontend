@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useCampaigns } from '../../hooks/useCampaigns';
-import { Category, CATEGORY_LABELS, stroopsToXlm } from '../../types';
-import CampaignStatusBadge from '../../components/CampaignStatusBadge';
-import FundingProgressBar from '../../components/FundingProgressBar';
+import { useCampaigns } from '@/hooks/useCampaigns';
+import { Category, CATEGORY_LABELS, stroopsToXlm } from '@/types';
+import CampaignStatusBadge from '@/components/CampaignStatusBadge';
+import FundingProgressBar from '@/components/FundingProgressBar';
 
 const CATEGORY_ICONS: Record<Category, string> = {
   [Category.Learner]: '🎓',

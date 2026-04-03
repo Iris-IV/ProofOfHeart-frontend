@@ -118,8 +118,8 @@ function Toast({
         {ICONS[toast.type]}
       </span>
 
-      {/* Message */}
-      <p className="flex-1 text-sm leading-snug">{toast.message}</p>
+  {/* Message */}
+  <p className="flex-1 text-sm leading-snug" dangerouslySetInnerHTML={{ __html: toast.message }} />
 
       {/* Dismiss */}
       <button

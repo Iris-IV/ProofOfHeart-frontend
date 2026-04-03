@@ -1,7 +1,9 @@
 'use client';
+ 'use client';
+import { explorerTxUrl } from '../utils/explorer';
 
 import { useState } from 'react';
-import { Campaign, stroopsToXlm } from '../types';
+import { Campaign, basisPointsToPercentage, stroopsToXlm } from '../types';
 import { withdrawFunds } from '../lib/contractClient';
 import { useToast } from './ToastProvider';
 import { parseContractError } from '../utils/contractErrors';
@@ -56,7 +58,7 @@ export default function WithdrawFunds({
   const totalRaised = stroopsToXlm(campaign.amount_raised);
   const feeAmount = totalRaised * (platformFeeBps / 10000);
   const creatorAmount = totalRaised - feeAmount;
-  const feePct = (platformFeeBps / 100).toFixed(1);
+  const feePct = basisPointsToPercentage(platformFeeBps);
 
   const handleWithdraw = async () => {
     setIsWithdrawing(true);
@@ -75,7 +77,7 @@ export default function WithdrawFunds({
     }
   };
 
-  // Success state — show tx hash and amounts
+  // Success state — show tx hash and amounts, with explorer link
   if (txHash) {
     return (
       <div className="bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800 p-5">
@@ -106,6 +108,15 @@ export default function WithdrawFunds({
           <p className="break-all">
             <span className="font-medium">Transaction:</span>{' '}
             <span className="font-mono text-xs">{txHash}</span>
+            {' '}
+            <a
+              href={explorerTxUrl(txHash)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-2 text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300"
+            >
+              View on Explorer
+            </a>
           </p>
         </div>
       </div>
@@ -141,6 +152,9 @@ export default function WithdrawFunds({
         <div className="space-y-3">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Are you sure you want to withdraw? This action cannot be undone.
+            You will withdraw {totalRaised.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM total,
+            pay {feeAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM in platform fees,
+            and receive {creatorAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM.
           </p>
           <div className="flex gap-2">
             <button
@@ -164,7 +178,7 @@ export default function WithdrawFunds({
           <button
             onClick={() => setShowConfirm(true)}
             disabled={isDisabled}
-            className="w-full px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-sm font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:from-zinc-400 disabled:to-zinc-400"
+            className="w-full px-4 py-2.5 bg-linear-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-sm font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:from-zinc-400 disabled:to-zinc-400"
           >
             Withdraw Funds
           </button>

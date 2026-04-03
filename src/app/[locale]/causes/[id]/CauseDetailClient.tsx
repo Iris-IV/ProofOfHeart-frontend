@@ -2,18 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from '../../../types';
-import { useCampaign } from '../../../hooks/useCampaign';
-import { stellarVotingService } from '../../../services/stellarVoting';
-import { useToast } from '../../../components/ToastProvider';
-import { parseContractError } from '../../../utils/contractErrors';
-import VotingComponent from '../../../components/VotingComponent';
-import CampaignStatusBadge from '../../../components/CampaignStatusBadge';
-import DeadlineCountdown from '../../../components/DeadlineCountdown';
-import FundingProgressBar from '../../../components/FundingProgressBar';
-import { useWallet } from '../../../components/WalletContext';
-import CampaignActions from '../../../components/CampaignActions';
-import DonationModal from '../../../components/DonationModal';
+import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from '@/types';
+import { useCampaign } from '@/hooks/useCampaign';
+import { usePlatformFee } from '@/hooks/usePlatformFee';
+import { stellarVotingService } from '@/services/stellarVoting';
+import { useToast } from '@/components/ToastProvider';
+import { parseContractError } from '@/utils/contractErrors';
+import VotingComponent from '@/components/VotingComponent';
+import CampaignStatusBadge from '@/components/CampaignStatusBadge';
+import DeadlineCountdown from '@/components/DeadlineCountdown';
+import FundingProgressBar from '@/components/FundingProgressBar';
+import { useWallet } from '@/components/WalletContext';
+import CampaignActions from '@/components/CampaignActions';
+import RevenueSharingPanel from '@/components/RevenueSharingPanel';
+import DonationModal from '@/components/DonationModal';
 
 function formatDate(ts: number) {
   return new Intl.DateTimeFormat('en-US', {
@@ -26,7 +28,8 @@ function formatDate(ts: number) {
 export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
 
-  const { campaign: fetchedCampaign, isLoading, error, notFound, refetch } = useCampaign(id);
+  const { campaign: fetchedCampaign, isLoading, error, refetch } = useCampaign(Number(id));
+  const { platformFeeBps, isLoading: isPlatformFeeLoading, isFallback } = usePlatformFee();
 
   // Local copy for optimistic vote updates
   const [campaign, setCampaign] = useState<Campaign | null>(null);
@@ -45,7 +48,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
     const existing = stellarVotingService.getUserVote(String(campaign.id), userWalletAddress);
     if (existing) {
       setUserVote({
-        causeId: String(campaign.id),
+        campaignId: String(campaign.id),
         voter: userWalletAddress,
         voteType: existing.voteType,
         timestamp: existing.timestamp,
@@ -68,7 +71,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
     try {
       const transactionHash = await stellarVotingService.castVote(id, voteType, userWalletAddress);
       const newVote: Vote = {
-        causeId: id,
+        campaignId: id,
         voter: userWalletAddress,
         voteType,
         timestamp: new Date(),
@@ -97,7 +100,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+      <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
         <main className="container mx-auto px-4 py-8 max-w-5xl">
           <div className="animate-pulse space-y-6">
             <div className="h-5 bg-zinc-200 dark:bg-zinc-700 rounded w-48" />
@@ -119,7 +122,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+      <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
         <main className="container mx-auto px-4 py-24 text-center">
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">
             Failed to load cause
@@ -136,9 +139,9 @@ export default function CauseDetailClient({ id }: { id: string }) {
     );
   }
 
-  if (notFound || !campaign) {
+  if (!campaign) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+      <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
         <main className="container mx-auto px-4 py-24 text-center">
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">Cause not found</h1>
           <p className="text-zinc-600 dark:text-zinc-400 mb-8">
@@ -166,9 +169,12 @@ export default function CauseDetailClient({ id }: { id: string }) {
     voteCounts.totalVotes > 0 ? Math.round((voteCounts.upvotes / voteCounts.totalVotes) * 100) : 0;
 
   const categoryLabel = CATEGORY_LABELS[campaign.category] ?? 'Other';
+  const platformFeePercent = platformFeeBps / 100;
+  const estimatedFeeAmount = raised * (platformFeeBps / 10000);
+  const estimatedCreatorReceives = raised - estimatedFeeAmount;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+    <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
       <main className="container mx-auto px-4 py-8 max-w-5xl">
         {/* Breadcrumb + Wallet */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -245,6 +251,32 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 />
               </div>
             )}
+
+            <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
+              <div className="flex items-center justify-between gap-4">
+                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Platform Fee</h2>
+                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+                  {isPlatformFeeLoading ? 'Loading…' : `${platformFeePercent.toFixed(2)}%`}
+                </span>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+                A platform fee of {platformFeePercent.toFixed(2)}% is deducted from funds when withdrawn by the creator.
+                Based on the current amount raised, that is {estimatedFeeAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM
+                in fees and {estimatedCreatorReceives.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM delivered to the creator.
+              </p>
+              {isFallback && (
+                <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                  The on-chain fee getter is not available yet, so this page is using the current known fallback fee of 3%.
+                </p>
+              )}
+            </div>
+
+            {campaign.has_revenue_sharing && (
+              <RevenueSharingPanel
+                campaign={campaign}
+                onActionSuccess={refetch}
+              />
+            )}
           </div>
 
           {/* Sidebar – right col */}
@@ -287,7 +319,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
             <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Created by</h2>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
+                <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
                   {campaign.creator.slice(1, 3).toUpperCase()}
                 </div>
                 <div>
