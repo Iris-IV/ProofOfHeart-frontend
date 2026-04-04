@@ -15,6 +15,7 @@ import FundingProgressBar from '@/components/FundingProgressBar';
 import { useWallet } from '@/components/WalletContext';
 import CampaignActions from '@/components/CampaignActions';
 import RevenueSharingPanel from '@/components/RevenueSharingPanel';
+import DonationModal from '@/components/DonationModal';
 
 function formatDate(ts: number) {
   return new Intl.DateTimeFormat('en-US', {
@@ -35,6 +36,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const [userVote, setUserVote] = useState<Vote | undefined>(undefined);
   const [isVoting, setIsVoting] = useState(false);
   const [voteCounts, setVoteCounts] = useState({ upvotes: 0, downvotes: 0, totalVotes: 0 });
+  const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const { showError, showSuccess, showWarning } = useToast();
 
   useEffect(() => {
@@ -82,7 +84,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
         totalVotes: prev.totalVotes + 1,
       }));
       showSuccess('Your vote has been cast successfully.');
-      
+
       // Trigger immediate refetch after successful transaction
       refetch();
     } catch (error) {
@@ -98,7 +100,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-  <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+      <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
         <main className="container mx-auto px-4 py-8 max-w-5xl">
           <div className="animate-pulse space-y-6">
             <div className="h-5 bg-zinc-200 dark:bg-zinc-700 rounded w-48" />
@@ -120,7 +122,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
 
   if (error) {
     return (
-  <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+      <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
         <main className="container mx-auto px-4 py-24 text-center">
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">
             Failed to load cause
@@ -139,7 +141,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
 
   if (!campaign) {
     return (
-  <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+      <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
         <main className="container mx-auto px-4 py-24 text-center">
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">Cause not found</h1>
           <p className="text-zinc-600 dark:text-zinc-400 mb-8">
@@ -172,7 +174,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const estimatedCreatorReceives = raised - estimatedFeeAmount;
 
   return (
-  <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+    <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
       <main className="container mx-auto px-4 py-8 max-w-5xl">
         {/* Breadcrumb + Wallet */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -291,6 +293,22 @@ export default function CauseDetailClient({ id }: { id: string }) {
               totalVotes={voteCounts.totalVotes}
             />
 
+            {/* Donate button */}
+            {campaign.is_active && !campaign.is_cancelled && (
+              <button
+                onClick={() => {
+                  if (!userWalletAddress) {
+                    showWarning('Please connect your wallet first.');
+                    return;
+                  }
+                  setIsDonationModalOpen(true);
+                }}
+                className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                💜 Fund This Cause
+              </button>
+            )}
+
             {/* Role-aware actions */}
             <CampaignActions
               campaign={campaign}
@@ -353,6 +371,14 @@ export default function CauseDetailClient({ id }: { id: string }) {
           </div>
         </div>
       </main>
+
+      {isDonationModalOpen && (
+        <DonationModal
+          campaign={campaign}
+          onClose={() => setIsDonationModalOpen(false)}
+          onSuccess={refetch}
+        />
+      )}
     </div>
   );
 }

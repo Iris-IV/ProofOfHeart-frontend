@@ -96,7 +96,7 @@ function CausesContent() {
       const v = stellarVotingService.getUserVote(String(campaign.id), userWalletAddress);
       if (v) {
         votes[campaign.id] = {
-          campaignId: String(campaign.id),
+          causeId: String(campaign.id),
           voter: userWalletAddress,
           voteType: v.voteType,
           timestamp: v.timestamp,
@@ -130,7 +130,7 @@ function CausesContent() {
     try {
       const transactionHash = await stellarVotingService.castVote(id, voteType, userWalletAddress);
       const newVote: Vote = {
-        campaignId: id,
+        causeId: id,
         voter: userWalletAddress,
         voteType,
         timestamp: new Date(),

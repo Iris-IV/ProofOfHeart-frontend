@@ -112,7 +112,7 @@ export default function DashboardPage() {
               const campaign = campaigns.find((c) => c.id === vote.campaignId);
               return (
                 <li key={idx} className="border rounded p-3 bg-zinc-50 dark:bg-zinc-900">
-                  <div className="font-medium">{campaign ? `Campaign #${campaign.id}` : `Campaign #${vote.campaignId}`}</div>
+                  <div className="font-medium">{campaign ? campaign.title : `Campaign #${vote.campaignId}`}</div>
                   <div className="text-sm text-zinc-500 dark:text-zinc-400">
                     {vote.voteType === 'upvote' ? 'Upvoted' : 'Downvoted'} on {vote.timestamp.toLocaleDateString()}<br />
                     <a
@@ -141,7 +141,7 @@ export default function DashboardPage() {
               const campaign = campaigns.find((c) => c.id === fund.campaignId);
               return (
                 <li key={idx} className="border rounded p-3 bg-zinc-50 dark:bg-zinc-900">
-                  <div className="font-medium">{campaign ? `Campaign #${campaign.id}` : `Campaign #${fund.campaignId}`}</div>
+                  <div className="font-medium">{campaign ? campaign.title : `Campaign #${fund.campaignId}`}</div>
                   <div className="text-sm text-zinc-500 dark:text-zinc-400">
                     Donated {fund.amount} XLM on {fund.timestamp.toLocaleDateString()}<br />
                     <a
@@ -157,7 +157,8 @@ export default function DashboardPage() {
               );
             })}
           </ul>
-        )}
+        )
+        }
       </section>
 
     </div>
