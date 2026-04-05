@@ -180,7 +180,6 @@ export default function Navbar() {
                 >
                   {isLoading ? t('connecting') : t('connectWallet')}
                 </button>
-<<<<<<< HEAD
               ) : (
                 <div className="flex flex-col gap-3 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
                   <div className="flex items-center justify-between">
@@ -192,10 +191,7 @@ export default function Navbar() {
                   </span>
                   <button
                     type="button"
-                    onClick={() => {
-                      disconnectWallet();
-                      setMenuOpen(false);
-                    }}
+                    onClick={() => { disconnectWallet(); setMenuOpen(false); }}
                     className="w-full py-2.5 text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors border border-red-100 dark:border-red-900/30"
                   >
                     {t('disconnect')}
@@ -204,15 +200,7 @@ export default function Navbar() {
               )}
             </div>
           </div>
-      }
-    </header >
-=======
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+        )}
     </header>
->>>>>>> 5438f66 (fix: resolve merge conflicts across all affected files)
   );
 }
