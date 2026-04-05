@@ -50,6 +50,43 @@ export default function CauseDetailClient({ id }: { id: string }) {
       const transactionHash = await stellarVotingService.castVote(vid, voteType, userWalletAddress);
       setUserVote({ causeId: vid, voter: userWalletAddress, voteType, timestamp: new Date(), transactionHash });
       setVoteCounts((prev) => ({ upvotes: voteType === 'upvote' ? prev.upvotes + 1 : prev.upvotes, downvotes: voteType === 'downvote' ? prev.downvotes + 1 : prev.downvotes, totalVotes: prev.totalVotes + 1 }));
+    if (existing) {
+      setUserVote({
+        causeId: String(campaign.id),
+        voter: userWalletAddress,
+        voteType: existing.voteType,
+        timestamp: existing.timestamp,
+        transactionHash: 'mock-hash',
+      });
+    }
+  }, [userWalletAddress, campaign]);
+
+  const handleVote = async (campaignId: number, voteType: 'upvote' | 'downvote') => {
+    if (!userWalletAddress) {
+      showWarning('Please connect your wallet first.');
+      return;
+    }
+    const vid = String(campaignId);
+    if (stellarVotingService.hasUserVoted(vid, userWalletAddress)) {
+      showWarning('You have already voted on this cause.');
+      return;
+    }
+    setIsVoting(true);
+    try {
+      const transactionHash = await stellarVotingService.castVote(vid, voteType, userWalletAddress);
+      const newVote: Vote = {
+        causeId: vid,
+        voter: userWalletAddress,
+        voteType,
+        timestamp: new Date(),
+        transactionHash,
+      };
+      setUserVote(newVote);
+      setVoteCounts((prev) => ({
+        upvotes: voteType === 'upvote' ? prev.upvotes + 1 : prev.upvotes,
+        downvotes: voteType === 'downvote' ? prev.downvotes + 1 : prev.downvotes,
+        totalVotes: prev.totalVotes + 1,
+      }));
       showSuccess('Your vote has been cast successfully.');
 
       // Trigger immediate refetch after successful transaction
@@ -57,10 +94,6 @@ export default function CauseDetailClient({ id }: { id: string }) {
     } catch (error) { showError(parseContractError(error)); }
     finally { setIsVoting(false); }
   };
-
-  // -------------------------------------------------------------------------
-  // Render states
-  // -------------------------------------------------------------------------
 
   if (isLoading) {
     return (
@@ -87,14 +120,9 @@ export default function CauseDetailClient({ id }: { id: string }) {
     return (
       <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
         <main className="container mx-auto px-4 py-24 text-center">
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">
-            Failed to load cause
-          </h1>
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">Failed to load cause</h1>
           <p className="text-zinc-600 dark:text-zinc-400 mb-8">{error}</p>
-          <Link
-            href="/causes"
-            className="px-6 py-3 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors"
-          >
+          <Link href="/causes" className="px-6 py-3 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors">
             ← Back to Causes
           </Link>
         </main>
@@ -107,13 +135,8 @@ export default function CauseDetailClient({ id }: { id: string }) {
       <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
         <main className="container mx-auto px-4 py-24 text-center">
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">Cause not found</h1>
-          <p className="text-zinc-600 dark:text-zinc-400 mb-8">
-            This cause does not exist or has been removed.
-          </p>
-          <Link
-            href="/causes"
-            className="px-6 py-3 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors"
-          >
+          <p className="text-zinc-600 dark:text-zinc-400 mb-8">This cause does not exist or has been removed.</p>
+          <Link href="/causes" className="px-6 py-3 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors">
             ← Back to Causes
           </Link>
         </main>
@@ -207,6 +230,22 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 💜 Fund This Cause
               </button>
             )}
+            {campaign.has_revenue_sharing && (
+              <RevenueSharingPanel campaign={campaign} onActionSuccess={refetch} />
+            )}
+          </div>
+
+          <div className="space-y-6">
+            <VotingComponent
+              campaign={campaign}
+              userWalletAddress={userWalletAddress}
+              onVote={handleVote}
+              userVote={userVote}
+              isVoting={isVoting}
+              upvotes={voteCounts.upvotes}
+              downvotes={voteCounts.downvotes}
+              totalVotes={voteCounts.totalVotes}
+            />
 
             {/* Donate button */}
             {campaign.is_active && !campaign.is_cancelled && (
@@ -236,6 +275,9 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold">{campaign.creator.slice(1, 3).toUpperCase()}</div>
                 <div>
                   <p className="text-sm font-mono text-zinc-700 dark:text-zinc-300 break-all">{campaign.creator.slice(0, 10)}...{campaign.creator.slice(-6)}</p>
+                  <p className="text-sm font-mono text-zinc-700 dark:text-zinc-300 break-all">
+                    {campaign.creator.slice(0, 10)}...{campaign.creator.slice(-6)}
+                  </p>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">Deadline: {formatDate(campaign.deadline)}</p>
                 </div>
               </div>
@@ -249,11 +291,19 @@ export default function CauseDetailClient({ id }: { id: string }) {
               </div>
               <div className="w-full bg-red-200 dark:bg-red-900/40 rounded-full h-2">
                 <div className="bg-green-500 h-2 rounded-full transition-all duration-300" style={{ width: voteCounts.totalVotes > 0 ? `${(voteCounts.upvotes / voteCounts.totalVotes) * 100}%` : '50%' }} />
+                <div
+                  className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: voteCounts.totalVotes > 0 ? `${(voteCounts.upvotes / voteCounts.totalVotes) * 100}%` : '50%' }}
+                />
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">{voteCounts.totalVotes} total votes cast</p>
             </div>
 
             <Link href="/causes" className="block text-center px-4 py-3 min-h-[44px] border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-full text-sm hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors">
+            <Link
+              href="/causes"
+              className="block text-center px-4 py-3 min-h-[44px] border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-full text-sm hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+            >
               ← Back to all causes
             </Link>
           </div>

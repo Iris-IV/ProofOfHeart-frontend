@@ -12,6 +12,7 @@ import {
   depositRevenue,
   claimRefund,
   claimRevenue,
+  claimRefund,
   verifyCampaign
 } from '../lib/contractClient';
 import { useToast } from './ToastProvider';
@@ -98,6 +99,25 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
               <input id="contribution-amount" type="number" min="0" step="0.1" inputMode="decimal" value={contributionAmount} onChange={(e) => setContributionAmount(e.target.value)} placeholder="Amount in XLM" disabled={isPending || !!contributionDisabledReason} className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-zinc-900 outline-none transition focus:border-blue-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50" />
               <button onClick={handleContribute} disabled={isPending || !!contributionDisabledReason} className="rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-zinc-400 flex items-center gap-2">
                 {isPending && <Spinner />}{isPending ? 'Processing…' : 'Contribute'}
+              <input
+                id="contribution-amount"
+                type="number"
+                min="0"
+                step="0.1"
+                inputMode="decimal"
+                value={contributionAmount}
+                onChange={(e) => setContributionAmount(e.target.value)}
+                placeholder="Amount in XLM"
+                disabled={isPending || !!contributionDisabledReason}
+                className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-zinc-900 outline-none transition focus:border-blue-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50"
+              />
+              <button
+                onClick={handleContribute}
+                disabled={isPending || !!contributionDisabledReason}
+                className="rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-zinc-400 flex items-center gap-2"
+              >
+                {isPending && <Spinner />}
+                {isPending ? 'Processing…' : 'Contribute'}
               </button>
             </div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">{contributionDisabledReason ?? 'Contributions are made in XLM and recorded on-chain after wallet confirmation.'}</p>
@@ -128,6 +148,22 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
               ) : (
                 <button onClick={() => setShowRevenueInput(true)} disabled={isPending || campaign.is_cancelled} className="w-full py-3 min-h-[44px] bg-purple-600 hover:bg-purple-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors">Deposit Revenue</button>
               ))}
+          <WithdrawFunds
+            campaign={campaign}
+            userWalletAddress={publicKey}
+            platformFeeBps={platformFeeBps}
+            onWithdrawSuccess={onActionSuccess}
+          />
+          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-4">Creator Dashboard</h3>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => handleAction(() => cancelCampaign(campaign.id), 'Campaign cancelled.')}
+                disabled={isPending || !campaign.is_active || campaign.is_cancelled || campaign.funds_withdrawn}
+                className="w-full py-3 min-h-[44px] bg-red-600 hover:bg-red-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                {isPending && <Spinner />} Cancel Campaign
+              </button>
             </div>
           </div>
         </>
@@ -137,6 +173,13 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
           <h3 className="text-base font-semibold text-blue-600 mb-4">Admin Panel</h3>
           <button onClick={() => handleAction(() => verifyCampaign(campaign.id), 'Campaign verified!')} disabled={isPending} className="w-full py-3 min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
+        <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
+          <h3 className="text-lg font-semibold text-blue-600 mb-4">Admin Panel</h3>
+          <button
+            onClick={() => handleAction(() => verifyCampaign(campaign.id), 'Campaign verified!')}
+            disabled={isPending}
+            className="w-full py-3 min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+          >
             {isPending && <Spinner />} Verify Campaign
           </button>
         </div>
@@ -148,6 +191,12 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
           <p className="text-2xl font-bold text-blue-600 mb-4">{stroopsToXlm(contribution)} XLM</p>
           <div className="flex flex-col gap-3">
             <button onClick={() => handleAction(() => claimRefund(campaign.id, publicKey!), 'Refund claimed!')} disabled={isPending || (campaign.is_active && !isExpired)} title={campaign.is_active && !isExpired ? 'Cannot refund while active' : ''} className="w-full py-3 min-h-[44px] bg-amber-600 hover:bg-amber-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
+            <button
+              onClick={() => handleAction(() => claimRefund(campaign.id, publicKey!), 'Refund claimed!')}
+              disabled={isPending || (campaign.is_active && !isExpired)}
+              title={campaign.is_active && !isExpired ? 'Cannot refund while active' : ''}
+              className="w-full py-3 min-h-[44px] bg-amber-600 hover:bg-amber-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
               {isPending && <Spinner />} Claim Refund
             </button>
             {campaign.has_revenue_sharing && (
