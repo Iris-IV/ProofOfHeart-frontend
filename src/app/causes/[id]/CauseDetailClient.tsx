@@ -119,7 +119,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
     );
   }
 
-  if (notFound || !campaign) {
+  if (!campaign) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
         <main className="container mx-auto px-4 py-24 text-center">
