@@ -27,7 +27,7 @@ function formatDate(ts: number) {
 export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
 
-  const { campaign: fetchedCampaign, isLoading, error, notFound, refetch } = useCampaign(id);
+  const { campaign: fetchedCampaign, isLoading, error, refetch } = useCampaign(Number(id));
 
   // Local copy for optimistic vote updates
   const [campaign, setCampaign] = useState<Campaign | null>(null);

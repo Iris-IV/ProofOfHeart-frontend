@@ -13,11 +13,6 @@ import { parseContractError } from '@/utils/contractErrors';
 import { cancelCampaign, claimRefund } from '@/lib/contractClient';
 import CauseCard from '@/components/CauseCard';
 import { CauseCardSkeleton } from '@/components/Skeleton';
-import { useWallet } from '../../components/WalletContext';
-import { useToast } from '../../components/ToastProvider';
-import { parseContractError } from '../../utils/contractErrors';
-import CauseCard from '../../components/CauseCard';
-import { CauseCardSkeleton } from '@/components/Skeleton';
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
