@@ -26,7 +26,7 @@ function formatDate(ts: number) {
 
 export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
-  const { campaign: fetchedCampaign, isLoading, error, notFound, refetch } = useCampaign(id);
+  const { campaign: fetchedCampaign, isLoading, error, refetch } = useCampaign(Number(id));
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [userVote, setUserVote] = useState<Vote | undefined>(undefined);
@@ -62,19 +62,8 @@ export default function CauseDetailClient({ id }: { id: string }) {
     }
     setIsVoting(true);
     try {
-<<<<<<< HEAD
-      const transactionHash = await stellarVotingService.castVote(id, voteType, userWalletAddress);
-      const newVote: Vote = {
-        causeId: id,
-        voter: userWalletAddress,
-        voteType,
-        timestamp: new Date(),
-        transactionHash,
-      };
-=======
       const transactionHash = await stellarVotingService.castVote(vid, voteType, userWalletAddress);
       const newVote: Vote = { causeId: vid, voter: userWalletAddress, voteType, timestamp: new Date(), transactionHash };
->>>>>>> 5438f66 (fix: resolve merge conflicts across all affected files)
       setUserVote(newVote);
       setVoteCounts((prev) => ({
         upvotes: voteType === 'upvote' ? prev.upvotes + 1 : prev.upvotes,
@@ -165,21 +154,23 @@ export default function CauseDetailClient({ id }: { id: string }) {
             </div>
 
 <<<<<<< HEAD
-              {/* Donate button */}
-              {campaign.is_active && !campaign.is_cancelled && (
-                <button
-                  onClick={() => {
-                    if (!userWalletAddress) {
-                      showWarning('Please connect your wallet first.');
-                      return;
-                    }
-                    setIsDonationModalOpen(true);
-                  }}
-                  className="w-full py-3 min-h-[44px] bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
-                >
-                  💜 Fund This Cause
-                </button>
-              )}
+  {/* Donate button */ }
+  {
+    campaign.is_active && !campaign.is_cancelled && (
+      <button
+        onClick={() => {
+          if (!userWalletAddress) {
+            showWarning('Please connect your wallet first.');
+            return;
+          }
+          setIsDonationModalOpen(true);
+        }}
+        className="w-full py-3 min-h-[44px] bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
+      >
+        💜 Fund This Cause
+      </button>
+    )
+  }
 =======
             {campaign.funding_goal > BigInt(0) && (
               <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
@@ -194,75 +185,76 @@ export default function CauseDetailClient({ id }: { id: string }) {
           </div>
 >>>>>>> 5438f66 (fix: resolve merge conflicts across all affected files)
 
-          <div className="space-y-6">
-            <VotingComponent
-              campaign={campaign}
-              userWalletAddress={userWalletAddress}
-              onVote={handleVote}
-              userVote={userVote}
-              isVoting={isVoting}
-              upvotes={voteCounts.upvotes}
-              downvotes={voteCounts.downvotes}
-              totalVotes={voteCounts.totalVotes}
-            />
+  <div className="space-y-6">
+    <VotingComponent
+      campaign={campaign}
+      userWalletAddress={userWalletAddress}
+      onVote={handleVote}
+      userVote={userVote}
+      isVoting={isVoting}
+      upvotes={voteCounts.upvotes}
+      downvotes={voteCounts.downvotes}
+      totalVotes={voteCounts.totalVotes}
+    />
 
-            {campaign.is_active && !campaign.is_cancelled && (
-              <button
-                onClick={() => {
-                  if (!userWalletAddress) { showWarning('Please connect your wallet first.'); return; }
-                  setIsDonationModalOpen(true);
-                }}
-                className="w-full py-3 min-h-[44px] bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
-              >
-                💜 Fund This Cause
-              </button>
-            )}
+    {campaign.is_active && !campaign.is_cancelled && (
+      <button
+        onClick={() => {
+          if (!userWalletAddress) { showWarning('Please connect your wallet first.'); return; }
+          setIsDonationModalOpen(true);
+        }}
+        className="w-full py-3 min-h-[44px] bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
+      >
+        💜 Fund This Cause
+      </button>
+    )}
 
-            <CampaignActions campaign={campaign} onActionSuccess={refetch} />
+    <CampaignActions campaign={campaign} onActionSuccess={refetch} />
 
-            <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Created by</h2>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
-                  {campaign.creator.slice(1, 3).toUpperCase()}
-                </div>
-                <div>
-                  <p className="text-sm font-mono text-zinc-700 dark:text-zinc-300 break-all">
-                    {campaign.creator.slice(0, 10)}...{campaign.creator.slice(-6)}
-                  </p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">Deadline: {formatDate(campaign.deadline)}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Vote Breakdown</h2>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-green-600 dark:text-green-400 font-medium">✓ Approve ({voteCounts.upvotes})</span>
-                <span className="text-red-500 dark:text-red-400 font-medium">✗ Reject ({voteCounts.downvotes})</span>
-              </div>
-              <div className="w-full bg-red-200 dark:bg-red-900/40 rounded-full h-2">
-                <div
-                  className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                  style={{ width: voteCounts.totalVotes > 0 ? `${(voteCounts.upvotes / voteCounts.totalVotes) * 100}%` : '50%' }}
-                />
-              </div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">{voteCounts.totalVotes} total votes cast</p>
-            </div>
-
-            <Link
-              href="/causes"
-              className="block text-center px-4 py-3 min-h-[44px] border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-full text-sm hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
-            >
-              ← Back to all causes
-            </Link>
-          </div>
+    <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
+      <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Created by</h2>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
+          {campaign.creator.slice(1, 3).toUpperCase()}
         </div>
-      </main>
-
-      {isDonationModalOpen && (
-        <DonationModal campaign={campaign} onClose={() => setIsDonationModalOpen(false)} onSuccess={refetch} />
-      )}
+        <div>
+          <p className="text-sm font-mono text-zinc-700 dark:text-zinc-300 break-all">
+            {campaign.creator.slice(0, 10)}...{campaign.creator.slice(-6)}
+          </p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Deadline: {formatDate(campaign.deadline)}</p>
+        </div>
+      </div>
     </div>
+
+    <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
+      <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Vote Breakdown</h2>
+      <div className="flex justify-between text-sm mb-2">
+        <span className="text-green-600 dark:text-green-400 font-medium">✓ Approve ({voteCounts.upvotes})</span>
+        <span className="text-red-500 dark:text-red-400 font-medium">✗ Reject ({voteCounts.downvotes})</span>
+      </div>
+      <div className="w-full bg-red-200 dark:bg-red-900/40 rounded-full h-2">
+        <div
+          className="bg-green-500 h-2 rounded-full transition-all duration-300"
+          style={{ width: voteCounts.totalVotes > 0 ? `${(voteCounts.upvotes / voteCounts.totalVotes) * 100}%` : '50%' }}
+        />
+      </div>
+      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">{voteCounts.totalVotes} total votes cast</p>
+    </div>
+
+    <Link
+      href="/causes"
+      className="block text-center px-4 py-3 min-h-[44px] border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-full text-sm hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+    >
+      ← Back to all causes
+    </Link>
+  </div>
+        </div >
+      </main >
+
+    { isDonationModalOpen && (
+      <DonationModal campaign={campaign} onClose={() => setIsDonationModalOpen(false)} onSuccess={refetch} />
+    )
+}
+    </div >
   );
 }

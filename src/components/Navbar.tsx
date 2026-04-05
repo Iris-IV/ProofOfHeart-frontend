@@ -3,16 +3,6 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useWallet } from "@/components/WalletContext";
-<<<<<<< HEAD
-=======
-
-const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/causes", label: "Explore Causes" },
-  { href: "/submit", label: "Submit a Cause" },
-  { href: "/about", label: "About" },
-];
->>>>>>> 5438f66 (fix: resolve merge conflicts across all affected files)
 import { useTheme } from "@/hooks/useTheme";
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/routing';
