@@ -24,7 +24,7 @@ function formatDate(ts: number) {
 export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
   const { campaign: fetchedCampaign, isLoading, error, refetch } = useCampaign(Number(id));
-  const { platformFeeBps, isLoading: isPlatformFeeLoading, isFallback } 
+  const { platformFeeBps, isLoading: isPlatformFeeLoading, isFallback } = usePlatformFee();
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [userVote, setUserVote] = useState<Vote | undefined>(undefined);
@@ -37,20 +37,20 @@ export default function CauseDetailClient({ id }: { id: string }) {
 
   useEffect(() => {
     if (!userWalletAddress || !campaign) return;
- erVote(String(campaign.id), userWalletAddress);
-.timestamp, transactionHash: 'mock-hash' });
+    const existing = stellarVotingService.getUserVote(String(campaign.id), userWalletAddress);
+    if (existing) setUserVote({ causeId: String(campaign.id), voter: userWalletAddress, voteType: existing.voteType, timestamp: existing.timestamp, transactionHash: 'mock-hash' });
   }, [userWalletAddress, campaign]);
 
   const handleVote = async (campaignId: number, voteType: 'upvote' | 'downvote') => {
     if (!userWalletAddress) { showWarning('Please connect your wallet first.'); return; }
-ng(campaignId);
+    const vid = String(campaignId);
     if (stellarVotingService.hasUserVoted(vid, userWalletAddress)) { showWarning('You have already voted on this cause.'); return; }
     setIsVoting(true);
     try {
       const transactionHash = await stellarVotingService.castVote(vid, voteType, userWalletAddress);
       setUserVote({ causeId: vid, voter: userWalletAddress, voteType, timestamp: new Date(), transactionHash });
-      setVoteCounts((prev) => ({ upvotes: voteType === 'upvot prev.downvotes, totalVotes: prev.totalVotes + 1 }));
-sfully.');
+      setVoteCounts((prev) => ({ upvotes: voteType === 'upvote' ? prev.upvotes + 1 : prev.upvotes, downvotes: voteType === 'downvote' ? prev.downvotes + 1 : prev.downvotes, totalVotes: prev.totalVotes + 1 }));
+      showSuccess('Your vote has been cast successfully.');
       refetch();
     } catch (error) { showError(parseContractError(error)); }
     finally { setIsVoting(false); }
@@ -61,7 +61,7 @@ sfully.');
       <main className="container mx-auto px-4 py-8 max-w-5xl">
         <div className="animate-pulse space-y-6">
           <div className="h-5 bg-zinc-200 dark:bg-zinc-700 rounded w-48" />
-          <div className="bg-whit0 dark:border-zinc-700 p-6 space-y-4">
+          <div className="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 p-6 space-y-4">
             <div className="h-8 bg-zinc-200 dark:bg-zinc-700 rounded w-3/4" />
             <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-full" />
           </div>
@@ -73,9 +73,9 @@ sfully.');
   if (error) return (
     <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
       <main className="container mx-auto px-4 py-24 text-center">
-        <h1 className="text-3xl font-bold text-zinc-900 dar1>
+        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">Failed to load cause</h1>
         <p className="text-zinc-600 dark:text-zinc-400 mb-8">{error}</p>
-      <Link href="/causes" className="px-6 py-3 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors">← Back to Causes</Link>
+        <Link href="/causes" className="px-6 py-3 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors">← Back to Causes</Link>
       </main>
     </div>
   );
@@ -85,7 +85,7 @@ sfully.');
       <main className="container mx-auto px-4 py-24 text-center">
         <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">Cause not found</h1>
         <p className="text-zinc-600 dark:text-zinc-400 mb-8">This cause does not exist or has been removed.</p>
-        <L"/causes" className="px-6 py-3 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors">← Back to Causes</Link>
+        <Link href="/causes" className="px-6 py-3 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors">← Back to Causes</Link>
       </main>
     </div>
   );
@@ -94,7 +94,7 @@ sfully.');
   const goal = stroopsToXlm(campaign.funding_goal);
   const fundingPct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
   const approvalRate = voteCounts.totalVotes > 0 ? Math.round((voteCounts.upvotes / voteCounts.totalVotes) * 100) : 0;
-RY_LABELS[campaign.category] ?? 'Other';
+  const categoryLabel = CATEGORY_LABELS[campaign.category] ?? 'Other';
   const platformFeePercent = platformFeeBps / 100;
   const estimatedFeeAmount = raised * (platformFeeBps / 10000);
   const estimatedCreatorReceives = raised - estimatedFeeAmount;
@@ -104,7 +104,7 @@ RY_LABELS[campaign.category] ?? 'Other';
       <main className="container mx-auto px-4 py-8 max-w-5xl">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <nav className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-            <Link>
+            <Link href="/causes" className="hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors">Causes</Link>
             <span>›</span>
             <span className="text-zinc-900 dark:text-zinc-50 truncate max-w-xs">{campaign.title}</span>
           </nav>
@@ -114,8 +114,8 @@ RY_LABELS[campaign.category] ?? 'Other';
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
               <div className="flex flex-wrap items-center gap-3 mb-4">
-        xt-sm font-medium text-zinc-500 dark:text-zinc-400">{categoryLabel}</span>
-     gn={campaign} />
+                <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{categoryLabel}</span>
+                <CampaignStatusBadge campaign={campaign} />
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4 leading-tight">{campaign.title}</h1>
               <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">{campaign.description}</p>
@@ -124,7 +124,7 @@ RY_LABELS[campaign.category] ?? 'Other';
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
                 { label: 'Total Votes', value: voteCounts.totalVotes, cls: 'text-zinc-900 dark:text-zinc-50' },
-                t-green-400' },
+                { label: 'Approval Rate', value: `${approvalRate}%`, cls: 'text-green-600 dark:text-green-400' },
                 { label: 'Funded', value: `${fundingPct}%`, cls: 'text-blue-600 dark:text-blue-400' },
                 { label: 'XLM Raised', value: raised.toLocaleString(undefined, { maximumFractionDigits: 2 }), cls: 'text-zinc-900 dark:text-zinc-50' },
               ].map(({ label, value, cls }) => (
@@ -132,7 +132,7 @@ RY_LABELS[campaign.category] ?? 'Other';
                   <div className={`text-2xl font-bold ${cls}`}>{value}</div>
                   <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{label}</div>
                 </div>
-              
+              ))}
             </div>
 
             <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
@@ -142,7 +142,7 @@ RY_LABELS[campaign.category] ?? 'Other';
             </div>
 
             {campaign.funding_goal > BigInt(0) && (
-l shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
+              <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
                 <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-4">Funding Progress</h2>
                 <FundingProgressBar amountRaised={campaign.amount_raised} fundingGoal={campaign.funding_goal} />
               </div>
@@ -150,19 +150,19 @@ l shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
 
             <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
               <div className="flex items-center justify-between gap-4">
-                <h2 className="text-lg font-semibold text-zinc-9
+                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Platform Fee</h2>
                 <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
                   {isPlatformFeeLoading ? 'Loading…' : `${platformFeePercent.toFixed(2)}%`}
                 </span>
               </div>
               <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
                 A platform fee of {platformFeePercent.toFixed(2)}% is deducted from funds when withdrawn by the creator.
-            ed, { maximumFractionDigits: 2 })} XLM in fees and {estimatedCreatorReceives.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM delivered to the creator.
+                Based on the current amount raised, that is {estimatedFeeAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM in fees and {estimatedCreatorReceives.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM delivered to the creator.
               </p>
               {isFallback && <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">The on-chain fee getter is not available yet, so this page is using the current known fallback fee of 3%.</p>}
             </div>
 
-            {campaign.has_revenue_sharing && <RevenueSharingPanel campaign={campaign} onActionSuccess={ref>}
+            {campaign.has_revenue_sharing && <RevenueSharingPanel campaign={campaign} onActionSuccess={refetch} />}
           </div>
 
           <div className="space-y-6">
@@ -171,7 +171,7 @@ l shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
             {campaign.is_active && !campaign.is_cancelled && (
               <button
                 onClick={() => { if (!userWalletAddress) { showWarning('Please connect your wallet first.'); return; } setIsDonationModalOpen(true); }}
-                className="w-full py-3 min-h-[44px] bg-gradientont-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
+                className="w-full py-3 min-h-[44px] bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
               >
                 💜 Fund This Cause
               </button>
@@ -181,8 +181,8 @@ l shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
 
             <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Created by</h2>
-        x items-center gap-3">
-     m-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold">{campaign.creator.slice(1, 3).toUpperCase()}</div>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold">{campaign.creator.slice(1, 3).toUpperCase()}</div>
                 <div>
                   <p className="text-sm font-mono text-zinc-700 dark:text-zinc-300 break-all">{campaign.creator.slice(0, 10)}...{campaign.creator.slice(-6)}</p>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">Deadline: {formatDate(campaign.deadline)}</p>
@@ -202,7 +202,7 @@ l shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">{voteCounts.totalVotes} total votes cast</p>
             </div>
 
-            <Link href="/causes" className="block text-center px-transition-colors">
+            <Link href="/causes" className="block text-center px-4 py-3 min-h-[44px] border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-full text-sm hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors">
               ← Back to all causes
             </Link>
           </div>

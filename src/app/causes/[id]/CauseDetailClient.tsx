@@ -98,237 +98,238 @@ export default function CauseDetailClient({ id }: { id: string }) {
 
   if (isLoading) {
     return <CauseDetailSkeleton />;
+  }
 
-    if (error) {
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
-          <main className="container mx-auto px-4 py-24 text-center">
-            <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">
-              Failed to load cause
-            </h1>
-            <p className="text-zinc-600 dark:text-zinc-400 mb-8">{error}</p>
-            <Link
-              href="/causes"
-              className="px-6 py-3 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors"
-            >
-              ← Back to Causes
-            </Link>
-          </main>
-        </div>
-      );
-    }
-
-    if (notFound || !campaign) {
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
-          <main className="container mx-auto px-4 py-24 text-center">
-            <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">Cause not found</h1>
-            <p className="text-zinc-600 dark:text-zinc-400 mb-8">
-              This cause does not exist or has been removed.
-            </p>
-            <Link
-              href="/causes"
-              className="px-6 py-3 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors"
-            >
-              ← Back to Causes
-            </Link>
-          </main>
-        </div>
-      );
-    }
-
-    const raised = stroopsToXlm(campaign.amount_raised);
-    const goal = stroopsToXlm(campaign.funding_goal);
-    const fundingPct =
-      goal > 0
-        ? Math.min(100, Math.round((raised / goal) * 100))
-        : 0;
-
-    const approvalRate =
-      voteCounts.totalVotes > 0 ? Math.round((voteCounts.upvotes / voteCounts.totalVotes) * 100) : 0;
-
-    const categoryLabel = CATEGORY_LABELS[campaign.category] ?? 'Other';
-
+  if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
-        <main className="container mx-auto px-4 py-8 max-w-5xl">
-          {/* Breadcrumb + Wallet */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <nav className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-              <Link href="/causes" className="hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors">
-                Causes
-              </Link>
-              <span>›</span>
-              <span className="text-zinc-900 dark:text-zinc-50 truncate max-w-xs">{campaign.title}</span>
-            </nav>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main content – left 2 cols */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Title & status */}
-              <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
-                <div className="flex flex-wrap items-center gap-3 mb-4">
-                  <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                    {categoryLabel}
-                  </span>
-                  <CampaignStatusBadge campaign={campaign} />
-                </div>
-
-                <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4 leading-tight">
-                  {campaign.title}
-                </h1>
-
-                <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                  {campaign.description}
-                </p>
-              </div>
-
-              {/* Stats row */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700 text-center">
-                  <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{voteCounts.totalVotes}</div>
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Total Votes</div>
-                </div>
-                <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700 text-center">
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">{approvalRate}%</div>
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Approval Rate</div>
-                </div>
-                <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700 text-center">
-                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{fundingPct}%</div>
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Funded</div>
-                </div>
-                <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700 text-center">
-                  <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-                    {raised.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                  </div>
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">XLM Raised</div>
-                </div>
-              </div>
-
-              {/* Deadline countdown */}
-              <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
-                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Campaign Deadline</h2>
-                <DeadlineCountdown deadline={campaign.deadline} />
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
-                  Ends {formatDate(campaign.deadline)}
-                </p>
-              </div>
-
-              {/* Funding progress */}
-              {campaign.funding_goal > BigInt(0) && (
-                <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
-                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-4">
-                    Funding Progress
-                  </h2>
-                  <FundingProgressBar
-                    amountRaised={campaign.amount_raised}
-                    fundingGoal={campaign.funding_goal}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Sidebar – right col */}
-            <div className="space-y-6">
-              {/* Voting */}
-              <VotingComponent
-                campaign={campaign}
-                userWalletAddress={userWalletAddress}
-                onVote={handleVote}
-                userVote={userVote}
-                isVoting={isVoting}
-                upvotes={voteCounts.upvotes}
-                downvotes={voteCounts.downvotes}
-                totalVotes={voteCounts.totalVotes}
-              />
-
-              {/* Donate button */}
-              {campaign.is_active && !campaign.is_cancelled && (
-                <button
-                  onClick={() => {
-                    if (!userWalletAddress) {
-                      showWarning('Please connect your wallet first.');
-                      return;
-                    }
-                    setIsDonationModalOpen(true);
-                  }}
-                  className="w-full py-3 min-h-[44px] bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
-                >
-                  💜 Fund This Cause
-                </button>
-              )}
-
-              {/* Role-aware actions */}
-              <CampaignActions
-                campaign={campaign}
-                onActionSuccess={refetch}
-              />
-
-              {/* Creator info */}
-              <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
-                <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Created by</h2>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
-                    {campaign.creator.slice(1, 3).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="text-sm font-mono text-zinc-700 dark:text-zinc-300 break-all">
-                      {campaign.creator.slice(0, 10)}...{campaign.creator.slice(-6)}
-                    </p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                      Deadline: {formatDate(campaign.deadline)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Vote breakdown */}
-              <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
-                <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">
-                  Vote Breakdown
-                </h2>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-green-600 dark:text-green-400 font-medium">
-                    ✓ Approve ({voteCounts.upvotes})
-                  </span>
-                  <span className="text-red-500 dark:text-red-400 font-medium">
-                    ✗ Reject ({voteCounts.downvotes})
-                  </span>
-                </div>
-                <div className="w-full bg-red-200 dark:bg-red-900/40 rounded-full h-2">
-                  <div
-                    className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                    style={{
-                      width:
-                        voteCounts.totalVotes > 0
-                          ? `${(voteCounts.upvotes / voteCounts.totalVotes) * 100}%`
-                          : '50%',
-                    }}
-                  />
-                </div>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
-                  {voteCounts.totalVotes} total votes cast
-                </p>
-              </div>
-
-              <Link
-                href="/causes"
-                className="block text-center px-4 py-3 min-h-[44px] border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-full text-sm hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
-              >
-                ← Back to all causes
-              </Link>
-            </div>
-          </div>
+        <main className="container mx-auto px-4 py-24 text-center">
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">
+            Failed to load cause
+          </h1>
+          <p className="text-zinc-600 dark:text-zinc-400 mb-8">{error}</p>
+          <Link
+            href="/causes"
+            className="px-6 py-3 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors"
+          >
+            ← Back to Causes
+          </Link>
         </main>
-
-        {isDonationModalOpen && (
-          <DonationModal
-            campaign={campaign}
-            onClose={() => setIsDonationModalOpen(false)}
-            onSuccess={refetch}
-          />
-        )}
       </div>
     );
   }
+
+  if (notFound || !campaign) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+        <main className="container mx-auto px-4 py-24 text-center">
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">Cause not found</h1>
+          <p className="text-zinc-600 dark:text-zinc-400 mb-8">
+            This cause does not exist or has been removed.
+          </p>
+          <Link
+            href="/causes"
+            className="px-6 py-3 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors"
+          >
+            ← Back to Causes
+          </Link>
+        </main>
+      </div>
+    );
+  }
+
+  const raised = stroopsToXlm(campaign.amount_raised);
+  const goal = stroopsToXlm(campaign.funding_goal);
+  const fundingPct =
+    goal > 0
+      ? Math.min(100, Math.round((raised / goal) * 100))
+      : 0;
+
+  const approvalRate =
+    voteCounts.totalVotes > 0 ? Math.round((voteCounts.upvotes / voteCounts.totalVotes) * 100) : 0;
+
+  const categoryLabel = CATEGORY_LABELS[campaign.category] ?? 'Other';
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+      <main className="container mx-auto px-4 py-8 max-w-5xl">
+        {/* Breadcrumb + Wallet */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <nav className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+            <Link href="/causes" className="hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors">
+              Causes
+            </Link>
+            <span>›</span>
+            <span className="text-zinc-900 dark:text-zinc-50 truncate max-w-xs">{campaign.title}</span>
+          </nav>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main content – left 2 cols */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Title & status */}
+            <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                  {categoryLabel}
+                </span>
+                <CampaignStatusBadge campaign={campaign} />
+              </div>
+
+              <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4 leading-tight">
+                {campaign.title}
+              </h1>
+
+              <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                {campaign.description}
+              </p>
+            </div>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700 text-center">
+                <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{voteCounts.totalVotes}</div>
+                <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Total Votes</div>
+              </div>
+              <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700 text-center">
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">{approvalRate}%</div>
+                <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Approval Rate</div>
+              </div>
+              <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700 text-center">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{fundingPct}%</div>
+                <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Funded</div>
+              </div>
+              <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700 text-center">
+                <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+                  {raised.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </div>
+                <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">XLM Raised</div>
+              </div>
+            </div>
+
+            {/* Deadline countdown */}
+            <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Campaign Deadline</h2>
+              <DeadlineCountdown deadline={campaign.deadline} />
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+                Ends {formatDate(campaign.deadline)}
+              </p>
+            </div>
+
+            {/* Funding progress */}
+            {campaign.funding_goal > BigInt(0) && (
+              <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
+                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-4">
+                  Funding Progress
+                </h2>
+                <FundingProgressBar
+                  amountRaised={campaign.amount_raised}
+                  fundingGoal={campaign.funding_goal}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Sidebar – right col */}
+          <div className="space-y-6">
+            {/* Voting */}
+            <VotingComponent
+              campaign={campaign}
+              userWalletAddress={userWalletAddress}
+              onVote={handleVote}
+              userVote={userVote}
+              isVoting={isVoting}
+              upvotes={voteCounts.upvotes}
+              downvotes={voteCounts.downvotes}
+              totalVotes={voteCounts.totalVotes}
+            />
+
+            {/* Donate button */}
+            {campaign.is_active && !campaign.is_cancelled && (
+              <button
+                onClick={() => {
+                  if (!userWalletAddress) {
+                    showWarning('Please connect your wallet first.');
+                    return;
+                  }
+                  setIsDonationModalOpen(true);
+                }}
+                className="w-full py-3 min-h-[44px] bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                💜 Fund This Cause
+              </button>
+            )}
+
+            {/* Role-aware actions */}
+            <CampaignActions
+              campaign={campaign}
+              onActionSuccess={refetch}
+            />
+
+            {/* Creator info */}
+            <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Created by</h2>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
+                  {campaign.creator.slice(1, 3).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-sm font-mono text-zinc-700 dark:text-zinc-300 break-all">
+                    {campaign.creator.slice(0, 10)}...{campaign.creator.slice(-6)}
+                  </p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Deadline: {formatDate(campaign.deadline)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Vote breakdown */}
+            <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">
+                Vote Breakdown
+              </h2>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-green-600 dark:text-green-400 font-medium">
+                  ✓ Approve ({voteCounts.upvotes})
+                </span>
+                <span className="text-red-500 dark:text-red-400 font-medium">
+                  ✗ Reject ({voteCounts.downvotes})
+                </span>
+              </div>
+              <div className="w-full bg-red-200 dark:bg-red-900/40 rounded-full h-2">
+                <div
+                  className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                  style={{
+                    width:
+                      voteCounts.totalVotes > 0
+                        ? `${(voteCounts.upvotes / voteCounts.totalVotes) * 100}%`
+                        : '50%',
+                  }}
+                />
+              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+                {voteCounts.totalVotes} total votes cast
+              </p>
+            </div>
+
+            <Link
+              href="/causes"
+              className="block text-center px-4 py-3 min-h-[44px] border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-full text-sm hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+            >
+              ← Back to all causes
+            </Link>
+          </div>
+        </div>
+      </main>
+
+      {isDonationModalOpen && (
+        <DonationModal
+          campaign={campaign}
+          onClose={() => setIsDonationModalOpen(false)}
+          onSuccess={refetch}
+        />
+      )}
+    </div>
+  );
+}

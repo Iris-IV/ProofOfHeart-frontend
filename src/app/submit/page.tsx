@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Category, CATEGORY_LABELS, xlmToStroops } from '../../types';
 import { createCampaign } from '../../lib/contractClient';
@@ -132,7 +131,6 @@ const INITIAL: FormValues = {
 };
 
 export default function SubmitCausePage() {
-    const router = useRouter();
     const { publicKey, isWalletConnected, connectWallet } = useWallet();
     const { showSuccess, showError } = useToast();
 
