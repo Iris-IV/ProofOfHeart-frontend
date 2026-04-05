@@ -86,17 +86,10 @@ export default function DashboardPage() {
           <span className="text-zinc-500 dark:text-zinc-400">You haven&apos;t submitted any campaigns yet.</span>
         ) : (
           <ul className="space-y-2">
-<<<<<<< HEAD:src/app/[locale]/dashboard/page.tsx
-            {submittedCampaigns.map((campaign) => (
-              <li key={campaign.id} className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 min-h-[60px]">
-                <div className="font-medium text-zinc-900 dark:text-zinc-50">{campaign.title}</div>
-                <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">{campaign.description}</div>
-=======
             {submittedCauses.map((cause) => (
               <li key={cause.id} className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 min-h-[60px]">
                 <div className="font-medium text-zinc-900 dark:text-zinc-50">{cause.title}</div>
                 <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">{cause.description}</div>
->>>>>>> 5438f66 (fix: resolve merge conflicts across all affected files):src/app/dashboard/page.tsx
               </li>
             ))}
           </ul>
@@ -114,14 +107,16 @@ export default function DashboardPage() {
             {mockVotes.map((vote, idx) => {
               const campaign = campaigns.find((c) => c.id === vote.campaignId);
               return (
-                <li key={idx} className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900">
-                  <div className="font-medium text-zinc-900 dark:text-zinc-50">
-                    {campaign ? campaign.title : `Campaign #${vote.campaignId}`}
-                  </div>
-                  <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                    {vote.voteType === 'upvote' ? '✓ Upvoted' : '✗ Downvoted'} · {vote.timestamp.toLocaleDateString()}
-                    {' · '}
-                    <a href={explorerTxUrl(vote.transactionHash)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                <li key={idx} className="border rounded p-3 bg-zinc-50 dark:bg-zinc-900">
+                  <div className="font-medium">{campaign ? campaign.title : `Campaign #${vote.campaignId}`}</div>
+                  <div className="text-sm text-zinc-500 dark:text-zinc-400">
+                    {vote.voteType === 'upvote' ? 'Upvoted' : 'Downvoted'} on {vote.timestamp.toLocaleDateString()}<br />
+                    <a
+                      href={explorerTxUrl(vote.transactionHash)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
                       View on Explorer
                     </a>
                   </div>
@@ -141,14 +136,16 @@ export default function DashboardPage() {
             {mockFunding.map((fund, idx) => {
               const campaign = campaigns.find((c) => c.id === fund.campaignId);
               return (
-                <li key={idx} className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900">
-                  <div className="font-medium text-zinc-900 dark:text-zinc-50">
-                    {campaign ? campaign.title : `Campaign #${fund.campaignId}`}
-                  </div>
-                  <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                    {fund.amount} XLM · {fund.timestamp.toLocaleDateString()}
-                    {' · '}
-                    <a href={explorerTxUrl(fund.tx)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                <li key={idx} className="border rounded p-3 bg-zinc-50 dark:bg-zinc-900">
+                  <div className="font-medium">{campaign ? campaign.title : `Campaign #${fund.campaignId}`}</div>
+                  <div className="text-sm text-zinc-500 dark:text-zinc-400">
+                    Donated {fund.amount} XLM on {fund.timestamp.toLocaleDateString()}<br />
+                    <a
+                      href={explorerTxUrl(fund.tx)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
                       View on Explorer
                     </a>
                   </div>
@@ -156,7 +153,8 @@ export default function DashboardPage() {
               );
             })}
           </ul>
-        )}
+        )
+        }
       </section>
     </div>
   );

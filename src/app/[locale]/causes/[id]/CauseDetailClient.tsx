@@ -73,6 +73,8 @@ export default function CauseDetailClient({ id }: { id: string }) {
         totalVotes: prev.totalVotes + 1,
       }));
       showSuccess('Your vote has been cast successfully.');
+
+      // Trigger immediate refetch after successful transaction
       refetch();
     } catch (error) {
       showError(parseContractError(error));
@@ -222,19 +224,27 @@ export default function CauseDetailClient({ id }: { id: string }) {
               totalVotes={voteCounts.totalVotes}
             />
 
+            {/* Donate button */}
             {campaign.is_active && !campaign.is_cancelled && (
               <button
                 onClick={() => {
-                  if (!userWalletAddress) { showWarning('Please connect your wallet first.'); return; }
+                  if (!userWalletAddress) {
+                    showWarning('Please connect your wallet first.');
+                    return;
+                  }
                   setIsDonationModalOpen(true);
                 }}
-                className="w-full py-3 min-h-[44px] bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
+                className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
               >
                 💜 Fund This Cause
               </button>
             )}
 
-            <CampaignActions campaign={campaign} onActionSuccess={refetch} />
+            {/* Role-aware actions */}
+            <CampaignActions
+              campaign={campaign}
+              onActionSuccess={refetch}
+            />
 
             <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Created by</h2>
@@ -277,7 +287,11 @@ export default function CauseDetailClient({ id }: { id: string }) {
       </main>
 
       {isDonationModalOpen && (
-        <DonationModal campaign={campaign} onClose={() => setIsDonationModalOpen(false)} onSuccess={refetch} />
+        <DonationModal
+          campaign={campaign}
+          onClose={() => setIsDonationModalOpen(false)}
+          onSuccess={refetch}
+        />
       )}
     </div>
   );
