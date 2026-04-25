@@ -17,6 +17,10 @@ export default function Navbar() {
   const t = useTranslations('Common');
   const [adminAddress, setAdminAddress] = useState<string | null>(null);
 
+  const networkPassphrase = process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE || '';
+  const isTestnet = networkPassphrase.includes('Test SDF');
+  const isMainnet = networkPassphrase.includes('Public Global');
+
   useEffect(() => {
     getAdmin().then(setAdminAddress).catch(() => { });
   }, []);
@@ -70,6 +74,16 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-3">
+          {isTestnet && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800 uppercase tracking-wider">
+              Testnet
+            </span>
+          )}
+          {isMainnet && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400 border border-green-200 dark:border-green-800 uppercase tracking-wider">
+              Mainnet
+            </span>
+          )}
           <div className="hidden sm:block border-r border-zinc-200 dark:border-zinc-800 h-6 mx-1" />
           <LanguageSwitcher />
 
@@ -87,7 +101,7 @@ export default function Navbar() {
                 type="button"
                 onClick={connectWallet}
                 disabled={isLoading}
-                className="h-10 items-center justify-center rounded-full bg-gradient-to-r from-red-500 to-pink-500 px-6 text-sm font-bold text-white transition-all hover:scale-105 hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-red-500/20"
+                className="h-10 items-center justify-center rounded-full bg-gradient-to-r from-red-500 to-pink-500 px-6 text-sm font-bold text-white transition-all hover:motion-safe:scale-105 hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-red-500/20"
               >
                 {isLoading ? t('connecting') : t('connectWallet')}
               </button>
@@ -113,6 +127,7 @@ export default function Navbar() {
                   onClick={disconnectWallet}
                   className="size-9 flex items-center justify-center rounded-full text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all border border-transparent hover:border-red-100 dark:hover:border-red-900/30"
                   title={t('disconnect')}
+                  aria-label={t('disconnect')}
                 >
                   <X size={18} />
                 </button>
@@ -125,6 +140,7 @@ export default function Navbar() {
             aria-controls="mobile-menu"
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((o) => !o)}
+            aria-label="Toggle menu"
             className="inline-flex size-10 items-center justify-center rounded-lg border border-black/10 bg-white text-zinc-950 hover:bg-black/5 dark:border-white/15 dark:bg-zinc-900 dark:text-white dark:hover:bg-white/10 md:hidden transition-colors shadow-sm"
           >
             <span className="sr-only">Toggle menu</span>
@@ -136,7 +152,7 @@ export default function Navbar() {
       {/* Mobile Menu */}
       {
         menuOpen && (
-          <div id="mobile-menu" className="border-t border-black/5 dark:border-white/10 md:hidden bg-white dark:bg-zinc-900 animate-in slide-in-from-top duration-300">
+          <div id="mobile-menu" className="border-t border-black/5 dark:border-white/10 md:hidden bg-white dark:bg-zinc-900 motion-safe:animate-in motion-safe:slide-in-from-top duration-300">
             <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
               <nav aria-label="Mobile">
                 <ul className="flex flex-col gap-2">

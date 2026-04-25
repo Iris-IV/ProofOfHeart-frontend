@@ -7,7 +7,7 @@ interface SkeletonProps {
 export function Skeleton({ className = '' }: SkeletonProps) {
     return (
         <div
-            className={`animate-pulse rounded bg-zinc-200 dark:bg-zinc-700 ${className}`}
+            className={`motion-safe:animate-pulse rounded bg-zinc-200 dark:bg-zinc-700 ${className}`}
         />
     );
 }
@@ -141,7 +141,7 @@ export function DashboardSkeleton() {
 export function Spinner({ className = 'h-4 w-4' }: { className?: string }) {
     return (
         <svg
-            className={`animate-spin ${className}`}
+            className={`motion-safe:animate-spin ${className}`}
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"

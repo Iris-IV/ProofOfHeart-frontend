@@ -82,7 +82,7 @@ export default function WalletConnection({ onWalletConnected, onWalletDisconnect
         <button
           onClick={connectWallet}
           disabled={isLoading}
-          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-full transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-full transition-all duration-200 transform hover:motion-safe:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? 'Connecting...' : 'Connect Wallet'}
         </button>

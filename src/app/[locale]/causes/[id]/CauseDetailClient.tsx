@@ -171,7 +171,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
     return (
       <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
         <main className="container mx-auto px-4 py-8 max-w-5xl">
-          <div className="animate-pulse space-y-6">
+          <div className="motion-safe:animate-pulse space-y-6">
             <div className="h-5 bg-zinc-200 dark:bg-zinc-700 rounded w-48" />
             <div className="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 p-6 space-y-4">
               <div className="h-8 bg-zinc-200 dark:bg-zinc-700 rounded w-3/4" />

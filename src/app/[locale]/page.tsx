@@ -12,30 +12,30 @@ export default function Home() {
   return (
     <div className="relative overflow-hidden bg-white dark:bg-zinc-950">
       {/* Background blobs for premium feel */}
-      <div className="absolute top-0 -left-4 w-72 h-72 bg-red-400 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob" />
-      <div className="absolute top-0 -right-4 w-72 h-72 bg-teal-400 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-2000" />
-      <div className="absolute -bottom-8 left-20 w-72 h-72 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-4000" />
+      <div className="absolute top-0 -left-4 w-72 h-72 bg-red-400 rounded-full mix-blend-multiply filter blur-3xl opacity-10 motion-safe:animate-blob" />
+      <div className="absolute top-0 -right-4 w-72 h-72 bg-teal-400 rounded-full mix-blend-multiply filter blur-3xl opacity-10 motion-safe:animate-blob animation-delay-2000" />
+      <div className="absolute -bottom-8 left-20 w-72 h-72 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-10 motion-safe:animate-blob animation-delay-4000" />
 
       <main className="relative container mx-auto px-4 py-24 sm:px-6 lg:px-8">
         {/* Hero Section */}
         <div className="text-center max-w-5xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-bold mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-bold mb-8 motion-safe:animate-in fade-in slide-in-from-bottom-4 duration-500">
             <Heart size={16} fill="currentColor" />
             <span>Community Driven Governance</span>
           </div>
           
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-zinc-900 dark:text-zinc-50 mb-8 leading-[1.1] tracking-tight animate-in fade-in slide-in-from-bottom-6 duration-700">
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-zinc-900 dark:text-zinc-50 mb-8 leading-[1.1] tracking-tight motion-safe:animate-in fade-in slide-in-from-bottom-6 duration-700">
             {t('heroTitle')}
           </h1>
 
-          <p className="text-xl sm:text-2xl text-zinc-600 dark:text-zinc-400 mb-12 leading-relaxed max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-1000">
+          <p className="text-xl sm:text-2xl text-zinc-600 dark:text-zinc-400 mb-12 leading-relaxed max-w-3xl mx-auto motion-safe:animate-in fade-in slide-in-from-bottom-8 duration-1000">
             {t('heroSubtitle')}
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center animate-in fade-in slide-in-from-bottom-10 duration-1000">
+          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center motion-safe:animate-in fade-in slide-in-from-bottom-10 duration-1000">
             <Link
               href="/explore"
-              className="group flex items-center gap-2 px-10 py-4 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-bold rounded-2xl transition-all shadow-xl shadow-red-500/25 hover:shadow-red-500/40 hover:-translate-y-1 active:translate-y-0"
+              className="group flex items-center gap-2 px-10 py-4 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-bold rounded-2xl transition-all shadow-xl shadow-red-500/25 hover:shadow-red-500/40 hover:motion-safe:-translate-y-1 active:translate-y-0"
             >
               {t('exploreCauses')}
               <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
@@ -43,7 +43,7 @@ export default function Home() {
             {isWalletConnected ? (
               <Link
                 href="/causes/new"
-                className="px-10 py-4 bg-white dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-bold rounded-2xl transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"
+                className="px-10 py-4 bg-white dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-bold rounded-2xl transition-all shadow-sm hover:shadow-md hover:motion-safe:-translate-y-0.5 active:translate-y-0"
               >
                 {t('startCampaign')}
               </Link>
@@ -52,7 +52,7 @@ export default function Home() {
                 type="button"
                 onClick={connectWallet}
                 disabled={isLoading}
-                className="px-10 py-4 bg-white dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-bold rounded-2xl transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="px-10 py-4 bg-white dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-bold rounded-2xl transition-all shadow-sm hover:shadow-md hover:motion-safe:-translate-y-0.5 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {isLoading ? 'Connecting...' : t('startCampaign')}
               </button>
@@ -94,7 +94,7 @@ export default function Home() {
 
 function FeatureCard({ icon, title, description, delay }: { icon: React.ReactNode, title: string, description: string, delay: string }) {
   return (
-    <div className={`p-8 rounded-3xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800/50 hover:border-blue-200 dark:hover:border-blue-900/30 transition-all hover:shadow-xl hover:shadow-blue-500/5 group animate-in fade-in zoom-in ${delay}`}>
+    <div className={`p-8 rounded-3xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800/50 hover:border-blue-200 dark:hover:border-blue-900/30 transition-all hover:shadow-xl hover:shadow-blue-500/5 group motion-safe:animate-in fade-in zoom-in ${delay}`}>
       <div className="w-14 h-14 bg-white dark:bg-zinc-800 rounded-2xl shadow-sm mb-6 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
         {icon}
       </div>

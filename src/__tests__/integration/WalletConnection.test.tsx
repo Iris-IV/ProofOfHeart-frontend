@@ -91,7 +91,7 @@ describe('WalletConnection — Connect Wallet flow', () => {
     await userEvent.click(button);
 
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent(/allow freighter/i);
+      expect(screen.getByRole('status')).toHaveTextContent(/allow freighter/i);
     });
   });
 
