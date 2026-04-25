@@ -16,6 +16,25 @@
     "startCampaign": "Iniciar una Campaña",
     "exploreCauses": "Explorar Causas"
   },
+  "Dashboard": {
+    "title": "Tu Panel de Control",
+    "noWalletHeading": "Conecta tu wallet para ver tu panel",
+    "goHome": "Ir al Inicio",
+    "walletBalance": "Saldo de Wallet",
+    "loadingBalance": "Cargando saldo…",
+    "balanceFetchError": "Error al obtener el saldo.",
+    "submittedCampaigns": "Tus Campañas Enviadas",
+    "noSubmittedCampaigns": "Aún no has enviado ninguna campaña.",
+    "votingHistory": "Historial de Votos",
+    "noVotingHistory": "Aún no hay actividad de votación.",
+    "upvotedOn": "Votó a favor el {date}",
+    "downvotedOn": "Votó en contra el {date}",
+    "viewOnExplorer": "Ver en el Explorador",
+    "fundingHistory": "Historial de Financiación/Donaciones",
+    "noFundingHistory": "Aún no hay actividad de financiación/donación.",
+    "donated": "Donó {amount} XLM el {date}",
+    "campaignFallback": "Campaña #{id}"
+  },
   "Admin": {
     "title": "Moderación Administrativa",
     "subtitle": "Revise y valide las nuevas causas enviadas a la plataforma.",

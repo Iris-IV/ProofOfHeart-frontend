@@ -16,6 +16,25 @@
     "startCampaign": "Start a Campaign",
     "exploreCauses": "Explore Causes"
   },
+  "Dashboard": {
+    "title": "Your Dashboard",
+    "noWalletHeading": "Connect your wallet to view your dashboard",
+    "goHome": "Go Home",
+    "walletBalance": "Wallet Balance",
+    "loadingBalance": "Loading balance…",
+    "balanceFetchError": "Failed to fetch balance.",
+    "submittedCampaigns": "Your Submitted Campaigns",
+    "noSubmittedCampaigns": "You haven't submitted any campaigns yet.",
+    "votingHistory": "Voting History",
+    "noVotingHistory": "No voting activity yet.",
+    "upvotedOn": "Upvoted on {date}",
+    "downvotedOn": "Downvoted on {date}",
+    "viewOnExplorer": "View on Explorer",
+    "fundingHistory": "Funding/Donation History",
+    "noFundingHistory": "No funding/donation activity yet.",
+    "donated": "Donated {amount} XLM on {date}",
+    "campaignFallback": "Campaign #{id}"
+  },
   "Admin": {
     "title": "Admin Moderation",
     "subtitle": "Review and validate new causes submitted to the platform.",

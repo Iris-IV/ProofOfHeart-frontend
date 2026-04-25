@@ -100,10 +100,12 @@ function Toast({
     setTimeout(() => onDismiss(toast.id), 300);
   };
 
+  const isError = toast.type === 'error';
+
   return (
     <div
-      role="alert"
-      aria-live="assertive"
+      role={isError ? 'alert' : 'status'}
+      aria-live={isError ? 'assertive' : 'polite'}
       className={`
         flex items-start gap-3 w-full max-w-sm rounded-xl border px-4 py-3 shadow-lg
         transition-all duration-300 ease-in-out
