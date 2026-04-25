@@ -200,6 +200,8 @@ export default function CreateCampaignPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={100}
+              aria-invalid={Boolean(errors.title)}
+              aria-describedby={errors.title ? 'title-error' : undefined}
               placeholder="A clear, compelling title for your campaign"
               className={`w-full px-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
                 errors.title
@@ -209,7 +211,9 @@ export default function CreateCampaignPage() {
             />
             <div className="flex justify-between mt-1">
               {errors.title ? (
-                <p className="text-xs text-red-500">{errors.title}</p>
+                <p id="title-error" className="text-xs text-red-500">
+                  {errors.title}
+                </p>
               ) : (
                 <span />
               )}
@@ -231,6 +235,8 @@ export default function CreateCampaignPage() {
               onChange={(e) => setDescription(e.target.value)}
               maxLength={1000}
               rows={5}
+              aria-invalid={Boolean(errors.description)}
+              aria-describedby={errors.description ? 'description-error' : undefined}
               placeholder="Describe your campaign, what it aims to achieve, and how funds will be used"
               className={`w-full px-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y transition-colors ${
                 errors.description
@@ -240,7 +246,9 @@ export default function CreateCampaignPage() {
             />
             <div className="flex justify-between mt-1">
               {errors.description ? (
-                <p className="text-xs text-red-500">{errors.description}</p>
+                <p id="description-error" className="text-xs text-red-500">
+                  {errors.description}
+                </p>
               ) : (
                 <span />
               )}
@@ -271,6 +279,8 @@ export default function CreateCampaignPage() {
                   onChange={(e) => setFundingGoal(e.target.value)}
                   min="0.0000001"
                   step="any"
+                  aria-invalid={Boolean(errors.fundingGoal)}
+                  aria-describedby={errors.fundingGoal ? 'funding-goal-error' : undefined}
                   placeholder="e.g. 1000"
                   className={`w-full pl-12 pr-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
                     errors.fundingGoal
@@ -280,7 +290,9 @@ export default function CreateCampaignPage() {
                 />
               </div>
               {errors.fundingGoal && (
-                <p className="text-xs text-red-500 mt-1">{errors.fundingGoal}</p>
+                <p id="funding-goal-error" className="text-xs text-red-500 mt-1">
+                  {errors.fundingGoal}
+                </p>
               )}
             </div>
 
@@ -300,6 +312,8 @@ export default function CreateCampaignPage() {
                 min="1"
                 max="365"
                 step="1"
+                aria-invalid={Boolean(errors.durationDays)}
+                aria-describedby={errors.durationDays ? 'duration-days-error' : undefined}
                 placeholder="1–365"
                 className={`w-full px-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
                   errors.durationDays
@@ -308,7 +322,9 @@ export default function CreateCampaignPage() {
                 }`}
               />
               {errors.durationDays && (
-                <p className="text-xs text-red-500 mt-1">{errors.durationDays}</p>
+                <p id="duration-days-error" className="text-xs text-red-500 mt-1">
+                  {errors.durationDays}
+                </p>
               )}
             </div>
           </div>

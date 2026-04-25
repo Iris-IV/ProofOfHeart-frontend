@@ -168,6 +168,25 @@ describe('CreateCampaignPage — client-side validation', () => {
     expect(await screen.findByText(/title is required/i)).toBeInTheDocument();
   });
 
+  it('links field errors to inputs with aria-describedby and aria-invalid', async () => {
+    render(<CreateCampaignPage />);
+    await userEvent.click(screen.getByRole('button', { name: /launch campaign/i }));
+
+    const titleInput = screen.getByLabelText(/campaign title/i);
+    const descriptionInput = screen.getByLabelText(/description/i);
+    const fundingGoalInput = screen.getByLabelText(/funding goal/i);
+    const durationInput = screen.getByLabelText(/duration/i);
+
+    expect(titleInput).toHaveAttribute('aria-invalid', 'true');
+    expect(titleInput).toHaveAttribute('aria-describedby', 'title-error');
+    expect(descriptionInput).toHaveAttribute('aria-invalid', 'true');
+    expect(descriptionInput).toHaveAttribute('aria-describedby', 'description-error');
+    expect(fundingGoalInput).toHaveAttribute('aria-invalid', 'true');
+    expect(fundingGoalInput).toHaveAttribute('aria-describedby', 'funding-goal-error');
+    expect(durationInput).toHaveAttribute('aria-invalid', 'true');
+    expect(durationInput).toHaveAttribute('aria-describedby', 'duration-days-error');
+  });
+
   it('shows a title error when title exceeds 100 characters', async () => {
     render(<CreateCampaignPage />);
     // fireEvent.change bypasses the maxLength DOM attribute so we can test the JS validator
