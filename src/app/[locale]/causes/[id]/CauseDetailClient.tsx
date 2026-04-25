@@ -221,6 +221,8 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const goal = stroopsToXlm(campaign.funding_goal);
   const fundingPct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
   const approvalRate = voteCounts.totalVotes > 0 ? Math.round((voteCounts.upvotes / voteCounts.totalVotes) * 100) : 0;
+  const voteBreakdownApprovePct = voteCounts.totalVotes > 0 ? approvalRate : 50;
+  const voteBreakdownRejectPct = 100 - voteBreakdownApprovePct;
   const categoryLabel = CATEGORY_LABELS[campaign.category] ?? 'Other';
   const platformFeePercent = platformFeeBps / 100;
   const estimatedFeeAmount = raised * (platformFeeBps / 10000);
@@ -390,8 +392,11 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 <span className="text-red-500 dark:text-red-400 font-medium">✗ Reject ({voteCounts.downvotes})</span>
               </div>
               <div className="w-full bg-red-200 dark:bg-red-900/40 rounded-full h-2">
-                <div className="bg-green-500 h-2 rounded-full transition-all duration-300" style={{ width: voteCounts.totalVotes > 0 ? `${(voteCounts.upvotes / voteCounts.totalVotes) * 100}%` : '50%' }} />
+                <div className="bg-green-500 h-2 rounded-full transition-all duration-300" style={{ width: `${voteBreakdownApprovePct}%` }} />
               </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+                {voteBreakdownApprovePct}% Approve / {voteBreakdownRejectPct}% Reject
+              </p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">{voteCounts.totalVotes} total votes cast</p>
             </div>
 

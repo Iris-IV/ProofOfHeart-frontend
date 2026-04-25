@@ -242,6 +242,8 @@ export default function CauseDetailClient({ id }: { id: string }) {
 
   const approvalRate =
     voteCounts.totalVotes > 0 ? Math.round((voteCounts.upvotes / voteCounts.totalVotes) * 100) : 0;
+  const voteBreakdownApprovePct = voteCounts.totalVotes > 0 ? approvalRate : 50;
+  const voteBreakdownRejectPct = 100 - voteBreakdownApprovePct;
 
   const categoryLabel = CATEGORY_LABELS[campaign.category] ?? 'Other';
 
@@ -456,13 +458,13 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 <div
                   className="bg-green-500 h-2 rounded-full transition-all duration-300"
                   style={{
-                    width:
-                      voteCounts.totalVotes > 0
-                        ? `${(voteCounts.upvotes / voteCounts.totalVotes) * 100}%`
-                        : '50%',
+                    width: `${voteBreakdownApprovePct}%`,
                   }}
                 />
               </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+                {voteBreakdownApprovePct}% Approve / {voteBreakdownRejectPct}% Reject
+              </p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
                 {voteCounts.totalVotes} total votes cast
               </p>

@@ -94,6 +94,8 @@ export default function VotingComponent({
   // Approval rate in basis points
   const currentApprovalBps =
     totalVotes > 0 ? Math.round((upvotes / totalVotes) * 10000) : 0;
+  const approvePercent = totalVotes > 0 ? Math.round((upvotes / totalVotes) * 100) : 50;
+  const rejectPercent = 100 - approvePercent;
 
   // Verify button visible once quorum met and approval threshold reached
   const canVerify =
@@ -122,14 +124,8 @@ export default function VotingComponent({
           }
           className={`${getVoteButtonClass('upvote')} flex-1 min-h-[44px] justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          <svg className="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fillRule="evenodd"
-              d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
-              clipRule="evenodd"
-            />
-          </svg>
-          Approve
+          <span aria-hidden="true">✓</span>
+          <span>Approve</span>
         </button>
 
         <button
@@ -146,14 +142,8 @@ export default function VotingComponent({
           }
           className={`${getVoteButtonClass('downvote')} flex-1 min-h-[44px] justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          <svg className="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fillRule="evenodd"
-              d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-              clipRule="evenodd"
-            />
-          </svg>
-          Reject
+          <span aria-hidden="true">✕</span>
+          <span>Reject</span>
         </button>
       </div>
 
@@ -171,10 +161,14 @@ export default function VotingComponent({
         <div
           className="bg-green-500 h-2 rounded-full transition-all duration-300"
           style={{
-            width: `${totalVotes > 0 ? (upvotes / totalVotes) * 100 : 50}%`,
+            width: `${approvePercent}%`,
           }}
         />
       </div>
+
+      <p className="w-full text-center text-xs text-zinc-600 dark:text-zinc-400">
+        {approvePercent}% Approve / {rejectPercent}% Reject
+      </p>
 
       <div className="flex justify-between w-full text-sm text-zinc-600 dark:text-zinc-400">
         <span>{upvotes} Approve</span>
