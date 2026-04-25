@@ -50,7 +50,7 @@ export function CampaignRowSkeleton() {
 /** Skeleton for the cause detail page */
 export function CauseDetailSkeleton() {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+        <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
             <main className="container mx-auto px-4 py-8 max-w-5xl">
                 <Skeleton className="h-4 w-48 mb-6" />
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

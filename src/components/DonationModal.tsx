@@ -93,7 +93,7 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
                         </div>
                         <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
                             <div
-                                className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
+                                className="bg-linear-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
                                 style={{ width: `${step === 'confirmed' ? newPct : currentPct}%` }}
                             />
                         </div>
@@ -142,7 +142,7 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
                             <button
                                 onClick={handleDonate}
                                 disabled={!publicKey || amountNum <= 0}
-                                className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200"
+                                className="w-full py-3 bg-linear-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200"
                             >
                                 Donate {amountNum > 0 ? `${amountNum} XLM` : ''}
                             </button>

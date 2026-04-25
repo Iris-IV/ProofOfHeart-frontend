@@ -335,7 +335,7 @@ export default function AdminDashboard() {
            </section>
 
            {/* Admin Transfer Control */}
-           <section className="bg-gradient-to-br from-red-50 to-rose-100/50 dark:from-red-900/10 dark:to-zinc-900 rounded-[2.5rem] border border-red-100 dark:border-red-900/20 p-8 shadow-sm">
+           <section className="bg-linear-to-br from-red-50 to-rose-100/50 dark:from-red-900/10 dark:to-zinc-900 rounded-[2.5rem] border border-red-100 dark:border-red-900/20 p-8 shadow-sm">
               <h3 className="text-xl font-bold mb-2 text-red-950 dark:text-red-400">{t('transferAdmin')}</h3>
               <p className="text-sm text-red-800/70 dark:text-red-400/70 mb-8 leading-relaxed">
                  Irreversible action. Move all administrative powers to a new address.

@@ -178,7 +178,7 @@ export default function WithdrawFunds({
           <button
             onClick={() => setShowConfirm(true)}
             disabled={isDisabled}
-            className="w-full px-4 py-3 min-h-[44px] bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-sm font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:from-zinc-400 disabled:to-zinc-400"
+            className="w-full px-4 py-3 min-h-[44px] bg-linear-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-sm font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:from-zinc-400 disabled:to-zinc-400"
           >
             Withdraw Funds
           </button>

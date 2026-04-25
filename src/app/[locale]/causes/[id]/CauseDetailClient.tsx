@@ -366,7 +366,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
             {campaign.is_active && !campaign.is_cancelled && (
               <button
                 onClick={() => { if (!userWalletAddress) { showWarning('Please connect your wallet first.'); return; } setIsDonationModalOpen(true); }}
-                className="w-full py-3 min-h-[44px] bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
+                className="w-full py-3 min-h-[44px] bg-linear-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
               >
                 💜 Fund This Cause
               </button>

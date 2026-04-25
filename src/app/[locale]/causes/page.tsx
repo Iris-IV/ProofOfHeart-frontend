@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Campaign, Vote, CATEGORY_LABELS, CampaignStatus } from '@/types';
 import { explorerTxUrl } from '@/utils/explorer';
@@ -27,6 +28,7 @@ function useDebounce<T>(value: T, delay: number): T {
 // ---------------------------------------------------------------------------
 
 function CausesContent() {
+  const t = useTranslations('Causes');
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -254,10 +256,10 @@ function CausesContent() {
         {/* Page heading */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-2">
-            Community Causes
+            {t('pageTitle')}
           </h1>
           <p className="text-zinc-600 dark:text-zinc-400">
-            Browse, search, and vote on causes that matter to you.
+            {t('pageSubtitle')}
           </p>
         </div>
 
@@ -282,7 +284,7 @@ function CausesContent() {
               type="text"
               value={rawSearch}
               onChange={(e) => setRawSearch(e.target.value)}
-              placeholder="Search causes by title, description, or category…"
+              placeholder={t('searchPlaceholder')}
               className="w-full pl-9 pr-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             />
             {rawSearch && (
@@ -299,14 +301,14 @@ function CausesContent() {
           <div className="flex flex-wrap gap-3 items-center">
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
-                Category
+                {t('labelCategory')}
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 className="text-sm rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="all">All Categories</option>
+                <option value="all">{t('allCategories')}</option>
                 {Object.entries(CATEGORY_LABELS).map(([val, label]) => (
                   <option key={val} value={val}>
                     {label}
@@ -317,7 +319,7 @@ function CausesContent() {
 
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                Status
+                {t('labelStatus')}
               </label>
               <select
                 value={status}
@@ -326,7 +328,7 @@ function CausesContent() {
               >
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>
-                    {s === 'all' ? 'All Statuses' : s.charAt(0).toUpperCase() + s.slice(1)}
+                    {s === 'all' ? t('allStatuses') : s.charAt(0).toUpperCase() + s.slice(1)}
                   </option>
                 ))}
               </select>
@@ -334,7 +336,7 @@ function CausesContent() {
 
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                Sort by
+                {t('labelSortBy')}
               </label>
               <select
                 value={sort}
@@ -354,7 +356,7 @@ function CausesContent() {
                 onClick={clearFilters}
                 className="text-xs text-blue-600 dark:text-blue-400 hover:underline ml-auto"
               >
-                Clear filters
+                {t('clearFilters')}
               </button>
             )}
           </div>
@@ -387,14 +389,13 @@ function CausesContent() {
           <>
             <div className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 flex items-center gap-3">
               <span>
-                {filteredCampaigns.length}{' '}
-                {filteredCampaigns.length === 1 ? 'cause' : 'causes'} found
-                {debouncedSearch && <span> for &ldquo;{debouncedSearch}&rdquo;</span>}
+                {t(filteredCampaigns.length === 1 ? 'causesFound_one' : 'causesFound_other', { count: filteredCampaigns.length })}
+                {debouncedSearch && <span>{t('causesFoundFor', { query: debouncedSearch })}</span>}
               </span>
               {isVotingFor !== null && (
                 <span className="inline-flex items-center gap-1">
                   <span className="inline-block motion-safe:animate-spin rounded-full h-3 w-3 border-b border-zinc-500" />
-                  Processing vote…
+                  {t('processingVote')}
                 </span>
               )}
             </div>
@@ -417,19 +418,17 @@ function CausesContent() {
               <div className="text-center py-20">
                 <div className="text-5xl mb-4">🔍</div>
                 <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-                  {campaigns.length === 0 ? 'No causes yet' : 'No causes found'}
+                  {campaigns.length === 0 ? t('noCausesYet') : t('noCausesFound')}
                 </h2>
                 <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-                  {campaigns.length === 0
-                    ? 'Be the first to submit a cause for the community to vote on.'
-                    : 'Try a different keyword or clear the filters.'}
+                  {campaigns.length === 0 ? t('beFirstToSubmit') : t('tryDifferentKeyword')}
                 </p>
                 {campaigns.length > 0 && (
                   <button
                     onClick={clearFilters}
                     className="px-6 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
                   >
-                    Clear all filters
+                    {t('clearAllFilters')}
                   </button>
                 )}
               </div>

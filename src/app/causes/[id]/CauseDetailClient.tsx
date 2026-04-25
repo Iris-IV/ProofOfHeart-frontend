@@ -197,7 +197,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+      <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
         <main className="container mx-auto px-4 py-24 text-center">
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">
             Failed to load cause
@@ -216,7 +216,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
 
   if (!campaign) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+      <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
         <main className="container mx-auto px-4 py-24 text-center">
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">Cause not found</h1>
           <p className="text-zinc-600 dark:text-zinc-400 mb-8">
@@ -255,7 +255,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const refundableXlm = stroopsToXlm(refundableAmount);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+    <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
       <main className="container mx-auto px-4 py-8 max-w-5xl">
         {/* Breadcrumb + Wallet */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -411,7 +411,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                   }
                   setIsDonationModalOpen(true);
                 }}
-                className="w-full py-3 min-h-[44px] bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
+                className="w-full py-3 min-h-[44px] bg-linear-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
               >
                 💜 Fund This Cause
               </button>
@@ -427,7 +427,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
             <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Created by</h2>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
+                <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
                   {campaign.creator.slice(1, 3).toUpperCase()}
                 </div>
                 <div>

@@ -35,7 +35,7 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center motion-safe:animate-in fade-in slide-in-from-bottom-10 duration-1000">
             <Link
               href="/explore"
-              className="group flex items-center gap-2 px-10 py-4 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-bold rounded-2xl transition-all shadow-xl shadow-red-500/25 hover:shadow-red-500/40 hover:motion-safe:-translate-y-1 active:translate-y-0"
+              className="group flex items-center gap-2 px-10 py-4 bg-linear-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-bold rounded-2xl transition-all shadow-xl shadow-red-500/25 hover:shadow-red-500/40 hover:motion-safe:-translate-y-1 active:translate-y-0"
             >
               {t('exploreCauses')}
               <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />

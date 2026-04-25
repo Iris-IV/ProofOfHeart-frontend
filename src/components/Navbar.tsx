@@ -101,7 +101,7 @@ export default function Navbar() {
                 type="button"
                 onClick={connectWallet}
                 disabled={isLoading}
-                className="h-10 items-center justify-center rounded-full bg-gradient-to-r from-red-500 to-pink-500 px-6 text-sm font-bold text-white transition-all hover:motion-safe:scale-105 hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-red-500/20"
+                className="h-10 items-center justify-center rounded-full bg-linear-to-r from-red-500 to-pink-500 px-6 text-sm font-bold text-white transition-all hover:motion-safe:scale-105 hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-red-500/20"
               >
                 {isLoading ? t('connecting') : t('connectWallet')}
               </button>
@@ -192,7 +192,7 @@ export default function Navbar() {
                   type="button"
                   onClick={connectWallet}
                   disabled={isLoading}
-                  className="h-12 w-full rounded-xl bg-gradient-to-r from-red-500 to-pink-500 px-4 text-base font-bold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+                  className="h-12 w-full rounded-xl bg-linear-to-r from-red-500 to-pink-500 px-4 text-base font-bold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
                 >
                   {isLoading ? t('connecting') : t('connectWallet')}
                 </button>
