@@ -2,10 +2,12 @@
 
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/routing';
+import { useWallet } from '@/components/WalletContext';
 import { Heart, Shield, Globe, Code, ArrowRight } from "lucide-react";
 
 export default function Home() {
   const t = useTranslations('Home');
+  const { isWalletConnected, connectWallet, isLoading } = useWallet();
 
   return (
     <div className="relative overflow-hidden bg-white dark:bg-zinc-950">
@@ -38,9 +40,23 @@ export default function Home() {
               {t('exploreCauses')}
               <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
             </Link>
-            <button className="px-10 py-4 bg-white dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-bold rounded-2xl transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0">
-              {t('startCampaign')}
-            </button>
+            {isWalletConnected ? (
+              <Link
+                href="/causes/new"
+                className="px-10 py-4 bg-white dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-bold rounded-2xl transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"
+              >
+                {t('startCampaign')}
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={connectWallet}
+                disabled={isLoading}
+                className="px-10 py-4 bg-white dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-bold rounded-2xl transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'Connecting...' : t('startCampaign')}
+              </button>
+            )}
           </div>
         </div>
 
