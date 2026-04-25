@@ -42,6 +42,7 @@
   "overrides": {
     "axios": "1.15.2",
     "follow-redirects": "1.16.0",
+    "@swc/helpers": "0.5.21",
     "postcss": "^8.5.10"
   }
 }
