@@ -1,21 +1,21 @@
-import type { Config } from 'jest';
-import nextJest from 'next/jest.js';
+import type { Config } from "jest";
+import nextJest from "next/jest.js";
 
-const createJestConfig = nextJest({ dir: './' });
+const createJestConfig = nextJest({ dir: "./" });
 
 const config: Config = {
-  testEnvironment: 'jsdom',
-  setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
-  coverageProvider: 'v8',
+  testEnvironment: "jsdom",
+  setupFilesAfterEnv: ["<rootDir>/src/setupTests.ts"],
+  coverageProvider: "v8",
   collectCoverageFrom: [
-    'src/**/*.{ts,tsx}',
-    '!src/**/*.d.ts',
-    '!src/types/**',
-    '!src/app/**',
+    "src/**/*.{ts,tsx}",
+    "!src/**/*.d.ts",
+    "!src/types/**",
+    // src/app/** is intentionally included so pages appear in coverage reports.
   ],
-  coverageReporters: ['text', 'lcov', 'html'],
+  coverageReporters: ["text", "lcov", "html"],
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
+    "^@/(.*)$": "<rootDir>/src/$1",
   },
 };
 

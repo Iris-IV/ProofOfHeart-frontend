@@ -393,7 +393,7 @@ function CausesContent() {
               </span>
               {isVotingFor !== null && (
                 <span className="inline-flex items-center gap-1">
-                  <span className="inline-block animate-spin rounded-full h-3 w-3 border-b border-zinc-500" />
+                  <span className="inline-block motion-safe:animate-spin rounded-full h-3 w-3 border-b border-zinc-500" />
                   Processing vote…
                 </span>
               )}
@@ -446,7 +446,7 @@ export default function CausesPage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+          <div className="motion-safe:animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
         </div>
       }
     >

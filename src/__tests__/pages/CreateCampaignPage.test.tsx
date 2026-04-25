@@ -85,6 +85,7 @@ async function fillRequiredFields({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  localStorage.clear();
   setWalletDisconnected();
   mockCreateCampaign.mockResolvedValue('mock_tx_hash');
   mockGetCampaignCount.mockResolvedValue(7);

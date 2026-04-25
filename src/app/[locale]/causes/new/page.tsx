@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from '@/i18n/routing';
 import { useWallet } from '@/components/WalletContext';
 import { useToast } from '@/components/ToastProvider';
@@ -79,6 +79,45 @@ export default function CreateCampaignPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const DRAFT_KEY = 'proof_of_heart_next_draft';
+
+  // Load draft from local storage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.title) setTitle(parsed.title);
+        if (parsed.description) setDescription(parsed.description);
+        if (parsed.fundingGoal) setFundingGoal(parsed.fundingGoal);
+        if (parsed.durationDays) setDurationDays(parsed.durationDays);
+        if (parsed.category !== undefined) setCategory(parsed.category);
+        if (parsed.hasRevenueSharing !== undefined) setHasRevenueSharing(parsed.hasRevenueSharing);
+        if (parsed.revenueSharePercentage !== undefined) setRevenueSharePercentage(parsed.revenueSharePercentage);
+      }
+    } catch (e) {
+      console.warn('Failed to load draft from localStorage:', e);
+    }
+  }, []);
+
+  // Save draft to local storage on changes
+  useEffect(() => {
+    try {
+      const draft = {
+        title,
+        description,
+        fundingGoal,
+        durationDays,
+        category,
+        hasRevenueSharing,
+        revenueSharePercentage,
+      };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } catch (e) {
+      console.warn('Failed to save draft to localStorage:', e);
+    }
+  }, [title, description, fundingGoal, durationDays, category, hasRevenueSharing, revenueSharePercentage]);
+
   const isStartup = category === Category.EducationalStartup;
 
   const handleCategoryChange = (val: Category) => {
@@ -132,6 +171,12 @@ export default function CreateCampaignPage() {
       );
 
       showSuccess('Campaign created successfully!');
+
+      try {
+        localStorage.removeItem(DRAFT_KEY);
+      } catch (e) {
+        // Ignore errors
+      }
 
       // Redirect to the newly created campaign detail page
       try {
@@ -443,7 +488,7 @@ export default function CreateCampaignPage() {
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isSubmitting && (
-                <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                <span className="inline-block motion-safe:animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
               )}
               {isSubmitting ? 'Submitting…' : 'Launch Campaign'}
             </button>

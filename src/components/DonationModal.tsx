@@ -152,7 +152,7 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
                     {/* Pending step */}
                     {step === 'pending' && (
                         <div className="flex flex-col items-center gap-4 py-6">
-                            <div className="w-12 h-12 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
+                            <div className="w-12 h-12 rounded-full border-4 border-blue-500 border-t-transparent motion-safe:animate-spin" />
                             <p className="text-zinc-600 dark:text-zinc-400 text-sm text-center">
                                 Waiting for Freighter signature and transaction confirmation…
                             </p>
