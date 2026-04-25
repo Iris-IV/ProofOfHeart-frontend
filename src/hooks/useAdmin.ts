@@ -1,18 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getAdmin } from '../lib/contractClient';
 
 export function useAdmin() {
-  const [admin, setAdmin] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    getAdmin()
-      .then(setAdmin)
-      .catch((err) => console.error('Failed to fetch admin:', err))
-      .finally(() => setIsLoading(false));
-  }, []);
+  const { data: admin = null, isLoading } = useQuery<string, Error>({
+    queryKey: ['admin'],
+    queryFn: getAdmin,
+    staleTime: Infinity,
+    retry: 1,
+  });
 
   return { admin, isLoading };
 }
