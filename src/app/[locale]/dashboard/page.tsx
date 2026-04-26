@@ -9,6 +9,7 @@ import { useCampaigns } from "@/hooks/useCampaigns";
 import { getStellarBalance } from "@/lib/getStellarBalance";
 import { DashboardSkeleton, Spinner } from "@/components/Skeleton";
 import MyContributionsSection from "@/components/MyContributionsSection";
+import { isSameAddress } from "@/lib/stellar";
 
 export default function DashboardPage() {
   const t = useTranslations('Dashboard');
@@ -48,7 +49,7 @@ export default function DashboardPage() {
     { campaignId: 1, amount: 50, timestamp: new Date('2024-02-20'), tx: 'fund2' },
   ], []);
 
-  const submittedCampaigns = useMemo(() => campaigns.filter((c) => c.creator === publicKey), [campaigns, publicKey]);
+  const submittedCampaigns = useMemo(() => campaigns.filter((c) => isSameAddress(c.creator, publicKey)), [campaigns, publicKey]);
 
   if (loading) return <DashboardSkeleton />;
 

@@ -18,6 +18,7 @@ import { Link } from '@/i18n/routing';
 import { useTranslations } from 'next-intl';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { parseContractError } from '@/utils/contractErrors';
+import { isSameAddress } from '@/lib/stellar';
 
 export default function AdminDashboard() {
   const { campaigns, isLoading, refetch, isRefreshing } = useCampaigns();
@@ -58,8 +59,7 @@ export default function AdminDashboard() {
   }, []);
 
   const isAdmin = useMemo(() => {
-    if (!publicKey || !adminAddress) return false;
-    return publicKey.trim().toUpperCase() === adminAddress.trim().toUpperCase();
+    return isSameAddress(publicKey, adminAddress);
   }, [publicKey, adminAddress]);
 
   const pendingCampaigns = useMemo(() => {

@@ -7,6 +7,7 @@ import { useWallet } from './WalletContext';
 import { useRevenueSharing } from '../hooks/useRevenueSharing';
 import { useToast } from './ToastProvider';
 import { parseContractError } from '../utils/contractErrors';
+import { isSameAddress } from '../lib/stellar';
 
 interface RevenueSharingPanelProps {
   campaign: Campaign;
@@ -49,7 +50,7 @@ export default function RevenueSharingPanel({
     campaign.has_revenue_sharing,
   );
 
-  const isCreator = publicKey === campaign.creator;
+  const isCreator = isSameAddress(publicKey, campaign.creator);
   const canShowCreatorControls = showCreatorControls && isCreator;
   const canShowContributorControls = showContributorControls && !!publicKey;
   const hasContribution = contribution > BigInt(0);

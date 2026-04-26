@@ -18,6 +18,7 @@ import { useToast } from './ToastProvider';
 import { parseContractError } from '../utils/contractErrors';
 import WithdrawFunds from './WithdrawFunds';
 import { Spinner } from './Skeleton';
+import { isSameAddress } from '../lib/stellar';
 
 interface CampaignActionsProps {
   campaign: Campaign;
@@ -35,8 +36,8 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
   const [revenueAmount, setRevenueAmount] = useState('');
   const [showRevenueInput, setShowRevenueInput] = useState(false);
 
-  const isCreator = publicKey === campaign.creator;
-  const isAdmin = !!publicKey && publicKey === admin;
+  const isCreator = isSameAddress(publicKey, campaign.creator);
+  const isAdmin = isSameAddress(publicKey, admin);
   const isContributor = contribution > BigInt(0);
 
   const handleAction = async (action: () => Promise<string>, successMsg: string) => {

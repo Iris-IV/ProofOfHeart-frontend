@@ -7,6 +7,7 @@ import { Campaign, basisPointsToPercentage, stroopsToXlm } from '../types';
 import { withdrawFunds } from '../lib/contractClient';
 import { useToast } from './ToastProvider';
 import { parseContractError } from '../utils/contractErrors';
+import { isSameAddress } from '../lib/stellar';
 
 interface WithdrawFundsProps {
   campaign: Campaign;
@@ -27,9 +28,7 @@ export default function WithdrawFunds({
   const { showError, showSuccess } = useToast();
 
   // Only the campaign creator should see this component
-  const isCreator =
-    userWalletAddress &&
-    userWalletAddress.toLowerCase() === campaign.creator.toLowerCase();
+  const isCreator = isSameAddress(userWalletAddress, campaign.creator);
 
   if (!isCreator) return null;
 

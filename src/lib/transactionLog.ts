@@ -8,14 +8,12 @@ export interface WalletTransactionLogEntry {
   timestamp: number;
 }
 
+import { normalizeAddress } from './stellar';
+
 const STORAGE_KEY = 'proof_of_heart_wallet_tx_log_v1';
 
 function canUseStorage(): boolean {
   return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
-}
-
-function normalizeAddress(address: string): string {
-  return address.trim().toUpperCase();
 }
 
 function readAllEntries(): WalletTransactionLogEntry[] {
