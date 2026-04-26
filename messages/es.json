@@ -109,5 +109,13 @@
     "beFirstToSubmit": "Sé el primero en enviar una causa para que la comunidad vote.",
     "tryDifferentKeyword": "Intenta con otra palabra clave o borra los filtros.",
     "tryAgain": "Intentar de nuevo"
+  },
+  "Status": {
+    "active": "Activa",
+    "cancelled": "Cancelada",
+    "funded": "Financiada",
+    "failed": "Fallida",
+    "verified": "Verificada",
+    "verifiedCampaign": "Campaña verificada"
   }
 }
