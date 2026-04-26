@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Campaign, Vote } from '../types';
-import { useToast } from './ToastProvider';
-import { parseContractError } from '../utils/contractErrors';
+import { useState } from "react";
+import { Campaign, Vote } from "../types";
+import { useToast } from "./ToastProvider";
+import { parseContractError } from "../utils/contractErrors";
 
 interface VotingComponentProps {
   campaign: Campaign;
   userWalletAddress: string | null;
-  onVote: (campaignId: number, voteType: 'upvote' | 'downvote') => Promise<void>;
+  onVote: (campaignId: number, voteType: "upvote" | "downvote") => Promise<void>;
   userVote?: Vote;
   isVoting: boolean;
   upvotes?: number;
@@ -40,25 +40,25 @@ export default function VotingComponent({
   onVerifyWithVotes,
   isVerifying = false,
 }: VotingComponentProps) {
-  const [localVote, setLocalVote] = useState<'upvote' | 'downvote' | null>(
-    userVote?.voteType ?? null
+  const [localVote, setLocalVote] = useState<"upvote" | "downvote" | null>(
+    userVote?.voteType ?? null,
   );
   const { showError, showWarning } = useToast();
 
   const hasAlreadyVoted = !!userVote || !!localVote;
   const voteDisabled = isVoting || !userWalletAddress || !isTokenHolder || hasAlreadyVoted;
 
-  const handleVote = async (voteType: 'upvote' | 'downvote') => {
+  const handleVote = async (voteType: "upvote" | "downvote") => {
     if (!userWalletAddress) {
-      showWarning('Please connect your wallet to vote.');
+      showWarning("Please connect your wallet to vote.");
       return;
     }
     if (!isTokenHolder) {
-      showWarning('You must hold governance tokens to vote.');
+      showWarning("You must hold governance tokens to vote.");
       return;
     }
     if (hasAlreadyVoted) {
-      showWarning('You have already voted on this cause.');
+      showWarning("You have already voted on this cause.");
       return;
     }
     if (isVoting) return;
@@ -66,16 +66,16 @@ export default function VotingComponent({
       await onVote(campaign.id, voteType);
       setLocalVote(voteType);
     } catch (error) {
-      console.error('Voting failed:', error);
+      console.error("Voting failed:", error);
       showError(parseContractError(error));
     }
   };
 
-  const getVoteButtonClass = (voteType: 'upvote' | 'downvote') => {
+  const getVoteButtonClass = (voteType: "upvote" | "downvote") => {
     const isSelected = localVote === voteType;
     const base =
-      'flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all duration-200 transform hover:motion-safe:scale-105';
-    if (voteType === 'upvote') {
+      "flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all duration-200 transform hover:motion-safe:scale-105";
+    if (voteType === "upvote") {
       return isSelected
         ? `${base} bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-2 border-green-300 dark:border-green-700`
         : `${base} bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-2 border-zinc-300 dark:border-zinc-600 hover:bg-green-50 dark:hover:bg-green-900/20`;
@@ -92,8 +92,7 @@ export default function VotingComponent({
       : null;
 
   // Approval rate in basis points
-  const currentApprovalBps =
-    totalVotes > 0 ? Math.round((upvotes / totalVotes) * 10000) : 0;
+  const currentApprovalBps = totalVotes > 0 ? Math.round((upvotes / totalVotes) * 10000) : 0;
   const approvePercent = totalVotes > 0 ? Math.round((upvotes / totalVotes) * 100) : 50;
   const rejectPercent = 100 - approvePercent;
 
@@ -111,36 +110,36 @@ export default function VotingComponent({
 
       <div className="flex gap-3 w-full">
         <button
-          onClick={() => handleVote('upvote')}
+          onClick={() => handleVote("upvote")}
           disabled={voteDisabled}
           title={
             !userWalletAddress
-              ? 'Connect your wallet to vote'
+              ? "Connect your wallet to vote"
               : !isTokenHolder
-              ? 'Token holders only'
-              : hasAlreadyVoted
-              ? 'Already voted'
-              : undefined
+                ? "Token holders only"
+                : hasAlreadyVoted
+                  ? "Already voted"
+                  : undefined
           }
-          className={`${getVoteButtonClass('upvote')} flex-1 min-h-[44px] justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
+          className={`${getVoteButtonClass("upvote")} flex-1 min-h-[44px] justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           <span aria-hidden="true">✓</span>
           <span>Approve</span>
         </button>
 
         <button
-          onClick={() => handleVote('downvote')}
+          onClick={() => handleVote("downvote")}
           disabled={voteDisabled}
           title={
             !userWalletAddress
-              ? 'Connect your wallet to vote'
+              ? "Connect your wallet to vote"
               : !isTokenHolder
-              ? 'Token holders only'
-              : hasAlreadyVoted
-              ? 'Already voted'
-              : undefined
+                ? "Token holders only"
+                : hasAlreadyVoted
+                  ? "Already voted"
+                  : undefined
           }
-          className={`${getVoteButtonClass('downvote')} flex-1 min-h-[44px] justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
+          className={`${getVoteButtonClass("downvote")} flex-1 min-h-[44px] justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           <span aria-hidden="true">✕</span>
           <span>Reject</span>
@@ -219,7 +218,7 @@ export default function VotingComponent({
           disabled={isVerifying}
           className="w-full min-h-[44px] py-2 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-semibold rounded-xl transition-colors text-sm"
         >
-          {isVerifying ? 'Verifying…' : '✓ Verify Campaign with Votes'}
+          {isVerifying ? "Verifying…" : "✓ Verify Campaign with Votes"}
         </button>
       )}
     </div>

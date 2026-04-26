@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useEffect, useRef } from 'react';
 
@@ -85,8 +85,8 @@ export default function CancelCampaignModal({
                 Cancel Campaign?
               </h2>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                This action cannot be undone. All contributors will be able to
-                claim full refunds once the campaign is cancelled.
+                This action cannot be undone. All contributors will be able to claim full refunds
+                once the campaign is cancelled.
               </p>
             </div>
           </div>
@@ -94,9 +94,7 @@ export default function CancelCampaignModal({
 
         {/* Campaign name */}
         <div className="mx-6 mb-5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-4 py-3">
-          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-0.5">
-            Campaign
-          </p>
+          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-0.5">Campaign</p>
           <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
             {campaignTitle}
           </p>
@@ -126,7 +124,7 @@ export default function CancelCampaignModal({
                 Cancelling…
               </>
             ) : (
-              'Cancel Campaign'
+              "Cancel Campaign"
             )}
           </button>
         </div>

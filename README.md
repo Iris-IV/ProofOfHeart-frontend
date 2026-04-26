@@ -11,31 +11,31 @@ ProofOfHeart empowers everyday people to rally behind the causes they believe in
 
 ## 🚀 Core Principles
 
--   **Community First**: Causes are validated by the people, not by a corporate board.
--   **Radical Transparency**: Every decision and transaction lives on-chain for anyone to verify.
--   **Permissionless Participation**: Anyone can propose, support, or challenge a cause.
--   **Trust Through Code**: Smart contracts enforce the rules, removing the need for intermediaries.
+- **Community First**: Causes are validated by the people, not by a corporate board.
+- **Radical Transparency**: Every decision and transaction lives on-chain for anyone to verify.
+- **Permissionless Participation**: Anyone can propose, support, or challenge a cause.
+- **Trust Through Code**: Smart contracts enforce the rules, removing the need for intermediaries.
 
 ## 🛠 Tech Stack
 
-| Layer | Technology |
-| --- | --- |
-| **Framework** | [Next.js 16](https://nextjs.org/) (App Router) |
-| **Language** | [TypeScript](https://www.typescriptlang.org/) |
-| **Styling** | [Tailwind CSS v4](https://tailwindcss.com/) |
-| **Animations** | [Framer Motion](https://motion.dev/) |
-| **Linting** | [ESLint 9](https://eslint.org/) |
-| **Runtime** | Node.js (v20+) |
+| Layer          | Technology                                     |
+| -------------- | ---------------------------------------------- |
+| **Framework**  | [Next.js 16](https://nextjs.org/) (App Router) |
+| **Language**   | [TypeScript](https://www.typescriptlang.org/)  |
+| **Styling**    | [Tailwind CSS v4](https://tailwindcss.com/)    |
+| **Animations** | [Framer Motion](https://motion.dev/)           |
+| **Linting**    | [ESLint 9](https://eslint.org/)                |
+| **Runtime**    | Node.js (v20+)                                 |
 
 ## 🏗 Architecture
 
 The project follows the standard **Next.js App Router** architecture:
 
--   `src/app/`: Contains the routes, layouts, and page-specific logic.
--   `src/components/`: (Planned) Reusable UI components.
--   `src/hooks/`: (Planned) Custom React hooks for state and API interaction.
--   `src/utils/`: (Planned) Utility functions and constants.
--   `public/`: Static assets like images and fonts.
+- `src/app/`: Contains the routes, layouts, and page-specific logic.
+- `src/components/`: (Planned) Reusable UI components.
+- `src/hooks/`: (Planned) Custom React hooks for state and API interaction.
+- `src/utils/`: (Planned) Utility functions and constants.
+- `public/`: Static assets like images and fonts.
 
 ## ✨ Current Frontend Features
 
@@ -63,12 +63,13 @@ The project follows the standard **Next.js App Router** architecture:
 
 ### Prerequisites
 
--   [Node.js](https://nodejs.org/) (Version 20 or higher)
--   [npm](https://www.npmjs.com/)
+- [Node.js](https://nodejs.org/) (Version 20 or higher)
+- [npm](https://www.npmjs.com/)
 
 ### Installation
 
 1.  **Clone the repository:**
+
     ```bash
     git clone https://github.com/Iris-IV/ProofOfHeart-frontend.git
     cd ProofOfHeart-frontend
@@ -82,6 +83,7 @@ The project follows the standard **Next.js App Router** architecture:
 ### Local Development
 
 Run the development server:
+
 ```bash
 npm run dev
 ```
@@ -106,11 +108,11 @@ We welcome contributions! To maintain a clean and consistent codebase, please fo
 
 1.  **Fork the repository** and create your branch from `main`.
 2.  **Naming Convention**: Use descriptive branch names (e.g., `feat/add-onboarding`, `fix/login-error`).
-3.  **Code Style**: 
+3.  **Code Style**:
     - Use Functional Components with Hooks.
     - Follow the existing TypeScript patterns.
     - Run `npm run lint` before committing.
-4.  **Pull Requests**: 
+4.  **Pull Requests**:
     - Provide a clear description of the changes.
     - Reference any related issues.
     - Ensure your code builds locally (`npm run build`).

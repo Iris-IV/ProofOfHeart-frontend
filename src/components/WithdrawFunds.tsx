@@ -1,12 +1,12 @@
-'use client';
-'use client';
-import { explorerTxUrl } from '../utils/explorer';
+"use client";
+"use client";
+import { explorerTxUrl } from "../utils/explorer";
 
-import { useState } from 'react';
-import { Campaign, basisPointsToPercentage, stroopsToXlm } from '../types';
-import { withdrawFunds } from '../lib/contractClient';
-import { useToast } from './ToastProvider';
-import { parseContractError } from '../utils/contractErrors';
+import { useState } from "react";
+import { Campaign, basisPointsToPercentage, stroopsToXlm } from "../types";
+import { withdrawFunds } from "../lib/contractClient";
+import { useToast } from "./ToastProvider";
+import { parseContractError } from "../utils/contractErrors";
 
 interface WithdrawFundsProps {
   campaign: Campaign;
@@ -28,8 +28,7 @@ export default function WithdrawFunds({
 
   // Only the campaign creator should see this component
   const isCreator =
-    userWalletAddress &&
-    userWalletAddress.toLowerCase() === campaign.creator.toLowerCase();
+    userWalletAddress && userWalletAddress.toLowerCase() === campaign.creator.toLowerCase();
 
   if (!isCreator) return null;
 
@@ -45,13 +44,13 @@ export default function WithdrawFunds({
     (campaign.is_active && !deadlinePassed);
 
   const disabledReason = campaign.is_cancelled
-    ? 'Campaign has been cancelled'
+    ? "Campaign has been cancelled"
     : campaign.funds_withdrawn
-      ? 'Funds have already been withdrawn'
+      ? "Funds have already been withdrawn"
       : !goalReached
-        ? 'Funding goal has not been reached'
+        ? "Funding goal has not been reached"
         : campaign.is_active && !deadlinePassed
-          ? 'Campaign is still active'
+          ? "Campaign is still active"
           : null;
 
   // Fee breakdown
@@ -99,16 +98,16 @@ export default function WithdrawFunds({
         </div>
         <div className="space-y-1.5 text-sm text-green-700 dark:text-green-300">
           <p>
-            <span className="font-medium">Amount received:</span>{' '}
+            <span className="font-medium">Amount received:</span>{" "}
             {creatorAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM
           </p>
           <p>
-            <span className="font-medium">Platform fee:</span> {feeAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM
+            <span className="font-medium">Platform fee:</span>{" "}
+            {feeAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM
           </p>
           <p className="break-all">
-            <span className="font-medium">Transaction:</span>{' '}
-            <span className="font-mono text-xs">{txHash}</span>
-            {' '}
+            <span className="font-medium">Transaction:</span>{" "}
+            <span className="font-mono text-xs">{txHash}</span>{" "}
             <a
               href={explorerTxUrl(txHash)}
               target="_blank"
@@ -125,9 +124,7 @@ export default function WithdrawFunds({
 
   return (
     <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
-      <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">
-        Withdraw Funds
-      </h3>
+      <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Withdraw Funds</h3>
 
       {/* Fee breakdown */}
       {goalReached && !campaign.funds_withdrawn && !campaign.is_cancelled && (
@@ -151,10 +148,11 @@ export default function WithdrawFunds({
       {showConfirm ? (
         <div className="space-y-3">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Are you sure you want to withdraw? This action cannot be undone.
-            You will withdraw {totalRaised.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM total,
-            pay {feeAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM in platform fees,
-            and receive {creatorAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM.
+            Are you sure you want to withdraw? This action cannot be undone. You will withdraw{" "}
+            {totalRaised.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM total, pay{" "}
+            {feeAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM in platform
+            fees, and receive{" "}
+            {creatorAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM.
           </p>
           <div className="flex flex-col sm:flex-row gap-2">
             <button
@@ -162,7 +160,7 @@ export default function WithdrawFunds({
               disabled={isWithdrawing}
               className="flex-1 px-4 py-3 min-h-[44px] bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isWithdrawing ? 'Processing…' : 'Confirm Withdrawal'}
+              {isWithdrawing ? "Processing…" : "Confirm Withdrawal"}
             </button>
             <button
               onClick={() => setShowConfirm(false)}

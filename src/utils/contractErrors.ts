@@ -11,25 +11,25 @@
 // ---------------------------------------------------------------------------
 
 export enum ContractError {
-  NotAuthorized             = 1,
-  CampaignNotFound          = 2,
-  CampaignNotActive         = 3,
+  NotAuthorized = 1,
+  CampaignNotFound = 2,
+  CampaignNotActive = 3,
   FundingGoalMustBePositive = 4,
-  InvalidDuration           = 5,
-  InvalidRevenueShare       = 6,
+  InvalidDuration = 5,
+  InvalidRevenueShare = 6,
   RevenueShareOnlyForStartup = 7,
-  DeadlinePassed            = 8,
+  DeadlinePassed = 8,
   ContributionMustBePositive = 9,
-  DeadlineNotPassed         = 10,
-  FundsAlreadyWithdrawn     = 11,
-  FundingGoalNotReached     = 12,
-  NoFundsToWithdraw         = 13,
-  CampaignAlreadyVerified   = 14,
-  ValidationFailed          = 15,
-  AlreadyVoted              = 16,
-  NotTokenHolder            = 17,
-  VotingQuorumNotMet        = 18,
-  VotingThresholdNotMet     = 19,
+  DeadlineNotPassed = 10,
+  FundsAlreadyWithdrawn = 11,
+  FundingGoalNotReached = 12,
+  NoFundsToWithdraw = 13,
+  CampaignAlreadyVerified = 14,
+  ValidationFailed = 15,
+  AlreadyVoted = 16,
+  NotTokenHolder = 17,
+  VotingQuorumNotMet = 18,
+  VotingThresholdNotMet = 19,
 }
 
 // ---------------------------------------------------------------------------
@@ -37,47 +37,29 @@ export enum ContractError {
 // ---------------------------------------------------------------------------
 
 export const errorMessages: Record<ContractError, string> = {
-  [ContractError.NotAuthorized]:
-    'You are not authorized to perform this action.',
-  [ContractError.CampaignNotFound]:
-    'This campaign could not be found.',
-  [ContractError.CampaignNotActive]:
-    'This campaign is no longer accepting contributions.',
-  [ContractError.FundingGoalMustBePositive]:
-    'The funding goal must be greater than zero.',
-  [ContractError.InvalidDuration]:
-    'The campaign duration is invalid.',
-  [ContractError.InvalidRevenueShare]:
-    'The revenue share percentage is invalid.',
+  [ContractError.NotAuthorized]: "You are not authorized to perform this action.",
+  [ContractError.CampaignNotFound]: "This campaign could not be found.",
+  [ContractError.CampaignNotActive]: "This campaign is no longer accepting contributions.",
+  [ContractError.FundingGoalMustBePositive]: "The funding goal must be greater than zero.",
+  [ContractError.InvalidDuration]: "The campaign duration is invalid.",
+  [ContractError.InvalidRevenueShare]: "The revenue share percentage is invalid.",
   [ContractError.RevenueShareOnlyForStartup]:
-    'Revenue sharing is only available for startup campaigns.',
-  [ContractError.DeadlinePassed]:
-    'The campaign deadline has passed.',
-  [ContractError.ContributionMustBePositive]:
-    'Please enter a valid contribution amount.',
-  [ContractError.DeadlineNotPassed]:
-    'The campaign deadline has not passed yet.',
-  [ContractError.FundsAlreadyWithdrawn]:
-    'The funds for this campaign have already been withdrawn.',
-  [ContractError.FundingGoalNotReached]:
-    'The funding goal has not been reached yet.',
-  [ContractError.NoFundsToWithdraw]:
-    'There are no funds available to withdraw.',
-  [ContractError.CampaignAlreadyVerified]:
-    'This campaign has already been verified.',
-  [ContractError.ValidationFailed]:
-    'Validation failed. Please check your input and try again.',
-  [ContractError.AlreadyVoted]:
-    'You have already voted on this campaign.',
-  [ContractError.NotTokenHolder]:
-    'You must hold the platform token to vote.',
-  [ContractError.VotingQuorumNotMet]:
-    'Not enough votes have been cast yet.',
-  [ContractError.VotingThresholdNotMet]:
-    'The approval threshold has not been reached.',
+    "Revenue sharing is only available for startup campaigns.",
+  [ContractError.DeadlinePassed]: "The campaign deadline has passed.",
+  [ContractError.ContributionMustBePositive]: "Please enter a valid contribution amount.",
+  [ContractError.DeadlineNotPassed]: "The campaign deadline has not passed yet.",
+  [ContractError.FundsAlreadyWithdrawn]: "The funds for this campaign have already been withdrawn.",
+  [ContractError.FundingGoalNotReached]: "The funding goal has not been reached yet.",
+  [ContractError.NoFundsToWithdraw]: "There are no funds available to withdraw.",
+  [ContractError.CampaignAlreadyVerified]: "This campaign has already been verified.",
+  [ContractError.ValidationFailed]: "Validation failed. Please check your input and try again.",
+  [ContractError.AlreadyVoted]: "You have already voted on this campaign.",
+  [ContractError.NotTokenHolder]: "You must hold the platform token to vote.",
+  [ContractError.VotingQuorumNotMet]: "Not enough votes have been cast yet.",
+  [ContractError.VotingThresholdNotMet]: "The approval threshold has not been reached.",
 };
 
-const FALLBACK_MESSAGE = 'An unexpected error occurred. Please try again.';
+const FALLBACK_MESSAGE = "An unexpected error occurred. Please try again.";
 
 // ---------------------------------------------------------------------------
 // Typed error class
@@ -90,7 +72,7 @@ const FALLBACK_MESSAGE = 'An unexpected error occurred. Please try again.';
 export class ContractErrorException extends Error {
   constructor(public readonly code: ContractError) {
     super(errorMessages[code] ?? FALLBACK_MESSAGE);
-    this.name = 'ContractErrorException';
+    this.name = "ContractErrorException";
   }
 }
 
@@ -138,7 +120,7 @@ export function parseContractError(error: unknown): string {
     }
 
     // Return the raw message if it looks human-readable (not a stack trace)
-    if (error.message && !error.message.includes('at ') && error.message.length < 200) {
+    if (error.message && !error.message.includes("at ") && error.message.length < 200) {
       return error.message;
     }
   }

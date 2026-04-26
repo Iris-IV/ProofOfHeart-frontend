@@ -1,4 +1,4 @@
-export type WalletTransactionAction = 'contribute' | 'claim_refund' | 'claim_revenue' | 'vote';
+export type WalletTransactionAction = "contribute" | "claim_refund" | "claim_revenue" | "vote";
 
 export interface WalletTransactionLogEntry {
   walletAddress: string;
@@ -8,10 +8,10 @@ export interface WalletTransactionLogEntry {
   timestamp: number;
 }
 
-const STORAGE_KEY = 'proof_of_heart_wallet_tx_log_v1';
+const STORAGE_KEY = "proof_of_heart_wallet_tx_log_v1";
 
 function canUseStorage(): boolean {
-  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
 
 function normalizeAddress(address: string): string {
@@ -42,9 +42,7 @@ function writeAllEntries(entries: WalletTransactionLogEntry[]): void {
   }
 }
 
-export function appendWalletTransaction(
-  entry: Omit<WalletTransactionLogEntry, 'timestamp'>,
-): void {
+export function appendWalletTransaction(entry: Omit<WalletTransactionLogEntry, "timestamp">): void {
   const allEntries = readAllEntries();
   const normalizedEntry: WalletTransactionLogEntry = {
     ...entry,

@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { FormEvent, useMemo, useState } from 'react';
-import { claimRevenue, depositRevenue } from '../lib/contractClient';
-import { Campaign, basisPointsToPercentage, stroopsToXlm, xlmToStroops } from '../types';
-import { useWallet } from './WalletContext';
-import { useRevenueSharing } from '../hooks/useRevenueSharing';
-import { useToast } from './ToastProvider';
-import { parseContractError } from '../utils/contractErrors';
+import { FormEvent, useMemo, useState } from "react";
+import { claimRevenue, depositRevenue } from "../lib/contractClient";
+import { Campaign, basisPointsToPercentage, stroopsToXlm, xlmToStroops } from "../types";
+import { useWallet } from "./WalletContext";
+import { useRevenueSharing } from "../hooks/useRevenueSharing";
+import { useToast } from "./ToastProvider";
+import { parseContractError } from "../utils/contractErrors";
 
 interface RevenueSharingPanelProps {
   campaign: Campaign;
-  variant?: 'detail' | 'dashboard';
+  variant?: "detail" | "dashboard";
   showCreatorControls?: boolean;
   showContributorControls?: boolean;
   onActionSuccess?: () => void;
@@ -24,30 +24,18 @@ function formatXlmAmount(value: bigint): string {
 
 export default function RevenueSharingPanel({
   campaign,
-  variant = 'detail',
+  variant = "detail",
   showCreatorControls = true,
   showContributorControls = true,
   onActionSuccess,
 }: RevenueSharingPanelProps) {
   const { publicKey, connectWallet, isWalletConnected } = useWallet();
   const { showError, showSuccess, showWarning } = useToast();
-  const [depositAmount, setDepositAmount] = useState('');
+  const [depositAmount, setDepositAmount] = useState("");
   const [isPending, setIsPending] = useState(false);
 
-  const {
-    revenuePool,
-    contribution,
-    claimed,
-    contributorShare,
-    claimable,
-    isLoading,
-    refetch,
-  } = useRevenueSharing(
-    campaign.id,
-    publicKey,
-    campaign.amount_raised,
-    campaign.has_revenue_sharing,
-  );
+  const { revenuePool, contribution, claimed, contributorShare, claimable, isLoading, refetch } =
+    useRevenueSharing(campaign.id, publicKey, campaign.amount_raised, campaign.has_revenue_sharing);
 
   const isCreator = publicKey === campaign.creator;
   const canShowCreatorControls = showCreatorControls && isCreator;
@@ -56,7 +44,7 @@ export default function RevenueSharingPanel({
 
   const breakdown = useMemo(() => {
     if (campaign.amount_raised <= BigInt(0)) {
-      return 'No contributor share is available until the campaign has raised funds.';
+      return "No contributor share is available until the campaign has raised funds.";
     }
 
     return `${formatXlmAmount(contribution)} XLM contribution × ${formatXlmAmount(revenuePool)} XLM pool ÷ ${formatXlmAmount(campaign.amount_raised)} XLM raised = ${formatXlmAmount(contributorShare)} XLM`;
@@ -71,17 +59,17 @@ export default function RevenueSharingPanel({
 
     const parsedAmount = Number(depositAmount);
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      showWarning('Enter a revenue amount greater than 0 XLM.');
+      showWarning("Enter a revenue amount greater than 0 XLM.");
       return;
     }
 
     setIsPending(true);
     try {
       await depositRevenue(campaign.id, xlmToStroops(parsedAmount));
-      setDepositAmount('');
+      setDepositAmount("");
       refetch();
       onActionSuccess?.();
-      showSuccess('Revenue deposited successfully.');
+      showSuccess("Revenue deposited successfully.");
     } catch (err) {
       showError(parseContractError(err));
     } finally {
@@ -91,7 +79,7 @@ export default function RevenueSharingPanel({
 
   const handleClaim = async () => {
     if (!publicKey) {
-      showWarning('Connect your wallet to claim revenue.');
+      showWarning("Connect your wallet to claim revenue.");
       return;
     }
 
@@ -100,7 +88,7 @@ export default function RevenueSharingPanel({
       await claimRevenue(campaign.id, publicKey);
       refetch();
       onActionSuccess?.();
-      showSuccess('Revenue claimed successfully.');
+      showSuccess("Revenue claimed successfully.");
     } catch (err) {
       showError(parseContractError(err));
     } finally {
@@ -109,9 +97,9 @@ export default function RevenueSharingPanel({
   };
 
   const containerClassName =
-    variant === 'dashboard'
-      ? 'rounded-2xl border border-emerald-200/70 bg-emerald-50/70 p-5 dark:border-emerald-900 dark:bg-emerald-950/30'
-      : 'bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-emerald-200 dark:border-emerald-900 p-6';
+    variant === "dashboard"
+      ? "rounded-2xl border border-emerald-200/70 bg-emerald-50/70 p-5 dark:border-emerald-900 dark:bg-emerald-950/30"
+      : "bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-emerald-200 dark:border-emerald-900 p-6";
 
   return (
     <section className={containerClassName}>
@@ -129,30 +117,50 @@ export default function RevenueSharingPanel({
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl bg-white/80 p-4 ring-1 ring-zinc-200 dark:bg-zinc-900/60 dark:ring-zinc-700">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Total Pool</p>
-          <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">{formatXlmAmount(revenuePool)} XLM</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            Total Pool
+          </p>
+          <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
+            {formatXlmAmount(revenuePool)} XLM
+          </p>
         </div>
         <div className="rounded-2xl bg-white/80 p-4 ring-1 ring-zinc-200 dark:bg-zinc-900/60 dark:ring-zinc-700">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Your Share</p>
-          <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">{formatXlmAmount(contributorShare)} XLM</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            Your Share
+          </p>
+          <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
+            {formatXlmAmount(contributorShare)} XLM
+          </p>
         </div>
         <div className="rounded-2xl bg-white/80 p-4 ring-1 ring-zinc-200 dark:bg-zinc-900/60 dark:ring-zinc-700">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Already Claimed</p>
-          <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">{formatXlmAmount(claimed)} XLM</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            Already Claimed
+          </p>
+          <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
+            {formatXlmAmount(claimed)} XLM
+          </p>
         </div>
         <div className="rounded-2xl bg-white/80 p-4 ring-1 ring-zinc-200 dark:bg-zinc-900/60 dark:ring-zinc-700">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Claimable Now</p>
-          <p className="mt-2 text-xl font-semibold text-emerald-700 dark:text-emerald-300">{formatXlmAmount(claimable)} XLM</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            Claimable Now
+          </p>
+          <p className="mt-2 text-xl font-semibold text-emerald-700 dark:text-emerald-300">
+            {formatXlmAmount(claimable)} XLM
+          </p>
         </div>
       </div>
 
       <div className="mt-4 rounded-2xl border border-zinc-200/80 bg-white/85 p-4 dark:border-zinc-700 dark:bg-zinc-900/60">
-        <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Pro-rata calculation</p>
+        <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+          Pro-rata calculation
+        </p>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{breakdown}</p>
       </div>
 
       {isLoading && (
-        <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">Refreshing revenue sharing data...</p>
+        <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
+          Refreshing revenue sharing data...
+        </p>
       )}
 
       {!isWalletConnected && showContributorControls && (
@@ -171,11 +179,13 @@ export default function RevenueSharingPanel({
         <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-zinc-200/80 bg-white/85 p-4 dark:border-zinc-700 dark:bg-zinc-900/60">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Contributor claim</p>
+              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                Contributor claim
+              </p>
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
                 {hasContribution
                   ? `You contributed ${formatXlmAmount(contribution)} XLM to this campaign.`
-                  : 'You have not contributed to this campaign yet, so your claimable share is currently 0 XLM.'}
+                  : "You have not contributed to this campaign yet, so your claimable share is currently 0 XLM."}
               </p>
             </div>
             <button

@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getCampaign,
   getCampaignCount,
   getContribution,
   getRevenueClaimed,
   getRevenuePool,
-} from '../lib/contractClient';
-import { getWalletTransactions, WalletTransactionLogEntry } from '../lib/transactionLog';
-import { Campaign, CampaignStatus, deriveCampaignStatus } from '../types';
+} from "../lib/contractClient";
+import { getWalletTransactions, WalletTransactionLogEntry } from "../lib/transactionLog";
+import { Campaign, CampaignStatus, deriveCampaignStatus } from "../types";
 
 export interface ContributionHistoryItem {
   campaign: Campaign;
@@ -64,7 +64,8 @@ async function fetchContributionHistory(walletAddress: string): Promise<Contribu
 
       const contribution = contributionAmounts[campaignId - 1];
       const status = deriveCampaignStatus(campaign);
-      const canClaimRefund = contribution > BigInt(0) && (status === 'failed' || status === 'cancelled');
+      const canClaimRefund =
+        contribution > BigInt(0) && (status === "failed" || status === "cancelled");
 
       let claimableRevenue = BigInt(0);
       if (campaign.has_revenue_sharing && contribution > BigInt(0)) {
@@ -100,7 +101,7 @@ export function useContributions(walletAddress: string | null): UseContributions
   const queryClient = useQueryClient();
 
   const { data, isLoading, isFetching, error } = useQuery<ContributionHistoryItem[], Error>({
-    queryKey: ['contributions', walletAddress],
+    queryKey: ["contributions", walletAddress],
     queryFn: () => fetchContributionHistory(walletAddress!),
     enabled: !!walletAddress,
     staleTime: 60_000,
@@ -112,7 +113,7 @@ export function useContributions(walletAddress: string | null): UseContributions
     isRefreshing: isFetching && !isLoading,
     error: error?.message ?? null,
     refetch: () => {
-      queryClient.invalidateQueries({ queryKey: ['contributions', walletAddress] });
+      queryClient.invalidateQueries({ queryKey: ["contributions", walletAddress] });
     },
   };
 }

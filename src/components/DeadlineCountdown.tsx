@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 interface DeadlineCountdownProps {
   deadline: number; // Unix timestamp in seconds
@@ -63,9 +63,12 @@ export default function DeadlineCountdown({ deadline }: DeadlineCountdownProps) 
         />
       </svg>
       <span>
-        {timeLeft.days > 0 && <><strong>{timeLeft.days}</strong>d </>}
-        <strong>{timeLeft.hours}</strong>h{' '}
-        <strong>{timeLeft.minutes}</strong>m remaining
+        {timeLeft.days > 0 && (
+          <>
+            <strong>{timeLeft.days}</strong>d{" "}
+          </>
+        )}
+        <strong>{timeLeft.hours}</strong>h <strong>{timeLeft.minutes}</strong>m remaining
       </span>
     </div>
   );

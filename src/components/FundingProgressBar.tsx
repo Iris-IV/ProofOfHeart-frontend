@@ -1,16 +1,13 @@
-'use client';
+"use client";
 
-import { stroopsToXlm } from '../types';
+import { stroopsToXlm } from "../types";
 
 interface FundingProgressBarProps {
   amountRaised: bigint;
   fundingGoal: bigint;
 }
 
-export default function FundingProgressBar({
-  amountRaised,
-  fundingGoal,
-}: FundingProgressBarProps) {
+export default function FundingProgressBar({ amountRaised, fundingGoal }: FundingProgressBarProps) {
   const raised = stroopsToXlm(amountRaised);
   const goal = stroopsToXlm(fundingGoal);
   const pct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
@@ -20,7 +17,7 @@ export default function FundingProgressBar({
       <div className="flex justify-between text-xs text-zinc-600 dark:text-zinc-400 mb-1">
         <span className="font-medium">{pct}% funded</span>
         <span>
-          {raised.toLocaleString(undefined, { maximumFractionDigits: 2 })} /{' '}
+          {raised.toLocaleString(undefined, { maximumFractionDigits: 2 })} /{" "}
           {goal.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM
         </span>
       </div>
