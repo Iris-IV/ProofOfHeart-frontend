@@ -177,37 +177,37 @@ editing `contractClient.ts`.
 
 ### Read functions
 
-| Contract function | `contractClient.ts` wrapper | Hook | Page / Component |
-|---|---|---|---|
-| `get_campaign(campaign_id)` | `getCampaign(id)` | `useCampaign(id)` | `/causes/[id]`, `/explore` |
-| `get_campaign` × N | `getAllCampaigns()` | `useCampaigns()` | `/causes`, `/explore` |
-| `get_campaign_count()` | `getCampaignCount()` | (internal) | — |
-| `get_contribution(campaign_id, contributor)` | `getContribution(campaignId, contributor)` | `useContribution(...)`, `useRevenueSharing(...)` | `/causes/[id]` (contributor view), `/dashboard` |
-| `get_revenue_pool(campaign_id)` | `getRevenuePool(campaignId)` | `useRevenueSharing(...)` | `/causes/[id]`, `/dashboard` |
-| `get_revenue_claimed(campaign_id, contributor)` | `getRevenueClaimed(campaignId, contributor)` | `useRevenueSharing(...)` | `/causes/[id]`, `/dashboard` |
-| `get_admin()` | `getAdmin()` | `useAdmin()` / server route preload | `/admin` |
-| `get_platform_fee()` | `getPlatformFee()` | `usePlatformFee()` | `/admin`, `/causes/[id]` |
-| `get_approve_votes(campaign_id)` | _pending_ | _pending_ | `/causes/[id]` (community vote UI) |
-| `get_reject_votes(campaign_id)` | _pending_ | _pending_ | `/causes/[id]` (community vote UI) |
-| `has_voted(campaign_id, voter)` | _pending_ | _pending_ | `/causes/[id]` (community vote UI) |
-| `get_version()` | _pending_ | — | admin / debug |
+| Contract function                               | `contractClient.ts` wrapper                  | Hook                                             | Page / Component                                |
+| ----------------------------------------------- | -------------------------------------------- | ------------------------------------------------ | ----------------------------------------------- |
+| `get_campaign(campaign_id)`                     | `getCampaign(id)`                            | `useCampaign(id)`                                | `/causes/[id]`, `/explore`                      |
+| `get_campaign` × N                              | `getAllCampaigns()`                          | `useCampaigns()`                                 | `/causes`, `/explore`                           |
+| `get_campaign_count()`                          | `getCampaignCount()`                         | (internal)                                       | —                                               |
+| `get_contribution(campaign_id, contributor)`    | `getContribution(campaignId, contributor)`   | `useContribution(...)`, `useRevenueSharing(...)` | `/causes/[id]` (contributor view), `/dashboard` |
+| `get_revenue_pool(campaign_id)`                 | `getRevenuePool(campaignId)`                 | `useRevenueSharing(...)`                         | `/causes/[id]`, `/dashboard`                    |
+| `get_revenue_claimed(campaign_id, contributor)` | `getRevenueClaimed(campaignId, contributor)` | `useRevenueSharing(...)`                         | `/causes/[id]`, `/dashboard`                    |
+| `get_admin()`                                   | `getAdmin()`                                 | `useAdmin()` / server route preload              | `/admin`                                        |
+| `get_platform_fee()`                            | `getPlatformFee()`                           | `usePlatformFee()`                               | `/admin`, `/causes/[id]`                        |
+| `get_approve_votes(campaign_id)`                | _pending_                                    | _pending_                                        | `/causes/[id]` (community vote UI)              |
+| `get_reject_votes(campaign_id)`                 | _pending_                                    | _pending_                                        | `/causes/[id]` (community vote UI)              |
+| `has_voted(campaign_id, voter)`                 | _pending_                                    | _pending_                                        | `/causes/[id]` (community vote UI)              |
+| `get_version()`                                 | _pending_                                    | —                                                | admin / debug                                   |
 
 ### Write functions
 
-| Contract function | Parameters | Frontend flow | Page / Component | Auth required |
-|---|---|---|---|---|
-| `create_campaign` | `creator, title, description, funding_goal, duration_days, category, has_revenue_sharing, revenue_share_percentage` | Cause submission form | `/causes/new` _(planned)_ | Creator wallet |
-| `contribute` | `campaign_id, contributor, amount` | Donation flow | `/causes/[id]` | Contributor wallet |
-| `withdraw_funds` | `campaign_id` | Creator withdrawal | `/causes/[id]` (creator view) | Creator wallet |
-| `cancel_campaign` | `campaign_id` | Campaign cancellation | `/causes/[id]` (creator view) | Creator wallet |
-| `claim_refund` | `campaign_id, contributor` | Refund claiming | `/causes/[id]` (contributor view) | Contributor wallet |
-| `deposit_revenue` | `campaign_id, amount` | Revenue deposit | `/dashboard`, `/causes/[id]` (creator view) | Creator wallet |
-| `claim_revenue` | `campaign_id, contributor` | Revenue claim | `/causes/[id]` (contributor view) | Contributor wallet |
-| `vote_on_campaign` | `campaign_id, voter, approve` | Community validation vote | `/causes/[id]` (voting panel) | Token-holding wallet |
-| `verify_campaign` | `campaign_id` | Admin verification | `/admin` | Admin wallet only |
-| `update_platform_fee` | `platform_fee` | Platform fee management | `/admin` | Admin wallet only |
-| `update_admin` | `new_admin` | Admin transfer | `/admin` | Admin wallet only |
-| `verify_campaign_with_votes` | `campaign_id` | Trigger vote-based verification | `/causes/[id]` | Anyone |
+| Contract function            | Parameters                                                                                                          | Frontend flow                   | Page / Component                            | Auth required        |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------- | -------------------- |
+| `create_campaign`            | `creator, title, description, funding_goal, duration_days, category, has_revenue_sharing, revenue_share_percentage` | Cause submission form           | `/causes/new` _(planned)_                   | Creator wallet       |
+| `contribute`                 | `campaign_id, contributor, amount`                                                                                  | Donation flow                   | `/causes/[id]`                              | Contributor wallet   |
+| `withdraw_funds`             | `campaign_id`                                                                                                       | Creator withdrawal              | `/causes/[id]` (creator view)               | Creator wallet       |
+| `cancel_campaign`            | `campaign_id`                                                                                                       | Campaign cancellation           | `/causes/[id]` (creator view)               | Creator wallet       |
+| `claim_refund`               | `campaign_id, contributor`                                                                                          | Refund claiming                 | `/causes/[id]` (contributor view)           | Contributor wallet   |
+| `deposit_revenue`            | `campaign_id, amount`                                                                                               | Revenue deposit                 | `/dashboard`, `/causes/[id]` (creator view) | Creator wallet       |
+| `claim_revenue`              | `campaign_id, contributor`                                                                                          | Revenue claim                   | `/causes/[id]` (contributor view)           | Contributor wallet   |
+| `vote_on_campaign`           | `campaign_id, voter, approve`                                                                                       | Community validation vote       | `/causes/[id]` (voting panel)               | Token-holding wallet |
+| `verify_campaign`            | `campaign_id`                                                                                                       | Admin verification              | `/admin`                                    | Admin wallet only    |
+| `update_platform_fee`        | `platform_fee`                                                                                                      | Platform fee management         | `/admin`                                    | Admin wallet only    |
+| `update_admin`               | `new_admin`                                                                                                         | Admin transfer                  | `/admin`                                    | Admin wallet only    |
+| `verify_campaign_with_votes` | `campaign_id`                                                                                                       | Trigger vote-based verification | `/causes/[id]`                              | Anyone               |
 
 The cause detail experience now surfaces platform fee transparency in three places:
 
@@ -219,20 +219,20 @@ If `get_platform_fee()` is unavailable, the frontend falls back to `300` basis p
 
 ### Business rules to enforce on the frontend (before calling the contract)
 
-| Rule | Contract error if violated |
-|---|---|
-| Contributor ≠ campaign creator | `NotAuthorized (1)` |
-| Campaign must be active and not cancelled | `CampaignNotActive (3)` |
-| `amount > 0` for contribute / deposit_revenue | `ContributionMustBePositive (9)` |
-| `funding_goal > 0` when creating | `FundingGoalMustBePositive (4)` |
-| `duration_days` between 1 and 365 | `InvalidDuration (5)` |
-| `revenue_share_percentage` 1–5000 bps (0.01%–50%) | `InvalidRevenueShare (6)` |
-| Revenue sharing only for `EducationalStartup` campaigns | `RevenueShareOnlyForStartup (7)` |
-| `withdraw_funds` only after goal reached | `FundingGoalNotReached (12)` |
-| Funds not already withdrawn | `FundsAlreadyWithdrawn (11)` |
-| Refund only after cancel or deadline passed + goal not met | `ValidationFailed (15)` |
-| Voter must hold the platform token | `NotTokenHolder (17)` |
-| Each wallet can only vote once per campaign | `AlreadyVoted (16)` |
+| Rule                                                       | Contract error if violated       |
+| ---------------------------------------------------------- | -------------------------------- |
+| Contributor ≠ campaign creator                             | `NotAuthorized (1)`              |
+| Campaign must be active and not cancelled                  | `CampaignNotActive (3)`          |
+| `amount > 0` for contribute / deposit_revenue              | `ContributionMustBePositive (9)` |
+| `funding_goal > 0` when creating                           | `FundingGoalMustBePositive (4)`  |
+| `duration_days` between 1 and 365                          | `InvalidDuration (5)`            |
+| `revenue_share_percentage` 1–5000 bps (0.01%–50%)          | `InvalidRevenueShare (6)`        |
+| Revenue sharing only for `EducationalStartup` campaigns    | `RevenueShareOnlyForStartup (7)` |
+| `withdraw_funds` only after goal reached                   | `FundingGoalNotReached (12)`     |
+| Funds not already withdrawn                                | `FundsAlreadyWithdrawn (11)`     |
+| Refund only after cancel or deadline passed + goal not met | `ValidationFailed (15)`          |
+| Voter must hold the platform token                         | `NotTokenHolder (17)`            |
+| Each wallet can only vote once per campaign                | `AlreadyVoted (16)`              |
 
 ---
 
@@ -277,21 +277,23 @@ pub struct Campaign {                  export interface Campaign {
 
 > **Note 3 — status derivation:** The contract has no single `status` field.
 > Derive it from boolean flags:
+>
 > ```ts
-> function deriveStatus(c: RawCampaign): Campaign['status'] {
->   if (c.is_cancelled) return 'rejected';
->   if (c.is_verified)  return 'approved';
->   return 'pending';
+> function deriveStatus(c: RawCampaign): Campaign["status"] {
+>   if (c.is_cancelled) return "rejected";
+>   if (c.is_verified) return "approved";
+>   return "pending";
 > }
 > ```
 
 > **Note 4 — Category enum:** The contract uses a Rust enum. Map it to a string:
+>
 > ```ts
 > const CATEGORY_LABELS: Record<number, string> = {
->   0: 'learner',
->   1: 'startup',
->   2: 'educator',
->   3: 'publisher',
+>   0: "learner",
+>   1: "startup",
+>   2: "educator",
+>   3: "publisher",
 > };
 > ```
 
@@ -319,27 +321,27 @@ pub enum Category {          export enum CampaignCategory {
 The contract returns error codes when operations fail. The frontend maps every code
 to a user-friendly message via `src/utils/contractErrors.ts`.
 
-| Code | `ContractError` enum value | User-facing message | Typical trigger |
-|---|---|---|---|
-| 1 | `NotAuthorized` | You are not authorized to perform this action. | Creator trying to contribute to own campaign |
-| 2 | `CampaignNotFound` | This campaign could not be found. | Invalid campaign ID |
-| 3 | `CampaignNotActive` | This campaign is no longer accepting contributions. | Cancelled or deadline-passed campaign |
-| 4 | `FundingGoalMustBePositive` | The funding goal must be greater than zero. | `funding_goal ≤ 0` on create |
-| 5 | `InvalidDuration` | The campaign duration is invalid. | `duration_days` outside 1–365 |
-| 6 | `InvalidRevenueShare` | The revenue share percentage is invalid. | bps outside 1–5000 |
-| 7 | `RevenueShareOnlyForStartup` | Revenue sharing is only available for startup campaigns. | Revenue flag set on non-startup |
-| 8 | `DeadlinePassed` | The campaign deadline has passed. | Contribution after deadline |
-| 9 | `ContributionMustBePositive` | Please enter a valid contribution amount. | `amount ≤ 0` |
-| 10 | `DeadlineNotPassed` | The campaign deadline has not passed yet. | Attempted refund before deadline |
-| 11 | `FundsAlreadyWithdrawn` | The funds for this campaign have already been withdrawn. | Double-withdraw attempt |
-| 12 | `FundingGoalNotReached` | The funding goal has not been reached yet. | Withdraw before goal met |
-| 13 | `NoFundsToWithdraw` | There are no funds available to withdraw. | Zero balance refund / revenue claim |
-| 14 | `CampaignAlreadyVerified` | This campaign has already been verified. | Re-verifying |
-| 15 | `ValidationFailed` | Validation failed. Please check your input and try again. | General input guard |
-| 16 | `AlreadyVoted` | You have already voted on this campaign. | Duplicate vote attempt |
-| 17 | `NotTokenHolder` | You must hold the platform token to vote. | Voter has 0 token balance |
-| 18 | `VotingQuorumNotMet` | Not enough votes have been cast yet. | `verify_campaign_with_votes` before quorum |
-| 19 | `VotingThresholdNotMet` | The approval threshold has not been reached. | `verify_campaign_with_votes` with < 60% approval |
+| Code | `ContractError` enum value   | User-facing message                                       | Typical trigger                                  |
+| ---- | ---------------------------- | --------------------------------------------------------- | ------------------------------------------------ |
+| 1    | `NotAuthorized`              | You are not authorized to perform this action.            | Creator trying to contribute to own campaign     |
+| 2    | `CampaignNotFound`           | This campaign could not be found.                         | Invalid campaign ID                              |
+| 3    | `CampaignNotActive`          | This campaign is no longer accepting contributions.       | Cancelled or deadline-passed campaign            |
+| 4    | `FundingGoalMustBePositive`  | The funding goal must be greater than zero.               | `funding_goal ≤ 0` on create                     |
+| 5    | `InvalidDuration`            | The campaign duration is invalid.                         | `duration_days` outside 1–365                    |
+| 6    | `InvalidRevenueShare`        | The revenue share percentage is invalid.                  | bps outside 1–5000                               |
+| 7    | `RevenueShareOnlyForStartup` | Revenue sharing is only available for startup campaigns.  | Revenue flag set on non-startup                  |
+| 8    | `DeadlinePassed`             | The campaign deadline has passed.                         | Contribution after deadline                      |
+| 9    | `ContributionMustBePositive` | Please enter a valid contribution amount.                 | `amount ≤ 0`                                     |
+| 10   | `DeadlineNotPassed`          | The campaign deadline has not passed yet.                 | Attempted refund before deadline                 |
+| 11   | `FundsAlreadyWithdrawn`      | The funds for this campaign have already been withdrawn.  | Double-withdraw attempt                          |
+| 12   | `FundingGoalNotReached`      | The funding goal has not been reached yet.                | Withdraw before goal met                         |
+| 13   | `NoFundsToWithdraw`          | There are no funds available to withdraw.                 | Zero balance refund / revenue claim              |
+| 14   | `CampaignAlreadyVerified`    | This campaign has already been verified.                  | Re-verifying                                     |
+| 15   | `ValidationFailed`           | Validation failed. Please check your input and try again. | General input guard                              |
+| 16   | `AlreadyVoted`               | You have already voted on this campaign.                  | Duplicate vote attempt                           |
+| 17   | `NotTokenHolder`             | You must hold the platform token to vote.                 | Voter has 0 token balance                        |
+| 18   | `VotingQuorumNotMet`         | Not enough votes have been cast yet.                      | `verify_campaign_with_votes` before quorum       |
+| 19   | `VotingThresholdNotMet`      | The approval threshold has not been reached.              | `verify_campaign_with_votes` with < 60% approval |
 
 > **⚠ Action needed:** `src/utils/contractErrors.ts` currently defines codes 1–15 only.
 > Codes 16–19 (`AlreadyVoted`, `NotTokenHolder`, `VotingQuorumNotMet`,
@@ -363,18 +365,18 @@ a toast.
 The contract emits the following Soroban events. Subscribe to them via the Soroban
 RPC event streaming API when building real-time update features.
 
-| Event topic | Data payload | Emitted by |
-|---|---|---|
-| `("campaign_created", count, creator)` | `title: String` | `create_campaign` |
-| `("contribution_made", campaign_id, contributor)` | `amount: i128` | `contribute` |
-| `("withdrawal", campaign_id, creator)` | `amount: i128` | `withdraw_funds` |
-| `("campaign_cancelled", campaign_id)` | `()` | `cancel_campaign` |
-| `("refund_claimed", campaign_id, contributor)` | `amount: i128` | `claim_refund` |
-| `("revenue_deposited", campaign_id)` | `amount: i128` | `deposit_revenue` |
-| `("revenue_claimed", campaign_id, contributor)` | `amount: i128` | `claim_revenue` |
-| `("campaign_vote_cast", campaign_id, voter)` | `approve: bool` | `vote_on_campaign` |
-| `("campaign_verified", campaign_id)` | `()` or `approve_votes: u32` | `verify_campaign` / `verify_campaign_with_votes` |
-| `("fee_updated",)` | `(old_fee, new_fee): (u32, u32)` | `update_platform_fee` |
+| Event topic                                       | Data payload                     | Emitted by                                       |
+| ------------------------------------------------- | -------------------------------- | ------------------------------------------------ |
+| `("campaign_created", count, creator)`            | `title: String`                  | `create_campaign`                                |
+| `("contribution_made", campaign_id, contributor)` | `amount: i128`                   | `contribute`                                     |
+| `("withdrawal", campaign_id, creator)`            | `amount: i128`                   | `withdraw_funds`                                 |
+| `("campaign_cancelled", campaign_id)`             | `()`                             | `cancel_campaign`                                |
+| `("refund_claimed", campaign_id, contributor)`    | `amount: i128`                   | `claim_refund`                                   |
+| `("revenue_deposited", campaign_id)`              | `amount: i128`                   | `deposit_revenue`                                |
+| `("revenue_claimed", campaign_id, contributor)`   | `amount: i128`                   | `claim_revenue`                                  |
+| `("campaign_vote_cast", campaign_id, voter)`      | `approve: bool`                  | `vote_on_campaign`                               |
+| `("campaign_verified", campaign_id)`              | `()` or `approve_votes: u32`     | `verify_campaign` / `verify_campaign_with_votes` |
+| `("fee_updated",)`                                | `(old_fee, new_fee): (u32, u32)` | `update_platform_fee`                            |
 
 ---
 
@@ -397,6 +399,7 @@ NEXT_PUBLIC_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
     --network testnet
   ```
 - Initialise after deploy:
+
   ```bash
   soroban contract invoke \
     --id <CONTRACT_ID> \
@@ -407,6 +410,7 @@ NEXT_PUBLIC_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
     --token <TOKEN_CONTRACT_ID> \
     --platform_fee 300
   ```
+
   `platform_fee` is in basis points: `300` = 3%.
 
 - Switch Freighter to **Testnet** in the extension settings before testing.
@@ -460,13 +464,16 @@ layer and toast system will handle it identically to a real contract error.
 Follow these steps when wiring up a new contract function (e.g. `contribute`):
 
 1. **Add a `contractClient.ts` function:**
+
    ```ts
    export async function contribute(
      campaignId: number,
      contributor: string,
      amount: bigint,
    ): Promise<void> {
-     if (USE_MOCKS) { /* simulate success */ return; }
+     if (USE_MOCKS) {
+       /* simulate success */ return;
+     }
      try {
        const client = new ProofOfHeartClient({ contractId: CONTRACT_ID, rpc: RPC_URL });
        await client.contribute({ campaign_id: campaignId, contributor, amount });
@@ -477,19 +484,22 @@ Follow these steps when wiring up a new contract function (e.g. `contribute`):
    ```
 
 2. **Create a hook if the call is reactive** (data-fetching):
+
    ```ts
    // src/hooks/useContribution.ts
    export function useContribution(campaignId: number, contributor: string) { ... }
    ```
+
    For one-off mutations (contribute, withdraw, etc.) call `contractClient.ts` directly
    from the page/component handler — no hook needed.
 
 3. **Wrap the call in a try/catch using `parseContractError`:**
+
    ```ts
    const { showError, showSuccess } = useToast();
    try {
      await contribute(campaignId, publicKey, amountInStroops);
-     showSuccess('Contribution recorded on-chain.');
+     showSuccess("Contribution recorded on-chain.");
    } catch (err) {
      showError(parseContractError(err));
    }

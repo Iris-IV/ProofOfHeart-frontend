@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from '../../../types';
-import { useCampaign } from '../../../hooks/useCampaign';
-import { useToast } from '../../../components/ToastProvider';
-import { parseContractError } from '../../../utils/contractErrors';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from "../../../types";
+import { useCampaign } from "../../../hooks/useCampaign";
+import { useToast } from "../../../components/ToastProvider";
+import { parseContractError } from "../../../utils/contractErrors";
 import {
   voteOnCampaign,
   getApproveVotes,
@@ -16,21 +16,21 @@ import {
   verifyCampaignWithVotes,
   getContribution,
   claimRefund,
-} from '../../../lib/contractClient';
-import VotingComponent from '../../../components/VotingComponent';
-import CampaignStatusBadge from '../../../components/CampaignStatusBadge';
-import DeadlineCountdown from '../../../components/DeadlineCountdown';
-import FundingProgressBar from '../../../components/FundingProgressBar';
-import { useWallet } from '../../../components/WalletContext';
-import CampaignActions from '../../../components/CampaignActions';
-import DonationModal from '../../../components/DonationModal';
-import { CauseDetailSkeleton } from '../../../components/Skeleton';
+} from "../../../lib/contractClient";
+import VotingComponent from "../../../components/VotingComponent";
+import CampaignStatusBadge from "../../../components/CampaignStatusBadge";
+import DeadlineCountdown from "../../../components/DeadlineCountdown";
+import FundingProgressBar from "../../../components/FundingProgressBar";
+import { useWallet } from "../../../components/WalletContext";
+import CampaignActions from "../../../components/CampaignActions";
+import DonationModal from "../../../components/DonationModal";
+import { CauseDetailSkeleton } from "../../../components/Skeleton";
 
 function formatDate(ts: number) {
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   }).format(new Date(ts * 1000));
 }
 
@@ -93,9 +93,9 @@ export default function CauseDetailClient({ id }: { id: string }) {
           setUserVote({
             causeId: String(campaign.id),
             voter: userWalletAddress,
-            voteType: 'upvote', // exact type unknown from contract; UI shows "already voted"
+            voteType: "upvote", // exact type unknown from contract; UI shows "already voted"
             timestamp: new Date(),
-            transactionHash: '',
+            transactionHash: "",
           });
         }
       } catch {
@@ -123,14 +123,14 @@ export default function CauseDetailClient({ id }: { id: string }) {
     loadContribution();
   }, [userWalletAddress, campaign, refundTxHash]);
 
-  const handleVote = async (campaignId: number, voteType: 'upvote' | 'downvote') => {
+  const handleVote = async (campaignId: number, voteType: "upvote" | "downvote") => {
     if (!userWalletAddress) {
-      showWarning('Please connect your wallet first.');
+      showWarning("Please connect your wallet first.");
       return;
     }
     setIsVoting(true);
     try {
-      const txHash = await voteOnCampaign(campaignId, userWalletAddress, voteType === 'upvote');
+      const txHash = await voteOnCampaign(campaignId, userWalletAddress, voteType === "upvote");
       const newVote: Vote = {
         causeId: String(campaignId),
         voter: userWalletAddress,
@@ -140,11 +140,11 @@ export default function CauseDetailClient({ id }: { id: string }) {
       };
       setUserVote(newVote);
       setVoteCounts((prev) => ({
-        upvotes: voteType === 'upvote' ? prev.upvotes + 1 : prev.upvotes,
-        downvotes: voteType === 'downvote' ? prev.downvotes + 1 : prev.downvotes,
+        upvotes: voteType === "upvote" ? prev.upvotes + 1 : prev.upvotes,
+        downvotes: voteType === "downvote" ? prev.downvotes + 1 : prev.downvotes,
         totalVotes: prev.totalVotes + 1,
       }));
-      showSuccess('Your vote has been cast successfully.');
+      showSuccess("Your vote has been cast successfully.");
       refetch();
     } catch (error) {
       showError(parseContractError(error));
@@ -157,7 +157,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
     setIsVerifying(true);
     try {
       await verifyCampaignWithVotes(Number(id));
-      showSuccess('Campaign verified successfully via community vote!');
+      showSuccess("Campaign verified successfully via community vote!");
       refetch();
     } catch (error) {
       showError(parseContractError(error));
@@ -173,12 +173,12 @@ export default function CauseDetailClient({ id }: { id: string }) {
       const txHash = await claimRefund(campaign.id, userWalletAddress);
       setRefundTxHash(txHash);
       setRefundableAmount(BigInt(0));
-      showSuccess('Refund claimed successfully!');
+      showSuccess("Refund claimed successfully!");
     } catch (error) {
       const msg = parseContractError(error);
-      if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('no funds')) {
+      if (msg.toLowerCase().includes("already") || msg.toLowerCase().includes("no funds")) {
         setAlreadyRefunded(true);
-        showWarning('Refund already claimed or no funds to refund.');
+        showWarning("Refund already claimed or no funds to refund.");
       } else {
         showError(msg);
       }
@@ -218,7 +218,9 @@ export default function CauseDetailClient({ id }: { id: string }) {
     return (
       <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
         <main className="container mx-auto px-4 py-24 text-center">
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">Cause not found</h1>
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">
+            Cause not found
+          </h1>
           <p className="text-zinc-600 dark:text-zinc-400 mb-8">
             This cause does not exist or has been removed.
           </p>
@@ -235,17 +237,14 @@ export default function CauseDetailClient({ id }: { id: string }) {
 
   const raised = stroopsToXlm(campaign.amount_raised);
   const goal = stroopsToXlm(campaign.funding_goal);
-  const fundingPct =
-    goal > 0
-      ? Math.min(100, Math.round((raised / goal) * 100))
-      : 0;
+  const fundingPct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
 
   const approvalRate =
     voteCounts.totalVotes > 0 ? Math.round((voteCounts.upvotes / voteCounts.totalVotes) * 100) : 0;
   const voteBreakdownApprovePct = voteCounts.totalVotes > 0 ? approvalRate : 50;
   const voteBreakdownRejectPct = 100 - voteBreakdownApprovePct;
 
-  const categoryLabel = CATEGORY_LABELS[campaign.category] ?? 'Other';
+  const categoryLabel = CATEGORY_LABELS[campaign.category] ?? "Other";
 
   const now = Math.floor(Date.now() / 1000);
   const isRefundEligible =
@@ -260,11 +259,16 @@ export default function CauseDetailClient({ id }: { id: string }) {
         {/* Breadcrumb + Wallet */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <nav className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-            <Link href="/causes" className="hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors">
+            <Link
+              href="/causes"
+              className="hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+            >
               Causes
             </Link>
             <span>›</span>
-            <span className="text-zinc-900 dark:text-zinc-50 truncate max-w-xs">{campaign.title}</span>
+            <span className="text-zinc-900 dark:text-zinc-50 truncate max-w-xs">
+              {campaign.title}
+            </span>
           </nav>
         </div>
 
@@ -292,15 +296,21 @@ export default function CauseDetailClient({ id }: { id: string }) {
             {/* Stats row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700 text-center">
-                <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{voteCounts.totalVotes}</div>
+                <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+                  {voteCounts.totalVotes}
+                </div>
                 <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Total Votes</div>
               </div>
               <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700 text-center">
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">{approvalRate}%</div>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  {approvalRate}%
+                </div>
                 <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Approval Rate</div>
               </div>
               <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700 text-center">
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{fundingPct}%</div>
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {fundingPct}%
+                </div>
                 <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Funded</div>
               </div>
               <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700 text-center">
@@ -313,7 +323,9 @@ export default function CauseDetailClient({ id }: { id: string }) {
 
             {/* Deadline countdown */}
             <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Campaign Deadline</h2>
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-3">
+                Campaign Deadline
+              </h2>
               <DeadlineCountdown deadline={campaign.deadline} />
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
                 Ends {formatDate(campaign.deadline)}
@@ -341,8 +353,8 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 </h2>
                 <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
                   {campaign.is_cancelled
-                    ? 'This campaign was cancelled. Contributors can reclaim their tokens.'
-                    : 'This campaign did not reach its funding goal by the deadline. Contributors can reclaim their tokens.'}
+                    ? "This campaign was cancelled. Contributors can reclaim their tokens."
+                    : "This campaign did not reach its funding goal by the deadline. Contributors can reclaim their tokens."}
                 </p>
 
                 {alreadyRefunded || refundTxHash ? (
@@ -359,7 +371,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 ) : refundableAmount > BigInt(0) ? (
                   <div className="space-y-3">
                     <p className="text-sm text-zinc-700 dark:text-zinc-300">
-                      Your refundable contribution:{' '}
+                      Your refundable contribution:{" "}
                       <span className="font-semibold">
                         {refundableXlm.toLocaleString(undefined, { maximumFractionDigits: 4 })} XLM
                       </span>
@@ -369,14 +381,14 @@ export default function CauseDetailClient({ id }: { id: string }) {
                       disabled={isClaimingRefund}
                       className="w-full min-h-[44px] py-2 px-4 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white font-semibold rounded-xl transition-colors text-sm"
                     >
-                      {isClaimingRefund ? 'Processing…' : 'Claim Refund'}
+                      {isClaimingRefund ? "Processing…" : "Claim Refund"}
                     </button>
                   </div>
                 ) : (
                   <p className="text-sm text-zinc-500 dark:text-zinc-400">
                     {refundableAmount === BigInt(0) && alreadyRefunded
-                      ? 'Already refunded.'
-                      : 'No contribution found for your wallet, or refund already claimed.'}
+                      ? "Already refunded."
+                      : "No contribution found for your wallet, or refund already claimed."}
                   </p>
                 )}
               </div>
@@ -406,7 +418,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
               <button
                 onClick={() => {
                   if (!userWalletAddress) {
-                    showWarning('Please connect your wallet first.');
+                    showWarning("Please connect your wallet first.");
                     return;
                   }
                   setIsDonationModalOpen(true);
@@ -418,14 +430,13 @@ export default function CauseDetailClient({ id }: { id: string }) {
             )}
 
             {/* Role-aware actions */}
-            <CampaignActions
-              campaign={campaign}
-              onActionSuccess={refetch}
-            />
+            <CampaignActions campaign={campaign} onActionSuccess={refetch} />
 
             {/* Creator info */}
             <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Created by</h2>
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">
+                Created by
+              </h2>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
                   {campaign.creator.slice(1, 3).toUpperCase()}
@@ -490,4 +501,3 @@ export default function CauseDetailClient({ id }: { id: string }) {
     </div>
   );
 }
-

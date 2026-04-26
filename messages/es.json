@@ -8,7 +8,8 @@
     "disconnect": "Desconectar",
     "admin": "Admin",
     "createCampaign": "Crear Campaña",
-    "selectLanguage": "Seleccionar Idioma"
+    "selectLanguage": "Seleccionar Idioma",
+    "skipToMainContent": "Saltar al contenido principal"
   },
   "Home": {
     "heroTitle": "Validación descentralizada para causas impulsadas por el corazón.",
@@ -117,5 +118,15 @@
     "failed": "Fallida",
     "verified": "Verificada",
     "verifiedCampaign": "Campaña verificada"
+  },
+  "Explore": {
+    "title": "Explorar",
+    "subtitle": "Explora causas, ve la validación de la comunidad y apoya lo que importa.",
+    "all": "Todas",
+    "noCausesYet": "Aún no hay causas",
+    "noCausesInCategory": "No hay causas en esta categoría",
+    "checkBackSoon": "Vuelve pronto — la comunidad está comenzando.",
+    "tryDifferentCategory": "Intenta seleccionar otra categoría.",
+    "tryAgain": "Intentar de nuevo"
   }
 }

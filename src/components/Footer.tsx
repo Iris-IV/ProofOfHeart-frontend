@@ -25,16 +25,14 @@ export default function Footer() {
               />
             </div>
             <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-              A decentralized launchpad where the community validates causes and
-              contributions are accounted for on-chain.
+              A decentralized launchpad where the community validates causes and contributions are
+              accounted for on-chain.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-8">
             <div>
-              <h3 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
-                Product
-              </h3>
+              <h3 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">Product</h3>
               <ul className="mt-3 space-y-2 text-sm">
                 {productLinks.map((link) => (
                   <li key={link.href}>
@@ -50,9 +48,7 @@ export default function Footer() {
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
-                Links
-              </h3>
+              <h3 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">Links</h3>
               <ul className="mt-3 space-y-2 text-sm">
                 <li>
                   <a

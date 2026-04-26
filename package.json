@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build --webpack",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
@@ -37,6 +39,7 @@
     "eslint-config-next": "^16.2.4",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
+    "prettier": "^3.8.3",
     "tailwindcss": "^4.2.4",
     "ts-node": "^10.9.2",
     "typescript": "^5"

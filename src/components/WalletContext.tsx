@@ -1,7 +1,7 @@
-'use client'
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { getAddress, isConnected, isAllowed } from '@stellar/freighter-api';
-import { useToast } from './ToastProvider';
+"use client";
+import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { getAddress, isConnected, isAllowed } from "@stellar/freighter-api";
+import { useToast } from "./ToastProvider";
 
 interface WalletContextType {
   publicKey: string | null;
@@ -21,7 +21,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     // Restore session from localStorage
-    const storedKey = localStorage.getItem('stellar_wallet_public_key');
+    const storedKey = localStorage.getItem("stellar_wallet_public_key");
     if (storedKey) {
       setPublicKey(storedKey);
       setIsWalletConnected(true);
@@ -38,7 +38,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         const key = await getAddress();
         setPublicKey(key.address);
         setIsWalletConnected(true);
-        localStorage.setItem('stellar_wallet_public_key', key.address);
+        localStorage.setItem("stellar_wallet_public_key", key.address);
       }
     } catch {
       // Not connected
@@ -50,24 +50,24 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     try {
       const connected = await isConnected();
       if (!connected) {
-        showWarning('Freighter wallet not found. Opening install page…');
-        window.open('https://www.freighter.app/', '_blank');
+        showWarning("Freighter wallet not found. Opening install page…");
+        window.open("https://www.freighter.app/", "_blank");
         setIsLoading(false);
         return;
       }
       const allowed = await isAllowed();
       if (!allowed) {
-        showWarning('Please allow Freighter to connect to this site.');
+        showWarning("Please allow Freighter to connect to this site.");
         setIsLoading(false);
         return;
       }
       const key = await getAddress();
       setPublicKey(key.address);
       setIsWalletConnected(true);
-      localStorage.setItem('stellar_wallet_public_key', key.address);
-      showSuccess('Wallet connected successfully.');
+      localStorage.setItem("stellar_wallet_public_key", key.address);
+      showSuccess("Wallet connected successfully.");
     } catch {
-      showError('Failed to connect wallet. Please try again.');
+      showError("Failed to connect wallet. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -76,11 +76,13 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const disconnectWallet = () => {
     setPublicKey(null);
     setIsWalletConnected(false);
-    localStorage.removeItem('stellar_wallet_public_key');
+    localStorage.removeItem("stellar_wallet_public_key");
   };
 
   return (
-    <WalletContext.Provider value={{ publicKey, isWalletConnected, connectWallet, disconnectWallet, isLoading }}>
+    <WalletContext.Provider
+      value={{ publicKey, isWalletConnected, connectWallet, disconnectWallet, isLoading }}
+    >
       {children}
     </WalletContext.Provider>
   );
@@ -88,6 +90,6 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
 
 export const useWallet = () => {
   const ctx = useContext(WalletContext);
-  if (!ctx) throw new Error('useWallet must be used within a WalletProvider');
+  if (!ctx) throw new Error("useWallet must be used within a WalletProvider");
   return ctx;
 };

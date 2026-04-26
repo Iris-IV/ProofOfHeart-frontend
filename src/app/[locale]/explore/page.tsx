@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useCampaigns } from '@/hooks/useCampaigns';
 import { Category, CATEGORY_LABELS, stroopsToXlm } from '@/types';
 import CampaignStatusBadge from '@/components/CampaignStatusBadge';
 import FundingProgressBar from '@/components/FundingProgressBar';
 import { CampaignRowSkeleton } from '@/components/Skeleton';
+import { formatAddress } from '@/lib/formatAddress';
 
 const CATEGORY_ICONS: Record<Category, string> = {
   [Category.Learner]: '🎓',
@@ -15,11 +17,8 @@ const CATEGORY_ICONS: Record<Category, string> = {
   [Category.Publisher]: '📚',
 };
 
-function formatAddress(addr: string) {
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-}
-
 export default function ExplorePage() {
+  const t = useTranslations('Explore');
   const { campaigns, isLoading, error, refetch } = useCampaigns();
   const [activeCategory, setActiveCategory] = useState<'all' | Category>('all');
 
@@ -50,10 +49,10 @@ export default function ExplorePage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-14 sm:px-6">
       <h1 className="text-3xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
-        Explore
+        {t('title')}
       </h1>
       <p className="mt-3 max-w-2xl text-base leading-7 text-zinc-600 dark:text-zinc-400">
-        Browse causes, see community validation, and support what matters.
+        {t('subtitle')}
       </p>
 
       {/* Category pills */}
@@ -68,7 +67,7 @@ export default function ExplorePage() {
                 : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
                 }`}
             >
-              {cat === 'all' ? 'All' : `${CATEGORY_ICONS[cat] ?? ''} ${CATEGORY_LABELS[cat]}`}
+              {cat === 'all' ? t('all') : `${CATEGORY_ICONS[cat] ?? ''} ${CATEGORY_LABELS[cat]}`}
             </button>
           ))}
         </div>
@@ -82,7 +81,7 @@ export default function ExplorePage() {
             onClick={refetch}
             className="px-5 py-2 bg-red-600 text-white rounded-full text-sm font-medium hover:bg-red-700 transition-colors"
           >
-            Try again
+            {t('tryAgain')}
           </button>
         </div>
       )}
@@ -101,12 +100,12 @@ export default function ExplorePage() {
         <div className="mt-16 text-center">
           <div className="text-5xl mb-4">🌐</div>
           <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-            {campaigns.length === 0 ? 'No causes yet' : 'No causes in this category'}
+            {campaigns.length === 0 ? t('noCausesYet') : t('noCausesInCategory')}
           </h2>
           <p className="text-zinc-600 dark:text-zinc-400">
             {campaigns.length === 0
-              ? 'Check back soon — the community is just getting started.'
-              : 'Try selecting a different category above.'}
+              ? t('checkBackSoon')
+              : t('tryDifferentCategory')}
           </p>
         </div>
       )}

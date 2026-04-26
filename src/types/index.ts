@@ -11,17 +11,17 @@ export enum Category {
 
 /** Human-readable labels for each Category value. */
 export const CATEGORY_LABELS: Record<Category, string> = {
-  [Category.Learner]: 'Learner',
-  [Category.EducationalStartup]: 'Educational Startup',
-  [Category.Educator]: 'Educator',
-  [Category.Publisher]: 'Publisher',
+  [Category.Learner]: "Learner",
+  [Category.EducationalStartup]: "Educational Startup",
+  [Category.Educator]: "Educator",
+  [Category.Publisher]: "Publisher",
 };
 
 // ---------------------------------------------------------------------------
 // Campaign status — derived from contract boolean flags
 // ---------------------------------------------------------------------------
 
-export type CampaignStatus = 'active' | 'cancelled' | 'funded' | 'failed' | 'verified';
+export type CampaignStatus = "active" | "cancelled" | "funded" | "failed" | "verified";
 
 // ---------------------------------------------------------------------------
 // Campaign interface — mirrors the on-chain Campaign struct
@@ -32,7 +32,7 @@ export interface Campaign {
   creator: string;
   title: string;
   description: string;
-  created_at : number; // Unix timestamp in seconds
+  created_at: number; // Unix timestamp in seconds
   status: CampaignStatus;
   funding_goal: bigint;
   deadline: number;
@@ -80,17 +80,17 @@ export enum ContractErrorCode {
  * Derive the campaign lifecycle status from its boolean flags + deadline.
  */
 export function deriveCampaignStatus(campaign: Campaign): CampaignStatus {
-  if (campaign.is_cancelled) return 'cancelled';
-  if (campaign.funds_withdrawn) return 'funded';
+  if (campaign.is_cancelled) return "cancelled";
+  if (campaign.funds_withdrawn) return "funded";
   if (
     !campaign.is_active &&
     campaign.deadline < Math.floor(Date.now() / 1000) &&
     campaign.amount_raised < campaign.funding_goal
   ) {
-    return 'failed';
+    return "failed";
   }
-  if (campaign.is_active) return 'active';
-  return 'active'; // fallback
+  if (campaign.is_active) return "active";
+  return "active"; // fallback
 }
 
 /**
@@ -121,7 +121,7 @@ export function basisPointsToPercentage(basisPoints: number): string {
 export interface Vote {
   causeId: string;
   voter: string;
-  voteType: 'upvote' | 'downvote';
+  voteType: "upvote" | "downvote";
   timestamp: Date;
   transactionHash: string;
 }
