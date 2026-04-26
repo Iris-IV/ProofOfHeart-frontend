@@ -13,36 +13,46 @@ interface ThemeContextType {
 export const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const [theme, setTheme] = useState<Theme>('light');
+  const [theme, setThemeState] = useState<Theme>('light');
   const [mounted, setMounted] = useState(false);
+  const [hasExplicitChoice, setHasExplicitChoice] = useState(false);
 
   useEffect(() => {
-    // Initial theme detection from external storage
-    Promise.resolve().then(() => {
-      const stored = localStorage.getItem('theme') as Theme | null;
+    const stored = localStorage.getItem('theme');
+
+    if (stored === 'light' || stored === 'dark') {
+      setThemeState(stored);
+      setHasExplicitChoice(true);
+    } else {
       const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const initialTheme = stored || (systemDark ? 'dark' : 'light');
-      
-      if (initialTheme !== 'light') {
-        setTheme(initialTheme);
-      }
-      setMounted(true);
-    });
+      setThemeState(systemDark ? 'dark' : 'light');
+    }
+
+    setMounted(true);
   }, []);
 
   useEffect(() => {
     if (!mounted) return;
+
     const root = window.document.documentElement;
     if (theme === 'dark') {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
-    localStorage.setItem('theme', theme);
-  }, [theme, mounted]);
+
+    if (hasExplicitChoice) {
+      localStorage.setItem('theme', theme);
+    }
+  }, [theme, mounted, hasExplicitChoice]);
+
+  const setTheme = (nextTheme: Theme) => {
+    setThemeState(nextTheme);
+    setHasExplicitChoice(true);
+  };
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+    setTheme(theme === 'light' ? 'dark' : 'light');
   };
 
   return (
