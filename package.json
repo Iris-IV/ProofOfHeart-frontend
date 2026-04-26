@@ -12,18 +12,19 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.80.2",
     "@stellar/freighter-api": "^6.0.1",
-    "@stellar/stellar-sdk": "^14.6.1",
+    "@stellar/stellar-sdk": "^15.0.1",
+    "@tanstack/react-query": "^5.100.4",
     "framer-motion": "^12.37.0",
     "lucide-react": "^1.7.0",
-    "next": "16.1.6",
-    "next-intl": "^4.8.3",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "stellar-sdk": "^13.3.0"
+    "next": "^16.2.4",
+    "next-intl": "^4.9.1",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "^4.2.4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -33,10 +34,17 @@
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.1.6",
+    "eslint-config-next": "^16.2.4",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
-    "tailwindcss": "^4",
+    "tailwindcss": "^4.2.4",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
+  },
+  "overrides": {
+    "axios": "1.15.2",
+    "follow-redirects": "1.16.0",
+    "@swc/helpers": "0.5.21",
+    "postcss": "^8.5.10"
   }
 }

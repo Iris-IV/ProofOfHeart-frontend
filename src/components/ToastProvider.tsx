@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   createContext,
@@ -8,26 +8,37 @@ import {
   useEffect,
   useRef,
   ReactNode,
-} from 'react';
+} from "react";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type ToastType = 'error' | 'success' | 'warning' | 'info';
+export type ToastType = "error" | "success" | "warning" | "info";
+
+export interface ToastAction {
+  label: string;
+  href: string;
+}
 
 export interface ToastItem {
   id: string;
   type: ToastType;
-  message: string;
+  message: ReactNode;
 }
 
 interface ToastContextValue {
-  showToast: (message: string, type?: ToastType) => void;
-  showError: (message: string) => void;
-  showSuccess: (message: string) => void;
-  showWarning: (message: string) => void;
-  showInfo: (message: string) => void;
+  showToast: (message: ReactNode, type?: ToastType) => void;
+  showError: (message: ReactNode) => void;
+  showSuccess: (message: ReactNode) => void;
+  showWarning: (message: ReactNode) => void;
+  showInfo: (message: ReactNode) => void;
+  /** Use this when the toast needs a clickable link (e.g. "View on Explorer"). */
+  showToastWithAction: (
+    message: string,
+    action: ToastAction,
+    type?: ToastType,
+  ) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -38,7 +49,7 @@ const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error('useToast must be used within <ToastProvider>');
+  if (!ctx) throw new Error("useToast must be used within <ToastProvider>");
   return ctx;
 }
 
@@ -47,24 +58,38 @@ export function useToast(): ToastContextValue {
 // ---------------------------------------------------------------------------
 
 const ICONS: Record<ToastType, string> = {
-  error:   '✕',
-  success: '✓',
-  warning: '⚠',
-  info:    'ℹ',
+  error: "✕",
+  success: "✓",
+  warning: "⚠",
+  info: "ℹ",
 };
 
 const STYLES: Record<ToastType, string> = {
-  error:   'bg-red-50 dark:bg-red-900/80 border-red-300 dark:border-red-700 text-red-900 dark:text-red-100',
-  success: 'bg-green-50 dark:bg-green-900/80 border-green-300 dark:border-green-700 text-green-900 dark:text-green-100',
-  warning: 'bg-yellow-50 dark:bg-yellow-900/80 border-yellow-300 dark:border-yellow-700 text-yellow-900 dark:text-yellow-100',
-  info:    'bg-blue-50 dark:bg-blue-900/80 border-blue-300 dark:border-blue-700 text-blue-900 dark:text-blue-100',
+  error:
+    "bg-red-50 dark:bg-red-900/80 border-red-300 dark:border-red-700 text-red-900 dark:text-red-100",
+  success:
+    "bg-green-50 dark:bg-green-900/80 border-green-300 dark:border-green-700 text-green-900 dark:text-green-100",
+  warning:
+    "bg-yellow-50 dark:bg-yellow-900/80 border-yellow-300 dark:border-yellow-700 text-yellow-900 dark:text-yellow-100",
+  info: "bg-blue-50 dark:bg-blue-900/80 border-blue-300 dark:border-blue-700 text-blue-900 dark:text-blue-100",
 };
 
 const ICON_STYLES: Record<ToastType, string> = {
-  error:   'bg-red-100 dark:bg-red-800 text-red-600 dark:text-red-300',
-  success: 'bg-green-100 dark:bg-green-800 text-green-600 dark:text-green-300',
-  warning: 'bg-yellow-100 dark:bg-yellow-800 text-yellow-600 dark:text-yellow-300',
-  info:    'bg-blue-100 dark:bg-blue-800 text-blue-600 dark:text-blue-300',
+  error: "bg-red-100 dark:bg-red-800 text-red-600 dark:text-red-300",
+  success: "bg-green-100 dark:bg-green-800 text-green-600 dark:text-green-300",
+  warning:
+    "bg-yellow-100 dark:bg-yellow-800 text-yellow-600 dark:text-yellow-300",
+  info: "bg-blue-100 dark:bg-blue-800 text-blue-600 dark:text-blue-300",
+};
+
+const LINK_STYLES: Record<ToastType, string> = {
+  error:
+    "text-red-700 dark:text-red-300 underline hover:text-red-900 dark:hover:text-red-100",
+  success:
+    "text-green-700 dark:text-green-300 underline hover:text-green-900 dark:hover:text-green-100",
+  warning:
+    "text-yellow-700 dark:text-yellow-300 underline hover:text-yellow-900 dark:hover:text-yellow-100",
+  info: "text-blue-700 dark:text-blue-300 underline hover:text-blue-900 dark:hover:text-blue-100",
 };
 
 const AUTO_DISMISS_MS = 5000;
@@ -100,15 +125,17 @@ function Toast({
     setTimeout(() => onDismiss(toast.id), 300);
   };
 
+  const isError = toast.type === "error";
+
   return (
     <div
-      role="alert"
-      aria-live="assertive"
+      role={isError ? "alert" : "status"}
+      aria-live={isError ? "assertive" : "polite"}
       className={`
         flex items-start gap-3 w-full max-w-sm rounded-xl border px-4 py-3 shadow-lg
         transition-all duration-300 ease-in-out
         ${STYLES[toast.type]}
-        ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}
+        ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}
       `}
     >
       {/* Icon */}
@@ -118,8 +145,8 @@ function Toast({
         {ICONS[toast.type]}
       </span>
 
-  {/* Message */}
-  <p className="flex-1 text-sm leading-snug" dangerouslySetInnerHTML={{ __html: toast.message }} />
+      {/* Message — rendered as JSX, never as raw HTML */}
+      <p className="flex-1 text-sm leading-snug">{toast.message}</p>
 
       {/* Dismiss */}
       <button
@@ -174,7 +201,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const showToast = useCallback(
-    (message: string, type: ToastType = 'info') => {
+    (message: ReactNode, type: ToastType = "info") => {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       setToasts((prev) => {
         const next = [...prev, { id, type, message }];
@@ -182,16 +209,59 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         return next.slice(-MAX_TOASTS);
       });
     },
-    []
+    [],
   );
 
-  const showError   = useCallback((msg: string) => showToast(msg, 'error'),   [showToast]);
-  const showSuccess = useCallback((msg: string) => showToast(msg, 'success'), [showToast]);
-  const showWarning = useCallback((msg: string) => showToast(msg, 'warning'), [showToast]);
-  const showInfo    = useCallback((msg: string) => showToast(msg, 'info'),    [showToast]);
+  const showToastWithAction = useCallback(
+    (message: string, action: ToastAction, type: ToastType = "info") => {
+      // The "View on Explorer" link case — rendered safely as JSX, no innerHTML.
+      const content = (
+        <span>
+          {message}{" "}
+          <a
+            href={action.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            // type-safe inline class lookup — no dynamic HTML
+            className={LINK_STYLES[type]}
+          >
+            {action.label}
+          </a>
+        </span>
+      );
+      showToast(content, type);
+    },
+    [showToast],
+  );
+
+  const showError = useCallback(
+    (msg: ReactNode) => showToast(msg, "error"),
+    [showToast],
+  );
+  const showSuccess = useCallback(
+    (msg: ReactNode) => showToast(msg, "success"),
+    [showToast],
+  );
+  const showWarning = useCallback(
+    (msg: ReactNode) => showToast(msg, "warning"),
+    [showToast],
+  );
+  const showInfo = useCallback(
+    (msg: ReactNode) => showToast(msg, "info"),
+    [showToast],
+  );
 
   return (
-    <ToastContext.Provider value={{ showToast, showError, showSuccess, showWarning, showInfo }}>
+    <ToastContext.Provider
+      value={{
+        showToast,
+        showError,
+        showSuccess,
+        showWarning,
+        showInfo,
+        showToastWithAction,
+      }}
+    >
       {children}
       <ToastContainer toasts={toasts} onDismiss={dismiss} />
     </ToastContext.Provider>

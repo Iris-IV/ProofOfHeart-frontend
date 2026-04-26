@@ -1,17 +1,18 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Campaign, Vote, CATEGORY_LABELS, CampaignStatus } from '@/types';
 import { explorerTxUrl } from '@/utils/explorer';
 import { SORT_OPTIONS } from '@/lib/mockCauses';
-import { stellarVotingService } from '@/services/stellarVoting';
 import { useCampaigns } from '@/hooks/useCampaigns';
 import { useWallet } from '@/components/WalletContext';
 import { useToast } from '@/components/ToastProvider';
 import { parseContractError } from '@/utils/contractErrors';
-import { cancelCampaign, claimRefund } from '@/lib/contractClient';
+import { cancelCampaign, claimRefund, voteOnCampaign, hasVoted } from '@/lib/contractClient';
 import CauseCard from '@/components/CauseCard';
+import { CauseCardSkeleton } from '@/components/Skeleton';
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -23,34 +24,11 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 // ---------------------------------------------------------------------------
-// Loading skeleton
-// ---------------------------------------------------------------------------
-
-function CauseCardSkeleton() {
-  return (
-    <div className="flex flex-col bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 overflow-hidden animate-pulse">
-      <div className="p-5 flex-1 space-y-3">
-        <div className="flex justify-between">
-          <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-24" />
-          <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-16" />
-        </div>
-        <div className="h-5 bg-zinc-200 dark:bg-zinc-700 rounded w-3/4" />
-        <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-full" />
-        <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-5/6" />
-        <div className="h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full w-full mt-4" />
-      </div>
-      <div className="px-5 pb-5">
-        <div className="h-24 bg-zinc-100 dark:bg-zinc-700/50 rounded-lg" />
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Main content (needs Suspense because it reads searchParams)
 // ---------------------------------------------------------------------------
 
 function CausesContent() {
+  const t = useTranslations('Causes');
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -89,21 +67,27 @@ function CausesContent() {
   }, [debouncedSearch, category, status, sort, router]);
 
   // Load user votes whenever wallet or campaigns change
-  const loadUserVotes = useCallback(() => {
+  const loadUserVotes = useCallback(async () => {
     if (!userWalletAddress) return;
     const votes: Record<string, Vote> = {};
-    for (const campaign of campaigns) {
-      const v = stellarVotingService.getUserVote(String(campaign.id), userWalletAddress);
-      if (v) {
-        votes[campaign.id] = {
-          campaignId: String(campaign.id),
-          voter: userWalletAddress,
-          voteType: v.voteType,
-          timestamp: v.timestamp,
-          transactionHash: 'mock-hash',
-        };
-      }
-    }
+    await Promise.all(
+      campaigns.map(async (campaign) => {
+        try {
+          const voted = await hasVoted(campaign.id, userWalletAddress);
+          if (voted) {
+            votes[campaign.id] = {
+              causeId: String(campaign.id),
+              voter: userWalletAddress,
+              voteType: 'upvote',
+              timestamp: new Date(),
+              transactionHash: '',
+            };
+          }
+        } catch {
+          // ignore per-campaign errors
+        }
+      })
+    );
     setUserVotes(votes);
   }, [userWalletAddress, campaigns]);
 
@@ -121,16 +105,15 @@ function CausesContent() {
       showWarning('Please connect your wallet first.');
       return;
     }
-    const id = String(campaignId);
-    if (stellarVotingService.hasUserVoted(id, userWalletAddress)) {
+    if (userVotes[campaignId]) {
       showWarning('You have already voted on this cause.');
       return;
     }
     setIsVotingFor(campaignId);
     try {
-      const transactionHash = await stellarVotingService.castVote(id, voteType, userWalletAddress);
+      const transactionHash = await voteOnCampaign(campaignId, userWalletAddress, voteType === 'upvote');
       const newVote: Vote = {
-        campaignId: id,
+        causeId: String(campaignId),
         voter: userWalletAddress,
         voteType,
         timestamp: new Date(),
@@ -219,7 +202,7 @@ function CausesContent() {
     }
 
     if (category !== 'all') result = result.filter((c) => String(c.category) === category);
-    if (status !== 'all')   result = result.filter((c) => c.status   === status);
+    if (status !== 'all') result = result.filter((c) => c.status === status);
 
     switch (sort) {
       case 'oldest':
@@ -268,15 +251,15 @@ function CausesContent() {
   // -------------------------------------------------------------------------
 
   return (
-  <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+    <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
       <main className="container mx-auto px-4 py-8">
         {/* Page heading */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-2">
-            Community Causes
+            {t('pageTitle')}
           </h1>
           <p className="text-zinc-600 dark:text-zinc-400">
-            Browse, search, and vote on causes that matter to you.
+            {t('pageSubtitle')}
           </p>
         </div>
 
@@ -301,7 +284,7 @@ function CausesContent() {
               type="text"
               value={rawSearch}
               onChange={(e) => setRawSearch(e.target.value)}
-              placeholder="Search causes by title, description, or category…"
+              placeholder={t('searchPlaceholder')}
               className="w-full pl-9 pr-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             />
             {rawSearch && (
@@ -318,14 +301,14 @@ function CausesContent() {
           <div className="flex flex-wrap gap-3 items-center">
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
-                Category
+                {t('labelCategory')}
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 className="text-sm rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="all">All Categories</option>
+                <option value="all">{t('allCategories')}</option>
                 {Object.entries(CATEGORY_LABELS).map(([val, label]) => (
                   <option key={val} value={val}>
                     {label}
@@ -336,7 +319,7 @@ function CausesContent() {
 
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                Status
+                {t('labelStatus')}
               </label>
               <select
                 value={status}
@@ -345,7 +328,7 @@ function CausesContent() {
               >
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>
-                    {s === 'all' ? 'All Statuses' : s.charAt(0).toUpperCase() + s.slice(1)}
+                    {s === 'all' ? t('allStatuses') : s.charAt(0).toUpperCase() + s.slice(1)}
                   </option>
                 ))}
               </select>
@@ -353,7 +336,7 @@ function CausesContent() {
 
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                Sort by
+                {t('labelSortBy')}
               </label>
               <select
                 value={sort}
@@ -373,7 +356,7 @@ function CausesContent() {
                 onClick={clearFilters}
                 className="text-xs text-blue-600 dark:text-blue-400 hover:underline ml-auto"
               >
-                Clear filters
+                {t('clearFilters')}
               </button>
             )}
           </div>
@@ -406,14 +389,13 @@ function CausesContent() {
           <>
             <div className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 flex items-center gap-3">
               <span>
-                {filteredCampaigns.length}{' '}
-                {filteredCampaigns.length === 1 ? 'cause' : 'causes'} found
-                {debouncedSearch && <span> for &ldquo;{debouncedSearch}&rdquo;</span>}
+                {t(filteredCampaigns.length === 1 ? 'causesFound_one' : 'causesFound_other', { count: filteredCampaigns.length })}
+                {debouncedSearch && <span>{t('causesFoundFor', { query: debouncedSearch })}</span>}
               </span>
               {isVotingFor !== null && (
                 <span className="inline-flex items-center gap-1">
-                  <span className="inline-block animate-spin rounded-full h-3 w-3 border-b border-zinc-500" />
-                  Processing vote…
+                  <span className="inline-block motion-safe:animate-spin rounded-full h-3 w-3 border-b border-zinc-500" />
+                  {t('processingVote')}
                 </span>
               )}
             </div>
@@ -436,19 +418,17 @@ function CausesContent() {
               <div className="text-center py-20">
                 <div className="text-5xl mb-4">🔍</div>
                 <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-                  {campaigns.length === 0 ? 'No causes yet' : 'No causes found'}
+                  {campaigns.length === 0 ? t('noCausesYet') : t('noCausesFound')}
                 </h2>
                 <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-                  {campaigns.length === 0
-                    ? 'Be the first to submit a cause for the community to vote on.'
-                    : 'Try a different keyword or clear the filters.'}
+                  {campaigns.length === 0 ? t('beFirstToSubmit') : t('tryDifferentKeyword')}
                 </p>
                 {campaigns.length > 0 && (
                   <button
                     onClick={clearFilters}
                     className="px-6 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
                   >
-                    Clear all filters
+                    {t('clearAllFilters')}
                   </button>
                 )}
               </div>
@@ -465,7 +445,7 @@ export default function CausesPage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+          <div className="motion-safe:animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
         </div>
       }
     >

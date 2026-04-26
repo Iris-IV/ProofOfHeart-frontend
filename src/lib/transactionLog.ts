@@ -1,4 +1,4 @@
-export type WalletTransactionAction = 'contribute' | 'claim_refund' | 'claim_revenue';
+export type WalletTransactionAction = 'contribute' | 'claim_refund' | 'claim_revenue' | 'vote';
 
 export interface WalletTransactionLogEntry {
   walletAddress: string;

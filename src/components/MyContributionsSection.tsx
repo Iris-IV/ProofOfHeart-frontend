@@ -8,6 +8,7 @@ import { useContributions } from '../hooks/useContributions';
 import { CampaignStatus, stroopsToXlm } from '../types';
 import { useToast } from './ToastProvider';
 import { parseContractError } from '../utils/contractErrors';
+import type { WalletTransactionAction } from '../lib/transactionLog';
 
 interface MyContributionsSectionProps {
   walletAddress: string;
@@ -51,7 +52,7 @@ function getStatusClasses(status: CampaignStatus): string {
   }
 }
 
-function getActionLabel(action: 'contribute' | 'claim_refund' | 'claim_revenue'): string {
+function getActionLabel(action: WalletTransactionAction): string {
   switch (action) {
     case 'contribute':
       return 'Contribution';
@@ -59,6 +60,8 @@ function getActionLabel(action: 'contribute' | 'claim_refund' | 'claim_revenue')
       return 'Refund claim';
     case 'claim_revenue':
       return 'Revenue claim';
+    case 'vote':
+      return 'Vote';
     default:
       return 'Transaction';
   }

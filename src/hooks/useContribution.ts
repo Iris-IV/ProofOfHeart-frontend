@@ -1,27 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getContribution } from '../lib/contractClient';
 
 export function useContribution(campaignId: number | string, userAddress: string | null) {
-  const [contribution, setContribution] = useState<bigint>(BigInt(0));
-  const [isLoading, setIsLoading] = useState(false);
+  const id = typeof campaignId === 'string' ? parseInt(campaignId, 10) : campaignId;
 
-  useEffect(() => {
-    if (!userAddress || !campaignId) {
-      setContribution(BigInt(0));
-      return;
-    }
+  const { data, isLoading } = useQuery<bigint, Error>({
+    queryKey: ['contribution', id, userAddress],
+    queryFn: () => getContribution(id, userAddress!),
+    enabled: !!userAddress && !!campaignId && !isNaN(id),
+    staleTime: 30_000,
+  });
 
-    const id = typeof campaignId === 'string' ? parseInt(campaignId, 10) : campaignId;
-    if (isNaN(id)) return;
-
-    setIsLoading(true);
-    getContribution(id, userAddress)
-      .then(setContribution)
-      .catch((err) => console.error('Failed to fetch contribution:', err))
-      .finally(() => setIsLoading(false));
-  }, [campaignId, userAddress]);
-
-  return { contribution, isLoading };
+  return { contribution: data ?? BigInt(0), isLoading };
 }

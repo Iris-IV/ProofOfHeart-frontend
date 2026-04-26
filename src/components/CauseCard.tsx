@@ -198,7 +198,7 @@ export default function CauseCard({
           >
             {isClaimingRefund ? (
               <>
-                <span className="inline-block animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
+                <span className="inline-block motion-safe:animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
                 Claiming Refund…
               </>
             ) : (

@@ -643,3 +643,120 @@ export async function updateAdmin(newAdmin: string): Promise<string> {
     throw new Error(parseContractError(err));
   }
 }
+
+// ---------------------------------------------------------------------------
+// Voting functions — wired to real contract
+// ---------------------------------------------------------------------------
+
+export async function getApproveVotes(campaignId: number): Promise<number> {
+  if (USE_MOCKS) return 0;
+  try {
+    const result = await invokeViewMethod('get_approve_votes', [
+      StellarSdk.nativeToScVal(campaignId, { type: 'u32' }),
+    ]);
+    if (!result) return 0;
+    return result.u32();
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function getRejectVotes(campaignId: number): Promise<number> {
+  if (USE_MOCKS) return 0;
+  try {
+    const result = await invokeViewMethod('get_reject_votes', [
+      StellarSdk.nativeToScVal(campaignId, { type: 'u32' }),
+    ]);
+    if (!result) return 0;
+    return result.u32();
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function hasVoted(campaignId: number, voter: string): Promise<boolean> {
+  if (USE_MOCKS) return false;
+  try {
+    const result = await invokeViewMethod('has_voted', [
+      StellarSdk.nativeToScVal(campaignId, { type: 'u32' }),
+      new StellarSdk.Address(voter).toScVal(),
+    ]);
+    if (!result) return false;
+    return result.b();
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function getMinVotesQuorum(): Promise<number> {
+  if (USE_MOCKS) return 10;
+  try {
+    const result = await invokeViewMethod('get_min_votes_quorum');
+    if (!result) return 0;
+    return result.u32();
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function getApprovalThresholdBps(): Promise<number> {
+  if (USE_MOCKS) return 5000;
+  try {
+    const result = await invokeViewMethod('get_approval_threshold_bps');
+    if (!result) return 0;
+    return result.u32();
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Cast a vote on a campaign via Freighter wallet.
+ * approve = true → upvote, approve = false → downvote.
+ */
+export async function voteOnCampaign(
+  campaignId: number,
+  voter: string,
+  approve: boolean,
+): Promise<string> {
+  if (USE_MOCKS) return `mock_tx_vote_${campaignId}_${approve ? 'approve' : 'reject'}`;
+  const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    'vote_on_campaign',
+    StellarSdk.nativeToScVal(campaignId, { type: 'u32' }),
+    new StellarSdk.Address(voter).toScVal(),
+    StellarSdk.nativeToScVal(approve, { type: 'bool' }),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(voter, op);
+    appendWalletTransaction({
+      walletAddress: voter,
+      campaignId,
+      action: 'vote',
+      txHash: txResult.txHash,
+    });
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Trigger on-chain campaign verification using accumulated votes.
+ * Can be called by anyone once quorum + threshold are met.
+ */
+export async function verifyCampaignWithVotes(campaignId: number): Promise<string> {
+  if (USE_MOCKS) return 'mock_tx_verify_with_votes';
+  const { address: callerAddress } = await getAddress();
+  const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    'verify_campaign_with_votes',
+    StellarSdk.nativeToScVal(campaignId, { type: 'u32' }),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op);
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}

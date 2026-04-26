@@ -143,7 +143,7 @@ export default function AdminDashboard() {
   if (!isWalletConnected) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
-        <Smartphone size={64} className="text-zinc-300 mb-6 animate-pulse" />
+        <Smartphone size={64} className="text-zinc-300 mb-6 motion-safe:animate-pulse" />
         <h1 className="text-3xl font-bold mb-4 tracking-tight">Wallet Required</h1>
         <p className="text-zinc-500 dark:text-zinc-400 max-w-md mb-8">
           Please connect your administrative wallet to access the platform controls.
@@ -162,7 +162,7 @@ export default function AdminDashboard() {
   if (isAdminLoading || isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-12 h-12 animate-spin text-amber-500 mb-4" />
+        <Loader2 className="w-12 h-12 motion-safe:animate-spin text-amber-500 mb-4" />
         <p className="text-zinc-500 font-medium">Authorizing secure session...</p>
       </div>
     );
@@ -213,7 +213,7 @@ export default function AdminDashboard() {
       </section>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 motion-safe:animate-in fade-in slide-in-from-bottom-4 duration-500">
         <StatsCard icon={<Activity className="text-blue-500" />} label={t('totalCampaigns')} value={campaigns.length} />
         <StatsCard icon={<DollarSign className="text-green-500" />} label={t('totalRaised')} value={`${stroopsToXlm(totalRaised).toLocaleString()} XLM`} />
         <StatsCard icon={<PieChart className="text-purple-500" />} label={t('activeCampaigns')} value={activeCampaignCount} />
@@ -235,8 +235,9 @@ export default function AdminDashboard() {
               disabled={isRefreshing}
               className="group size-10 flex items-center justify-center rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition shadow-sm"
               title={t('refresh')}
+              aria-label={t('refresh')}
             >
-              <RefreshCw size={18} className={`${isRefreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+              <RefreshCw size={18} className={`${isRefreshing ? 'motion-safe:animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
             </button>
           </div>
 
@@ -285,15 +286,15 @@ export default function AdminDashboard() {
                                   className="size-12 flex items-center justify-center rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 border border-red-100 dark:border-red-900/50 hover:bg-red-100 transition disabled:opacity-50"
                                   title={t('reject')}
                                 >
-                                   {cancellingId === c.id ? <Loader2 className="animate-spin" size={20} /> : <XCircle size={20} />}
+                                   {cancellingId === c.id ? <Loader2 className="motion-safe:animate-spin" size={20} /> : <XCircle size={20} />}
                                 </button>
                                 <button
                                   onClick={() => handleApprove(c.id)}
                                   disabled={verifyingId === c.id || cancellingId === c.id}
-                                  className="size-12 flex items-center justify-center rounded-xl bg-green-500 text-white shadow-lg shadow-green-500/20 hover:bg-green-600 transition hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
+                                  className="size-12 flex items-center justify-center rounded-xl bg-green-500 text-white shadow-lg shadow-green-500/20 hover:bg-green-600 transition hover:motion-safe:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
                                   title={t('approve')}
                                 >
-                                   {verifyingId === c.id ? <Loader2 className="animate-spin" size={20} /> : <CheckCircle size={20} />}
+                                   {verifyingId === c.id ? <Loader2 className="motion-safe:animate-spin" size={20} /> : <CheckCircle size={20} />}
                                 </button>
                              </div>
                           </div>
@@ -334,7 +335,7 @@ export default function AdminDashboard() {
            </section>
 
            {/* Admin Transfer Control */}
-           <section className="bg-gradient-to-br from-red-50 to-rose-100/50 dark:from-red-900/10 dark:to-zinc-900 rounded-[2.5rem] border border-red-100 dark:border-red-900/20 p-8 shadow-sm">
+           <section className="bg-linear-to-br from-red-50 to-rose-100/50 dark:from-red-900/10 dark:to-zinc-900 rounded-[2.5rem] border border-red-100 dark:border-red-900/20 p-8 shadow-sm">
               <h3 className="text-xl font-bold mb-2 text-red-950 dark:text-red-400">{t('transferAdmin')}</h3>
               <p className="text-sm text-red-800/70 dark:text-red-400/70 mb-8 leading-relaxed">
                  Irreversible action. Move all administrative powers to a new address.

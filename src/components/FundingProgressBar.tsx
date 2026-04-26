@@ -26,7 +26,7 @@ export default function FundingProgressBar({
       </div>
       <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
         <div
-          className="bg-gradient-to-r from-blue-500 to-purple-500 h-1.5 rounded-full transition-all duration-300"
+          className="bg-linear-to-r from-blue-500 to-purple-500 h-1.5 rounded-full transition-all duration-300"
           style={{ width: `${pct}%` }}
         />
       </div>
