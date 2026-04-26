@@ -1,9 +1,9 @@
 /**
- * Soroban contract error codes and user-friendly messages.
+ * Soroban contract error codes and translation keys.
  *
  * Error codes match the on-chain contract enum exactly.
- * Use parseContractError() to convert any thrown error (SDK or otherwise)
- * into a display-ready string before showing it to the user.
+ * Use parseContractError() to convert any thrown error into a translation key.
+ * Callers resolve the key via useTranslations('ContractErrors') or a t helper.
  */
 
 // ---------------------------------------------------------------------------
@@ -33,33 +33,32 @@ export enum ContractError {
 }
 
 // ---------------------------------------------------------------------------
-// User-facing messages
+// Translation keys (caller resolves via next-intl t function)
 // ---------------------------------------------------------------------------
 
-export const errorMessages: Record<ContractError, string> = {
-  [ContractError.NotAuthorized]: "You are not authorized to perform this action.",
-  [ContractError.CampaignNotFound]: "This campaign could not be found.",
-  [ContractError.CampaignNotActive]: "This campaign is no longer accepting contributions.",
-  [ContractError.FundingGoalMustBePositive]: "The funding goal must be greater than zero.",
-  [ContractError.InvalidDuration]: "The campaign duration is invalid.",
-  [ContractError.InvalidRevenueShare]: "The revenue share percentage is invalid.",
-  [ContractError.RevenueShareOnlyForStartup]:
-    "Revenue sharing is only available for startup campaigns.",
-  [ContractError.DeadlinePassed]: "The campaign deadline has passed.",
-  [ContractError.ContributionMustBePositive]: "Please enter a valid contribution amount.",
-  [ContractError.DeadlineNotPassed]: "The campaign deadline has not passed yet.",
-  [ContractError.FundsAlreadyWithdrawn]: "The funds for this campaign have already been withdrawn.",
-  [ContractError.FundingGoalNotReached]: "The funding goal has not been reached yet.",
-  [ContractError.NoFundsToWithdraw]: "There are no funds available to withdraw.",
-  [ContractError.CampaignAlreadyVerified]: "This campaign has already been verified.",
-  [ContractError.ValidationFailed]: "Validation failed. Please check your input and try again.",
-  [ContractError.AlreadyVoted]: "You have already voted on this campaign.",
-  [ContractError.NotTokenHolder]: "You must hold the platform token to vote.",
-  [ContractError.VotingQuorumNotMet]: "Not enough votes have been cast yet.",
-  [ContractError.VotingThresholdNotMet]: "The approval threshold has not been reached.",
-};
+const FALLBACK_KEY = "ContractErrors.UnexpectedError";
 
-const FALLBACK_MESSAGE = "An unexpected error occurred. Please try again.";
+export const errorTranslationKeys: Record<ContractError, string> = {
+  [ContractError.NotAuthorized]: "ContractErrors.NotAuthorized",
+  [ContractError.CampaignNotFound]: "ContractErrors.CampaignNotFound",
+  [ContractError.CampaignNotActive]: "ContractErrors.CampaignNotActive",
+  [ContractError.FundingGoalMustBePositive]: "ContractErrors.FundingGoalMustBePositive",
+  [ContractError.InvalidDuration]: "ContractErrors.InvalidDuration",
+  [ContractError.InvalidRevenueShare]: "ContractErrors.InvalidRevenueShare",
+  [ContractError.RevenueShareOnlyForStartup]: "ContractErrors.RevenueShareOnlyForStartup",
+  [ContractError.DeadlinePassed]: "ContractErrors.DeadlinePassed",
+  [ContractError.ContributionMustBePositive]: "ContractErrors.ContributionMustBePositive",
+  [ContractError.DeadlineNotPassed]: "ContractErrors.DeadlineNotPassed",
+  [ContractError.FundsAlreadyWithdrawn]: "ContractErrors.FundsAlreadyWithdrawn",
+  [ContractError.FundingGoalNotReached]: "ContractErrors.FundingGoalNotReached",
+  [ContractError.NoFundsToWithdraw]: "ContractErrors.NoFundsToWithdraw",
+  [ContractError.CampaignAlreadyVerified]: "ContractErrors.CampaignAlreadyVerified",
+  [ContractError.ValidationFailed]: "ContractErrors.ValidationFailed",
+  [ContractError.AlreadyVoted]: "ContractErrors.AlreadyVoted",
+  [ContractError.NotTokenHolder]: "ContractErrors.NotTokenHolder",
+  [ContractError.VotingQuorumNotMet]: "ContractErrors.VotingQuorumNotMet",
+  [ContractError.VotingThresholdNotMet]: "ContractErrors.VotingThresholdNotMet",
+};
 
 // ---------------------------------------------------------------------------
 // Typed error class
@@ -71,7 +70,7 @@ const FALLBACK_MESSAGE = "An unexpected error occurred. Please try again.";
  */
 export class ContractErrorException extends Error {
   constructor(public readonly code: ContractError) {
-    super(errorMessages[code] ?? FALLBACK_MESSAGE);
+    super(`ContractError.${code}`);
     this.name = "ContractErrorException";
   }
 }
@@ -81,49 +80,73 @@ export class ContractErrorException extends Error {
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the user-friendly message for a numeric contract error code.
- * Falls back to a generic message for unknown codes.
+ * Extract the numeric ContractError code from any thrown value.
+ * Returns null if the error doesn't match a known contract error format.
  */
-export function contractErrorMessage(code: number): string {
-  if (code in ContractError) {
-    return errorMessages[code as ContractError];
-  }
-  return FALLBACK_MESSAGE;
-}
-
-/**
- * Converts any thrown value from a contract call into a display-ready string.
- *
- * Handles:
- *  - ContractErrorException (our own typed errors)
- *  - Soroban SDK format:  "Error(Contract, #N)"
- *  - Generic Error with message
- *  - Unknown thrown values
- */
-export function parseContractError(error: unknown): string {
-  // Our own typed contract error
+export function getContractErrorCode(error: unknown): ContractError | null {
   if (error instanceof ContractErrorException) {
-    return error.message;
+    return error.code;
   }
 
   if (error instanceof Error) {
     // Soroban SDK typically formats contract errors as "Error(Contract, #N)"
     const sorobanMatch = error.message.match(/Error\s*\(\s*Contract\s*,\s*#(\d+)\s*\)/i);
     if (sorobanMatch) {
-      return contractErrorMessage(parseInt(sorobanMatch[1], 10));
+      const code = parseInt(sorobanMatch[1], 10);
+      if (code in ContractError) {
+        return code as ContractError;
+      }
     }
 
     // Alternative formats: "contractError: N" or "contract error N"
     const codeMatch = error.message.match(/contract\s*[Ee]rror[:\s]+(\d+)/);
     if (codeMatch) {
-      return contractErrorMessage(parseInt(codeMatch[1], 10));
+      const code = parseInt(codeMatch[1], 10);
+      if (code in ContractError) {
+        return code as ContractError;
+      }
     }
+  }
 
+  return null;
+}
+
+/**
+ * Returns the translation key for a numeric contract error code.
+ * Falls back to a generic key for unknown codes.
+ */
+export function contractErrorKey(code: number): string {
+  if (code in ContractError) {
+    return errorTranslationKeys[code as ContractError] ?? FALLBACK_KEY;
+  }
+  return FALLBACK_KEY;
+}
+
+/**
+ * Converts any thrown value from a contract call into a translation key.
+ *
+ * Handles:
+ *  - ContractErrorException (our own typed errors)
+ *  - Soroban SDK format:  "Error(Contract, #N)"
+ *  - Generic Error with message (returns raw message so callers get human text)
+ *  - Unknown thrown values (returns fallback key)
+ *
+ * Callers should resolve the returned string through their i18n t function:
+ *   showError(tContractErrors(parseContractError(err)))
+ */
+export function parseContractError(error: unknown): string {
+  const code = getContractErrorCode(error);
+  if (code !== null) {
+    return errorTranslationKeys[code] ?? FALLBACK_KEY;
+  }
+
+  if (error instanceof Error) {
     // Return the raw message if it looks human-readable (not a stack trace)
     if (error.message && !error.message.includes("at ") && error.message.length < 200) {
       return error.message;
     }
   }
 
-  return FALLBACK_MESSAGE;
+  return FALLBACK_KEY;
 }
+

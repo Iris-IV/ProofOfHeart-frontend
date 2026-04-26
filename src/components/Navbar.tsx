@@ -91,6 +91,7 @@ export default function Navbar() {
             onClick={toggleTheme}
             className="flex size-9 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-950 hover:bg-black/5 dark:border-white/15 dark:bg-zinc-800 dark:text-white dark:hover:bg-white/10 transition-colors shadow-sm"
             aria-label="Toggle theme"
+            aria-pressed={theme === 'dark'}
           >
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>

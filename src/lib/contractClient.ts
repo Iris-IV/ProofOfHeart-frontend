@@ -1,7 +1,7 @@
 import * as StellarSdk from "@stellar/stellar-sdk";
 import { signTransaction, getAddress } from "@stellar/freighter-api";
 import { Campaign, CampaignStatus, Category } from "../types";
-import { parseContractError } from "../utils/contractErrors";
+import { parseContractError, getContractErrorCode, ContractError } from "../utils/contractErrors";
 import { appendWalletTransaction } from "./transactionLog";
 
 // ---------------------------------------------------------------------------
@@ -295,9 +295,9 @@ export async function getCampaign(id: number): Promise<Campaign | null> {
     if (!result) return null;
     return decodeCampaign(result);
   } catch (err) {
-    const msg = parseContractError(err);
-    if (msg.includes("not be found")) return null;
-    throw new Error(msg);
+    const code = getContractErrorCode(err);
+    if (code === ContractError.CampaignNotFound) return null;
+    throw new Error(parseContractError(err));
   }
 }
 
