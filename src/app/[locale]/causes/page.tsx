@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useTranslations } from 'next-intl';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import { useRouter } from '@/i18n/routing';
 import { Campaign, Vote, CATEGORY_LABELS, CampaignStatus, Category } from '@/types';
 import { explorerTxUrl } from '@/utils/explorer';
 import { SORT_OPTIONS } from '@/lib/mockCauses';

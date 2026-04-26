@@ -7,6 +7,7 @@ import CampaignStatusBadge from './CampaignStatusBadge';
 import FundingProgressBar from './FundingProgressBar';
 import DeadlineCountdown from './DeadlineCountdown';
 import CancelCampaignModal from './cancelCampaignModal';
+import { formatAddress } from '@/lib/formatAddress';
 
 interface CauseCardProps {
   campaign: Campaign;
@@ -31,9 +32,6 @@ function formatDate(ts: number) {
   }).format(new Date(ts * 1000));
 }
 
-function formatAddress(addr: string) {
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-}
 
 export default function CauseCard({
   campaign,

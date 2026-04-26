@@ -117,5 +117,15 @@
     "failed": "Failed",
     "verified": "Verified",
     "verifiedCampaign": "Verified campaign"
+  },
+  "Explore": {
+    "title": "Explore",
+    "subtitle": "Browse causes, see community validation, and support what matters.",
+    "all": "All",
+    "noCausesYet": "No causes yet",
+    "noCausesInCategory": "No causes in this category",
+    "checkBackSoon": "Check back soon — the community is just getting started.",
+    "tryDifferentCategory": "Try selecting a different category above.",
+    "tryAgain": "Try again"
   }
 }

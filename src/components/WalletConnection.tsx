@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getAddress, isConnected, isAllowed } from '@stellar/freighter-api';
 import { useToast } from './ToastProvider';
+import { formatAddress } from '@/lib/formatAddress';
 
 interface WalletConnectionProps {
   onWalletConnected: (publicKey: string) => void;
@@ -72,9 +73,6 @@ export default function WalletConnection({ onWalletConnected, onWalletDisconnect
     onWalletDisconnected();
   };
 
-  const formatAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
 
   return (
     <div className="flex items-center gap-4">

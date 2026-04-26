@@ -9,6 +9,7 @@ import { Link } from '@/i18n/routing';
 import LanguageSwitcher from "./LanguageSwitcher";
 import { getAdmin } from "@/lib/contractClient";
 import { Menu, X, Moon, Sun, ShieldCheck, Plus } from "lucide-react";
+import { formatAddress } from "@/lib/formatAddress";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -37,7 +38,6 @@ export default function Navbar() {
     navLinks.push({ href: "/admin", label: t('admin') });
   }
 
-  const formatAddress = (address: string) => `${address.slice(0, 6)}...${address.slice(-4)}`;
 
   return (
     <header className="sticky top-0 z-50 border-b border-black/5 bg-white/80 backdrop-blur-md dark:border-white/10 dark:bg-zinc-900/80 transition-all duration-300">

@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+
 interface CancelCampaignModalProps {
   campaignTitle: string;
   isOpen: boolean;
@@ -22,15 +24,51 @@ export default function CancelCampaignModal({
   onConfirm,
   onClose,
 }: CancelCampaignModalProps) {
+  const keepActiveRef = useRef<HTMLButtonElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
+  // ESC to close
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      // Focus trap: cycle Tab/Shift+Tab between the two buttons
+      if (e.key === 'Tab') {
+        const first = keepActiveRef.current;
+        const last = cancelRef.current;
+        if (!first || !last) return;
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  // Auto-focus the safe "Keep Active" button when modal opens
+  useEffect(() => {
+    if (isOpen) keepActiveRef.current?.focus();
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
-    // Backdrop
+    // Backdrop — clicking outside also closes
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="cancel-modal-title"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden">
         {/* Header */}
@@ -67,6 +105,7 @@ export default function CancelCampaignModal({
         {/* Actions */}
         <div className="flex gap-3 px-6 pb-6">
           <button
+            ref={keepActiveRef}
             type="button"
             onClick={onClose}
             disabled={isCancelling}
@@ -75,6 +114,7 @@ export default function CancelCampaignModal({
             Keep Active
           </button>
           <button
+            ref={cancelRef}
             type="button"
             onClick={onConfirm}
             disabled={isCancelling}
