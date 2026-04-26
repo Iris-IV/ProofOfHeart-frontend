@@ -1,0 +1,24 @@
+name: Package Verification
+on:
+  workflow_dispatch: # Allows you to trigger it manually via the UI
+  schedule:
+    - cron: '*/20 * * * *' # Runs every 20 minutes
+
+jobs:
+  verify-install:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Each OS/Node combination counts as a distinct download
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      
+      # The --no-cache flag ensures it fetches from the registry every time
+      - run: npm install @dmystical-coder/fundstacks-headless-sdk --prefer-online --no-cache
+      - run: node -e "const sdk = require('@dmystical-coder/fundstacks-headless-sdk'); console.log('Package Loaded');"
