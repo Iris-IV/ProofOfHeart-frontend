@@ -8,7 +8,8 @@
     "disconnect": "Desconectar",
     "admin": "Admin",
     "createCampaign": "Crear Campaña",
-    "selectLanguage": "Seleccionar Idioma"
+    "selectLanguage": "Seleccionar Idioma",
+    "skipToMainContent": "Saltar al contenido principal"
   },
   "Home": {
     "heroTitle": "Validación descentralizada para causas impulsadas por el corazón.",
