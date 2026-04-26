@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CreateCampaignPage from '@/app/[locale]/causes/new/page';
 
@@ -308,10 +308,75 @@ describe('CreateCampaignPage — revenue sharing', () => {
 describe('CreateCampaignPage — submission', () => {
   beforeEach(() => setWalletConnected());
 
+  it('opens review first and only submits after "Confirm & Sign"', async () => {
+    render(<CreateCampaignPage />);
+    await fillRequiredFields();
+
+    await userEvent.click(screen.getByRole('button', { name: /launch campaign/i }));
+
+    expect(
+      screen.getByRole('heading', { name: /review campaign before signing/i }),
+    ).toBeInTheDocument();
+    expect(mockCreateCampaign).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: /confirm & sign/i }));
+
+    await waitFor(() => expect(mockCreateCampaign).toHaveBeenCalledTimes(1));
+  });
+
+  it('allows editing details and reopening review', async () => {
+    render(<CreateCampaignPage />);
+    await fillRequiredFields();
+
+    await userEvent.click(screen.getByRole('button', { name: /launch campaign/i }));
+    expect(screen.getByText('My Test Campaign')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /edit details/i }));
+    expect(
+      screen.queryByRole('heading', { name: /review campaign before signing/i }),
+    ).not.toBeInTheDocument();
+
+    const titleInput = screen.getByLabelText(/campaign title/i);
+    await userEvent.clear(titleInput);
+    await userEvent.type(titleInput, 'Updated Campaign Title');
+
+    await userEvent.click(screen.getByRole('button', { name: /launch campaign/i }));
+    expect(screen.getByText('Updated Campaign Title')).toBeInTheDocument();
+  });
+
+  it('shows a consolidated review with local deadline preview details', async () => {
+    render(<CreateCampaignPage />);
+    await fillRequiredFields({ durationDays: '10' });
+
+    await userEvent.selectOptions(screen.getByLabelText(/category/i), '1');
+    await userEvent.click(screen.getByRole('switch', { name: /revenue sharing/i }));
+    const slider = await screen.findByLabelText(/revenue share percentage/i);
+    fireEvent.change(slider, { target: { value: '500' } }); // 5%
+
+    await userEvent.click(screen.getByRole('button', { name: /launch campaign/i }));
+
+    const reviewDialog = screen.getByRole('dialog');
+    const reviewScope = within(reviewDialog);
+
+    expect(reviewScope.getByText('My Test Campaign')).toBeInTheDocument();
+    expect(reviewScope.getByText(/1,?000 xlm/i)).toBeInTheDocument();
+    expect(reviewScope.getByText(/10 days/i)).toBeInTheDocument();
+    expect(reviewScope.getByText(/^Educational Startup$/)).toBeInTheDocument();
+    expect(reviewScope.getByText('5.00%')).toBeInTheDocument();
+    expect(reviewScope.getByText(/end date \(your timezone\)/i)).toBeInTheDocument();
+
+    const timestampValues = reviewScope
+      .getAllByText(/^\d+$/)
+      .map((node) => node.textContent ?? '')
+      .filter((value) => value.length >= 10);
+    expect(timestampValues.length).toBeGreaterThan(0);
+  });
+
   it('calls createCampaign with correct args on valid submission', async () => {
     render(<CreateCampaignPage />);
     await fillRequiredFields();
     await userEvent.click(screen.getByRole('button', { name: /launch campaign/i }));
+    await userEvent.click(screen.getByRole('button', { name: /confirm & sign/i }));
 
     await waitFor(() => expect(mockCreateCampaign).toHaveBeenCalledTimes(1));
 
@@ -341,6 +406,7 @@ describe('CreateCampaignPage — submission', () => {
     fireEvent.change(slider, { target: { value: '500' } });
 
     await userEvent.click(screen.getByRole('button', { name: /launch campaign/i }));
+    await userEvent.click(screen.getByRole('button', { name: /confirm & sign/i }));
 
     await waitFor(() => expect(mockCreateCampaign).toHaveBeenCalledTimes(1));
 
@@ -355,6 +421,7 @@ describe('CreateCampaignPage — submission', () => {
     render(<CreateCampaignPage />);
     await fillRequiredFields();
     await userEvent.click(screen.getByRole('button', { name: /launch campaign/i }));
+    await userEvent.click(screen.getByRole('button', { name: /confirm & sign/i }));
 
     await waitFor(() => {
       expect(mockShowSuccess).toHaveBeenCalledWith('Campaign created successfully!');
@@ -369,6 +436,7 @@ describe('CreateCampaignPage — submission', () => {
     render(<CreateCampaignPage />);
     await fillRequiredFields();
     await userEvent.click(screen.getByRole('button', { name: /launch campaign/i }));
+    await userEvent.click(screen.getByRole('button', { name: /confirm & sign/i }));
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/causes');
@@ -380,6 +448,7 @@ describe('CreateCampaignPage — submission', () => {
     render(<CreateCampaignPage />);
     await fillRequiredFields();
     await userEvent.click(screen.getByRole('button', { name: /launch campaign/i }));
+    await userEvent.click(screen.getByRole('button', { name: /confirm & sign/i }));
 
     await waitFor(() => {
       expect(mockShowError).toHaveBeenCalledWith(
@@ -396,7 +465,8 @@ describe('CreateCampaignPage — submission', () => {
 
     render(<CreateCampaignPage />);
     await fillRequiredFields();
-    fireEvent.click(screen.getByRole('button', { name: /launch campaign/i }));
+    await userEvent.click(screen.getByRole('button', { name: /launch campaign/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm & sign/i }));
 
     expect(await screen.findByRole('button', { name: /submitting/i })).toBeDisabled();
 

@@ -20,6 +20,17 @@ interface FormErrors {
   revenueSharePercentage?: string;
 }
 
+interface ReviewData {
+  title: string;
+  description: string;
+  fundingGoalXlm: number;
+  durationDays: number;
+  category: Category;
+  hasRevenueSharing: boolean;
+  revenueSharePercentage: number;
+  estimatedDeadlineTimestamp: number;
+}
+
 function validateForm(
   title: string,
   description: string,
@@ -78,6 +89,8 @@ export default function CreateCampaignPage() {
   const [revenueSharePercentage, setRevenueSharePercentage] = useState(1);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
+  const [reviewData, setReviewData] = useState<ReviewData | null>(null);
 
   const DRAFT_KEY = 'proof_of_heart_next_draft';
 
@@ -128,7 +141,68 @@ export default function CreateCampaignPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const formatReviewDate = (timestamp: number) =>
+    new Intl.DateTimeFormat(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZoneName: 'short',
+    }).format(new Date(timestamp * 1000));
+
+  const handleConfirmAndSign = async () => {
+    if (!reviewData) return;
+
+    if (!isWalletConnected || !publicKey) {
+      showError('Please connect your Freighter wallet before creating a campaign.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const fundingGoalStroops = xlmToStroops(reviewData.fundingGoalXlm);
+      const basisPoints = reviewData.hasRevenueSharing
+        ? Math.round(reviewData.revenueSharePercentage * 100)
+        : 0;
+
+      await createCampaign(
+        publicKey,
+        reviewData.title,
+        reviewData.description,
+        fundingGoalStroops,
+        reviewData.durationDays,
+        reviewData.category,
+        reviewData.hasRevenueSharing,
+        basisPoints,
+      );
+
+      showSuccess('Campaign created successfully!');
+      setIsReviewOpen(false);
+      setReviewData(null);
+
+      try {
+        localStorage.removeItem(DRAFT_KEY);
+      } catch (e) {
+        // Ignore errors
+      }
+
+      // Redirect to the newly created campaign detail page
+      try {
+        const newId = await getCampaignCount();
+        router.push(`/causes/${newId}`);
+      } catch {
+        router.push('/causes');
+      }
+    } catch (err) {
+      showError(parseContractError(err));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!isWalletConnected || !publicKey) {
@@ -151,45 +225,20 @@ export default function CreateCampaignPage() {
     }
 
     setErrors({});
-    setIsSubmitting(true);
+    const parsedGoal = parseFloat(fundingGoal);
+    const parsedDays = parseInt(durationDays, 10);
 
-    try {
-      const fundingGoalStroops = xlmToStroops(parseFloat(fundingGoal));
-      const days = parseInt(durationDays, 10);
-      // Convert percentage to basis points: e.g. 5% → 500 bps
-      const basisPoints = hasRevenueSharing ? Math.round(revenueSharePercentage * 100) : 0;
-
-      await createCampaign(
-        publicKey,
-        title.trim(),
-        description.trim(),
-        fundingGoalStroops,
-        days,
-        category,
-        hasRevenueSharing,
-        basisPoints,
-      );
-
-      showSuccess('Campaign created successfully!');
-
-      try {
-        localStorage.removeItem(DRAFT_KEY);
-      } catch (e) {
-        // Ignore errors
-      }
-
-      // Redirect to the newly created campaign detail page
-      try {
-        const newId = await getCampaignCount();
-        router.push(`/causes/${newId}`);
-      } catch {
-        router.push('/causes');
-      }
-    } catch (err) {
-      showError(parseContractError(err));
-    } finally {
-      setIsSubmitting(false);
-    }
+    setReviewData({
+      title: title.trim(),
+      description: description.trim(),
+      fundingGoalXlm: parsedGoal,
+      durationDays: parsedDays,
+      category,
+      hasRevenueSharing,
+      revenueSharePercentage: hasRevenueSharing ? revenueSharePercentage : 0,
+      estimatedDeadlineTimestamp: Math.floor(Date.now() / 1000) + parsedDays * 86400,
+    });
+    setIsReviewOpen(true);
   };
 
   // ---------------------------------------------------------------------------
@@ -487,13 +536,136 @@ export default function CreateCampaignPage() {
               disabled={isSubmitting || !isWalletConnected}
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isSubmitting && (
-                <span className="inline-block motion-safe:animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-              )}
-              {isSubmitting ? 'Submitting…' : 'Launch Campaign'}
+              Launch Campaign
             </button>
           </div>
         </form>
+
+        {isReviewOpen && reviewData && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="campaign-review-title"
+            onClick={(e) => {
+              if (e.target === e.currentTarget && !isSubmitting) {
+                setIsReviewOpen(false);
+              }
+            }}
+          >
+            <div className="w-full max-w-xl rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-2xl overflow-hidden">
+              <div className="px-6 py-5 border-b border-zinc-200 dark:border-zinc-700">
+                <h2
+                  id="campaign-review-title"
+                  className="text-xl font-semibold text-zinc-900 dark:text-zinc-50"
+                >
+                  Review Campaign Before Signing
+                </h2>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+                  Launching is irreversible on-chain. Confirm these details before signing in
+                  Freighter.
+                </p>
+              </div>
+
+              <dl className="px-6 py-5 space-y-4">
+                <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
+                  <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                    Title
+                  </dt>
+                  <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mt-1">
+                    {reviewData.title}
+                  </dd>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
+                    <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                      Funding Goal
+                    </dt>
+                    <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mt-1">
+                      {reviewData.fundingGoalXlm.toLocaleString(undefined, {
+                        maximumFractionDigits: 7,
+                      })}{' '}
+                      XLM
+                    </dd>
+                  </div>
+
+                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
+                    <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                      Duration
+                    </dt>
+                    <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mt-1">
+                      {reviewData.durationDays} day
+                      {reviewData.durationDays === 1 ? '' : 's'}
+                    </dd>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
+                    <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                      Category
+                    </dt>
+                    <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mt-1">
+                      {CATEGORY_LABELS[reviewData.category]}
+                    </dd>
+                  </div>
+
+                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
+                    <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                      Revenue Share
+                    </dt>
+                    <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mt-1">
+                      {reviewData.hasRevenueSharing
+                        ? `${reviewData.revenueSharePercentage.toFixed(2)}%`
+                        : '0.00% (Not enabled)'}
+                    </dd>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
+                  <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                    End Date (Your Timezone)
+                  </dt>
+                  <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mt-1">
+                    {formatReviewDate(reviewData.estimatedDeadlineTimestamp)}
+                  </dd>
+                </div>
+
+                <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
+                  <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                    Estimated Deadline Timestamp
+                  </dt>
+                  <dd className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mt-1 tabular-nums">
+                    {reviewData.estimatedDeadlineTimestamp}
+                  </dd>
+                </div>
+              </dl>
+
+              <div className="px-6 py-5 border-t border-zinc-200 dark:border-zinc-700 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsReviewOpen(false)}
+                  disabled={isSubmitting}
+                  className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Edit Details
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmAndSign}
+                  disabled={isSubmitting || !isWalletConnected}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isSubmitting && (
+                    <span className="inline-block motion-safe:animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                  )}
+                  {isSubmitting ? 'Submitting…' : 'Confirm & Sign'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
