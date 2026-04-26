@@ -8,7 +8,8 @@
     "disconnect": "Disconnect",
     "admin": "Admin",
     "createCampaign": "Create Campaign",
-    "selectLanguage": "Select Language"
+    "selectLanguage": "Select Language",
+    "skipToMainContent": "Skip to main content"
   },
   "Home": {
     "heroTitle": "Decentralized validation for heart-driven causes.",
