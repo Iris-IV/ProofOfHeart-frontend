@@ -154,7 +154,7 @@ function Toast({
         aria-label="Dismiss notification"
         className="shrink-0 opacity-60 hover:opacity-100 transition-opacity text-lg leading-none mt-0.5"
       >
-        ×
+        <span aria-hidden="true">×</span>
       </button>
     </div>
   );
