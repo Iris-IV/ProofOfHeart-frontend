@@ -29,7 +29,7 @@ export default function Navbar() {
 
   const navLinks = [
     { href: "/", label: t('home') },
-    { href: "/explore", label: t('explore') },
+    { href: "/causes", label: t('explore') },
     { href: "/about", label: t('about') },
   ];
 

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Campaign, Vote, CATEGORY_LABELS, CampaignStatus } from '@/types';
+import { Campaign, Vote, CATEGORY_LABELS, CampaignStatus, Category } from '@/types';
 import { explorerTxUrl } from '@/utils/explorer';
 import { SORT_OPTIONS } from '@/lib/mockCauses';
 import { useCampaigns } from '@/hooks/useCampaigns';
@@ -13,6 +13,13 @@ import { parseContractError } from '@/utils/contractErrors';
 import { cancelCampaign, claimRefund, voteOnCampaign, hasVoted } from '@/lib/contractClient';
 import CauseCard from '@/components/CauseCard';
 import { CauseCardSkeleton } from '@/components/Skeleton';
+
+const CATEGORY_ICONS: Record<Category, string> = {
+  [Category.Learner]: '🎓',
+  [Category.EducationalStartup]: '🚀',
+  [Category.Educator]: '👩‍🏫',
+  [Category.Publisher]: '📚',
+};
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -361,6 +368,25 @@ function CausesContent() {
             )}
           </div>
         </div>
+
+        {/* Category pills */}
+        {!isLoading && !error && (
+          <div className="flex flex-wrap gap-2 mb-6">
+            {(['all', ...Object.values(Category).filter((v) => typeof v === 'number')] as ('all' | Category)[]).map((cat) => (
+              <button
+                key={String(cat)}
+                onClick={() => setCategory(cat === 'all' ? 'all' : String(cat))}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  (cat === 'all' ? category === 'all' : category === String(cat))
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                }`}
+              >
+                {cat === 'all' ? 'All' : `${CATEGORY_ICONS[cat as Category]} ${CATEGORY_LABELS[cat as Category]}`}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Error state */}
         {error && (
