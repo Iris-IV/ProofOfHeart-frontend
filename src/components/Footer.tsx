@@ -1,14 +1,18 @@
+"use client";
+
 import { Link } from "@/i18n/routing";
 import Image from "next/image";
-
-const productLinks = [
-  { href: "/", label: "Home" },
-  { href: "/causes", label: "Explore Causes" },
-  { href: "/about", label: "About" },
-];
+import { useTranslations } from "next-intl";
 
 export default function Footer() {
+  const t = useTranslations("Footer");
   const year = new Date().getFullYear();
+
+  const productLinks = [
+    { href: "/", label: t("home") },
+    { href: "/causes", label: t("exploreCauses") },
+    { href: "/about", label: t("about") },
+  ];
 
   return (
     <footer className="border-t border-black/5 bg-white dark:border-white/10 dark:bg-zinc-900">
@@ -25,14 +29,15 @@ export default function Footer() {
               />
             </div>
             <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-              A decentralized launchpad where the community validates causes and contributions are
-              accounted for on-chain.
+              {t("tagline")}
             </p>
           </div>
 
           <div className="flex flex-wrap gap-8">
             <div>
-              <h3 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">Product</h3>
+              <h3 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
+                {t("productHeading")}
+              </h3>
               <ul className="mt-3 space-y-2 text-sm">
                 {productLinks.map((link) => (
                   <li key={link.href}>
@@ -48,7 +53,9 @@ export default function Footer() {
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">Links</h3>
+              <h3 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
+                {t("linksHeading")}
+              </h3>
               <ul className="mt-3 space-y-2 text-sm">
                 <li>
                   <a
@@ -57,7 +64,7 @@ export default function Footer() {
                     rel="noopener noreferrer"
                     className="text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-50"
                   >
-                    GitHub
+                    {t("github")}
                   </a>
                 </li>
                 <li>
@@ -67,7 +74,7 @@ export default function Footer() {
                     rel="noopener noreferrer"
                     className="text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-50"
                   >
-                    Stellar
+                    {t("stellar")}
                   </a>
                 </li>
               </ul>
@@ -76,8 +83,8 @@ export default function Footer() {
         </div>
 
         <div className="mt-10 flex flex-col gap-2 border-t border-black/5 pt-6 text-sm text-zinc-500 dark:border-white/10 dark:text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {year} ProofOfHeart. All rights reserved.</p>
-          <p>Built with Next.js + Stellar</p>
+          <p>{t("rights", { year })}</p>
+          <p>{t("builtWith")}</p>
         </div>
       </div>
     </footer>

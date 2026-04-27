@@ -148,6 +148,18 @@
     "verified": "Verificada",
     "verifiedCampaign": "Campaña verificada"
   },
+  "Footer": {
+    "tagline": "Una plataforma de lanzamiento descentralizada donde la comunidad valida causas y las contribuciones se registran en la cadena.",
+    "productHeading": "Producto",
+    "linksHeading": "Enlaces",
+    "home": "Inicio",
+    "exploreCauses": "Explorar Causas",
+    "about": "Nosotros",
+    "github": "GitHub",
+    "stellar": "Stellar",
+    "rights": "© {year} ProofOfHeart. Todos los derechos reservados.",
+    "builtWith": "Construido con Next.js + Stellar"
+  },
   "Explore": {
     "title": "Explorar",
     "subtitle": "Explora causas, ve la validación de la comunidad y apoya lo que importa.",

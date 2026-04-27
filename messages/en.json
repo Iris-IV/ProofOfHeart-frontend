@@ -148,6 +148,18 @@
     "verified": "Verified",
     "verifiedCampaign": "Verified campaign"
   },
+  "Footer": {
+    "tagline": "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
+    "productHeading": "Product",
+    "linksHeading": "Links",
+    "home": "Home",
+    "exploreCauses": "Explore Causes",
+    "about": "About",
+    "github": "GitHub",
+    "stellar": "Stellar",
+    "rights": "© {year} ProofOfHeart. All rights reserved.",
+    "builtWith": "Built with Next.js + Stellar"
+  },
   "Explore": {
     "title": "Explore",
     "subtitle": "Browse causes, see community validation, and support what matters.",
