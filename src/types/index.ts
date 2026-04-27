@@ -154,4 +154,26 @@ export interface UpdatePayload {
   timestamp: number;
 }
 
+// ---------------------------------------------------------------------------
+// Comment & Q&A types
+// ---------------------------------------------------------------------------
+
+export interface Comment {
+  id: string;
+  campaignId: number;
+  content: string;
+  authorAddress: string;
+  timestamp: number; // Unix timestamp in seconds
+  parentId: string | null;
+  signature: string;
+  isPinned: boolean;
+  isReported: boolean;
+}
+
+export interface CommentPayload {
+  campaignId: number;
+  content: string;
+  timestamp: number;
+}
+
 // VotingResult is deprecated; use local state shape instead if needed
