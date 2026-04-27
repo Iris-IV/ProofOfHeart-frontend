@@ -8,6 +8,9 @@ import { useRouter } from '@/i18n/routing';
 import { createCampaign, getCampaignCount } from '@/lib/contractClient';
 import { Category, CATEGORY_LABELS, xlmToStroops } from '@/types';
 import { parseContractError } from '@/utils/contractErrors';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 
 // ---------------------------------------------------------------------------
 // Validation — returns translation keys instead of hardcoded strings
@@ -93,6 +96,7 @@ export default function CreateCampaignPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [reviewData, setReviewData] = useState<ReviewData | null>(null);
+  const [descriptionTab, setDescriptionTab] = useState<'write' | 'preview'>('write');
 
   const DRAFT_KEY = 'proof_of_heart_next_draft';
 
@@ -327,21 +331,57 @@ export default function CreateCampaignPage() {
             >
               {t('labelDescription')} <span className="text-red-500">*</span>
             </label>
-            <textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              maxLength={1000}
-              rows={5}
-              aria-invalid={Boolean(errorKeys.description)}
-              aria-describedby={errorKeys.description ? 'description-error' : undefined}
-              placeholder={t('placeholderDescription')}
-              className={`w-full px-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y transition-colors ${
-                errorKeys.description
-                  ? 'border-red-400 dark:border-red-500'
-                  : 'border-zinc-200 dark:border-zinc-600'
-              }`}
-            />
+            <div className="border border-zinc-200 dark:border-zinc-600 rounded-lg overflow-hidden">
+              <div className="flex border-b border-zinc-200 dark:border-zinc-600">
+                <button
+                  type="button"
+                  onClick={() => setDescriptionTab('write')}
+                  className={`px-4 py-2 text-sm font-medium ${
+                    descriptionTab === 'write'
+                      ? 'bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50'
+                      : 'bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700'
+                  }`}
+                >
+                  Write
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDescriptionTab('preview')}
+                  className={`px-4 py-2 text-sm font-medium ${
+                    descriptionTab === 'preview'
+                      ? 'bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50'
+                      : 'bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700'
+                  }`}
+                >
+                  Preview
+                </button>
+              </div>
+              {descriptionTab === 'write' ? (
+                <textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  maxLength={1000}
+                  rows={5}
+                  aria-invalid={Boolean(errorKeys.description)}
+                  aria-describedby={errorKeys.description ? 'description-error' : undefined}
+                  placeholder={t('placeholderDescription')}
+                  className="w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none resize-y"
+                />
+              ) : (
+                <div className="px-3 py-2 min-h-[120px] bg-zinc-50 dark:bg-zinc-700 text-sm text-zinc-600 dark:text-zinc-400">
+                  {description.trim() ? (
+                    <div className="prose prose-zinc dark:prose-invert max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+                        {description}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <span className="italic text-zinc-400">Nothing to preview</span>
+                  )}
+                </div>
+              )}
+            </div>
             <div className="flex justify-between mt-1">
               {err('description') ? (
                 <p id="description-error" className="text-xs text-red-500">
