@@ -15,6 +15,7 @@ interface CauseCardProps {
   onVote: (campaignId: number, voteType: 'upvote' | 'downvote') => Promise<void>;
   onCancel: (campaignId: number) => Promise<void>;
   onClaimRefund: (campaignId: number) => Promise<void>;
+  onTagClick?: (tag: string) => void;
   userVote?: Vote;
 }
 
@@ -39,6 +40,7 @@ export default function CauseCard({
   onVote,
   onCancel,
   onClaimRefund,
+  onTagClick,
   userVote,
 }: CauseCardProps) {
   const [isVoting, setIsVoting] = useState(false);
@@ -120,6 +122,21 @@ export default function CauseCard({
         <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3 leading-relaxed">
           {campaign.description}
         </p>
+
+        {/* Tags */}
+        {campaign.tags && campaign.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {campaign.tags.map((tag) => (
+              <span
+                key={tag}
+                onClick={() => onTagClick?.(tag)}
+                className="inline-flex items-center px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-700/50 text-zinc-600 dark:text-zinc-400 text-[10px] font-medium border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Funding progress */}
         <div className="space-y-1.5">

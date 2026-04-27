@@ -44,6 +44,7 @@ function CausesContent() {
   const [category, setCategory] = useState(searchParams.get('category') ?? 'all');
   const [status, setStatus] = useState(searchParams.get('status') ?? 'all');
   const [sort, setSort] = useState(searchParams.get('sort') ?? 'newest');
+  const [tag, setTag] = useState(searchParams.get('tag') ?? '');
 
   const debouncedSearch = useDebounce(rawSearch, 300);
 
@@ -70,9 +71,10 @@ function CausesContent() {
     if (category !== 'all') params.set('category', category);
     if (status !== 'all') params.set('status', status);
     if (sort !== 'newest') params.set('sort', sort);
+    if (tag) params.set('tag', tag);
     const qs = params.toString();
     router.replace(qs ? `/causes?${qs}` : '/causes', { scroll: false });
-  }, [debouncedSearch, category, status, sort, router]);
+  }, [debouncedSearch, category, status, sort, tag, router]);
 
   // Load user votes whenever wallet or campaigns change
   const loadUserVotes = useCallback(async () => {
@@ -203,14 +205,16 @@ function CausesContent() {
       const q = debouncedSearch.toLowerCase();
       result = result.filter(
         (c) =>
-          c.title.toLowerCase().includes(q) ||
-          c.description.toLowerCase().includes(q) ||
-          (CATEGORY_LABELS[c.category] ?? '').toLowerCase().includes(q)
-      );
-    }
-
-    if (category !== 'all') result = result.filter((c) => String(c.category) === category);
-    if (status !== 'all') result = result.filter((c) => c.status === status);
+            c.title.toLowerCase().includes(q) ||
+            c.description.toLowerCase().includes(q) ||
+            (CATEGORY_LABELS[c.category] ?? '').toLowerCase().includes(q) ||
+            c.tags?.some((t) => t.toLowerCase().includes(q))
+        );
+      }
+  
+      if (category !== 'all') result = result.filter((c) => String(c.category) === category);
+      if (status !== 'all') result = result.filter((c) => c.status === status);
+      if (tag) result = result.filter((c) => c.tags?.includes(tag));
 
     switch (sort) {
       case 'oldest':
@@ -242,16 +246,17 @@ function CausesContent() {
     }
 
     return result;
-  }, [campaigns, debouncedSearch, category, status, sort, voteCounts]);
+  }, [campaigns, debouncedSearch, category, status, sort, tag, voteCounts]);
 
   const hasActiveFilters =
-    debouncedSearch || category !== 'all' || status !== 'all' || sort !== 'newest';
+    debouncedSearch || category !== 'all' || status !== 'all' || sort !== 'newest' || tag;
 
   const clearFilters = () => {
     setRawSearch('');
     setCategory('all');
     setStatus('all');
     setSort('newest');
+    setTag('');
   };
 
   // -------------------------------------------------------------------------
@@ -269,6 +274,20 @@ function CausesContent() {
           <p className="text-zinc-600 dark:text-zinc-400">
             {t('pageSubtitle')}
           </p>
+          {tag && (
+            <div className="flex items-center gap-2 mt-4 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-lg w-fit">
+              <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                Filter: #{tag}
+              </span>
+              <button
+                onClick={() => setTag('')}
+                className="ml-1 text-blue-400 hover:text-blue-600 dark:hover:text-blue-200 transition-colors"
+                aria-label="Clear tag filter"
+              >
+                ✕
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Search + filters bar */}
@@ -437,6 +456,7 @@ function CausesContent() {
                     onVote={handleVote}
                     onCancel={handleCancel}
                     onClaimRefund={handleClaimRefund}
+                    onTagClick={(t: string) => setTag(t)}
                     userVote={userVotes[campaign.id]}
                   />
                 ))}

@@ -30,6 +30,7 @@ interface ReviewData {
   hasRevenueSharing: boolean;
   revenueSharePercentage: number;
   estimatedDeadlineTimestamp: number;
+  tags: string[];
 }
 
 function validateForm(
@@ -39,6 +40,7 @@ function validateForm(
   durationDays: string,
   hasRevenueSharing: boolean,
   revenueSharePercentage: number,
+  tags: string[],
 ): FormErrorKeys {
   const errors: FormErrorKeys = {};
 
@@ -93,6 +95,8 @@ export default function CreateCampaignPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [reviewData, setReviewData] = useState<ReviewData | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
 
   const DRAFT_KEY = 'proof_of_heart_next_draft';
 
@@ -109,6 +113,7 @@ export default function CreateCampaignPage() {
         if (parsed.hasRevenueSharing !== undefined) setHasRevenueSharing(parsed.hasRevenueSharing);
         if (parsed.revenueSharePercentage !== undefined)
           setRevenueSharePercentage(parsed.revenueSharePercentage);
+        if (parsed.tags) setTags(parsed.tags);
       }
     } catch (e) {
       console.warn('Failed to load draft from localStorage:', e);
@@ -127,12 +132,13 @@ export default function CreateCampaignPage() {
           category,
           hasRevenueSharing,
           revenueSharePercentage,
+          tags,
         }),
       );
     } catch (e) {
       console.warn('Failed to save draft to localStorage:', e);
     }
-  }, [title, description, fundingGoal, durationDays, category, hasRevenueSharing, revenueSharePercentage]);
+  }, [title, description, fundingGoal, durationDays, category, hasRevenueSharing, revenueSharePercentage, tags]);
 
   const isStartup = category === Category.EducationalStartup;
 
@@ -179,6 +185,7 @@ export default function CreateCampaignPage() {
         reviewData.category,
         reviewData.hasRevenueSharing,
         basisPoints,
+        reviewData.tags,
       );
 
       showSuccess(t('successMessage'));
@@ -219,6 +226,7 @@ export default function CreateCampaignPage() {
       durationDays,
       hasRevenueSharing,
       revenueSharePercentage,
+      tags,
     );
 
     if (Object.keys(keys).length > 0) {
@@ -239,6 +247,7 @@ export default function CreateCampaignPage() {
       hasRevenueSharing,
       revenueSharePercentage: hasRevenueSharing ? revenueSharePercentage : 0,
       estimatedDeadlineTimestamp: Math.floor(Date.now() / 1000) + parsedDays * 86400,
+      tags,
     });
     setIsReviewOpen(true);
   };
@@ -554,6 +563,49 @@ export default function CreateCampaignPage() {
             </div>
           )}
 
+          {/* Tags */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              {t('labelTags')} <span className="text-xs font-normal text-zinc-400">({t('tagsLimitTip')})</span>
+            </label>
+            <div className={`flex flex-wrap gap-2 p-2 rounded-lg border bg-zinc-50 dark:bg-zinc-700 transition-colors ${tags.length >= 3 ? 'border-zinc-200 dark:border-zinc-600' : 'border-zinc-200 dark:border-zinc-600 focus-within:ring-2 focus-within:ring-blue-500'}`}>
+              {tags.map((tag: string, idx: number) => (
+                <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-medium border border-blue-200 dark:border-blue-800 transition-all">
+                  #{tag}
+                  <button
+                    type="button"
+                    onClick={() => setTags(tags.filter((_: string, i: number) => i !== idx))}
+                    className="hover:text-blue-900 dark:hover:text-blue-100 transition-colors"
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+              {tags.length < 3 && (
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTagInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                    if (e.key === 'Enter' || e.key === ',') {
+                      e.preventDefault();
+                      const val = tagInput.trim();
+                      if (val && !tags.includes(val)) {
+                        setTags([...tags, val]);
+                        setTagInput('');
+                      }
+                    }
+                  }}
+                  placeholder={tags.length === 0 ? t('placeholderTags') : ''}
+                  className="flex-1 bg-transparent border-none outline-none text-sm text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 min-w-[120px]"
+                />
+              )}
+            </div>
+            <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
+              {t('tagsHelpText')}
+            </p>
+          </div>
+
           {/* Actions */}
           <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-700">
             <button
@@ -666,6 +718,21 @@ export default function CreateCampaignPage() {
                     {formatReviewDate(reviewData.estimatedDeadlineTimestamp)}
                   </dd>
                 </div>
+
+                {reviewData.tags.length > 0 && (
+                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
+                    <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                      {t('reviewFieldTags')}
+                    </dt>
+                    <dd className="flex flex-wrap gap-2 mt-1.5">
+                      {reviewData.tags.map((tag) => (
+                        <span key={tag} className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold border border-zinc-300 dark:border-zinc-600">
+                          #{tag}
+                        </span>
+                      ))}
+                    </dd>
+                  </div>
+                )}
 
                 <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
                   <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">

@@ -153,6 +153,7 @@ function decodeCampaign(val: StellarSdk.xdr.ScVal): Campaign {
     category: fields["category"].u32() as Category,
     has_revenue_sharing: fields["has_revenue_sharing"].b(),
     revenue_share_percentage: fields["revenue_share_percentage"].u32(),
+    tags: fields["tags"] ? (fields["tags"] as any).vec().map((v: any) => v.str().toString()) : [],
   };
 }
 
@@ -178,6 +179,7 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     has_revenue_sharing: false,
     created_at: Math.floor(Date.now() / 1000),
     revenue_share_percentage: 0,
+    tags: ["water", "rural", "health"],
   },
   {
     id: 2,
@@ -196,6 +198,7 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     category: Category.EducationalStartup,
     has_revenue_sharing: true,
     revenue_share_percentage: 500,
+    tags: ["education", "tech", "children"],
   },
   {
     id: 3,
@@ -214,6 +217,7 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     category: Category.Educator,
     has_revenue_sharing: false,
     revenue_share_percentage: 0,
+    tags: ["medical", "clinic", "rural"],
   },
   {
     id: 4,
@@ -409,8 +413,30 @@ export async function createCampaign(
   category: Category,
   hasRevenueSharing: boolean,
   revenueSharePercentage: number,
+  tags: string[],
 ): Promise<string> {
-  if (USE_MOCKS) return "mock_tx_create_campaign";
+  if (USE_MOCKS) {
+    MOCK_CAMPAIGNS.push({
+      id: MOCK_CAMPAIGNS.length + 1,
+      creator,
+      title,
+      description,
+      funding_goal: fundingGoal,
+      deadline: Math.floor(Date.now() / 1000) + durationDays * 86400,
+      amount_raised: BigInt(0),
+      is_active: true,
+      status: "active",
+      created_at: Math.floor(Date.now() / 1000),
+      funds_withdrawn: false,
+      is_cancelled: false,
+      is_verified: false,
+      category,
+      has_revenue_sharing: hasRevenueSharing,
+      revenue_share_percentage: revenueSharePercentage,
+      tags,
+    });
+    return "mock_tx_create_campaign";
+  }
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     "create_campaign",

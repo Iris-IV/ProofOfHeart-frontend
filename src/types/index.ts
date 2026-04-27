@@ -44,6 +44,7 @@ export interface Campaign {
   category: Category;
   has_revenue_sharing: boolean;
   revenue_share_percentage: number; // basis points (e.g. 300 = 3%)
+  tags?: string[];
 }
 
 // ---------------------------------------------------------------------------
