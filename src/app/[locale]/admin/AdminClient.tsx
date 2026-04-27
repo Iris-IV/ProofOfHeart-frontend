@@ -37,6 +37,8 @@ import {
   REPORT_REASON_LABELS,
   type CampaignReport,
 } from "@/lib/campaignReports";
+import CancelCampaignModal from "@/components/cancelCampaignModal";
+import { Campaign } from "@/types";
 
 export default function AdminDashboard() {
   const { campaigns, isLoading, refetch, isRefreshing } = useCampaigns();
@@ -61,6 +63,13 @@ export default function AdminDashboard() {
     setReports(getAllReports());
   }, []);
 
+  // Rejection Modal State
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [campaignToReject, setCampaignToReject] = useState<Campaign | null>(null);
+
+  // Optimistic UI State
+  const [optimisticRemovedIds, setOptimisticRemovedIds] = useState<number[]>([]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -84,13 +93,32 @@ export default function AdminDashboard() {
     };
   }, []);
 
+  // Reconcile optimistic updates when raw data changes
+  useEffect(() => {
+    if (optimisticRemovedIds.length === 0) return;
+    
+    // Remove IDs from optimistic list if they are no longer in the "actually pending" server data
+    setOptimisticRemovedIds(prev => prev.filter(id => {
+      const isStillInServerData = campaigns.some(c => 
+        c.id === id && !c.is_verified && c.is_active && !c.is_cancelled
+      );
+      return isStillInServerData;
+    }));
+  }, [campaigns]);
+
   const isAdmin = useMemo(() => {
     return isSameAddress(publicKey, adminAddress);
   }, [publicKey, adminAddress]);
 
   const pendingCampaigns = useMemo(() => {
-    return campaigns.filter((c) => !c.is_verified && c.is_active && !c.is_cancelled);
-  }, [campaigns]);
+    return campaigns.filter(
+      (c) =>
+        !c.is_verified &&
+        c.is_active &&
+        !c.is_cancelled &&
+        !optimisticRemovedIds.includes(c.id),
+    );
+  }, [campaigns, optimisticRemovedIds]);
 
   const totalRaised = useMemo(() => {
     return campaigns.reduce((sum, c) => sum + BigInt(c.amount_raised), BigInt(0));
@@ -105,6 +133,7 @@ export default function AdminDashboard() {
     try {
       await verifyCampaign(id);
       showSuccess("Campaign approved successfully!");
+      setOptimisticRemovedIds((prev) => [...prev, id]);
       refetch();
     } catch (err) {
       showError(parseContractError(err));
@@ -113,12 +142,19 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleReject = async (id: number) => {
-    if (!confirm("Are you sure you want to reject (cancel) this campaign?")) return;
-    setCancellingId(id);
+  const handleReject = (campaign: Campaign) => {
+    setCampaignToReject(campaign);
+    setIsRejectModalOpen(true);
+  };
+
+  const handleConfirmReject = async () => {
+    if (!campaignToReject) return;
+    setCancellingId(campaignToReject.id);
     try {
-      await cancelCampaign(id);
+      await cancelCampaign(campaignToReject.id);
       showSuccess("Campaign rejected and cancelled.");
+      setOptimisticRemovedIds((prev) => [...prev, campaignToReject.id]);
+      setIsRejectModalOpen(false);
       refetch();
     } catch (err) {
       showError(parseContractError(err));
@@ -365,7 +401,7 @@ export default function AdminDashboard() {
                         </Link>
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleReject(c.id)}
+                            onClick={() => handleReject(c)}
                             disabled={cancellingId === c.id || verifyingId === c.id}
                             className="size-12 flex items-center justify-center rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 border border-red-100 dark:border-red-900/50 hover:bg-red-100 transition disabled:opacity-50"
                             title={t("reject")}
@@ -561,6 +597,16 @@ export default function AdminDashboard() {
           )}
         </div>
       </section>
+
+      <CancelCampaignModal
+        isOpen={isRejectModalOpen}
+        isCancelling={cancellingId !== null}
+        campaignTitle={campaignToReject?.title ?? ""}
+        onConfirm={handleConfirmReject}
+        onClose={() => setIsRejectModalOpen(false)}
+        title={t("reject")}
+        confirmLabel={t("reject")}
+      />
     </div>
   );
 }

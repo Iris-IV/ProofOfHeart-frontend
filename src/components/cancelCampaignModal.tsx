@@ -8,6 +8,8 @@ interface CancelCampaignModalProps {
   isCancelling: boolean;
   onConfirm: () => Promise<void>;
   onClose: () => void;
+  title?: string;
+  confirmLabel?: string;
 }
 
 /**
@@ -23,6 +25,8 @@ export default function CancelCampaignModal({
   isCancelling,
   onConfirm,
   onClose,
+  title,
+  confirmLabel,
 }: CancelCampaignModalProps) {
   const keepActiveRef = useRef<HTMLButtonElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
@@ -90,7 +94,7 @@ export default function CancelCampaignModal({
                 id="cancel-modal-title"
                 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
               >
-                Cancel Campaign?
+                {title ?? "Cancel Campaign?"}
               </h2>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
                 This action cannot be undone. All contributors will be able to claim full refunds
@@ -129,10 +133,10 @@ export default function CancelCampaignModal({
             {isCancelling ? (
               <>
                 <span className="inline-block motion-safe:animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
-                Cancelling…
+                {confirmLabel ? `${confirmLabel}…` : "Cancelling…"}
               </>
             ) : (
-              "Cancel Campaign"
+              confirmLabel ?? "Cancel Campaign"
             )}
           </button>
         </div>
