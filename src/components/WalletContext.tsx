@@ -20,14 +20,8 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const { showError, showWarning, showSuccess } = useToast();
 
   useEffect(() => {
-    // Restore session from localStorage
-    const storedKey = localStorage.getItem("stellar_wallet_public_key");
-    if (storedKey) {
-      setPublicKey(storedKey);
-      setIsWalletConnected(true);
-    } else {
-      checkWalletConnection();
-    }
+    // Always re-verify with Freighter rather than blindly trusting localStorage (#97)
+    checkWalletConnection();
   }, []);
 
   const checkWalletConnection = async () => {
@@ -39,9 +33,11 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         setPublicKey(key.address);
         setIsWalletConnected(true);
         localStorage.setItem("stellar_wallet_public_key", key.address);
+      } else {
+        localStorage.removeItem("stellar_wallet_public_key");
       }
     } catch {
-      // Not connected
+      localStorage.removeItem("stellar_wallet_public_key");
     }
   };
 
@@ -77,6 +73,10 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     setPublicKey(null);
     setIsWalletConnected(false);
     localStorage.removeItem("stellar_wallet_public_key");
+    // Freighter has no programmatic revoke API. Inform the user how to fully sever access.
+    showWarning(
+      "Disconnected. To fully revoke Freighter access, open the extension and remove this site from Connected Sites."
+    );
   };
 
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Campaign, xlmToStroops, stroopsToXlm } from "../types";
 import { contribute } from "../lib/contractClient";
 import { useWallet } from "./WalletContext";
@@ -26,6 +26,52 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
   const [step, setStep] = useState<Step>("input");
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  // Body scroll lock + focus restoration
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement as HTMLElement;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+      previousFocusRef.current?.focus();
+    };
+  }, []);
+
+  // ESC to close + focus trap
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && step !== "pending") {
+        onClose();
+        return;
+      }
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusable = Array.from(
+          dialogRef.current.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+          )
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [step, onClose]);
 
   const goal = stroopsToXlm(campaign.funding_goal);
   const raised = stroopsToXlm(campaign.amount_raised);
@@ -61,10 +107,16 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && step !== "pending" && onClose()}
     >
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-md border border-zinc-200 dark:border-zinc-700 overflow-hidden">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="donation-modal-title"
+        className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-md border border-zinc-200 dark:border-zinc-700 overflow-hidden"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          <h2 id="donation-modal-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
             {step === "confirmed" ? "Donation Confirmed" : "Fund This Cause"}
           </h2>
           {step !== "pending" && (
