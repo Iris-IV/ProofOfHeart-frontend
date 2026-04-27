@@ -18,7 +18,7 @@ export default function HomeClient() {
 
       <main className="relative container mx-auto px-4 py-24 sm:px-6 lg:px-8">
         {/* Hero Section */}
-        <div className="text-center max-w-5xl mx-auto">
+        <div className="text-center max-w-5xl mx-auto mb-16 sm:mb-24">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-bold mb-8 motion-safe:animate-in fade-in slide-in-from-bottom-4 duration-500">
             <Heart size={16} fill="currentColor" />
             <span>Community Driven Governance</span>
@@ -32,7 +32,7 @@ export default function HomeClient() {
             {t("heroSubtitle")}
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center motion-safe:animate-in fade-in slide-in-from-bottom-10 duration-1000">
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center motion-safe:animate-in fade-in slide-in-from-bottom-10 duration-1000">
             <Link
               href="/explore"
               className="group flex items-center gap-2 px-10 py-4 bg-linear-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-bold rounded-2xl transition-all shadow-xl shadow-red-500/25 hover:shadow-red-500/40 hover:motion-safe:-translate-y-1 active:translate-y-0"
