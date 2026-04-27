@@ -481,11 +481,11 @@ function StatsCard({
   value: string | number;
 }) {
   return (
-    <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2rem] border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow group">
-      <div className="size-12 rounded-2xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+    <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2rem] border border-zinc-100 dark:border-zinc-700 shadow-sm hover:shadow-md transition-shadow group">
+      <div className="size-12 rounded-2xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform" aria-hidden="true">
         {icon}
       </div>
-      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-2 block">
+      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 dark:text-zinc-300 mb-2 block">
         {label}
       </span>
       <span className="text-2xl font-black text-zinc-900 dark:text-zinc-50">{value}</span>
