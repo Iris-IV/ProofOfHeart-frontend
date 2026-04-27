@@ -1,8 +1,12 @@
 import { getTranslations } from "next-intl/server";
+import { buildAlternates } from "@/lib/seo";
 
 export async function generateMetadata() {
   const t = await getTranslations("About");
-  return { title: t("pageTitle") };
+  return {
+    title: t("pageTitle"),
+    alternates: buildAlternates("/about"),
+  };
 }
 
 export default async function AboutPage() {

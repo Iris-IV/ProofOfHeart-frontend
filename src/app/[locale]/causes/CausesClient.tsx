@@ -467,7 +467,7 @@ function CausesContent() {
   );
 }
 
-export default function CausesPage() {
+export default function CausesClient() {
   return (
     <Suspense
       fallback={
