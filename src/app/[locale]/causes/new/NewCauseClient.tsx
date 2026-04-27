@@ -22,6 +22,7 @@ interface FormErrorKeys {
   fundingGoal?: string;
   durationDays?: string;
   revenueSharePercentage?: string;
+  coverImageUrl?: string;
 }
 
 interface ReviewData {
@@ -34,7 +35,10 @@ interface ReviewData {
   revenueSharePercentage: number;
   estimatedDeadlineTimestamp: number;
   tags: string[];
+  coverImageUrl: string;
 }
+
+const IMAGE_URL_RE = /^https?:\/\/.+\..+/;
 
 function validateForm(
   title: string,
@@ -44,6 +48,7 @@ function validateForm(
   hasRevenueSharing: boolean,
   revenueSharePercentage: number,
   tags: string[],
+  coverImageUrl: string,
 ): FormErrorKeys {
   const errors: FormErrorKeys = {};
 
@@ -71,6 +76,10 @@ function validateForm(
 
   if (hasRevenueSharing && (revenueSharePercentage < 0.01 || revenueSharePercentage > 50)) {
     errors.revenueSharePercentage = 'validationRevenueShareInvalid';
+  }
+
+  if (coverImageUrl.trim() && !IMAGE_URL_RE.test(coverImageUrl.trim())) {
+    errors.coverImageUrl = 'validationCoverImageInvalid';
   }
 
   return errors;
@@ -101,6 +110,7 @@ export default function CreateCampaignPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [descriptionTab, setDescriptionTab] = useState<'write' | 'preview'>('write');
+  const [coverImageUrl, setCoverImageUrl] = useState('');
 
   const DRAFT_KEY = 'proof_of_heart_next_draft';
 
@@ -118,6 +128,7 @@ export default function CreateCampaignPage() {
         if (parsed.revenueSharePercentage !== undefined)
           setRevenueSharePercentage(parsed.revenueSharePercentage);
         if (parsed.tags) setTags(parsed.tags);
+        if (parsed.coverImageUrl) setCoverImageUrl(parsed.coverImageUrl);
       }
     } catch (e) {
       console.warn('Failed to load draft from localStorage:', e);
@@ -137,12 +148,13 @@ export default function CreateCampaignPage() {
           hasRevenueSharing,
           revenueSharePercentage,
           tags,
+          coverImageUrl,
         }),
       );
     } catch (e) {
       console.warn('Failed to save draft to localStorage:', e);
     }
-  }, [title, description, fundingGoal, durationDays, category, hasRevenueSharing, revenueSharePercentage, tags]);
+  }, [title, description, fundingGoal, durationDays, category, hasRevenueSharing, revenueSharePercentage, tags, coverImageUrl]);
 
   const isStartup = category === Category.EducationalStartup;
 
@@ -231,6 +243,7 @@ export default function CreateCampaignPage() {
       hasRevenueSharing,
       revenueSharePercentage,
       tags,
+      coverImageUrl,
     );
 
     if (Object.keys(keys).length > 0) {
@@ -252,6 +265,7 @@ export default function CreateCampaignPage() {
       revenueSharePercentage: hasRevenueSharing ? revenueSharePercentage : 0,
       estimatedDeadlineTimestamp: Math.floor(Date.now() / 1000) + parsedDays * 86400,
       tags,
+      coverImageUrl: coverImageUrl.trim(),
     });
     setIsReviewOpen(true);
   };
@@ -646,6 +660,44 @@ export default function CreateCampaignPage() {
             </p>
           </div>
 
+          {/* Cover Image URL */}
+          <div>
+            <label
+              htmlFor="coverImageUrl"
+              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+            >
+              Cover Image URL <span className="text-xs font-normal text-zinc-400">(optional)</span>
+            </label>
+            <input
+              id="coverImageUrl"
+              type="url"
+              value={coverImageUrl}
+              onChange={(e) => setCoverImageUrl(e.target.value)}
+              placeholder="https://ipfs.io/ipfs/... or https://i.imgur.com/..."
+              aria-invalid={Boolean(errorKeys.coverImageUrl)}
+              aria-describedby={errorKeys.coverImageUrl ? 'cover-image-error' : undefined}
+              className={`w-full px-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+                errorKeys.coverImageUrl
+                  ? 'border-red-400 dark:border-red-500'
+                  : 'border-zinc-200 dark:border-zinc-600'
+              }`}
+            />
+            {errorKeys.coverImageUrl && (
+              <p id="cover-image-error" className="text-xs text-red-500 mt-1">
+                Please enter a valid URL (must start with http:// or https://).
+              </p>
+            )}
+            {coverImageUrl && !errorKeys.coverImageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={coverImageUrl}
+                alt="Cover preview"
+                className="mt-2 w-full aspect-video object-cover rounded-lg border border-zinc-200 dark:border-zinc-600"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+              />
+            )}
+          </div>
+
           {/* Actions */}
           <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-700">
             <button
@@ -704,6 +756,17 @@ export default function CreateCampaignPage() {
                     {reviewData.title}
                   </dd>
                 </div>
+
+                {reviewData.coverImageUrl && (
+                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={reviewData.coverImageUrl}
+                      alt="Cover preview"
+                      className="w-full aspect-video object-cover"
+                    />
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">

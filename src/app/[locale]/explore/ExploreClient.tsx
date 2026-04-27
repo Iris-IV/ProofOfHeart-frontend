@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
@@ -124,9 +125,22 @@ export default function ExplorePage() {
                 {idx + 1}
               </span>
 
-              {/* Icon */}
-              <span className="text-2xl shrink-0">
-                {CATEGORY_ICONS[campaign.category] ?? '💡'}
+              {/* Icon / thumbnail */}
+              <span className="text-2xl shrink-0 w-10 h-10 flex items-center justify-center">
+                {campaign.cover_image_url ? (
+                  <span className="relative w-10 h-10 rounded-md overflow-hidden block">
+                    <Image
+                      src={campaign.cover_image_url}
+                      alt={campaign.title}
+                      fill
+                      unoptimized
+                      loading="lazy"
+                      className="object-cover"
+                    />
+                  </span>
+                ) : (
+                  CATEGORY_ICONS[campaign.category] ?? '💡'
+                )}
               </span>
 
               {/* Title + meta */}

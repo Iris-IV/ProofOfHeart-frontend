@@ -10,6 +10,7 @@ import { Link } from '@/i18n/routing';
 import { getAdmin } from "@/lib/contractClient";
 import { formatAddress } from "@/lib/formatAddress";
 import LanguageSwitcher from "./LanguageSwitcher";
+import NotificationBell from "./NotificationBell";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -136,6 +137,8 @@ export default function Navbar() {
           )}
           <div className="hidden sm:block border-r border-zinc-200 dark:border-zinc-800 h-6 mx-1" />
           <LanguageSwitcher />
+
+          <NotificationBell />
 
           <button
             onClick={toggleTheme}

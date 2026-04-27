@@ -12,6 +12,7 @@ import {
   PieChart,
   RefreshCw,
   Smartphone,
+  Flag,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -30,6 +31,12 @@ import {
 import { isSameAddress } from "@/lib/stellar";
 import { stroopsToXlm, Category, CATEGORY_LABELS, basisPointsToPercentage } from "@/types";
 import { parseContractError } from "@/utils/contractErrors";
+import {
+  getAllReports,
+  markReportReviewed,
+  REPORT_REASON_LABELS,
+  type CampaignReport,
+} from "@/lib/campaignReports";
 
 export default function AdminDashboard() {
   const { campaigns, isLoading, refetch, isRefreshing } = useCampaigns();
@@ -47,6 +54,12 @@ export default function AdminDashboard() {
   const [isAdminLoading, setIsAdminLoading] = useState(true);
   const [isUpdatingFee, setIsUpdatingFee] = useState(false);
   const [isUpdatingAdmin, setIsUpdatingAdmin] = useState(false);
+  const [reports, setReports] = useState<CampaignReport[]>([]);
+
+  // Load reports from localStorage on mount
+  useEffect(() => {
+    setReports(getAllReports());
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,6 +125,12 @@ export default function AdminDashboard() {
     } finally {
       setCancellingId(null);
     }
+  };
+
+  const handleMarkReportReviewed = (reportId: string) => {
+    markReportReviewed(reportId);
+    setReports(getAllReports());
+    showSuccess('Report marked as reviewed.');
   };
 
   const handleUpdateFee = async (e: FormEvent) => {
@@ -467,6 +486,81 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* ── Reports Queue ── */}
+      <section className="mt-12">
+        <div className="flex items-center justify-between px-2 mb-6">
+          <h2 className="text-2xl font-bold flex items-center gap-3">
+            <Flag size={22} className="text-red-500" />
+            Abuse Reports
+            <span className="text-sm font-bold px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500">
+              {reports.filter((r) => r.status === 'pending').length} pending
+            </span>
+          </h2>
+        </div>
+
+        <div className="bg-white dark:bg-zinc-900 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
+          {reports.length === 0 ? (
+            <div className="p-16 text-center">
+              <Flag size={32} className="mx-auto text-zinc-300 mb-4" />
+              <p className="text-zinc-500 font-medium">No reports yet</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              {reports.map((report) => (
+                <div key={report.id} className={`p-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4 ${
+                  report.status === 'reviewed' ? 'opacity-50' : ''
+                }`}>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
+                        {REPORT_REASON_LABELS[report.reason]}
+                      </span>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                        report.status === 'pending'
+                          ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'
+                      }`}>
+                        {report.status}
+                      </span>
+                    </div>
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                      Campaign #{report.campaignId}: {report.campaignTitle}
+                    </p>
+                    {report.notes && (
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400">{report.notes}</p>
+                    )}
+                    <p className="text-xs text-zinc-400">
+                      {report.reporterAddress
+                        ? `By ${report.reporterAddress.slice(0, 8)}...${report.reporterAddress.slice(-6)}`
+                        : 'Anonymous'}
+                      {' · '}
+                      {new Date(report.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Link
+                      href={`/causes/${report.campaignId}`}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
+                    >
+                      View <ExternalLink size={12} />
+                    </Link>
+                    {report.status === 'pending' && (
+                      <button
+                        type="button"
+                        onClick={() => handleMarkReportReviewed(report.id)}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-500 text-white rounded-xl text-sm font-medium hover:bg-green-600 transition"
+                      >
+                        <CheckCircle size={14} /> Reviewed
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

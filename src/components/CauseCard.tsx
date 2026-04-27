@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
 import { formatAddress } from '@/lib/formatAddress';
 import { Campaign, Vote, CATEGORY_LABELS } from '../types';
@@ -101,6 +102,24 @@ export default function CauseCard({
 
   return (
     <div className="flex flex-col bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 overflow-hidden hover:shadow-md transition-shadow duration-200">
+
+      {/* ── Cover image ── */}
+      <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-700">
+        {campaign.cover_image_url ? (
+          <Image
+            src={campaign.cover_image_url}
+            alt={campaign.title}
+            fill
+            unoptimized
+            loading="lazy"
+            className="object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-4xl select-none">
+            {categoryIcon || '💡'}
+          </div>
+        )}
+      </div>
 
       {/* ── Card body ── */}
       <div className="p-5 flex-1 space-y-3">
