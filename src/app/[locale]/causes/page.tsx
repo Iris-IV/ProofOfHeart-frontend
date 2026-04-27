@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { buildAlternates } from "@/lib/seo";
 import CausesClient from "./CausesClient";
 
@@ -6,8 +7,24 @@ import CausesClient from "./CausesClient";
 // improves TTFB and SEO without sacrificing data freshness for active users.
 export const revalidate = 30;
 
-export function generateMetadata() {
+export async function generateMetadata() {
+  const t = await getTranslations("Causes");
+  const title = `${t("pageTitle")} | ProofOfHeart`;
+  const description = t("pageSubtitle");
+
   return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
     alternates: buildAlternates("/causes"),
   };
 }

@@ -3,8 +3,22 @@ import { buildAlternates } from "@/lib/seo";
 
 export async function generateMetadata() {
   const t = await getTranslations("About");
+  const title = `${t("pageTitle")} | ProofOfHeart`;
+  const description = t("pageSubtitle");
+
   return {
-    title: t("pageTitle"),
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
     alternates: buildAlternates("/about"),
   };
 }

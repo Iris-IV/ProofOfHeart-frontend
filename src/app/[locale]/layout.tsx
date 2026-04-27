@@ -19,9 +19,23 @@ export function generateStaticParams() {
 }
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://proofofheart.xyz"),
   title: "ProofOfHeart",
   description:
     "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
+  openGraph: {
+    type: "website",
+    siteName: "ProofOfHeart",
+    title: "ProofOfHeart",
+    description: "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
+    images: ["/proof-of-heart-logo.svg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ProofOfHeart",
+    description: "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
+    images: ["/proof-of-heart-logo.svg"],
+  },
 };
 
 export default async function RootLayout({
