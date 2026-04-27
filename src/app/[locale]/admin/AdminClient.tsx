@@ -19,6 +19,7 @@ import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { Link } from "@/i18n/routing";
+import { appendAdminAuditLog, AdminAuditLogEntry, getAdminAuditLog } from "@/lib/adminLog";
 import {
   getAdmin,
   getPlatformFee,
@@ -30,6 +31,7 @@ import {
 import { isSameAddress } from "@/lib/stellar";
 import { stroopsToXlm, Category, CATEGORY_LABELS, basisPointsToPercentage } from "@/types";
 import { parseContractError } from "@/utils/contractErrors";
+import { explorerTxUrl } from "@/utils/explorer";
 
 export default function AdminDashboard() {
   const { campaigns, isLoading, refetch, isRefreshing } = useCampaigns();
@@ -47,6 +49,7 @@ export default function AdminDashboard() {
   const [isAdminLoading, setIsAdminLoading] = useState(true);
   const [isUpdatingFee, setIsUpdatingFee] = useState(false);
   const [isUpdatingAdmin, setIsUpdatingAdmin] = useState(false);
+  const [auditLog, setAuditLog] = useState<AdminAuditLogEntry[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,6 +78,14 @@ export default function AdminDashboard() {
     return isSameAddress(publicKey, adminAddress);
   }, [publicKey, adminAddress]);
 
+  const refreshAuditLog = (address = publicKey) => {
+    if (!address) {
+      setAuditLog([]);
+      return;
+    }
+    setAuditLog(getAdminAuditLog(address, 50));
+  };
+
   const pendingCampaigns = useMemo(() => {
     return campaigns.filter((c) => !c.is_verified && c.is_active && !c.is_cancelled);
   }, [campaigns]);
@@ -90,7 +101,17 @@ export default function AdminDashboard() {
   const handleApprove = async (id: number) => {
     setVerifyingId(id);
     try {
-      await verifyCampaign(id);
+      const txHash = await verifyCampaign(id);
+      if (publicKey) {
+        appendAdminAuditLog({
+          adminAddress: publicKey,
+          action: "verify_campaign",
+          campaignId: id,
+          txHash,
+          details: `Approved campaign #${id}`,
+        });
+        refreshAuditLog(publicKey);
+      }
       showSuccess("Campaign approved successfully!");
       refetch();
     } catch (err) {
@@ -104,7 +125,17 @@ export default function AdminDashboard() {
     if (!confirm("Are you sure you want to reject (cancel) this campaign?")) return;
     setCancellingId(id);
     try {
-      await cancelCampaign(id);
+      const txHash = await cancelCampaign(id);
+      if (publicKey) {
+        appendAdminAuditLog({
+          adminAddress: publicKey,
+          action: "reject_campaign",
+          campaignId: id,
+          txHash,
+          details: `Rejected campaign #${id}`,
+        });
+        refreshAuditLog(publicKey);
+      }
       showSuccess("Campaign rejected and cancelled.");
       refetch();
     } catch (err) {
@@ -123,7 +154,18 @@ export default function AdminDashboard() {
 
     setIsUpdatingFee(true);
     try {
-      await updatePlatformFee(fee);
+      const txHash = await updatePlatformFee(fee);
+      if (publicKey) {
+        const previousFeeLabel =
+          platformFee === null ? "unknown" : `${(platformFee / 100).toFixed(2)}%`;
+        appendAdminAuditLog({
+          adminAddress: publicKey,
+          action: "update_platform_fee",
+          txHash,
+          details: `Updated platform fee from ${previousFeeLabel} to ${(fee / 100).toFixed(2)}% (${fee} bps)`,
+        });
+        refreshAuditLog(publicKey);
+      }
       setPlatformFee(fee);
       showSuccess("Platform fee updated");
     } catch (err) {
@@ -142,7 +184,16 @@ export default function AdminDashboard() {
 
     setIsUpdatingAdmin(true);
     try {
-      await updateAdmin(nextAdmin);
+      const txHash = await updateAdmin(nextAdmin);
+      if (publicKey) {
+        appendAdminAuditLog({
+          adminAddress: publicKey,
+          action: "transfer_admin",
+          txHash,
+          details: `Transferred admin access to ${nextAdmin}`,
+        });
+        refreshAuditLog(publicKey);
+      }
       setAdminAddress(nextAdmin);
       setNewAdminInput("");
       showSuccess("Admin access transferred");
@@ -152,6 +203,14 @@ export default function AdminDashboard() {
       setIsUpdatingAdmin(false);
     }
   };
+
+  useEffect(() => {
+    if (isAdmin && publicKey) {
+      refreshAuditLog(publicKey);
+      return;
+    }
+    setAuditLog([]);
+  }, [isAdmin, publicKey]);
 
   if (!isWalletConnected) {
     return (
@@ -453,6 +512,43 @@ export default function AdminDashboard() {
                 {isUpdatingAdmin ? t("awaitingSignature") : t("transferAdmin")}
               </button>
             </form>
+          </section>
+
+          <section className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 p-8 shadow-sm">
+            <h3 className="text-xl font-bold mb-2">Recent Admin Activity</h3>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 leading-relaxed">
+              Last 50 moderation and governance actions performed by this admin wallet.
+            </p>
+            {auditLog.length === 0 ? (
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                No admin activity recorded on this device yet.
+              </p>
+            ) : (
+              <ul className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                {auditLog.map((entry) => (
+                  <li
+                    key={`${entry.timestamp}-${entry.txHash}`}
+                    className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 p-3"
+                  >
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                      {entry.details ??
+                        `${entry.action.replaceAll("_", " ")}${entry.campaignId ? ` #${entry.campaignId}` : ""}`}
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                      {new Date(entry.timestamp).toLocaleString()}
+                    </p>
+                    <a
+                      href={explorerTxUrl(entry.txHash)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-flex text-xs font-mono text-blue-600 hover:underline dark:text-blue-400"
+                    >
+                      {entry.txHash.slice(0, 10)}...{entry.txHash.slice(-8)}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
 
           {/* Responsibility Footer */}

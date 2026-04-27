@@ -157,6 +157,11 @@ function decodeCampaign(val: StellarSdk.xdr.ScVal): Campaign {
   };
 }
 
+// Exposed for targeted unit tests of XDR decoding behavior.
+export const __testUtils = {
+  decodeCampaign,
+};
+
 // ---------------------------------------------------------------------------
 // Mock data
 // ---------------------------------------------------------------------------

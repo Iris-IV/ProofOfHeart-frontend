@@ -1,6 +1,9 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import ReactMarkdown from 'react-markdown';
+import rehypeSanitize from 'rehype-sanitize';
+import remarkGfm from 'remark-gfm';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ToastProvider';
 import { useWallet } from '@/components/WalletContext';
@@ -8,9 +11,6 @@ import { useRouter } from '@/i18n/routing';
 import { createCampaign, getCampaignCount } from '@/lib/contractClient';
 import { Category, CATEGORY_LABELS, xlmToStroops } from '@/types';
 import { parseContractError } from '@/utils/contractErrors';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeSanitize from 'rehype-sanitize';
 
 // ---------------------------------------------------------------------------
 // Validation — returns translation keys instead of hardcoded strings
@@ -19,6 +19,7 @@ import rehypeSanitize from 'rehype-sanitize';
 interface FormErrorKeys {
   title?: string;
   description?: string;
+  creatorEmail?: string;
   fundingGoal?: string;
   durationDays?: string;
   revenueSharePercentage?: string;
@@ -27,6 +28,7 @@ interface FormErrorKeys {
 interface ReviewData {
   title: string;
   description: string;
+  creatorEmail: string;
   fundingGoalXlm: number;
   durationDays: number;
   category: Category;
@@ -39,11 +41,11 @@ interface ReviewData {
 function validateForm(
   title: string,
   description: string,
+  creatorEmail: string,
   fundingGoal: string,
   durationDays: string,
   hasRevenueSharing: boolean,
   revenueSharePercentage: number,
-  tags: string[],
 ): FormErrorKeys {
   const errors: FormErrorKeys = {};
 
@@ -57,6 +59,10 @@ function validateForm(
     errors.description = 'validationDescriptionRequired';
   } else if (description.trim().length > 1000) {
     errors.description = 'validationDescriptionTooLong';
+  }
+
+  if (creatorEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(creatorEmail.trim())) {
+    errors.creatorEmail = 'validationCreatorEmailInvalid';
   }
 
   const goal = parseFloat(fundingGoal);
@@ -84,10 +90,11 @@ export default function CreateCampaignPage() {
   const t = useTranslations('CreateCampaign');
   const router = useRouter();
   const { publicKey, isWalletConnected, connectWallet, isLoading: walletLoading } = useWallet();
-  const { showError, showSuccess } = useToast();
+  const { showError, showSuccess, showWarning } = useToast();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [creatorEmail, setCreatorEmail] = useState('');
   const [fundingGoal, setFundingGoal] = useState('');
   const [durationDays, setDurationDays] = useState('');
   const [category, setCategory] = useState<Category>(Category.Learner);
@@ -103,6 +110,8 @@ export default function CreateCampaignPage() {
   const [descriptionTab, setDescriptionTab] = useState<'write' | 'preview'>('write');
 
   const DRAFT_KEY = 'proof_of_heart_next_draft';
+  const CREATOR_EMAIL_WEBHOOK_URL =
+    process.env.NEXT_PUBLIC_CREATOR_EMAIL_WEBHOOK_URL?.trim() ?? '';
 
   useEffect(() => {
     try {
@@ -111,6 +120,7 @@ export default function CreateCampaignPage() {
         const parsed = JSON.parse(saved);
         if (parsed.title) setTitle(parsed.title);
         if (parsed.description) setDescription(parsed.description);
+        if (parsed.creatorEmail) setCreatorEmail(parsed.creatorEmail);
         if (parsed.fundingGoal) setFundingGoal(parsed.fundingGoal);
         if (parsed.durationDays) setDurationDays(parsed.durationDays);
         if (parsed.category !== undefined) setCategory(parsed.category);
@@ -131,6 +141,7 @@ export default function CreateCampaignPage() {
         JSON.stringify({
           title,
           description,
+          creatorEmail,
           fundingGoal,
           durationDays,
           category,
@@ -142,7 +153,17 @@ export default function CreateCampaignPage() {
     } catch (e) {
       console.warn('Failed to save draft to localStorage:', e);
     }
-  }, [title, description, fundingGoal, durationDays, category, hasRevenueSharing, revenueSharePercentage, tags]);
+  }, [
+    title,
+    description,
+    creatorEmail,
+    fundingGoal,
+    durationDays,
+    category,
+    hasRevenueSharing,
+    revenueSharePercentage,
+    tags,
+  ]);
 
   const isStartup = category === Category.EducationalStartup;
 
@@ -163,6 +184,33 @@ export default function CreateCampaignPage() {
       minute: '2-digit',
       timeZoneName: 'short',
     }).format(new Date(timestamp * 1000));
+
+  const notifyEmailOptIn = async (
+    campaignId: number | null,
+    email: string,
+    campaignTitle: string,
+    creatorAddress: string,
+  ) => {
+    if (!CREATOR_EMAIL_WEBHOOK_URL || !email) return;
+
+    try {
+      await fetch(CREATOR_EMAIL_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'campaign_creator_email_opt_in',
+          email,
+          campaignId,
+          campaignTitle,
+          creatorAddress,
+          source: 'proof_of_heart_frontend',
+          timestamp: new Date().toISOString(),
+        }),
+      });
+    } catch {
+      showWarning(t('emailWebhookFailed'));
+    }
+  };
 
   const handleConfirmAndSign = async () => {
     if (!reviewData) return;
@@ -192,6 +240,20 @@ export default function CreateCampaignPage() {
         reviewData.tags,
       );
 
+      let newCampaignId: number | null = null;
+      try {
+        newCampaignId = await getCampaignCount();
+      } catch {
+        // Ignore count lookup failures and continue with a generic redirect.
+      }
+
+      await notifyEmailOptIn(
+        newCampaignId,
+        reviewData.creatorEmail,
+        reviewData.title,
+        publicKey,
+      );
+
       showSuccess(t('successMessage'));
       setIsReviewOpen(false);
       setReviewData(null);
@@ -202,10 +264,9 @@ export default function CreateCampaignPage() {
         // ignore
       }
 
-      try {
-        const newId = await getCampaignCount();
-        router.push(`/causes/${newId}`);
-      } catch {
+      if (newCampaignId !== null) {
+        router.push(`/causes/${newCampaignId}`);
+      } else {
         router.push('/causes');
       }
     } catch (err) {
@@ -226,11 +287,11 @@ export default function CreateCampaignPage() {
     const keys = validateForm(
       title,
       description,
+      creatorEmail,
       fundingGoal,
       durationDays,
       hasRevenueSharing,
       revenueSharePercentage,
-      tags,
     );
 
     if (Object.keys(keys).length > 0) {
@@ -245,6 +306,7 @@ export default function CreateCampaignPage() {
     setReviewData({
       title: title.trim(),
       description: description.trim(),
+      creatorEmail: creatorEmail.trim(),
       fundingGoalXlm: parsedGoal,
       durationDays: parsedDays,
       category,
@@ -401,6 +463,39 @@ export default function CreateCampaignPage() {
               )}
               <span className="text-xs text-zinc-400 ml-auto">{description.length}/1,000</span>
             </div>
+          </div>
+
+          {/* Optional creator email (off-chain only) */}
+          <div>
+            <label
+              htmlFor="creatorEmail"
+              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+            >
+              {t('labelCreatorEmailOptional')}
+            </label>
+            <input
+              id="creatorEmail"
+              type="email"
+              value={creatorEmail}
+              onChange={(e) => setCreatorEmail(e.target.value)}
+              aria-invalid={Boolean(errorKeys.creatorEmail)}
+              aria-describedby={errorKeys.creatorEmail ? 'creator-email-error' : 'creator-email-note'}
+              placeholder={t('placeholderCreatorEmail')}
+              className={`w-full px-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+                errorKeys.creatorEmail
+                  ? 'border-red-400 dark:border-red-500'
+                  : 'border-zinc-200 dark:border-zinc-600'
+              }`}
+            />
+            {err('creatorEmail') ? (
+              <p id="creator-email-error" className="text-xs text-red-500 mt-1">
+                {err('creatorEmail')}
+              </p>
+            ) : (
+              <p id="creator-email-note" className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                {t('creatorEmailNote')}
+              </p>
+            )}
           </div>
 
           {/* Funding Goal + Duration */}
@@ -702,6 +797,15 @@ export default function CreateCampaignPage() {
                   </dt>
                   <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mt-1">
                     {reviewData.title}
+                  </dd>
+                </div>
+
+                <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
+                  <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                    {t('reviewFieldCreatorEmail')}
+                  </dt>
+                  <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mt-1">
+                    {reviewData.creatorEmail || t('reviewCreatorEmailNone')}
                   </dd>
                 </div>
 
