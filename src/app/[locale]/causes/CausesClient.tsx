@@ -1,19 +1,19 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
-import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
-import { useRouter } from '@/i18n/routing';
-import { Campaign, Vote, CATEGORY_LABELS, CampaignStatus, Category } from '@/types';
-import { explorerTxUrl } from '@/utils/explorer';
-import { SORT_OPTIONS } from '@/lib/mockCauses';
-import { useCampaigns } from '@/hooks/useCampaigns';
-import { useWallet } from '@/components/WalletContext';
-import { useToast } from '@/components/ToastProvider';
-import { parseContractError } from '@/utils/contractErrors';
-import { cancelCampaign, claimRefund, voteOnCampaign, hasVoted } from '@/lib/contractClient';
+import { useTranslations } from 'next-intl';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import CauseCard from '@/components/CauseCard';
 import { CauseCardSkeleton } from '@/components/Skeleton';
+import { useToast } from '@/components/ToastProvider';
+import { useWallet } from '@/components/WalletContext';
+import { useCampaigns } from '@/hooks/useCampaigns';
+import { useRouter } from '@/i18n/routing';
+import { cancelCampaign, claimRefund, voteOnCampaign, hasVoted } from '@/lib/contractClient';
+import { SORT_OPTIONS } from '@/lib/mockCauses';
+import { Campaign, Vote, CATEGORY_LABELS, CampaignStatus, Category } from '@/types';
+import { parseContractError } from '@/utils/contractErrors';
+import { explorerTxUrl } from '@/utils/explorer';
 
 const CATEGORY_ICONS: Record<Category, string> = {
   [Category.Learner]: '🎓',

@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
-import { explorerTxUrl } from "@/utils/explorer";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import MyContributionsSection from "@/components/MyContributionsSection";
+import { DashboardSkeleton, Spinner } from "@/components/Skeleton";
 import { useWallet } from "@/components/WalletContext";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { getStellarBalance } from "@/lib/getStellarBalance";
-import { DashboardSkeleton, Spinner } from "@/components/Skeleton";
-import MyContributionsSection from "@/components/MyContributionsSection";
 import { isSameAddress } from "@/lib/stellar";
+import { explorerTxUrl } from "@/utils/explorer";
 
 export default function DashboardPage() {
   const t = useTranslations("Dashboard");

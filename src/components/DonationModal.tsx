@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Campaign, xlmToStroops, stroopsToXlm } from "../types";
 import { contribute } from "../lib/contractClient";
-import { useWallet } from "./WalletContext";
+import { Campaign, xlmToStroops, stroopsToXlm } from "../types";
 import { useToast } from "./ToastProvider";
+import { useWallet } from "./WalletContext";
 import { parseContractError } from "../utils/contractErrors";
 
 const EXPLORER_BASE =
@@ -105,7 +105,13 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      role="presentation"
       onClick={(e) => e.target === e.currentTarget && step !== "pending" && onClose()}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' && step !== "pending") {
+          onClose();
+        }
+      }}
     >
       <div
         ref={dialogRef}

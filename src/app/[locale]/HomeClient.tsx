@@ -1,9 +1,9 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/routing";
-import { useWallet } from "@/components/WalletContext";
 import { Heart, Shield, Globe, Code, ArrowRight } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useWallet } from "@/components/WalletContext";
+import { Link } from "@/i18n/routing";
 
 export default function HomeClient() {
   const t = useTranslations("Home");

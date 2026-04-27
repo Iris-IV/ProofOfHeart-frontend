@@ -1,15 +1,15 @@
 "use client";
 
+import { Menu, X, Moon, Sun, ShieldCheck, Plus } from "lucide-react";
 import Image from "next/image";
+import { useTranslations } from 'next-intl';
 import { useState, useEffect, useRef } from "react";
 import { useWallet } from "@/components/WalletContext";
 import { useTheme } from "@/hooks/useTheme";
-import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/routing';
-import LanguageSwitcher from "./LanguageSwitcher";
 import { getAdmin } from "@/lib/contractClient";
-import { Menu, X, Moon, Sun, ShieldCheck, Plus } from "lucide-react";
 import { formatAddress } from "@/lib/formatAddress";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);

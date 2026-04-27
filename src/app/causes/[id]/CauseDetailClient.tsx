@@ -1,11 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from "../../../types";
-import { useCampaign } from "../../../hooks/useCampaign";
+import { useState, useEffect } from "react";
+import CampaignActions from "../../../components/CampaignActions";
+import CampaignStatusBadge from "../../../components/CampaignStatusBadge";
+import DeadlineCountdown from "../../../components/DeadlineCountdown";
+import DonationModal from "../../../components/DonationModal";
+import FundingProgressBar from "../../../components/FundingProgressBar";
+import { CauseDetailSkeleton } from "../../../components/Skeleton";
 import { useToast } from "../../../components/ToastProvider";
-import { parseContractError } from "../../../utils/contractErrors";
+import VotingComponent from "../../../components/VotingComponent";
+import { useWallet } from "../../../components/WalletContext";
+import { useCampaign } from "../../../hooks/useCampaign";
 import {
   voteOnCampaign,
   getApproveVotes,
@@ -17,14 +23,8 @@ import {
   getContribution,
   claimRefund,
 } from "../../../lib/contractClient";
-import VotingComponent from "../../../components/VotingComponent";
-import CampaignStatusBadge from "../../../components/CampaignStatusBadge";
-import DeadlineCountdown from "../../../components/DeadlineCountdown";
-import FundingProgressBar from "../../../components/FundingProgressBar";
-import { useWallet } from "../../../components/WalletContext";
-import CampaignActions from "../../../components/CampaignActions";
-import DonationModal from "../../../components/DonationModal";
-import { CauseDetailSkeleton } from "../../../components/Skeleton";
+import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from "../../../types";
+import { parseContractError } from "../../../utils/contractErrors";
 
 function formatDate(ts: number) {
   return new Intl.DateTimeFormat("en-US", {
