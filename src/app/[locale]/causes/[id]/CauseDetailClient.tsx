@@ -8,6 +8,7 @@ import DeadlineCountdown from '@/components/DeadlineCountdown';
 import DonationModal from '@/components/DonationModal';
 import FundingProgressBar from '@/components/FundingProgressBar';
 import RevenueSharingPanel from '@/components/RevenueSharingPanel';
+import UpdatesSection from '@/components/UpdatesSection';
 import { useToast } from '@/components/ToastProvider';
 import VotingComponent from '@/components/VotingComponent';
 import { useWallet } from '@/components/WalletContext';
@@ -24,6 +25,17 @@ import {
   getContribution,
   claimRefund,
 } from '@/lib/contractClient';
+import VotingComponent from '@/components/VotingComponent';
+import CampaignStatusBadge from '@/components/CampaignStatusBadge';
+import DeadlineCountdown from '@/components/DeadlineCountdown';
+import FundingProgressBar from '@/components/FundingProgressBar';
+import { useWallet } from '@/components/WalletContext';
+import CampaignActions from '@/components/CampaignActions';
+import RevenueSharingPanel from '@/components/RevenueSharingPanel';
+import DonationModal from '@/components/DonationModal';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from '@/types';
 import { parseContractError } from '@/utils/contractErrors';
 
@@ -253,7 +265,11 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 <CampaignStatusBadge campaign={campaign} />
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4 leading-tight">{campaign.title}</h1>
-              <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">{campaign.description}</p>
+              <div className="prose prose-zinc dark:prose-invert max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+                  {campaign.description}
+                </ReactMarkdown>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -349,6 +365,9 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 )}
               </div>
             )}
+
+            {/* Updates Section */}
+            <UpdatesSection campaign={campaign} />
           </div>
 
           <div className="space-y-6">

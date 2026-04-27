@@ -10,6 +10,11 @@ export const metadata: Metadata = {
     siteName: 'ProofOfHeart',
     type: 'website',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Explore Causes | ProofOfHeart',
+    description: 'Browse and explore all causes on ProofOfHeart.',
+  },
 };
 
 export default function Page() {

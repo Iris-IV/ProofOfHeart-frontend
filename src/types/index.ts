@@ -127,4 +127,31 @@ export interface Vote {
   transactionHash: string;
 }
 
+// ---------------------------------------------------------------------------
+// Campaign Update types — for off-chain signed updates
+// ---------------------------------------------------------------------------
+
+/**
+ * Represents a campaign update posted by the creator.
+ * Updates are stored off-chain and signed by the creator's wallet.
+ */
+export interface CampaignUpdate {
+  id: string;
+  campaignId: number;
+  content: string;
+  authorAddress: string;
+  timestamp: number; // Unix timestamp in seconds
+  signature: string;
+}
+
+/**
+ * Payload to be signed when creating a new update.
+ * This is what gets signed by the wallet, not the entire update.
+ */
+export interface UpdatePayload {
+  campaignId: number;
+  content: string;
+  timestamp: number;
+}
+
 // VotingResult is deprecated; use local state shape instead if needed
