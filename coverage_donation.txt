@@ -1,0 +1,102 @@
+
+> proofofheart-frontend@0.1.0 test:coverage
+> jest --coverage src/__tests__/components/DonationModal.test.tsx
+
+------------------------------|---------|----------|---------|---------|---------------------------------------------------
+File                          | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s                                 
+------------------------------|---------|----------|---------|---------|---------------------------------------------------
+All files                     |    3.93 |    25.89 |    9.63 |    3.93 |                                                   
+ src                          |       0 |        0 |       0 |       0 |                                                   
+  proxy.ts                    |       0 |        0 |       0 |       0 | 1-9                                               
+ src/app                      |       0 |        0 |       0 |       0 |                                                   
+  apple-icon.tsx              |       0 |        0 |       0 |       0 | 1-26                                              
+  icon.tsx                    |       0 |        0 |       0 |       0 | 1-26                                              
+  manifest.ts                 |       0 |        0 |       0 |       0 | 1-37                                              
+  robots.ts                   |       0 |        0 |       0 |       0 | 1-6                                               
+  sitemap.ts                  |       0 |        0 |       0 |       0 | 1-49                                              
+ src/app/[locale]             |       0 |        0 |       0 |       0 |                                                   
+  HomeClient.tsx              |       0 |        0 |       0 |       0 | 1-117                                             
+  layout.tsx                  |       0 |        0 |       0 |       0 | 1-91                                              
+  page.tsx                    |       0 |        0 |       0 |       0 | 1-25                                              
+ src/app/[locale]/about       |       0 |        0 |       0 |       0 |                                                   
+  page.tsx                    |       0 |        0 |       0 |       0 | 1-113                                             
+ src/app/[locale]/admin       |       0 |        0 |       0 |       0 |                                                   
+  AdminClient.tsx             |       0 |        0 |       0 |       0 | 1-494                                             
+  page.tsx                    |       0 |        0 |       0 |       0 | 1-22                                              
+ src/app/[locale]/causes      |       0 |        0 |       0 |       0 |                                                   
+  CausesClient.tsx            |       0 |        0 |       0 |       0 | 1-502                                             
+  page.tsx                    |       0 |        0 |       0 |       0 | 1-32                                              
+ src/app/[locale]/causes/[id] |       0 |        0 |       0 |       0 |                                                   
+  CauseDetailClient.tsx       |       0 |        0 |       0 |       0 | 1-442                                             
+  opengraph-image.tsx         |       0 |        0 |       0 |       0 | 1-265                                             
+  page.tsx                    |       0 |        0 |       0 |       0 | 1-60                                              
+ src/app/[locale]/causes/new  |       0 |        0 |       0 |       0 |                                                   
+  NewCauseClient.tsx          |       0 |        0 |       0 |       0 | 1-814                                             
+  page.tsx                    |       0 |        0 |       0 |       0 | 1-22                                              
+ src/app/[locale]/dashboard   |       0 |        0 |       0 |       0 |                                                   
+  DashboardClient.tsx         |       0 |        0 |       0 |       0 | 1-203                                             
+  page.tsx                    |       0 |        0 |       0 |       0 | 1-22                                              
+ src/app/[locale]/explore     |       0 |        0 |       0 |       0 |                                                   
+  ExploreClient.tsx           |       0 |        0 |       0 |       0 | 1-155                                             
+  page.tsx                    |       0 |        0 |       0 |       0 | 1-22                                              
+ src/app/causes/[id]          |       0 |        0 |       0 |       0 |                                                   
+  CauseDetailClient.tsx       |       0 |        0 |       0 |       0 | 1-503                                             
+ src/app/icon-192             |       0 |        0 |       0 |       0 |                                                   
+  route.tsx                   |       0 |        0 |       0 |       0 | 1-25                                              
+ src/app/icon-512             |       0 |        0 |       0 |       0 |                                                   
+  route.tsx                   |       0 |        0 |       0 |       0 | 1-25                                              
+ src/components               |     6.7 |    47.36 |   19.35 |     6.7 |                                                   
+  CampaignActions.tsx         |       0 |        0 |       0 |       0 | 1-291                                             
+  CampaignStatusBadge.tsx     |       0 |        0 |       0 |       0 | 1-62                                              
+  CauseCard.tsx               |       0 |        0 |       0 |       0 | 1-247                                             
+  DeadlineCountdown.tsx       |       0 |        0 |       0 |       0 | 1-75                                              
+  DonationModal.tsx           |   98.84 |    84.37 |     100 |   98.84 | 86-88                                             
+  ErrorBoundary.tsx           |       0 |        0 |       0 |       0 | 1-68                                              
+  Footer.tsx                  |       0 |        0 |       0 |       0 | 1-92                                              
+  FundingProgressBar.tsx      |       0 |        0 |       0 |       0 | 1-32                                              
+  LanguageSwitcher.tsx        |       0 |        0 |       0 |       0 | 1-56                                              
+  MyContributionsSection.tsx  |       0 |        0 |       0 |       0 | 1-248                                             
+  Navbar.tsx                  |       0 |        0 |       0 |       0 | 1-276                                             
+  QueryProvider.tsx           |       0 |        0 |       0 |       0 | 1-20                                              
+  RevenueSharingPanel.tsx     |       0 |        0 |       0 |       0 | 1-235                                             
+  Skeleton.tsx                |       0 |        0 |       0 |       0 | 1-181                                             
+  ThemeProvider.tsx           |       0 |        0 |       0 |       0 | 1-69                                              
+  ToastProvider.tsx           |       0 |        0 |       0 |       0 | 1-242                                             
+  TransferAdminModal.tsx      |       0 |        0 |       0 |       0 | 1-152                                             
+  UpdateComposer.tsx          |       0 |        0 |       0 |       0 | 1-172                                             
+  UpdateItem.tsx              |       0 |        0 |       0 |       0 | 1-137                                             
+  UpdatesList.tsx             |       0 |        0 |       0 |       0 | 1-87                                              
+  UpdatesSection.tsx          |       0 |        0 |       0 |       0 | 1-58                                              
+  VotingComponent.tsx         |       0 |        0 |       0 |       0 | 1-226                                             
+  WalletConnection.tsx        |       0 |        0 |       0 |       0 | 1-102                                             
+  WalletContext.tsx           |       0 |        0 |       0 |       0 | 1-95                                              
+  WithdrawFunds.tsx           |       0 |        0 |       0 |       0 | 1-192                                             
+  cancelCampaignModal.tsx     |       0 |        0 |       0 |       0 | 1-142                                             
+ src/hooks                    |       0 |        0 |       0 |       0 |                                                   
+  useAdmin.ts                 |       0 |        0 |       0 |       0 | 1-15                                              
+  useCampaign.ts              |       0 |        0 |       0 |       0 | 1-31                                              
+  useCampaignUpdates.ts       |       0 |        0 |       0 |       0 | 1-55                                              
+  useCampaigns.ts             |       0 |        0 |       0 |       0 | 1-39                                              
+  useContribution.ts          |       0 |        0 |       0 |       0 | 1-17                                              
+  useContributions.ts         |       0 |        0 |       0 |       0 | 1-143                                             
+  usePlatformFee.ts           |       0 |        0 |       0 |       0 | 1-27                                              
+  useRevenueSharing.ts        |       0 |        0 |       0 |       0 | 1-63                                              
+  useTheme.ts                 |       0 |        0 |       0 |       0 | 1-10                                              
+  useWindowVisibility.ts      |       0 |        0 |       0 |       0 | 1-24                                              
+ src/i18n                     |       0 |        0 |       0 |       0 |                                                   
+  request.ts                  |       0 |        0 |       0 |       0 | 1-12                                              
+  routing.ts                  |       0 |        0 |       0 |       0 | 1-14                                              
+ src/lib                      |       0 |        0 |       0 |       0 |                                                   
+  campaignUpdates.ts          |       0 |        0 |       0 |       0 | 1-259                                             
+  contractClient.ts           |       0 |        0 |       0 |       0 | 1-755                                             
+  formatAddress.ts            |       0 |        0 |       0 |       0 | 1-8                                               
+  getStellarBalance.ts        |       0 |        0 |       0 |       0 | 1-10                                              
+  mockCauses.ts               |       0 |        0 |       0 |       0 | 1-29                                              
+  seo.ts                      |       0 |        0 |       0 |       0 | 1-12                                              
+  stellar.ts                  |       0 |        0 |       0 |       0 | 1-20                                              
+  stellarExplorer.ts          |       0 |        0 |       0 |       0 | 1-11                                              
+  transactionLog.ts           |       0 |        0 |       0 |       0 | 1-60                                              
+ src/utils                    |   77.77 |       25 |      40 |   77.77 |                                                   
+  contractErrors.ts           |   83.44 |    28.57 |      50 |   83.44 | 73-75,88-89,95-99,104-108,119-123,140-141,149-151 
+  explorer.ts                 |       0 |        0 |       0 |       0 | 1-11                                              
+------------------------------|---------|----------|---------|---------|---------------------------------------------------
