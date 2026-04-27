@@ -39,7 +39,7 @@ export default function DeadlineCountdown({ deadline }: DeadlineCountdownProps) 
   if (!timeLeft) {
     return (
       <div className="flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -54,7 +54,7 @@ export default function DeadlineCountdown({ deadline }: DeadlineCountdownProps) 
 
   return (
     <div className="flex items-center gap-1.5 text-sm text-zinc-700 dark:text-zinc-300">
-      <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
