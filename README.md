@@ -147,7 +147,7 @@ docker run -p 3000:3000 proofofheart-frontend
 
 ## 📄 License
 
-This project is licensed under the [MIT License](LICENSE) (to be added).
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 
