@@ -9,7 +9,8 @@
     "admin": "Admin",
     "createCampaign": "Crear Campaña",
     "selectLanguage": "Seleccionar Idioma",
-    "skipToMainContent": "Saltar al contenido principal"
+    "skipToMainContent": "Saltar al contenido principal",
+    "xlmPrecisionWarning": "Redondeado a {amount} XLM"
   },
   "Home": {
     "heroTitle": "Validación descentralizada para causas impulsadas por el corazón.",
