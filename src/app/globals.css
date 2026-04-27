@@ -63,3 +63,16 @@ body {
     animation: none;
   }
 }
+@theme {
+  --color-muted: var(--color-zinc-500);
+  --color-muted-strong: var(--color-zinc-700);
+}
+
+/* Custom utility utilities for responsive accessibility */
+@utility text-muted {
+  @apply text-zinc-500 dark:text-zinc-300;
+}
+
+@utility text-muted-strong {
+  @apply text-zinc-700 dark:text-zinc-100;
+}
