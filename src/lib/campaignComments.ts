@@ -64,7 +64,7 @@ async function signPayload(payload: CommentPayload): Promise<string> {
       timestamp: payload.timestamp,
     });
 
-    const payloadHash = StellarSdk.hash(payloadString);
+    const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
 
     const { signedTxXdr } = await signTransaction(
       new StellarSdk.TransactionBuilder(
@@ -266,13 +266,13 @@ export async function verifyCommentSignature(comment: Comment): Promise<boolean>
       timestamp: comment.timestamp,
     });
 
-    const payloadHash = StellarSdk.hash(payloadString);
+    const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
     const signatureBuffer = Buffer.from(comment.signature, "hex");
     
     return StellarSdk.verify(
       payloadHash,
       signatureBuffer,
-      comment.authorAddress
+      StellarSdk.Keypair.fromPublicKey(comment.authorAddress).rawPublicKey()
     );
   } catch {
     return false;
