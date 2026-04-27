@@ -104,6 +104,8 @@ NEXT_PUBLIC_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
 
 ## 🤝 Contributing!
 
+Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
+
 We welcome contributions! To maintain a clean and consistent codebase, please follow these guidelines:
 
 1.  **Fork the repository** and create your branch from `main`.
