@@ -54,6 +54,9 @@ export default function AdminDashboard() {
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [campaignToReject, setCampaignToReject] = useState<Campaign | null>(null);
 
+  // Optimistic UI State
+  const [optimisticRemovedIds, setOptimisticRemovedIds] = useState<number[]>([]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -77,13 +80,32 @@ export default function AdminDashboard() {
     };
   }, []);
 
+  // Reconcile optimistic updates when raw data changes
+  useEffect(() => {
+    if (optimisticRemovedIds.length === 0) return;
+    
+    // Remove IDs from optimistic list if they are no longer in the "actually pending" server data
+    setOptimisticRemovedIds(prev => prev.filter(id => {
+      const isStillInServerData = campaigns.some(c => 
+        c.id === id && !c.is_verified && c.is_active && !c.is_cancelled
+      );
+      return isStillInServerData;
+    }));
+  }, [campaigns]);
+
   const isAdmin = useMemo(() => {
     return isSameAddress(publicKey, adminAddress);
   }, [publicKey, adminAddress]);
 
   const pendingCampaigns = useMemo(() => {
-    return campaigns.filter((c) => !c.is_verified && c.is_active && !c.is_cancelled);
-  }, [campaigns]);
+    return campaigns.filter(
+      (c) =>
+        !c.is_verified &&
+        c.is_active &&
+        !c.is_cancelled &&
+        !optimisticRemovedIds.includes(c.id),
+    );
+  }, [campaigns, optimisticRemovedIds]);
 
   const totalRaised = useMemo(() => {
     return campaigns.reduce((sum, c) => sum + BigInt(c.amount_raised), BigInt(0));
@@ -98,6 +120,7 @@ export default function AdminDashboard() {
     try {
       await verifyCampaign(id);
       showSuccess("Campaign approved successfully!");
+      setOptimisticRemovedIds((prev) => [...prev, id]);
       refetch();
     } catch (err) {
       showError(parseContractError(err));
@@ -117,6 +140,7 @@ export default function AdminDashboard() {
     try {
       await cancelCampaign(campaignToReject.id);
       showSuccess("Campaign rejected and cancelled.");
+      setOptimisticRemovedIds((prev) => [...prev, campaignToReject.id]);
       setIsRejectModalOpen(false);
       refetch();
     } catch (err) {
