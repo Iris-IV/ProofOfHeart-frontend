@@ -28,14 +28,6 @@ import {
   getContribution,
   claimRefund,
 } from '@/lib/contractClient';
-import VotingComponent from '@/components/VotingComponent';
-import CampaignStatusBadge from '@/components/CampaignStatusBadge';
-import DeadlineCountdown from '@/components/DeadlineCountdown';
-import FundingProgressBar from '@/components/FundingProgressBar';
-import { useWallet } from '@/components/WalletContext';
-import CampaignActions from '@/components/CampaignActions';
-import RevenueSharingPanel from '@/components/RevenueSharingPanel';
-import DonationModal from '@/components/DonationModal';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
