@@ -13,6 +13,14 @@ const config: Config = {
     "!src/types/**",
     // src/app/** is intentionally included so pages appear in coverage reports.
   ],
+  coverageThreshold: {
+    global: {
+      statements: 70,
+      branches: 60,
+      functions: 70,
+      lines: 70,
+    },
+  },
   coverageReporters: ["text", "lcov", "html"],
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
