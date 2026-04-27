@@ -3,7 +3,8 @@
 import { useLocale } from "next-intl";
 import { useRouter, usePathname } from "@/i18n/routing";
 import { Languages } from "lucide-react";
-import { useTransition } from "react";
+import { useMemo, useTransition } from "react";
+import { routing } from "@/i18n/routing";
 
 export default function LanguageSwitcher() {
   const locale = useLocale();
@@ -11,22 +12,45 @@ export default function LanguageSwitcher() {
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
 
-  const toggleLocale = () => {
-    const nextLocale = locale === "en" ? "es" : "en";
+  const displayNames = useMemo(
+    () =>
+      new Intl.DisplayNames([locale], {
+        type: "language",
+      }),
+    [locale],
+  );
+
+  const getLocaleLabel = (code: string) => {
+    return displayNames.of(code) ?? code.toUpperCase();
+  };
+
+  const handleLocaleChange = (nextLocale: string) => {
+    if (nextLocale === locale) {
+      return;
+    }
+
     startTransition(() => {
       router.replace(pathname, { locale: nextLocale });
     });
   };
 
   return (
-    <button
-      onClick={toggleLocale}
-      disabled={isPending}
-      className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-black/5 dark:text-zinc-200 dark:hover:bg-white/10 rounded-md transition-colors disabled:opacity-50"
-      aria-label="Switch language"
-    >
+    <label className="flex items-center gap-2 px-2 py-1.5 rounded-md text-zinc-700 dark:text-zinc-200">
       <Languages size={18} className={isPending ? "motion-safe:animate-pulse" : ""} />
-      <span>{locale === "en" ? "ES" : "EN"}</span>
-    </button>
+      <span className="sr-only">Select language</span>
+      <select
+        value={locale}
+        onChange={(event) => handleLocaleChange(event.target.value)}
+        disabled={isPending}
+        aria-label="Select language"
+        className="rounded-md border border-black/10 bg-white px-2 py-1 text-sm font-medium text-zinc-700 transition-colors hover:bg-black/5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-white/15 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-white/10"
+      >
+        {routing.locales.map((availableLocale) => (
+          <option key={availableLocale} value={availableLocale}>
+            {getLocaleLabel(availableLocale)}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }

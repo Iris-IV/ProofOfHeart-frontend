@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useWallet } from "@/components/WalletContext";
 import { useTheme } from "@/hooks/useTheme";
 import { useTranslations } from 'next-intl';
@@ -13,6 +13,8 @@ import { formatAddress } from "@/lib/formatAddress";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuToggleButtonRef = useRef<HTMLButtonElement>(null);
   const { publicKey, isWalletConnected, connectWallet, disconnectWallet, isLoading } = useWallet();
   const { theme, toggleTheme } = useTheme();
   const t = useTranslations('Common');
@@ -25,6 +27,54 @@ export default function Navbar() {
   useEffect(() => {
     getAdmin().then(setAdminAddress).catch(() => { });
   }, []);
+
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+
+    const menuElement = menuRef.current;
+    if (!menuElement) {
+      return;
+    }
+
+    const focusableElements = menuElement.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    const firstFocusable = focusableElements[0];
+    const lastFocusable = focusableElements[focusableElements.length - 1];
+
+    firstFocusable?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMenuOpen(false);
+        menuToggleButtonRef.current?.focus();
+        return;
+      }
+
+      if (event.key !== "Tab" || focusableElements.length === 0) {
+        return;
+      }
+
+      const activeElement = document.activeElement as HTMLElement | null;
+      if (event.shiftKey) {
+        if (activeElement === firstFocusable) {
+          event.preventDefault();
+          lastFocusable?.focus();
+        }
+      } else if (activeElement === lastFocusable) {
+        event.preventDefault();
+        firstFocusable?.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
 
   const isAdmin = isWalletConnected && publicKey === adminAddress;
 
@@ -137,6 +187,7 @@ export default function Navbar() {
           </div>
 
           <button
+            ref={menuToggleButtonRef}
             type="button"
             aria-controls="mobile-menu"
             aria-expanded={menuOpen}
@@ -152,7 +203,7 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       {menuOpen && (
-        <div id="mobile-menu" className="border-t border-black/5 dark:border-white/10 md:hidden bg-white dark:bg-zinc-900 motion-safe:animate-in motion-safe:slide-in-from-top duration-300">
+        <div ref={menuRef} id="mobile-menu" className="border-t border-black/5 dark:border-white/10 md:hidden bg-white dark:bg-zinc-900 motion-safe:animate-in motion-safe:slide-in-from-top duration-300">
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
             <nav aria-label="Mobile">
               <ul className="flex flex-col gap-2">
