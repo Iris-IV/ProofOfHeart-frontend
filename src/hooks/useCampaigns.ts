@@ -8,7 +8,7 @@ import { useWindowVisibility } from './useWindowVisibility';
 export interface UseCampaignsResult {
   campaigns: Campaign[];
   isLoading: boolean;
-  isRefreshing?: boolean;
+  isRefreshing: boolean;
   error: string | null;
   refetch: () => void;
 }
