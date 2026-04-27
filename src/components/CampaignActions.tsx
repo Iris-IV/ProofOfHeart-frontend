@@ -2,7 +2,10 @@
 
 import React, { useState } from "react";
 import { Campaign, basisPointsToPercentage, stroopsToXlm, xlmToStroops } from "../types";
+import { Spinner } from "./Skeleton";
+import { useToast } from "./ToastProvider";
 import { useWallet } from "./WalletContext";
+import WithdrawFunds from "./WithdrawFunds";
 import { useAdmin } from "../hooks/useAdmin";
 import { useContribution } from "../hooks/useContribution";
 import { usePlatformFee } from "../hooks/usePlatformFee";
@@ -14,11 +17,8 @@ import {
   claimRevenue,
   verifyCampaign,
 } from "../lib/contractClient";
-import { useToast } from "./ToastProvider";
-import { parseContractError } from "../utils/contractErrors";
-import WithdrawFunds from "./WithdrawFunds";
-import { Spinner } from "./Skeleton";
 import { isSameAddress } from "../lib/stellar";
+import { parseContractError } from "../utils/contractErrors";
 
 interface CampaignActionsProps {
   campaign: Campaign;

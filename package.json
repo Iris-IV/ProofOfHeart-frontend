@@ -2,6 +2,9 @@
   "name": "proofofheart-frontend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,13 +14,16 @@
     "format:check": "prettier --check .",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "@dmystical-coder/fundstacks-headless-sdk": "^0.2.0",
     "@stellar/freighter-api": "^6.0.1",
     "@stellar/stellar-sdk": "^15.0.1",
-    "@tanstack/react-query": "^5.100.4",
+    "@tanstack/react-query": "^5.100.5",
     "framer-motion": "^12.37.0",
     "lucide-react": "^1.11.0",
     "next": "^16.2.4",
@@ -26,6 +32,7 @@
     "react-dom": "^19.2.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
     "@tailwindcss/postcss": "^4.2.4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -37,6 +44,9 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^10",
     "eslint-config-next": "^16.2.4",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-unused-imports": "^4.4.1",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
     "prettier": "^3.8.3",

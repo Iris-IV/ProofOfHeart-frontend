@@ -1,7 +1,7 @@
 "use client";
 
-import { Campaign, CampaignStatus, deriveCampaignStatus } from "../types";
 import { useTranslations } from "next-intl";
+import { Campaign, CampaignStatus, deriveCampaignStatus } from "../types";
 
 const STATUS_CONFIG: Record<CampaignStatus, { key: CampaignStatus; className: string }> = {
   active: {

@@ -57,44 +57,68 @@ async function fetchContributionHistory(walletAddress: string): Promise<Contribu
   const contributedIds = campaignIds.filter((_, i) => contributionAmounts[i] > BigInt(0));
   const txLog = getWalletTransactions(walletAddress);
 
-  const records = await Promise.all(
+  const campaignsData = await Promise.all(
     contributedIds.map(async (campaignId) => {
-      const campaign = await getCampaign(campaignId);
-      if (!campaign) return null;
-
-      const contribution = contributionAmounts[campaignId - 1];
-      const status = deriveCampaignStatus(campaign);
-      const canClaimRefund =
-        contribution > BigInt(0) && (status === "failed" || status === "cancelled");
-
-      let claimableRevenue = BigInt(0);
-      if (campaign.has_revenue_sharing && contribution > BigInt(0)) {
-        const [pool, claimed] = await Promise.all([
-          getRevenuePool(campaignId),
-          getRevenueClaimed(campaignId, walletAddress),
-        ]);
-        claimableRevenue = computeClaimableRevenue(campaign, contribution, pool, claimed);
+      try {
+        const campaign = await getCampaign(campaignId);
+        return { id: campaignId, campaign };
+      } catch {
+        return { id: campaignId, campaign: null };
       }
-
-      return {
-        campaign,
-        contribution,
-        status,
-        canClaimRefund,
-        canClaimRevenue: claimableRevenue > BigInt(0),
-        claimableRevenue,
-        transactions: txLog.filter((e) => e.campaignId === campaignId),
-      } satisfies ContributionHistoryItem;
     }),
   );
 
-  return records
-    .filter((r): r is ContributionHistoryItem => r !== null)
-    .sort((a, b) => {
-      const tA = a.transactions[0]?.timestamp ?? 0;
-      const tB = b.transactions[0]?.timestamp ?? 0;
-      return tA !== tB ? tB - tA : b.campaign.id - a.campaign.id;
-    });
+  const campaignsToProcess = campaignsData.filter((c) => c.campaign !== null);
+
+  const campaignsWithRevenue = campaignsToProcess.filter((c) => c.campaign!.has_revenue_sharing);
+
+  const revenueData = await Promise.all(
+    campaignsWithRevenue.map(async ({ id }) => {
+      try {
+        const [pool, claimed] = await Promise.all([
+          getRevenuePool(id),
+          getRevenueClaimed(id, walletAddress),
+        ]);
+        return { id, pool, claimed };
+      } catch {
+        return { id, pool: BigInt(0), claimed: BigInt(0) };
+      }
+    }),
+  );
+
+  const revenueMap = new Map(revenueData.map((r) => [r.id, r]));
+
+  const records: ContributionHistoryItem[] = campaignsToProcess.map(({ id, campaign }) => {
+    const c = campaign!;
+    const contribution = contributionAmounts[id - 1];
+    const status = deriveCampaignStatus(c);
+    const canClaimRefund =
+      contribution > BigInt(0) && (status === "failed" || status === "cancelled");
+
+    let claimableRevenue = BigInt(0);
+    if (c.has_revenue_sharing && contribution > BigInt(0)) {
+      const revenue = revenueMap.get(id);
+      if (revenue) {
+        claimableRevenue = computeClaimableRevenue(c, contribution, revenue.pool, revenue.claimed);
+      }
+    }
+
+    return {
+      campaign: c,
+      contribution,
+      status,
+      canClaimRefund,
+      canClaimRevenue: claimableRevenue > BigInt(0),
+      claimableRevenue,
+      transactions: txLog.filter((e) => e.campaignId === id),
+    };
+  });
+
+  return records.sort((a, b) => {
+    const tA = a.transactions[0]?.timestamp ?? 0;
+    const tB = b.transactions[0]?.timestamp ?? 0;
+    return tA !== tB ? tB - tA : b.campaign.id - a.campaign.id;
+  });
 }
 
 export function useContributions(walletAddress: string | null): UseContributionsResult {

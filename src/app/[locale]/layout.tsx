@@ -1,15 +1,15 @@
-import type { Metadata } from "next";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import { WalletProvider } from "@/components/WalletContext";
-import { ToastProvider } from "@/components/ToastProvider";
-import { QueryProvider } from "@/components/QueryProvider";
-import { ThemeProvider } from "@/components/ThemeProvider";
-import ErrorBoundary from "@/components/ErrorBoundary";
+import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations } from 'next-intl/server';
-import { notFound } from 'next/navigation';
+import ErrorBoundary from "@/components/ErrorBoundary";
+import Footer from "@/components/Footer";
+import Navbar from "@/components/Navbar";
+import { QueryProvider } from "@/components/QueryProvider";
+import { ThemeProvider } from "@/components/ThemeProvider";
+import { ToastProvider } from "@/components/ToastProvider";
+import { WalletProvider } from "@/components/WalletContext";
 import { routing } from '@/i18n/routing';
+import type { Metadata } from "next";
 import "../globals.css";
 
 // #138 — Pre-render locale shells at build time so /en and /es appear in the

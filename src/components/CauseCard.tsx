@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Campaign, Vote, CATEGORY_LABELS } from '../types';
-import VotingComponent from './VotingComponent';
-import CampaignStatusBadge from './CampaignStatusBadge';
-import FundingProgressBar from './FundingProgressBar';
-import DeadlineCountdown from './DeadlineCountdown';
-import CancelCampaignModal from './cancelCampaignModal';
 import { formatAddress } from '@/lib/formatAddress';
+import { Campaign, Vote, CATEGORY_LABELS } from '../types';
+import CampaignStatusBadge from './CampaignStatusBadge';
+import CancelCampaignModal from './cancelCampaignModal';
+import DeadlineCountdown from './DeadlineCountdown';
+import FundingProgressBar from './FundingProgressBar';
+import VotingComponent from './VotingComponent';
 
 interface CauseCardProps {
   campaign: Campaign;

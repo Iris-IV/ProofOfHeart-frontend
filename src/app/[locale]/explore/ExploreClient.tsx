@@ -1,14 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useCampaigns } from '@/hooks/useCampaigns';
-import { Category, CATEGORY_LABELS, stroopsToXlm } from '@/types';
+import { useMemo, useState } from 'react';
 import CampaignStatusBadge from '@/components/CampaignStatusBadge';
 import FundingProgressBar from '@/components/FundingProgressBar';
 import { CampaignRowSkeleton } from '@/components/Skeleton';
+import { useCampaigns } from '@/hooks/useCampaigns';
 import { formatAddress } from '@/lib/formatAddress';
+import { Category, CATEGORY_LABELS, stroopsToXlm } from '@/types';
 
 const CATEGORY_ICONS: Record<Category, string> = {
   [Category.Learner]: '🎓',

@@ -1,18 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useCampaigns } from "@/hooks/useCampaigns";
-import { useWallet } from "@/components/WalletContext";
-import {
-  getAdmin,
-  getPlatformFee,
-  updateAdmin,
-  updatePlatformFee,
-  verifyCampaign,
-  cancelCampaign,
-} from "@/lib/contractClient";
-import { stroopsToXlm, Category, CATEGORY_LABELS, basisPointsToPercentage } from "@/types";
-import { useToast } from "@/components/ToastProvider";
+import * as StellarSdk from "@stellar/stellar-sdk";
 import {
   CheckCircle,
   XCircle,
@@ -25,11 +13,23 @@ import {
   RefreshCw,
   Smartphone,
 } from "lucide-react";
-import { Link } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
-import * as StellarSdk from "@stellar/stellar-sdk";
-import { parseContractError } from "@/utils/contractErrors";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useToast } from "@/components/ToastProvider";
+import { useWallet } from "@/components/WalletContext";
+import { useCampaigns } from "@/hooks/useCampaigns";
+import { Link } from "@/i18n/routing";
+import {
+  getAdmin,
+  getPlatformFee,
+  updateAdmin,
+  updatePlatformFee,
+  verifyCampaign,
+  cancelCampaign,
+} from "@/lib/contractClient";
 import { isSameAddress } from "@/lib/stellar";
+import { stroopsToXlm, Category, CATEGORY_LABELS, basisPointsToPercentage } from "@/types";
+import { parseContractError } from "@/utils/contractErrors";
 
 export default function AdminDashboard() {
   const { campaigns, isLoading, refetch, isRefreshing } = useCampaigns();
@@ -396,12 +396,27 @@ export default function AdminDashboard() {
                   type="number"
                   value={feeInput}
                   onChange={(e) => setFeeInput(e.target.value)}
+                  min="0"
+                  max="10000"
                   className="w-full bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-100 dark:border-zinc-700 rounded-2xl px-5 py-4 font-bold text-zinc-900 dark:text-zinc-50 focus:border-amber-500 focus:outline-none transition group-hover:border-amber-200"
                 />
+                {feeInput && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                      = {(Number(feeInput) / 100).toFixed(2)}%
+                    </p>
+                    {Number(feeInput) > 1000 && (
+                      <p className="text-sm font-medium text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                        <span>⚠️</span>
+                        <span>Warning: Fee exceeds 10% (1000 bps)</span>
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
               <button
                 type="submit"
-                disabled={isUpdatingFee}
+                disabled={isUpdatingFee || Number(feeInput) > 10000 || Number(feeInput) < 0}
                 className="w-full py-4 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 rounded-2xl font-black text-sm uppercase tracking-widest hover:opacity-90 active:scale-95 transition disabled:opacity-50"
               >
                 {isUpdatingFee ? t("awaitingSignature") : t("updatePlatformFee")}

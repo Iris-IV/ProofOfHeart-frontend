@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from '@/i18n/routing';
-import { useWallet } from '@/components/WalletContext';
-import { useToast } from '@/components/ToastProvider';
 import { useTranslations } from 'next-intl';
-import { Category, CATEGORY_LABELS, xlmToStroops } from '@/types';
+import { useState, useEffect } from 'react';
+import { useToast } from '@/components/ToastProvider';
+import { useWallet } from '@/components/WalletContext';
+import { useRouter } from '@/i18n/routing';
 import { createCampaign, getCampaignCount } from '@/lib/contractClient';
+import { Category, CATEGORY_LABELS, xlmToStroops } from '@/types';
 import { parseContractError } from '@/utils/contractErrors';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -191,7 +191,7 @@ export default function CreateCampaignPage() {
 
       try {
         localStorage.removeItem(DRAFT_KEY);
-      } catch (e) {
+      } catch {
         // ignore
       }
 
@@ -621,6 +621,11 @@ export default function CreateCampaignPage() {
             aria-labelledby="campaign-review-title"
             onClick={(e) => {
               if (e.target === e.currentTarget && !isSubmitting) {
+                setIsReviewOpen(false);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' && !isSubmitting) {
                 setIsReviewOpen(false);
               }
             }}

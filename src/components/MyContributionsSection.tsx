@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useContributions } from "../hooks/useContributions";
 import { claimRefund, claimRevenue } from "../lib/contractClient";
 import { getStellarExplorerTxUrl } from "../lib/stellarExplorer";
-import { useContributions } from "../hooks/useContributions";
 import { CampaignStatus, stroopsToXlm } from "../types";
 import { useToast } from "./ToastProvider";
 import { parseContractError } from "../utils/contractErrors";

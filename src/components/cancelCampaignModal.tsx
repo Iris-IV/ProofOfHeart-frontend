@@ -65,12 +65,20 @@ export default function CancelCampaignModal({
     // Backdrop — clicking outside also closes
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="cancel-modal-title"
+      role="presentation"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      }}
     >
-      <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden">
+      <div 
+        className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cancel-modal-title"
+      >
         {/* Header */}
         <div className="p-6 pb-4">
           <div className="flex items-start gap-3">

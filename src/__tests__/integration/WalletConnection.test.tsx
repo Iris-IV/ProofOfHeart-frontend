@@ -1,11 +1,10 @@
 import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import WalletConnection from "@/components/WalletConnection";
+import { isConnected, isAllowed, getAddress } from "@stellar/freighter-api";
 import { ToastProvider } from "@/components/ToastProvider";
+import WalletConnection from "@/components/WalletConnection";
 
 jest.mock("@stellar/freighter-api");
-
-import { isConnected, isAllowed, getAddress } from "@stellar/freighter-api";
 
 const mockIsConnected = isConnected as jest.MockedFunction<typeof isConnected>;
 const mockIsAllowed = isAllowed as jest.MockedFunction<typeof isAllowed>;

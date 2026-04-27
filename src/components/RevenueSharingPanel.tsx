@@ -3,11 +3,11 @@
 import { FormEvent, useMemo, useState } from "react";
 import { claimRevenue, depositRevenue } from "../lib/contractClient";
 import { Campaign, basisPointsToPercentage, stroopsToXlm, xlmToStroops } from "../types";
+import { useToast } from "./ToastProvider";
 import { useWallet } from "./WalletContext";
 import { useRevenueSharing } from "../hooks/useRevenueSharing";
-import { useToast } from "./ToastProvider";
-import { parseContractError } from "../utils/contractErrors";
 import { isSameAddress } from "../lib/stellar";
+import { parseContractError } from "../utils/contractErrors";
 
 interface RevenueSharingPanelProps {
   campaign: Campaign;
