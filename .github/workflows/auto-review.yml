@@ -223,10 +223,10 @@ jobs:
               reasoning_effort: "medium"
             }')
 
-          RESPONSE=$(curl -s --max-time 180 https://api.groq.com/openai/v1/chat/completions \
+          RESPONSE=$(echo "$PAYLOAD" | curl -s --max-time 180 https://api.groq.com/openai/v1/chat/completions \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $GROQ_API_KEY" \
-            -d "$PAYLOAD")
+            -d @-)
 
           echo "Response top-level keys: $(echo "$RESPONSE" | jq -r 'keys | join(", ")' 2>/dev/null || echo '<unparseable>')"
 
