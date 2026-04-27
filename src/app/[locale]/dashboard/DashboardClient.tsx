@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import MyContributionsSection from "@/components/MyContributionsSection";
-import { DashboardSkeleton, Spinner } from "@/components/Skeleton";
+import { Spinner } from "@/components/Skeleton";
 import { useWallet } from "@/components/WalletContext";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { getStellarBalance } from "@/lib/getStellarBalance";
@@ -14,7 +14,6 @@ import { explorerTxUrl } from "@/utils/explorer";
 export default function DashboardPage() {
   const t = useTranslations("Dashboard");
   const { publicKey, isWalletConnected } = useWallet();
-  const [loading, setLoading] = useState(true);
   const { campaigns } = useCampaigns();
   const [balance, setBalance] = useState<number | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
@@ -35,9 +34,8 @@ export default function DashboardPage() {
   }, [publicKey]);
 
   useEffect(() => {
-    setLoading(false);
     if (publicKey) fetchBalance();
-  }, [isWalletConnected, publicKey, fetchBalance]);
+  }, [publicKey, fetchBalance]);
 
   const mockVotes = useMemo(
     () => [
@@ -71,8 +69,6 @@ export default function DashboardPage() {
     () => campaigns.filter((c) => isSameAddress(c.creator, publicKey)),
     [campaigns, publicKey],
   );
-
-  if (loading) return <DashboardSkeleton />;
 
   if (!isWalletConnected || !publicKey) {
     return (
