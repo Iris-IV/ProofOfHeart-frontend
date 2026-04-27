@@ -15,7 +15,25 @@
     "heroTitle": "Decentralized validation for heart-driven causes.",
     "heroSubtitle": "The community validates, you contribute, and impact is recorded on-chain.",
     "startCampaign": "Start a Campaign",
-    "exploreCauses": "Explore Causes"
+    "exploreCauses": "Explore Causes",
+    "features": {
+      "communityFirst": {
+        "title": "Community First",
+        "description": "Every cause is validated by the community through on-chain voting before it goes live."
+      },
+      "transparency": {
+        "title": "Radical Transparency",
+        "description": "Track every donation, vote, and fund withdrawal directly on the Stellar blockchain."
+      },
+      "permissionless": {
+        "title": "Permissionless",
+        "description": "Anyone can submit a cause. No gatekeepers, just decentralized validation."
+      },
+      "trust": {
+        "title": "Trust Through Code",
+        "description": "Smart contracts handle the funds, ensuring they only go to verified, successful causes."
+      }
+    }
   },
   "Dashboard": {
     "title": "Your Dashboard",
