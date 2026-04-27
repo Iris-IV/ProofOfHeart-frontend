@@ -8,6 +8,7 @@ import DeadlineCountdown from '@/components/DeadlineCountdown';
 import DonationModal from '@/components/DonationModal';
 import FundingProgressBar from '@/components/FundingProgressBar';
 import RevenueSharingPanel from '@/components/RevenueSharingPanel';
+import UpdatesSection from '@/components/UpdatesSection';
 import { useToast } from '@/components/ToastProvider';
 import VotingComponent from '@/components/VotingComponent';
 import { useWallet } from '@/components/WalletContext';
@@ -364,6 +365,9 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 )}
               </div>
             )}
+
+            {/* Updates Section */}
+            <UpdatesSection campaign={campaign} />
           </div>
 
           <div className="space-y-6">
