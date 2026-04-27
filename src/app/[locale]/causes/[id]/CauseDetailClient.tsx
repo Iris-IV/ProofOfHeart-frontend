@@ -26,6 +26,9 @@ import { useWallet } from '@/components/WalletContext';
 import CampaignActions from '@/components/CampaignActions';
 import RevenueSharingPanel from '@/components/RevenueSharingPanel';
 import DonationModal from '@/components/DonationModal';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 
 function formatDate(ts: number) {
   return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(ts * 1000));
@@ -253,7 +256,11 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 <CampaignStatusBadge campaign={campaign} />
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4 leading-tight">{campaign.title}</h1>
-              <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">{campaign.description}</p>
+              <div className="prose prose-zinc dark:prose-invert max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+                  {campaign.description}
+                </ReactMarkdown>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
