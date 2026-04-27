@@ -544,7 +544,7 @@ export default function CreateCampaignPage() {
                     >
                       {t('labelRevenueSharePct')}
                     </label>
-                    <span className="text-sm font-semibold text-blue-600 dark:text-blue-400 tabular-nums">
+                    <span className="text-sm font-semibold text-blue-600 dark:text-blue-400 tabular-nums" title={`Stored on-chain as ${Math.round(revenueSharePercentage * 100)} basis points`}>
                       {revenueSharePercentage.toFixed(2)}%
                     </span>
                   </div>
