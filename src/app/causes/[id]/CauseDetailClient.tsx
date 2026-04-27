@@ -9,6 +9,7 @@ import DonationModal from "../../../components/DonationModal";
 import FundingProgressBar from "../../../components/FundingProgressBar";
 import { CauseDetailSkeleton } from "../../../components/Skeleton";
 import { useToast } from "../../../components/ToastProvider";
+import CommentsSection from "../../../components/CommentsSection";
 import VotingComponent from "../../../components/VotingComponent";
 import { useWallet } from "../../../components/WalletContext";
 import { useCampaign } from "../../../hooks/useCampaign";
@@ -393,6 +394,9 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 )}
               </div>
             )}
+
+            {/* Comments & Q&A section */}
+            <CommentsSection campaign={campaign} />
           </div>
 
           {/* Sidebar – right col */}
