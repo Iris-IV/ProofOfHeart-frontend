@@ -10,6 +10,8 @@ import { Link } from '@/i18n/routing';
 import { getAdmin } from "@/lib/contractClient";
 import { formatAddress } from "@/lib/formatAddress";
 import LanguageSwitcher from "./LanguageSwitcher";
+import { useCampaigns } from "@/hooks/useCampaigns";
+import { useMemo } from "react";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -19,6 +21,11 @@ export default function Navbar() {
   const { theme, toggleTheme } = useTheme();
   const t = useTranslations('Common');
   const [adminAddress, setAdminAddress] = useState<string | null>(null);
+
+  const { campaigns } = useCampaigns();
+  const pendingCount = useMemo(() => {
+    return campaigns.filter(c => !c.is_verified && c.is_active && !c.is_cancelled).length;
+  }, [campaigns]);
 
   const networkPassphrase = process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE || '';
   const isTestnet = networkPassphrase.includes('Test SDF');
@@ -117,6 +124,11 @@ export default function Navbar() {
               <span className="flex items-center gap-1.5">
                 {link.href === '/admin' && <ShieldCheck size={14} className="text-blue-500" />}
                 {link.label}
+                {link.href === '/admin' && pendingCount > 0 && (
+                  <span className="ml-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white animate-in zoom-in duration-300">
+                    {pendingCount}
+                  </span>
+                )}
               </span>
               <span className="absolute bottom-1 left-4 right-4 h-0.5 bg-blue-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
             </Link>
@@ -160,13 +172,14 @@ export default function Navbar() {
               <div className="flex items-center gap-3 pl-2">
                 <Link
                   href="/causes/new"
-                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/20"
+                  className="inline-flex items-center gap-1.5 h-9 px-3 lg:px-4 rounded-full bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/20"
+                  title={t('createCampaign')}
                 >
                   <Plus size={14} />
-                  {t('createCampaign')}
+                  <span className="hidden lg:inline">{t('createCampaign')}</span>
                 </Link>
                 <div className="flex flex-col items-end">
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-400 dark:text-zinc-500 leading-none mb-1">
+                  <span className="hidden lg:block text-[10px] uppercase tracking-wider font-bold text-zinc-400 dark:text-zinc-500 leading-none mb-1">
                     Connected
                   </span>
                   <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-mono font-bold border border-blue-100 dark:border-blue-800">
@@ -220,6 +233,11 @@ export default function Navbar() {
                       <span className="flex items-center gap-2">
                         {link.href === '/admin' && <ShieldCheck size={18} />}
                         {link.label}
+                        {link.href === '/admin' && pendingCount > 0 && (
+                          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                            {pendingCount}
+                          </span>
+                        )}
                       </span>
                     </Link>
                   </li>
