@@ -87,7 +87,8 @@ export default function CreateCampaignPage() {
   const [durationDays, setDurationDays] = useState('');
   const [category, setCategory] = useState<Category>(Category.Learner);
   const [hasRevenueSharing, setHasRevenueSharing] = useState(false);
-  const [revenueSharePercentage, setRevenueSharePercentage] = useState(1);
+  // #110 — default 5 % (500 bps); state is percent, converted to bps at submit
+  const [revenueSharePercentage, setRevenueSharePercentage] = useState(5);
   const [errorKeys, setErrorKeys] = useState<FormErrorKeys>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
@@ -482,6 +483,10 @@ export default function CreateCampaignPage() {
               </div>
 
               {hasRevenueSharing && (
+                // #110 — slider now models percent directly (0.5 % steps) so
+                // round percentages are easy to hit. A companion bps input lets
+                // users enter exact values when they need them. Submitted value
+                // is still converted to bps at submit time.
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label
@@ -492,27 +497,55 @@ export default function CreateCampaignPage() {
                     </label>
                     <span className="text-sm font-semibold text-blue-600 dark:text-blue-400 tabular-nums">
                       {revenueSharePercentage.toFixed(2)}%
-                      <span className="text-xs text-zinc-400 font-normal ml-1">
-                        ({Math.round(revenueSharePercentage * 100)} bps)
-                      </span>
                     </span>
                   </div>
+
+                  {/* Slider — operates in percent, 0.5 % steps (#110) */}
                   <input
                     id="revenueShareSlider"
                     type="range"
-                    min="1"
-                    max="5000"
-                    step="1"
-                    value={Math.round(revenueSharePercentage * 100)}
+                    min="0.5"
+                    max="50"
+                    step="0.5"
+                    value={revenueSharePercentage}
                     onChange={(e) =>
-                      setRevenueSharePercentage(parseInt(e.target.value, 10) / 100)
+                      setRevenueSharePercentage(parseFloat(e.target.value))
                     }
+                    aria-label={t('labelRevenueSharePct')}
                     className="w-full h-2 rounded-full accent-blue-600 cursor-pointer"
                   />
                   <div className="flex justify-between text-xs text-zinc-400 mt-1">
-                    <span>0.01%</span>
+                    <span>0.5%</span>
                     <span>50%</span>
                   </div>
+
+                  {/* Precise bps input for exact values (#110) */}
+                  <div className="flex items-center gap-2 mt-2">
+                    <label
+                      htmlFor="revenueShareBps"
+                      className="text-xs text-zinc-500 dark:text-zinc-400 shrink-0"
+                    >
+                      Exact bps:
+                    </label>
+                    <input
+                      id="revenueShareBps"
+                      type="number"
+                      inputMode="numeric"
+                      min="1"
+                      max="5000"
+                      step="1"
+                      value={Math.round(revenueSharePercentage * 100)}
+                      onChange={(e) => {
+                        const bps = parseInt(e.target.value, 10);
+                        if (!isNaN(bps) && bps >= 1 && bps <= 5000) {
+                          setRevenueSharePercentage(bps / 100);
+                        }
+                      }}
+                      className="w-24 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+                    />
+                    <span className="text-xs text-zinc-400">/ 10 000</span>
+                  </div>
+
                   {err('revenueSharePercentage') && (
                     <p className="text-xs text-red-500 mt-1">{err('revenueSharePercentage')}</p>
                   )}
