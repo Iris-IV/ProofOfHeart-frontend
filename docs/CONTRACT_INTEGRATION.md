@@ -161,8 +161,7 @@ src/
 │   └── contractErrors.ts       ← ContractError enum, errorMessages, parseContractError()
 ├── components/
 │   ├── ToastProvider.tsx        ← global toast context + useToast() hook
-│   ├── WalletContext.tsx        ← Freighter wallet state (publicKey, connect, disconnect)
-│   └── WalletConnection.tsx    ← wallet connect/disconnect UI widget
+│   └── WalletContext.tsx        ← Freighter wallet state (publicKey, connect, disconnect)
 └── types/
     └── index.ts                ← Campaign TypeScript interface (contract-aligned)
 ```
