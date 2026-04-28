@@ -242,15 +242,15 @@ export async function verifyUpdateSignature(update: CampaignUpdate): Promise<boo
       timestamp: update.timestamp,
     });
     
-     const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
-     const signature = Buffer.from(update.signature, "hex");
-     const publicKey = StellarSdk.StrKey.decodeEd25519PublicKey(update.authorAddress);
-     
-     const verified = StellarSdk.verify(
-       payloadHash,
-       signature,
-       publicKey
-     );
+    const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
+    const signature = Buffer.from(update.signature, "hex");
+    const publicKey = StellarSdk.StrKey.decodeEd25519PublicKey(update.authorAddress);
+    
+    const verified = StellarSdk.verify(
+      payloadHash,
+      signature,
+      publicKey
+    );
     
     return verified;
   } catch {

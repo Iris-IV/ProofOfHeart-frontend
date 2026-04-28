@@ -64,28 +64,29 @@ async function signPayload(payload: CommentPayload): Promise<string> {
       timestamp: payload.timestamp,
     });
 
-     const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
-     const { signedTxXdr } = await signTransaction(
-       new StellarSdk.TransactionBuilder(
-         new StellarSdk.Account(address, "0"),
-         {
-           fee: StellarSdk.BASE_FEE,
-           networkPassphrase: NETWORK_PASSPHRASE,
-         }
-       )
-         .addOperation(
-           StellarSdk.Operation.manageData({
-             name: "comment_signature",
-             value: payloadHash,
-           })
-         )
-         .setTimeout(30)
-         .build()
-         .toXDR(),
-       {
-         networkPassphrase: NETWORK_PASSPHRASE,
-       }
-     );
+    const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
+
+    const { signedTxXdr } = await signTransaction(
+      new StellarSdk.TransactionBuilder(
+        new StellarSdk.Account(address, "0"),
+        {
+          fee: StellarSdk.BASE_FEE,
+          networkPassphrase: NETWORK_PASSPHRASE,
+        }
+      )
+        .addOperation(
+          StellarSdk.Operation.manageData({
+            name: "comment_signature",
+            value: payloadHash,
+          })
+        )
+        .setTimeout(30)
+        .build()
+        .toXDR(),
+      {
+        networkPassphrase: NETWORK_PASSPHRASE,
+      }
+    );
 
     const signedTx = StellarSdk.TransactionBuilder.fromXDR(
       signedTxXdr,
@@ -265,15 +266,15 @@ export async function verifyCommentSignature(comment: Comment): Promise<boolean>
       timestamp: comment.timestamp,
     });
 
-     const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
-     const signatureBuffer = Buffer.from(comment.signature, "hex");
-     const publicKey = StellarSdk.StrKey.decodeEd25519PublicKey(comment.authorAddress);
-     
-     return StellarSdk.verify(
-       payloadHash,
-       signatureBuffer,
-       publicKey
-     );
+    const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
+    const signatureBuffer = Buffer.from(comment.signature, "hex");
+    const publicKey = StellarSdk.StrKey.decodeEd25519PublicKey(comment.authorAddress);
+    
+    return StellarSdk.verify(
+      payloadHash,
+      signatureBuffer,
+      publicKey
+    );
   } catch {
     return false;
   }

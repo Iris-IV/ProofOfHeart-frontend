@@ -17,7 +17,8 @@
     "test:coverage": "jest --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "analyze": "ANALYZE=true next build --webpack"
   },
   "dependencies": {
     "@dmystical-coder/fundstacks-headless-sdk": "^0.2.0",
@@ -35,6 +36,7 @@
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.2.4",
     "@playwright/test": "^1.52.0",
     "@tailwindcss/postcss": "^4.2.4",
     "@testing-library/dom": "^10.4.1",
