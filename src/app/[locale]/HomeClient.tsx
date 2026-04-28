@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart, Shield, Globe, Code, ArrowRight } from "lucide-react";
+import { Heart, Shield, Globe, Code, ArrowRight, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useWallet } from "@/components/WalletContext";
 import { Link } from "@/i18n/routing";
@@ -48,9 +48,10 @@ export default function HomeClient() {
                   connectWallet();
                 }
               }}
-              className="px-10 py-4 bg-white dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-bold rounded-2xl transition-all shadow-sm hover:shadow-md hover:motion-safe:-translate-y-0.5 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="group flex items-center gap-2 px-10 py-4 bg-white dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-bold rounded-2xl transition-all shadow-sm hover:shadow-md hover:motion-safe:-translate-y-0.5 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isLoading && !isWalletConnected ? "Connecting..." : t("startCampaign")}
+              <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
             </Link>
           </div>
         </div>
