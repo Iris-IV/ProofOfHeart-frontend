@@ -17,7 +17,8 @@
     "test:coverage": "jest --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "analyze": "ANALYZE=true next build --webpack"
   },
   "dependencies": {
     "@dmystical-coder/fundstacks-headless-sdk": "^0.2.0",
@@ -29,9 +30,13 @@
     "next": "^16.2.4",
     "next-intl": "^4.9.1",
     "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "react-dom": "^19.2.5",
+    "react-markdown": "^10.1.0",
+    "rehype-sanitize": "^6.0.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.2.4",
     "@playwright/test": "^1.52.0",
     "@tailwindcss/postcss": "^4.2.4",
     "@testing-library/jest-dom": "^6.9.1",

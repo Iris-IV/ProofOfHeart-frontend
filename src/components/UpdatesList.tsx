@@ -2,7 +2,7 @@
 
 import { CampaignUpdate } from '@/types';
 import UpdateItem from '@/components/UpdateItem';
-import Skeleton from '@/components/Skeleton';
+import { Skeleton } from '@/components/Skeleton';
 
 interface UpdatesListProps {
   updates: CampaignUpdate[];
