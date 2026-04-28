@@ -1,10 +1,10 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ToastProvider } from '@/components/ToastProvider';
-import { WalletProvider } from '@/components/WalletContext';
 import UpdatesSection from '@/components/UpdatesSection';
-import { Campaign, Category } from '@/types';
+import { WalletProvider } from '@/components/WalletContext';
 import * as campaignUpdatesModule from '@/lib/campaignUpdates';
+import { Campaign, Category } from '@/types';
 
 // Mock the campaign updates module
 jest.mock('@/lib/campaignUpdates', () => ({

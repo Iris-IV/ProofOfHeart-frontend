@@ -108,7 +108,7 @@ function FeatureCard({
 }) {
   return (
     <div
-      className={`p-8 rounded-3xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800/50 hover:border-blue-200 dark:hover:border-blue-900/30 transition-all hover:shadow-xl hover:shadow-blue-500/5 group motion-safe:animate-in fade-in zoom-in ${delay}`}
+      className={`p-8 rounded-3xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800/50 hover:border-blue-200 dark:hover:border-blue-900/30 transition-all hover:shadow-xl hover:shadow-blue-500/5 group motion-safe:animate-in fade-in zoom-in min-h-[260px] ${delay}`}
     >
       <div className="w-14 h-14 bg-white dark:bg-zinc-800 rounded-2xl shadow-sm mb-6 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
         {icon}

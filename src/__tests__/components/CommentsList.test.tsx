@@ -1,5 +1,5 @@
-import React from 'react';
 import { render, screen } from '@testing-library/react';
+import React from 'react';
 import CommentsList from '@/components/CommentsList';
 
 // Mock CommentItem to isolate tests

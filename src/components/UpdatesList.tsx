@@ -1,8 +1,8 @@
 'use client';
 
-import { CampaignUpdate } from '@/types';
-import UpdateItem from '@/components/UpdateItem';
 import { Skeleton } from '@/components/Skeleton';
+import UpdateItem from '@/components/UpdateItem';
+import { CampaignUpdate } from '@/types';
 
 interface UpdatesListProps {
   updates: CampaignUpdate[];

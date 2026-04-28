@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Comment } from '@/types';
+import CommentComposer from './CommentComposer';
 import { useWallet } from '@/components/WalletContext';
 import { verifyCommentSignature } from '@/lib/campaignComments';
-import CommentComposer from './CommentComposer';
+import { Comment } from '@/types';
 
 interface CommentItemProps {
   comment: Comment;

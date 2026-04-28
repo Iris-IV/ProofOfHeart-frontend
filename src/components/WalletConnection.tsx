@@ -2,8 +2,8 @@
 
 import { getAddress, isConnected, isAllowed } from '@stellar/freighter-api';
 import { useState, useEffect, useCallback } from 'react';
-import { formatAddress } from '@/lib/formatAddress';
 import { useToast } from './ToastProvider';
+import { formatAddress } from '@/lib/formatAddress';
 
 interface WalletConnectionProps {
   onWalletConnected: (publicKey: string) => void;

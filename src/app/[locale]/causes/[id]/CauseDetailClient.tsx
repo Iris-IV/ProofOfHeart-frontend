@@ -1,18 +1,21 @@
 'use client';
 
-import Link from 'next/link';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import ShareButtons from '@/components/ShareButtons';
-import ReportModal from '@/components/ReportModal';
+import ReactMarkdown from 'react-markdown';
+import rehypeSanitize from 'rehype-sanitize';
+import remarkGfm from 'remark-gfm';
 import CampaignActions from '@/components/CampaignActions';
 import CampaignStatusBadge from '@/components/CampaignStatusBadge';
 import DeadlineCountdown from '@/components/DeadlineCountdown';
 import DonationModal from '@/components/DonationModal';
 import FundingProgressBar from '@/components/FundingProgressBar';
+import ReportModal from '@/components/ReportModal';
 import RevenueSharingPanel from '@/components/RevenueSharingPanel';
-import UpdatesSection from '@/components/UpdatesSection';
+import ShareButtons from '@/components/ShareButtons';
 import { useToast } from '@/components/ToastProvider';
+import UpdatesSection from '@/components/UpdatesSection';
 import VotingComponent from '@/components/VotingComponent';
 import { useWallet } from '@/components/WalletContext';
 import { useCampaign } from '@/hooks/useCampaign';
@@ -28,9 +31,6 @@ import {
   getContribution,
   claimRefund,
 } from '@/lib/contractClient';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeSanitize from 'rehype-sanitize';
 import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from '@/types';
 import { parseContractError } from '@/utils/contractErrors';
 

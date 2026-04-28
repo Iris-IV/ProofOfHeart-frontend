@@ -1,7 +1,7 @@
-import { buildAlternates } from "@/lib/seo";
-import { getCampaign } from "@/lib/contractClient";
-import { CATEGORY_LABELS, stroopsToXlm } from "@/types";
 import CauseDetailClient from "./CauseDetailClient";
+import { getCampaign } from "@/lib/contractClient";
+import { buildAlternates } from "@/lib/seo";
+import { CATEGORY_LABELS, stroopsToXlm } from "@/types";
 
 type Props = { params: Promise<{ locale: string; id: string }> };
 

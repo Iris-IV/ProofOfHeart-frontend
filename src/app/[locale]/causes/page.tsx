@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
-import { buildAlternates } from "@/lib/seo";
 import CausesClient from "./CausesClient";
+import { buildAlternates } from "@/lib/seo";
 
 // #151 — ISR: allow the edge cache to serve a stale snapshot of the /causes
 // listing for up to 30 seconds before revalidating in the background. This

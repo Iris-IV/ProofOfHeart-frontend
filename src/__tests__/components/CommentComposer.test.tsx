@@ -1,5 +1,5 @@
-import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import React from 'react';
 import CommentComposer from '@/components/CommentComposer';
 import { useToast } from '@/components/ToastProvider';
 

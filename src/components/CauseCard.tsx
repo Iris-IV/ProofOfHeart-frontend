@@ -2,13 +2,13 @@
 
 import Image from 'next/image';
 import { useState } from 'react';
-import { formatAddress } from '@/lib/formatAddress';
 import { Campaign, Vote, CATEGORY_LABELS } from '../types';
 import CampaignStatusBadge from './CampaignStatusBadge';
 import CancelCampaignModal from './cancelCampaignModal';
 import DeadlineCountdown from './DeadlineCountdown';
 import FundingProgressBar from './FundingProgressBar';
 import VotingComponent from './VotingComponent';
+import { formatAddress } from '@/lib/formatAddress';
 
 interface CauseCardProps {
   campaign: Campaign;

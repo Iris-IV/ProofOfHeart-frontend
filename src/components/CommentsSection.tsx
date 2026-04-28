@@ -1,10 +1,10 @@
 'use client';
 
-import { Campaign } from '@/types';
+import CommentComposer from './CommentComposer';
+import CommentsList from './CommentsList';
 import { useWallet } from '@/components/WalletContext';
 import { useCampaignComments } from '@/hooks/useCampaignComments';
-import CommentsList from './CommentsList';
-import CommentComposer from './CommentComposer';
+import { Campaign } from '@/types';
 
 interface CommentsSectionProps {
   campaign: Campaign;

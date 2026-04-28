@@ -1,7 +1,7 @@
-import { render, screen, act, fireEvent } from "@testing-library/react";
-import { WalletProvider, useWallet } from "../WalletContext";
 import { isConnected, isAllowed, getAddress } from "@stellar/freighter-api";
+import { render, screen, act, fireEvent } from "@testing-library/react";
 import { useToast } from "../ToastProvider";
+import { WalletProvider, useWallet } from "../WalletContext";
 
 // Mock dependencies
 jest.mock("../ToastProvider", () => ({

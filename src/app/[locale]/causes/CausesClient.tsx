@@ -45,8 +45,11 @@ function CausesContent() {
   const [status, setStatus] = useState(searchParams.get('status') ?? 'all');
   const [sort, setSort] = useState(searchParams.get('sort') ?? 'newest');
   const [tag, setTag] = useState(searchParams.get('tag') ?? '');
+  const [preset, setPreset] = useState(searchParams.get('preset') ?? '');
+  const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
 
   const debouncedSearch = useDebounce(rawSearch, 300);
+  const ITEMS_PER_PAGE = 24;
 
   const STATUS_OPTIONS: ('all' | CampaignStatus)[] = ['all', 'active', 'cancelled', 'funded', 'failed'];
 
@@ -72,9 +75,16 @@ function CausesContent() {
     if (status !== 'all') params.set('status', status);
     if (sort !== 'newest') params.set('sort', sort);
     if (tag) params.set('tag', tag);
+    if (preset) params.set('preset', preset);
+    if (page > 1) params.set('page', page.toString());
     const qs = params.toString();
     router.replace(qs ? `/causes?${qs}` : '/causes', { scroll: false });
-  }, [debouncedSearch, category, status, sort, tag, router]);
+  }, [debouncedSearch, category, status, sort, tag, preset, page, router]);
+
+  // Reset page when filters change (except page itself)
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, category, status, sort, tag, preset]);
 
   // Load user votes whenever wallet or campaigns change
   const loadUserVotes = useCallback(async () => {
@@ -216,6 +226,16 @@ function CausesContent() {
       if (status !== 'all') result = result.filter((c) => c.status === status);
       if (tag) result = result.filter((c) => c.tags?.includes(tag));
 
+      // Preset filters
+      if (preset === 'ending-soon') {
+        const sevenDaysFromNow = Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60);
+        result = result.filter((c) => c.deadline <= sevenDaysFromNow && c.is_active);
+      }
+      if (preset === 'recently-verified') {
+        const sevenDaysAgo = Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60);
+        result = result.filter((c) => c.is_verified && c.created_at >= sevenDaysAgo);
+      }
+
     switch (sort) {
       case 'oldest':
         result.sort((a, b) => a.deadline - b.deadline);
@@ -248,8 +268,16 @@ function CausesContent() {
     return result;
   }, [campaigns, debouncedSearch, category, status, sort, tag, voteCounts]);
 
+  // Pagination logic
+  const paginatedCampaigns = useMemo(() => {
+    const startIndex = (page - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredCampaigns.slice(startIndex, endIndex);
+  }, [filteredCampaigns, page]);
+
+  const totalPages = Math.ceil(filteredCampaigns.length / ITEMS_PER_PAGE);
   const hasActiveFilters =
-    debouncedSearch || category !== 'all' || status !== 'all' || sort !== 'newest' || tag;
+    debouncedSearch || category !== 'all' || status !== 'all' || sort !== 'newest' || tag || preset;
 
   const clearFilters = () => {
     setRawSearch('');
@@ -257,6 +285,7 @@ function CausesContent() {
     setStatus('all');
     setSort('newest');
     setTag('');
+    setPreset('');
   };
 
   // -------------------------------------------------------------------------
@@ -409,6 +438,32 @@ function CausesContent() {
           </div>
         )}
 
+        {/* Preset filter buttons */}
+        {!isLoading && !error && (
+          <div className="flex flex-wrap gap-2 mb-6">
+            <button
+              onClick={() => setPreset(preset === 'ending-soon' ? '' : 'ending-soon')}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                preset === 'ending-soon'
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+              }`}
+            >
+              ⏰ Ending Soon
+            </button>
+            <button
+              onClick={() => setPreset(preset === 'recently-verified' ? '' : 'recently-verified')}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                preset === 'recently-verified'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+              }`}
+            >
+              ✅ Recently Verified
+            </button>
+          </div>
+        )}
+
         {/* Error state */}
         {error && (
           <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-6 mb-6 text-center">
@@ -434,34 +489,93 @@ function CausesContent() {
         {/* Results */}
         {!isLoading && !error && (
           <>
-            <div className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 flex items-center gap-3">
-              <span>
-                {t(filteredCampaigns.length === 1 ? 'causesFound_one' : 'causesFound_other', { count: filteredCampaigns.length })}
-                {debouncedSearch && <span>{t('causesFoundFor', { query: debouncedSearch })}</span>}
-              </span>
-              {isVotingFor !== null && (
-                <span className="inline-flex items-center gap-1">
-                  <span className="inline-block motion-safe:animate-spin rounded-full h-3 w-3 border-b border-zinc-500" />
-                  {t('processingVote')}
+            <div className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span>
+                  {t(filteredCampaigns.length === 1 ? 'causesFound_one' : 'causesFound_other', { count: filteredCampaigns.length })}
+                  {debouncedSearch && <span>{t('causesFoundFor', { query: debouncedSearch })}</span>}
+                  {totalPages > 1 && (
+                    <span className="text-blue-600 dark:text-blue-400">
+                      Page {page} of {totalPages}
+                    </span>
+                  )}
                 </span>
-              )}
+                {isVotingFor !== null && (
+                  <span className="inline-flex items-center gap-1">
+                    <span className="inline-block motion-safe:animate-spin rounded-full h-3 w-3 border-b border-zinc-500" />
+                    {t('processingVote')}
+                  </span>
+                )}
+              </div>
             </div>
 
-            {filteredCampaigns.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredCampaigns.map((campaign) => (
-                  <CauseCard
-                    key={campaign.id}
-                    campaign={campaign}
-                    userWalletAddress={userWalletAddress}
-                    onVote={handleVote}
-                    onCancel={handleCancel}
-                    onClaimRefund={handleClaimRefund}
-                    onTagClick={(t: string) => setTag(t)}
-                    userVote={userVotes[campaign.id]}
-                  />
-                ))}
-              </div>
+            {paginatedCampaigns.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {paginatedCampaigns.map((campaign) => (
+                    <CauseCard
+                      key={campaign.id}
+                      campaign={campaign}
+                      userWalletAddress={userWalletAddress}
+                      onVote={handleVote}
+                      onCancel={handleCancel}
+                      onClaimRefund={handleClaimRefund}
+                      onTagClick={(t: string) => setTag(t)}
+                      userVote={userVotes[campaign.id]}
+                    />
+                  ))}
+                </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex justify-center items-center gap-2 mt-8">
+                    <button
+                      onClick={() => setPage(page - 1)}
+                      disabled={page === 1}
+                      className="px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Previous
+                    </button>
+                    
+                    <div className="flex gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (page <= 3) {
+                          pageNum = i + 1;
+                        } else if (page >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = page - 2 + i;
+                        }
+                        
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setPage(pageNum)}
+                            className={`px-3 py-2 rounded-lg transition-colors ${
+                              pageNum === page
+                                ? 'bg-blue-600 text-white'
+                                : 'border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-700'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    
+                    <button
+                      onClick={() => setPage(page + 1)}
+                      disabled={page === totalPages}
+                      className="px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-20">
                 <div className="text-5xl mb-4">🔍</div>

@@ -1,10 +1,10 @@
 'use client';
 
-import { Campaign } from '@/types';
+import UpdateComposer from '@/components/UpdateComposer';
+import UpdatesList from '@/components/UpdatesList';
 import { useWallet } from '@/components/WalletContext';
 import { useCampaignUpdates } from '@/hooks/useCampaignUpdates';
-import UpdatesList from '@/components/UpdatesList';
-import UpdateComposer from '@/components/UpdateComposer';
+import { Campaign } from '@/types';
 
 interface UpdatesSectionProps {
   campaign: Campaign;

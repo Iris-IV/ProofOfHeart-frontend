@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { CampaignUpdate } from '@/types';
 import { verifyUpdateSignature } from '@/lib/campaignUpdates';
+import { CampaignUpdate } from '@/types';
 
 interface UpdateItemProps {
   update: CampaignUpdate;

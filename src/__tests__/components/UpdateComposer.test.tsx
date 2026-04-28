@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import UpdateComposer from '@/components/UpdateComposer';
 import { ToastProvider } from '@/components/ToastProvider';
+import UpdateComposer from '@/components/UpdateComposer';
 
 const mockOnSubmit = jest.fn();
 

@@ -1,5 +1,5 @@
-import { buildAlternates } from "@/lib/seo";
 import HomeClient from "./HomeClient";
+import { buildAlternates } from "@/lib/seo";
 
 export function generateMetadata() {
   const title = "ProofOfHeart | Decentralized Community Launchpad";

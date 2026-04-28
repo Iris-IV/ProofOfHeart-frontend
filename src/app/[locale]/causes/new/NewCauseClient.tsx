@@ -2,15 +2,15 @@
 
 import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import rehypeSanitize from 'rehype-sanitize';
+import remarkGfm from 'remark-gfm';
 import { useToast } from '@/components/ToastProvider';
 import { useWallet } from '@/components/WalletContext';
 import { useRouter } from '@/i18n/routing';
 import { createCampaign, getCampaignCount } from '@/lib/contractClient';
 import { Category, CATEGORY_LABELS, xlmToStroops } from '@/types';
 import { parseContractError } from '@/utils/contractErrors';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeSanitize from 'rehype-sanitize';
 
 // ---------------------------------------------------------------------------
 // Validation — returns translation keys instead of hardcoded strings

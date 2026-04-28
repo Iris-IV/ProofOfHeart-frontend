@@ -1,6 +1,6 @@
+import { isConnected, isAllowed, getAddress } from "@stellar/freighter-api";
 import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { isConnected, isAllowed, getAddress } from "@stellar/freighter-api";
 import { ToastProvider } from "@/components/ToastProvider";
 import WalletConnection from "@/components/WalletConnection";
 

@@ -16,10 +16,17 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import CancelCampaignModal from "@/components/cancelCampaignModal";
 import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { Link } from "@/i18n/routing";
+import {
+  getAllReports,
+  markReportReviewed,
+  REPORT_REASON_LABELS,
+  type CampaignReport,
+} from "@/lib/campaignReports";
 import {
   getAdmin,
   getPlatformFee,
@@ -30,15 +37,8 @@ import {
 } from "@/lib/contractClient";
 import { isSameAddress } from "@/lib/stellar";
 import { stroopsToXlm, Category, CATEGORY_LABELS, basisPointsToPercentage } from "@/types";
-import { parseContractError } from "@/utils/contractErrors";
-import {
-  getAllReports,
-  markReportReviewed,
-  REPORT_REASON_LABELS,
-  type CampaignReport,
-} from "@/lib/campaignReports";
-import CancelCampaignModal from "@/components/cancelCampaignModal";
 import { Campaign } from "@/types";
+import { parseContractError } from "@/utils/contractErrors";
 
 export default function AdminDashboard() {
   const { campaigns, isLoading, refetch, isRefreshing } = useCampaigns();
