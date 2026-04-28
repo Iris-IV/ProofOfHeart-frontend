@@ -100,6 +100,8 @@ NEXT_PUBLIC_API_URL=https://api.proofofheart.org
 # NEXT_PUBLIC_CHAIN_ID=1
 NEXT_PUBLIC_RPC_URL=https://soroban-testnet.stellar.org
 NEXT_PUBLIC_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
+# Optional off-chain webhook for creator email opt-ins
+NEXT_PUBLIC_CREATOR_EMAIL_WEBHOOK_URL=
 ```
 
 ## 🤝 Contributing!
