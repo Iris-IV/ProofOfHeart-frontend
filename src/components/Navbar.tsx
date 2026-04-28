@@ -3,15 +3,15 @@
 import { Menu, X, Moon, Sun, ShieldCheck, Plus } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from 'next-intl';
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useWallet } from "@/components/WalletContext";
 import { useTheme } from "@/hooks/useTheme";
 import { Link } from '@/i18n/routing';
 import { getAdmin } from "@/lib/contractClient";
 import { formatAddress } from "@/lib/formatAddress";
 import LanguageSwitcher from "./LanguageSwitcher";
+import NotificationBell from "./NotificationBell";
 import { useCampaigns } from "@/hooks/useCampaigns";
-import { useMemo } from "react";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -95,7 +95,6 @@ export default function Navbar() {
     navLinks.push({ href: "/admin", label: t('admin') });
   }
 
-
   return (
     <header className="sticky top-0 z-50 border-b border-black/5 bg-white/80 backdrop-blur-md dark:border-white/10 dark:bg-zinc-900/80 transition-all duration-300">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
@@ -148,6 +147,8 @@ export default function Navbar() {
           )}
           <div className="hidden sm:block border-r border-zinc-200 dark:border-zinc-800 h-6 mx-1" />
           <LanguageSwitcher />
+
+          <NotificationBell />
 
           <button
             onClick={toggleTheme}
@@ -245,48 +246,48 @@ export default function Navbar() {
               </ul>
             </nav>
 
-              {isWalletConnected && (
-                <Link
-                  href="/causes/new"
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center justify-center gap-2 h-12 w-full rounded-xl bg-blue-600 text-white text-base font-bold hover:bg-blue-700 transition-colors"
-                >
-                  <Plus size={18} />
-                  {t('createCampaign')}
-                </Link>
-              )}
+            {isWalletConnected && (
+              <Link
+                href="/causes/new"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center justify-center gap-2 h-12 w-full rounded-xl bg-blue-600 text-white text-base font-bold hover:bg-blue-700 transition-colors"
+              >
+                <Plus size={18} />
+                {t('createCampaign')}
+              </Link>
+            )}
 
-              {!isWalletConnected ? (
+            {!isWalletConnected ? (
+              <button
+                type="button"
+                onClick={connectWallet}
+                disabled={isLoading}
+                className="h-12 w-full rounded-xl bg-linear-to-r from-red-500 to-pink-500 px-4 text-base font-bold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+              >
+                {isLoading ? t('connecting') : t('connectWallet')}
+              </button>
+            ) : (
+              <div className="flex flex-col gap-3 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Account</span>
+                  <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400 rounded text-[10px] font-bold">Connected</span>
+                </div>
+                <span className="text-sm font-mono font-bold text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900 p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-center">
+                  {publicKey}
+                </span>
                 <button
                   type="button"
-                  onClick={connectWallet}
-                  disabled={isLoading}
-                  className="h-12 w-full rounded-xl bg-linear-to-r from-red-500 to-pink-500 px-4 text-base font-bold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+                  onClick={() => {
+                    disconnectWallet();
+                    setMenuOpen(false);
+                  }}
+                  className="w-full py-2.5 text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors border border-red-100 dark:border-red-900/30"
                 >
-                  {isLoading ? t('connecting') : t('connectWallet')}
+                  {t('disconnect')}
                 </button>
-              ) : (
-                <div className="flex flex-col gap-3 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Account</span>
-                    <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-400 rounded text-[10px] font-bold">Connected</span>
-                  </div>
-                  <span className="text-sm font-mono font-bold text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900 p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 text-center">
-                    {publicKey}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      disconnectWallet();
-                      setMenuOpen(false);
-                    }}
-                    className="w-full py-2.5 text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors border border-red-100 dark:border-red-900/30"
-                  >
-                    {t('disconnect')}
-                  </button>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </header>

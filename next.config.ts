@@ -12,6 +12,19 @@ const nextConfig: NextConfig = {
   output: "standalone",
   reactCompiler: true,
   outputFileTracingRoot: path.join(__dirname),
+  images: {
+    unoptimized: true,
+    remotePatterns: [
+      { protocol: 'https', hostname: '**.ipfs.io' },
+      { protocol: 'https', hostname: 'ipfs.io' },
+      { protocol: 'https', hostname: '**.ipfs.dweb.link' },
+      { protocol: 'https', hostname: 'cloudflare-ipfs.com' },
+      { protocol: 'https', hostname: 'i.imgur.com' },
+      { protocol: 'https', hostname: '**.githubusercontent.com' },
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: '**.arweave.net' },
+    ],
+  },
   async redirects() {
     return [
       {

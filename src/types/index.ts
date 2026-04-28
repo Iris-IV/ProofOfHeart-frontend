@@ -45,6 +45,7 @@ export interface Campaign {
   has_revenue_sharing: boolean;
   revenue_share_percentage: number; // basis points (e.g. 300 = 3%)
   tags?: string[];
+  cover_image_url?: string;
 }
 
 // ---------------------------------------------------------------------------

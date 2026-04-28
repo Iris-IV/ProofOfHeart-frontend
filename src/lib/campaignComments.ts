@@ -268,11 +268,12 @@ export async function verifyCommentSignature(comment: Comment): Promise<boolean>
 
     const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
     const signatureBuffer = Buffer.from(comment.signature, "hex");
+    const publicKey = StellarSdk.StrKey.decodeEd25519PublicKey(comment.authorAddress);
     
     return StellarSdk.verify(
       payloadHash,
       signatureBuffer,
-      StellarSdk.Keypair.fromPublicKey(comment.authorAddress).rawPublicKey()
+      publicKey
     );
   } catch {
     return false;

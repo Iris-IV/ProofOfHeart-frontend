@@ -243,13 +243,13 @@ export async function verifyUpdateSignature(update: CampaignUpdate): Promise<boo
     });
     
     const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
-    
-    // Verify the signature matches the author address
     const signature = Buffer.from(update.signature, "hex");
+    const publicKey = StellarSdk.StrKey.decodeEd25519PublicKey(update.authorAddress);
+    
     const verified = StellarSdk.verify(
       payloadHash,
       signature,
-      StellarSdk.Keypair.fromPublicKey(update.authorAddress).rawPublicKey()
+      publicKey
     );
     
     return verified;
