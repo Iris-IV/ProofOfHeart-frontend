@@ -73,9 +73,9 @@ export default function DashboardPage() {
   if (!isWalletConnected || !publicKey) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
-        <h2 className="text-xl font-semibold mb-4 text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-xl font-semibold mb-4 text-zinc-900 dark:text-zinc-50">
           {t("noWalletHeading")}
-        </h2>
+        </h1>
         <Link
           href="/"
           className="px-6 py-3 min-h-[44px] inline-flex items-center bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition"
