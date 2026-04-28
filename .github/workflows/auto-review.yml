@@ -188,7 +188,7 @@ jobs:
           SYSTEM_EOF
           )
 
-          PAYLOAD=$(jq -n \
+          jq -n \
             --arg system   "$SYSTEM_PROMPT" \
             --arg title    "$PR_TITLE" \
             --arg author   "$PR_AUTHOR" \
@@ -221,12 +221,12 @@ jobs:
               temperature: 0.1,
               response_format: { type: "json_object" },
               reasoning_effort: "medium"
-            }')
+            }' > /tmp/payload.json
 
           RESPONSE=$(curl -s --max-time 180 https://api.groq.com/openai/v1/chat/completions \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $GROQ_API_KEY" \
-            -d "$PAYLOAD")
+            -d @/tmp/payload.json)
 
           echo "Response top-level keys: $(echo "$RESPONSE" | jq -r 'keys | join(", ")' 2>/dev/null || echo '<unparseable>')"
 

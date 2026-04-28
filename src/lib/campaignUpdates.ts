@@ -68,7 +68,7 @@ async function signPayload(payload: UpdatePayload): Promise<string> {
     });
     
     // Create a hash of the payload
-    const payloadHash = StellarSdk.hash(payloadString);
+    const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
     
     // Sign the hash using Freighter
     const { signedTxXdr } = await signTransaction(
@@ -242,14 +242,14 @@ export async function verifyUpdateSignature(update: CampaignUpdate): Promise<boo
       timestamp: update.timestamp,
     });
     
-    const payloadHash = StellarSdk.hash(payloadString);
-    
-    // Verify the signature matches the author address
+    const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
     const signature = Buffer.from(update.signature, "hex");
+    const publicKey = StellarSdk.StrKey.decodeEd25519PublicKey(update.authorAddress);
+    
     const verified = StellarSdk.verify(
       payloadHash,
       signature,
-      update.authorAddress
+      publicKey
     );
     
     return verified;

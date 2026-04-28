@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Comment } from '@/types';
 import CommentItem from './CommentItem';
-import Skeleton from './Skeleton';
+import { Skeleton } from './Skeleton';
 
 interface CommentsListProps {
   comments: Comment[];

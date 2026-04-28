@@ -59,6 +59,27 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  const stored = localStorage.getItem('theme');
+                  const isDark = stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                  if (isDark) {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
+                } catch (e) {
+                  console.warn('Failed to apply theme before hydration:', e);
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="antialiased">
         <NextIntlClientProvider messages={messages} locale={locale}>
           <a 

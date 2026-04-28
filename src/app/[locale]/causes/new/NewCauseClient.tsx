@@ -23,6 +23,7 @@ interface FormErrorKeys {
   fundingGoal?: string;
   durationDays?: string;
   revenueSharePercentage?: string;
+  coverImageUrl?: string;
 }
 
 interface ReviewData {
@@ -36,7 +37,10 @@ interface ReviewData {
   revenueSharePercentage: number;
   estimatedDeadlineTimestamp: number;
   tags: string[];
+  coverImageUrl: string;
 }
+
+const IMAGE_URL_RE = /^https?:\/\/.+\..+/;
 
 function validateForm(
   title: string,
@@ -46,6 +50,8 @@ function validateForm(
   durationDays: string,
   hasRevenueSharing: boolean,
   revenueSharePercentage: number,
+  tags: string[],
+  coverImageUrl: string,
 ): FormErrorKeys {
   const errors: FormErrorKeys = {};
 
@@ -79,6 +85,10 @@ function validateForm(
     errors.revenueSharePercentage = 'validationRevenueShareInvalid';
   }
 
+  if (coverImageUrl.trim() && !IMAGE_URL_RE.test(coverImageUrl.trim())) {
+    errors.coverImageUrl = 'validationCoverImageInvalid';
+  }
+
   return errors;
 }
 
@@ -108,6 +118,7 @@ export default function CreateCampaignPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [descriptionTab, setDescriptionTab] = useState<'write' | 'preview'>('write');
+  const [coverImageUrl, setCoverImageUrl] = useState('');
 
   const DRAFT_KEY = 'proof_of_heart_next_draft';
   const CREATOR_EMAIL_WEBHOOK_URL =
@@ -128,6 +139,7 @@ export default function CreateCampaignPage() {
         if (parsed.revenueSharePercentage !== undefined)
           setRevenueSharePercentage(parsed.revenueSharePercentage);
         if (parsed.tags) setTags(parsed.tags);
+        if (parsed.coverImageUrl) setCoverImageUrl(parsed.coverImageUrl);
       }
     } catch (e) {
       console.warn('Failed to load draft from localStorage:', e);
@@ -148,6 +160,7 @@ export default function CreateCampaignPage() {
           hasRevenueSharing,
           revenueSharePercentage,
           tags,
+          coverImageUrl,
         }),
       );
     } catch (e) {
@@ -292,6 +305,8 @@ export default function CreateCampaignPage() {
       durationDays,
       hasRevenueSharing,
       revenueSharePercentage,
+      tags,
+      coverImageUrl,
     );
 
     if (Object.keys(keys).length > 0) {
@@ -314,6 +329,7 @@ export default function CreateCampaignPage() {
       revenueSharePercentage: hasRevenueSharing ? revenueSharePercentage : 0,
       estimatedDeadlineTimestamp: Math.floor(Date.now() / 1000) + parsedDays * 86400,
       tags,
+      coverImageUrl: coverImageUrl.trim(),
     });
     setIsReviewOpen(true);
   };
@@ -639,7 +655,7 @@ export default function CreateCampaignPage() {
                     >
                       {t('labelRevenueSharePct')}
                     </label>
-                    <span className="text-sm font-semibold text-blue-600 dark:text-blue-400 tabular-nums">
+                    <span className="text-sm font-semibold text-blue-600 dark:text-blue-400 tabular-nums" title={`Stored on-chain as ${Math.round(revenueSharePercentage * 100)} basis points`}>
                       {revenueSharePercentage.toFixed(2)}%
                     </span>
                   </div>
@@ -739,6 +755,44 @@ export default function CreateCampaignPage() {
             <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
               {t('tagsHelpText')}
             </p>
+          </div>
+
+          {/* Cover Image URL */}
+          <div>
+            <label
+              htmlFor="coverImageUrl"
+              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+            >
+              Cover Image URL <span className="text-xs font-normal text-zinc-400">(optional)</span>
+            </label>
+            <input
+              id="coverImageUrl"
+              type="url"
+              value={coverImageUrl}
+              onChange={(e) => setCoverImageUrl(e.target.value)}
+              placeholder="https://ipfs.io/ipfs/... or https://i.imgur.com/..."
+              aria-invalid={Boolean(errorKeys.coverImageUrl)}
+              aria-describedby={errorKeys.coverImageUrl ? 'cover-image-error' : undefined}
+              className={`w-full px-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+                errorKeys.coverImageUrl
+                  ? 'border-red-400 dark:border-red-500'
+                  : 'border-zinc-200 dark:border-zinc-600'
+              }`}
+            />
+            {errorKeys.coverImageUrl && (
+              <p id="cover-image-error" className="text-xs text-red-500 mt-1">
+                Please enter a valid URL (must start with http:// or https://).
+              </p>
+            )}
+            {coverImageUrl && !errorKeys.coverImageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={coverImageUrl}
+                alt="Cover preview"
+                className="mt-2 w-full aspect-video object-cover rounded-lg border border-zinc-200 dark:border-zinc-600"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+              />
+            )}
           </div>
 
           {/* Actions */}

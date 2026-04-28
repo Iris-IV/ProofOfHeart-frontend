@@ -1,7 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
+import ShareButtons from '@/components/ShareButtons';
+import ReportModal from '@/components/ReportModal';
 import CampaignActions from '@/components/CampaignActions';
 import CampaignStatusBadge from '@/components/CampaignStatusBadge';
 import DeadlineCountdown from '@/components/DeadlineCountdown';
@@ -25,14 +28,6 @@ import {
   getContribution,
   claimRefund,
 } from '@/lib/contractClient';
-import VotingComponent from '@/components/VotingComponent';
-import CampaignStatusBadge from '@/components/CampaignStatusBadge';
-import DeadlineCountdown from '@/components/DeadlineCountdown';
-import FundingProgressBar from '@/components/FundingProgressBar';
-import { useWallet } from '@/components/WalletContext';
-import CampaignActions from '@/components/CampaignActions';
-import RevenueSharingPanel from '@/components/RevenueSharingPanel';
-import DonationModal from '@/components/DonationModal';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
@@ -53,6 +48,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const [isVoting, setIsVoting] = useState(false);
   const [voteCounts, setVoteCounts] = useState({ upvotes: 0, downvotes: 0, totalVotes: 0 });
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const { showError, showSuccess, showWarning } = useToast();
 
   // Quorum / threshold state
@@ -264,11 +260,38 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{categoryLabel}</span>
                 <CampaignStatusBadge campaign={campaign} />
               </div>
+              {campaign.cover_image_url && (
+                <div className="relative w-full aspect-video rounded-lg overflow-hidden mb-4 bg-zinc-100 dark:bg-zinc-700">
+                  <Image
+                    src={campaign.cover_image_url}
+                    alt={campaign.title}
+                    fill
+                    unoptimized
+                    loading="lazy"
+                    className="object-cover"
+                  />
+                </div>
+              )}
               <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4 leading-tight">{campaign.title}</h1>
               <div className="prose prose-zinc dark:prose-invert max-w-none">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                   {campaign.description}
                 </ReactMarkdown>
+              </div>
+
+              {/* Share + Report toolbar */}
+              <div className="flex items-center justify-between flex-wrap gap-3 pt-4 mt-4 border-t border-zinc-100 dark:border-zinc-700">
+                <ShareButtons
+                  url={typeof window !== 'undefined' ? window.location.href : `https://proofofheart.org/causes/${campaign.id}`}
+                  title={campaign.title}
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsReportModalOpen(true)}
+                  className="text-xs text-zinc-400 dark:text-zinc-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                >
+                  🚩 Report
+                </button>
               </div>
             </div>
 
@@ -435,6 +458,15 @@ export default function CauseDetailClient({ id }: { id: string }) {
           campaign={campaign}
           onClose={() => setIsDonationModalOpen(false)}
           onSuccess={refetch}
+        />
+      )}
+
+      {isReportModalOpen && (
+        <ReportModal
+          campaignId={campaign.id}
+          campaignTitle={campaign.title}
+          reporterAddress={userWalletAddress}
+          onClose={() => setIsReportModalOpen(false)}
         />
       )}
     </div>
