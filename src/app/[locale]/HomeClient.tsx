@@ -16,7 +16,7 @@ export default function HomeClient() {
       <div className="absolute top-0 -right-4 w-72 h-72 bg-teal-400 rounded-full mix-blend-multiply filter blur-3xl opacity-10 motion-safe:animate-blob animation-delay-2000" />
       <div className="absolute -bottom-8 left-20 w-72 h-72 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-10 motion-safe:animate-blob animation-delay-4000" />
 
-      <main className="relative container mx-auto px-4 py-24 sm:px-6 lg:px-8">
+      <div className="relative container mx-auto px-4 py-24 sm:px-6 lg:px-8">
         {/* Hero Section */}
         <div className="text-center max-w-5xl mx-auto mb-16 sm:mb-24">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-bold mb-8 motion-safe:animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -61,7 +61,9 @@ export default function HomeClient() {
         </div>
 
         {/* Features Section */}
-        <div className="mt-32 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <section aria-labelledby="features-heading" className="mt-32">
+          <h2 id="features-heading" className="sr-only">Key features</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <FeatureCard
             icon={<Globe className="text-blue-500" />}
             title="Community First"
@@ -86,8 +88,9 @@ export default function HomeClient() {
             description="Smart contracts enforce the rules, removing the need for intermediaries."
             delay="delay-400"
           />
-        </div>
-      </main>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
