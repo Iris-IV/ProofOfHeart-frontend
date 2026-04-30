@@ -1,5 +1,5 @@
-import Link from "next/link";
 import Image from "next/image";
+import { Link } from "@/i18n/routing";
 
 const productLinks = [
   { href: "/", label: "Home" },
@@ -39,7 +39,7 @@ export default function Footer() {
                 {productLinks.map((link) => (
                   <li key={link.href}>
                     <Link
-                      href={link.href}
+                      href={link.href as Parameters<typeof Link>[0]["href"]}
                       className="text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-50"
                     >
                       {link.label}
@@ -80,7 +80,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-10 flex flex-col gap-2 border-t border-black/5 pt-6 text-sm text-zinc-500 dark:border-white/10 dark:text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {year} ProofOfHeart. All rights reserved.</p>
+          <p>&copy; {year} ProofOfHeart. All rights reserved.</p>
           <p>Built with Next.js + Stellar</p>
         </div>
       </div>
