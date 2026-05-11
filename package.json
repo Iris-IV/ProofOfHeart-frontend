@@ -28,7 +28,7 @@
     "@tanstack/react-query": "^5.100.9",
     "framer-motion": "^12.37.0",
     "lucide-react": "^1.14.0",
-    "next": "^16.2.4",
+    "next": "^16.2.6",
     "next-intl": "^4.11.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
@@ -37,7 +37,7 @@
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
-    "@next/bundle-analyzer": "^16.2.4",
+    "@next/bundle-analyzer": "^16.2.6",
     "@playwright/test": "^1.52.0",
     "@tailwindcss/postcss": "^4.2.4",
     "@testing-library/dom": "^10.4.1",
