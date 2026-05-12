@@ -1,12 +1,14 @@
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
+import { formatAddress } from '@/lib/formatAddress';
 import { Campaign, Vote, CATEGORY_LABELS } from '../types';
-import VotingComponent from './VotingComponent';
 import CampaignStatusBadge from './CampaignStatusBadge';
-import FundingProgressBar from './FundingProgressBar';
-import DeadlineCountdown from './DeadlineCountdown';
 import CancelCampaignModal from './cancelCampaignModal';
+import DeadlineCountdown from './DeadlineCountdown';
+import FundingProgressBar from './FundingProgressBar';
+import VotingComponent from './VotingComponent';
 
 interface CauseCardProps {
   campaign: Campaign;
@@ -14,6 +16,7 @@ interface CauseCardProps {
   onVote: (campaignId: number, voteType: 'upvote' | 'downvote') => Promise<void>;
   onCancel: (campaignId: number) => Promise<void>;
   onClaimRefund: (campaignId: number) => Promise<void>;
+  onTagClick?: (tag: string) => void;
   userVote?: Vote;
 }
 
@@ -31,9 +34,6 @@ function formatDate(ts: number) {
   }).format(new Date(ts * 1000));
 }
 
-function formatAddress(addr: string) {
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-}
 
 export default function CauseCard({
   campaign,
@@ -41,6 +41,7 @@ export default function CauseCard({
   onVote,
   onCancel,
   onClaimRefund,
+  onTagClick,
   userVote,
 }: CauseCardProps) {
   const [isVoting, setIsVoting] = useState(false);
@@ -102,6 +103,24 @@ export default function CauseCard({
   return (
     <div className="flex flex-col bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 overflow-hidden hover:shadow-md transition-shadow duration-200">
 
+      {/* ── Cover image ── */}
+      <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-700">
+        {campaign.cover_image_url ? (
+          <Image
+            src={campaign.cover_image_url}
+            alt={campaign.title}
+            fill
+            unoptimized
+            loading="lazy"
+            className="object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-4xl select-none">
+            {categoryIcon || '💡'}
+          </div>
+        )}
+      </div>
+
       {/* ── Card body ── */}
       <div className="p-5 flex-1 space-y-3">
 
@@ -123,24 +142,22 @@ export default function CauseCard({
           {campaign.description}
         </p>
 
-        {/* Funding progress */}
-        <div className="space-y-1.5">
-          <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400">
-            <span>${campaign.amount_raised.toLocaleString()} raised</span>
-            <span>{progressPct}%</span>
+        {/* Tags */}
+        {campaign.tags && campaign.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {campaign.tags.map((tag) => (
+              <span
+                key={tag}
+                onClick={() => onTagClick?.(tag)}
+                className="inline-flex items-center px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-700/50 text-zinc-600 dark:text-zinc-400 text-[10px] font-medium border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+              >
+                #{tag}
+              </span>
+            ))}
           </div>
-          <div className="w-full bg-zinc-100 dark:bg-zinc-700 rounded-full h-1.5">
-            <div
-              className="bg-blue-500 h-1.5 rounded-full transition-all"
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500">
-            Goal: ${campaign.funding_goal.toLocaleString()}
-          </p>
-        </div>
+        )}
 
-        {/* Extended funding bar (BigInt path) */}
+        {/* Funding progress */}
         {campaign.funding_goal > BigInt(0) && (
           <FundingProgressBar
             amountRaised={campaign.amount_raised}

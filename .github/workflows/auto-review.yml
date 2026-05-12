@@ -28,40 +28,29 @@ jobs:
           FILES=$(echo "$PR_DATA" | jq -r '.changedFiles')
           ADDS=$(echo "$PR_DATA" | jq -r '.additions')
           DELS=$(echo "$PR_DATA" | jq -r '.deletions')
-
           echo "author=$AUTHOR" >> $GITHUB_OUTPUT
           echo "files=$FILES" >> $GITHUB_OUTPUT
           echo "adds=$ADDS" >> $GITHUB_OUTPUT
           echo "dels=$DELS" >> $GITHUB_OUTPUT
-
           {
             echo "title<<GHA_DELIM"
             echo "$TITLE"
             echo "GHA_DELIM"
           } >> $GITHUB_OUTPUT
-
           {
             echo "pr_body<<GHA_DELIM"
             echo "$BODY"
             echo "GHA_DELIM"
           } >> $GITHUB_OUTPUT
-
-          # Fetch the diff and capture size signals
           gh pr diff "$PR_NUM" > /tmp/pr-diff.txt 2>/dev/null || true
           DIFF_BYTES=$(wc -c < /tmp/pr-diff.txt | tr -d ' ')
-          # Count actual +/- lines (excluding diff headers like +++ and ---)
           REAL_CHANGE_LINES=$(grep -E '^[+-]' /tmp/pr-diff.txt | grep -vE '^(\+\+\+|---)' | wc -l | tr -d ' ')
           echo "diff_bytes=$DIFF_BYTES" >> $GITHUB_OUTPUT
           echo "real_change_lines=$REAL_CHANGE_LINES" >> $GITHUB_OUTPUT
-
-          # Truncate diff to keep prompt size manageable
           head -3000 /tmp/pr-diff.txt > /tmp/pr-diff-truncated.txt
-
-          # Extract linked issue numbers from PR body
           ISSUE_NUMS=$(echo "$BODY" | \
             grep -oiE '(close[sd]?|fix(e[sd])?|resolve[sd]?)\s+#[0-9]+' | \
             grep -oE '[0-9]+' | sort -u | tr '\n' ' ' || true)
-
           : > /tmp/issues-context.txt
           if [ -n "${ISSUE_NUMS:-}" ]; then
             for NUM in $ISSUE_NUMS; do
@@ -78,7 +67,6 @@ jobs:
               fi
             done
           fi
-
           if [ ! -s /tmp/issues-context.txt ]; then
             echo "(No issues linked or issues could not be fetched)" > /tmp/issues-context.txt
             echo "has_issue=false" >> $GITHUB_OUTPUT
@@ -93,8 +81,6 @@ jobs:
           REAL_CHANGE_LINES: ${{ steps.ctx.outputs.real_change_lines }}
           ADDS: ${{ steps.ctx.outputs.adds }}
         run: |
-          # Empty / whitespace / no real additions = automatic fraud flag.
-          # No model call needed — this is unambiguous.
           if [ "$DIFF_BYTES" -lt 50 ] || [ "$ADDS" -eq 0 ] || [ "$REAL_CHANGE_LINES" -lt 1 ]; then
             echo "auto_fraud=true" >> $GITHUB_OUTPUT
             echo "fraud_type=empty" >> $GITHUB_OUTPUT
@@ -115,7 +101,6 @@ jobs:
           PR_DELS: ${{ steps.ctx.outputs.dels }}
           HAS_ISSUE: ${{ steps.ctx.outputs.has_issue }}
         run: |
-          # Single-quoted heredoc marker → no shell expansion of the prompt body
           SYSTEM_PROMPT=$(cat <<'SYSTEM_EOF'
           You are an EXTREMELY LENIENT code reviewer for Lernza, a hackathon project.
           Interns are shipping fast. CI has been disabled to maximise velocity.
@@ -187,6 +172,11 @@ jobs:
           Respond with a SINGLE JSON object only. No preamble, no markdown fences,
           no explanation outside the JSON.
 
+          The "summary" field is what gets posted to the PR as your review comment.
+          Keep it natural, friendly, and conversational — under 150 words, addressed
+          to the contributor. Do NOT include any meta-commentary about confidence,
+          fraud type, or that you are an automated reviewer in the summary text.
+
           Schema:
           {
             "decision": "APPROVE" | "FLAG_FRAUD",
@@ -198,9 +188,7 @@ jobs:
           SYSTEM_EOF
           )
 
-          # Build payload entirely in jq to avoid shell injection from diff/PR content.
-          # --arg passes shell strings safely; --rawfile reads files without shell.
-          PAYLOAD=$(jq -n \
+          jq -n \
             --arg system   "$SYSTEM_PROMPT" \
             --arg title    "$PR_TITLE" \
             --arg author   "$PR_AUTHOR" \
@@ -233,22 +221,18 @@ jobs:
               temperature: 0.1,
               response_format: { type: "json_object" },
               reasoning_effort: "medium"
-            }')
+            }' > /tmp/payload.json
 
           RESPONSE=$(curl -s --max-time 180 https://api.groq.com/openai/v1/chat/completions \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $GROQ_API_KEY" \
-            -d "$PAYLOAD")
+            -d @/tmp/payload.json)
 
           echo "Response top-level keys: $(echo "$RESPONSE" | jq -r 'keys | join(", ")' 2>/dev/null || echo '<unparseable>')"
 
           API_ERROR=$(echo "$RESPONSE" | jq -r '.error.message // ""' 2>/dev/null || echo "")
           REVIEW_JSON=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // ""' 2>/dev/null || echo "")
 
-          # ---- Fail-closed parsing ----
-          # ANY failure path (API error, empty content, malformed JSON, unknown
-          # decision value) results in DECISION=UNKNOWN, which the next step
-          # handles as "comment only — do not approve, do not close, do not merge."
           DECISION="UNKNOWN"
           CONFIDENCE="0"
           FRAUD_TYPE="none"
@@ -257,13 +241,13 @@ jobs:
 
           if [ -n "$API_ERROR" ] && [ "$API_ERROR" != "null" ]; then
             echo "Groq API error: $API_ERROR"
-            MODEL_SUMMARY="Auto-review failed (API error: $API_ERROR). Leaving PR for human review."
+            MODEL_SUMMARY="Auto-review failed (API error). Leaving PR for human review."
           elif [ -z "$REVIEW_JSON" ] || [ "$REVIEW_JSON" = "null" ]; then
             echo "Empty model response"
             MODEL_SUMMARY="Auto-review returned an empty response. Leaving PR for human review."
           elif ! echo "$REVIEW_JSON" | jq empty 2>/dev/null; then
             echo "Model output is not valid JSON. Raw: $REVIEW_JSON"
-            MODEL_SUMMARY="Auto-review returned malformed JSON. Leaving PR for human review."
+            MODEL_SUMMARY="Auto-review returned malformed output. Leaving PR for human review."
           else
             DECISION=$(echo "$REVIEW_JSON" | jq -r '.decision // "UNKNOWN"')
             CONFIDENCE=$(echo "$REVIEW_JSON" | jq -r '.confidence // 0')
@@ -278,10 +262,20 @@ jobs:
             fi
           fi
 
-          echo "Decision: $DECISION | Confidence: $CONFIDENCE | Fraud type: $FRAUD_TYPE"
+          # Log full details to Actions run output for your debugging.
+          # These do NOT get posted to the PR.
+          echo "::group::Auto-review details (run-only, not posted)"
+          echo "Decision:   $DECISION"
+          echo "Confidence: $CONFIDENCE"
+          echo "Fraud type: $FRAUD_TYPE"
+          echo "Evidence:   $EVIDENCE"
+          echo "::endgroup::"
 
-          REVIEW_BODY=$(printf '%s\n\n---\n**Auto-review details**\n- Decision: `%s` (confidence: `%s`)\n- Fraud type: `%s`\n- Evidence: %s\n\n_Reviewed by `openai/gpt-oss-120b` via Groq. Auto-merge on APPROVE >= 0.7. Auto-close on FLAG_FRAUD >= 0.85._\n' \
-            "$MODEL_SUMMARY" "$DECISION" "$CONFIDENCE" "$FRAUD_TYPE" "$EVIDENCE")
+          # The PR comment body is JUST the model summary. Nothing appended.
+          if [ -z "$MODEL_SUMMARY" ]; then
+            MODEL_SUMMARY="Looks good."
+          fi
+          REVIEW_BODY="$MODEL_SUMMARY"
 
           echo "decision=$DECISION" >> $GITHUB_OUTPUT
           echo "confidence=$CONFIDENCE" >> $GITHUB_OUTPUT
@@ -301,14 +295,9 @@ jobs:
         run: |
           PAT_USER=$(gh api user --jq '.login' 2>/dev/null || echo "")
           BODY=$(printf '%s\n' \
-            "Auto-review: this PR has an empty or whitespace-only diff. No real code changes detected." \
+            "This PR has an empty or whitespace-only diff — no real code changes detected." \
             "" \
-            "If you intended to push code, please commit it. If this PR was opened by mistake, no action needed." \
-            "" \
-            "Closing automatically since CI is disabled and there is nothing to review. Open a new PR (or reopen this one) once you have actual changes." \
-            "" \
-            "---" \
-            "_Detected by pre-flight check (\`fraud_type: empty\`). No model call was made._")
+            "If you intended to push code, please commit it. Closing automatically; reopen once you have actual changes.")
 
           if [ "$PR_AUTHOR" = "$PAT_USER" ]; then
             gh pr comment "$PR_NUM" --body "$BODY"
@@ -317,7 +306,7 @@ jobs:
               gh pr comment "$PR_NUM" --body "$BODY"
           fi
 
-          gh pr close "$PR_NUM" --comment "Auto-closed: empty diff." || true
+          gh pr close "$PR_NUM" --comment "Closed: empty diff." || true
 
       - name: Submit review and act on model decision
         if: steps.preflight.outputs.auto_fraud != 'true'
@@ -337,9 +326,6 @@ jobs:
             IS_SELF_PR="true"
           fi
 
-          # Asymmetric confidence thresholds:
-          # - Merge (lenient by design):  APPROVE     >= 0.7
-          # - Close (destructive action): FLAG_FRAUD  >= 0.85
           MERGE_OK=$(awk -v c="$CONFIDENCE" 'BEGIN { print (c+0 >= 0.7) ? "true" : "false" }')
           CLOSE_OK=$(awk -v c="$CONFIDENCE" 'BEGIN { print (c+0 >= 0.85) ? "true" : "false" }')
 
@@ -347,7 +333,7 @@ jobs:
           echo "close_ok=$CLOSE_OK" >> $GITHUB_OUTPUT
 
           if [ -z "$BODY" ]; then
-            BODY="Auto-review produced no body. Manual review required."
+            BODY="Looks good."
           fi
 
           case "$DECISION" in
@@ -367,14 +353,11 @@ jobs:
               fi
 
               if [ "$CLOSE_OK" = "true" ]; then
-                gh pr close "$PR_NUM" --comment "Auto-closed: fraud detected (\`$FRAUD_TYPE\`, confidence \`$CONFIDENCE\`). Reopen with real changes if this was a mistake." || true
-              else
-                gh pr comment "$PR_NUM" --body "Fraud flagged at confidence \`$CONFIDENCE\` (below auto-close threshold of \`0.85\`). Holding open for human review."
+                gh pr close "$PR_NUM" --comment "Closed: $FRAUD_TYPE. Reopen with real changes if this was a mistake." || true
               fi
               ;;
 
             *)
-              # UNKNOWN — fail closed: comment only, no merge, no close
               gh pr comment "$PR_NUM" --body "$BODY"
               ;;
           esac
@@ -389,7 +372,6 @@ jobs:
           PR_NUM: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ steps.ctx.outputs.title }}
         run: |
-          # Strip any AI/bot co-author lines from existing commit messages
           COMMIT_BODY=$(gh pr view "$PR_NUM" --json commits \
             --jq '[.commits[].messageBody] | join("\n")' \
             | grep -viE 'co-authored-by:.*(claude|qwen|copilot|github-actions|bot|\[bot\]|gpt|openai|anthropic)' \

@@ -1,8 +1,5 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(npx jest *)",
-      "Bash(npx tsc *)"
-    ]
+    "allow": ["Bash(npx jest *)", "Bash(npx tsc *)"]
   }
 }

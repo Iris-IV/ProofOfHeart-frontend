@@ -34,11 +34,7 @@ interface ToastContextValue {
   showWarning: (message: ReactNode) => void;
   showInfo: (message: ReactNode) => void;
   /** Use this when the toast needs a clickable link (e.g. "View on Explorer"). */
-  showToastWithAction: (
-    message: string,
-    action: ToastAction,
-    type?: ToastType,
-  ) => void;
+  showToastWithAction: (message: string, action: ToastAction, type?: ToastType) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -77,14 +73,12 @@ const STYLES: Record<ToastType, string> = {
 const ICON_STYLES: Record<ToastType, string> = {
   error: "bg-red-100 dark:bg-red-800 text-red-600 dark:text-red-300",
   success: "bg-green-100 dark:bg-green-800 text-green-600 dark:text-green-300",
-  warning:
-    "bg-yellow-100 dark:bg-yellow-800 text-yellow-600 dark:text-yellow-300",
+  warning: "bg-yellow-100 dark:bg-yellow-800 text-yellow-600 dark:text-yellow-300",
   info: "bg-blue-100 dark:bg-blue-800 text-blue-600 dark:text-blue-300",
 };
 
 const LINK_STYLES: Record<ToastType, string> = {
-  error:
-    "text-red-700 dark:text-red-300 underline hover:text-red-900 dark:hover:text-red-100",
+  error: "text-red-700 dark:text-red-300 underline hover:text-red-900 dark:hover:text-red-100",
   success:
     "text-green-700 dark:text-green-300 underline hover:text-green-900 dark:hover:text-green-100",
   warning:
@@ -94,13 +88,7 @@ const LINK_STYLES: Record<ToastType, string> = {
 
 const AUTO_DISMISS_MS = 5000;
 
-function Toast({
-  toast,
-  onDismiss,
-}: {
-  toast: ToastItem;
-  onDismiss: (id: string) => void;
-}) {
+function Toast({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: string) => void }) {
   const [visible, setVisible] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -154,7 +142,7 @@ function Toast({
         aria-label="Dismiss notification"
         className="shrink-0 opacity-60 hover:opacity-100 transition-opacity text-lg leading-none mt-0.5"
       >
-        ×
+        <span aria-hidden="true">×</span>
       </button>
     </div>
   );
@@ -176,7 +164,7 @@ function ToastContainer({
   return (
     <div
       aria-label="Notifications"
-      className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 items-end pointer-events-none"
+      className="fixed bottom-[calc(env(safe-area-inset-bottom)_+_1.25rem)] left-1/2 -translate-x-1/2 w-full px-4 sm:w-auto sm:px-0 sm:left-auto sm:right-5 sm:translate-x-0 z-50 flex flex-col gap-2 items-center sm:items-end pointer-events-none"
     >
       {toasts.map((t) => (
         <div key={t.id} className="pointer-events-auto">
@@ -200,17 +188,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const showToast = useCallback(
-    (message: ReactNode, type: ToastType = "info") => {
-      const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      setToasts((prev) => {
-        const next = [...prev, { id, type, message }];
-        // Keep only the newest MAX_TOASTS
-        return next.slice(-MAX_TOASTS);
-      });
-    },
-    [],
-  );
+  const showToast = useCallback((message: ReactNode, type: ToastType = "info") => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setToasts((prev) => {
+      const next = [...prev, { id, type, message }];
+      // Keep only the newest MAX_TOASTS
+      return next.slice(-MAX_TOASTS);
+    });
+  }, []);
 
   const showToastWithAction = useCallback(
     (message: string, action: ToastAction, type: ToastType = "info") => {
@@ -234,22 +219,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [showToast],
   );
 
-  const showError = useCallback(
-    (msg: ReactNode) => showToast(msg, "error"),
-    [showToast],
-  );
-  const showSuccess = useCallback(
-    (msg: ReactNode) => showToast(msg, "success"),
-    [showToast],
-  );
-  const showWarning = useCallback(
-    (msg: ReactNode) => showToast(msg, "warning"),
-    [showToast],
-  );
-  const showInfo = useCallback(
-    (msg: ReactNode) => showToast(msg, "info"),
-    [showToast],
-  );
+  const showError = useCallback((msg: ReactNode) => showToast(msg, "error"), [showToast]);
+  const showSuccess = useCallback((msg: ReactNode) => showToast(msg, "success"), [showToast]);
+  const showWarning = useCallback((msg: ReactNode) => showToast(msg, "warning"), [showToast]);
+  const showInfo = useCallback((msg: ReactNode) => showToast(msg, "info"), [showToast]);
 
   return (
     <ToastContext.Provider

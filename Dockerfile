@@ -2,7 +2,7 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm install
+RUN npm ci --no-audit --no-fund
 
 # Stage 2: Build the application
 FROM node:20-alpine AS builder

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { Component, ErrorInfo, ReactNode } from "react";
 import { AlertCircle, RefreshCcw } from "lucide-react";
+import React, { Component, ErrorInfo, ReactNode } from "react";
 
 interface Props {
   children?: ReactNode;

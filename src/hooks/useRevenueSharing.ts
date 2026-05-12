@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getContribution, getRevenueClaimed, getRevenuePool } from '../lib/contractClient';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getContribution, getRevenueClaimed, getRevenuePool } from "../lib/contractClient";
 
 interface UseRevenueSharingResult {
   revenuePool: bigint;
@@ -31,11 +31,11 @@ export function useRevenueSharing(
   amountRaised: bigint,
   enabled: boolean,
 ): UseRevenueSharingResult {
-  const id = typeof campaignId === 'string' ? parseInt(campaignId, 10) : campaignId;
+  const id = typeof campaignId === "string" ? parseInt(campaignId, 10) : campaignId;
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['revenueSharing', id, walletAddress],
+    queryKey: ["revenueSharing", id, walletAddress],
     queryFn: () => fetchRevenueSharing(id, walletAddress),
     enabled: enabled && !!campaignId && !isNaN(id),
     staleTime: 30_000,
@@ -57,7 +57,7 @@ export function useRevenueSharing(
     claimable,
     isLoading,
     refetch: () => {
-      queryClient.invalidateQueries({ queryKey: ['revenueSharing', id, walletAddress] });
+      queryClient.invalidateQueries({ queryKey: ["revenueSharing", id, walletAddress] });
     },
   };
 }

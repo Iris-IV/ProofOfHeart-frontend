@@ -1,0 +1,25 @@
+# ESLint ignore patterns
+
+# Configuration files
+eslint.config.mjs
+.eslintrc.cjs
+.eslintrc.js
+.eslintrc.json
+
+# Build outputs
+.next/
+out/
+build/
+
+# TypeScript
+*.d.ts
+next-env.d.ts
+
+# Dependencies
+node_modules/
+
+# Test artifacts
+coverage/
+
+# Miscellaneous
+.DS_Store

@@ -1,0 +1,35 @@
+# Code Owners
+# https://help.github.com/articles/about-code-owners/
+
+# Default owner for everything not matched below
+* @default-owner
+
+# Frontend / UI
+src/app/** @frontend-owner
+src/components/** @frontend-owner
+
+# Contract integration layer
+src/lib/contractClient.ts @contract-integration-owner
+
+# Hooks
+src/hooks/** @frontend-owner
+
+# Types
+src/types/** @contract-integration-owner
+
+# i18n / translations
+src/i18n/** @i18n-owner
+src/messages/** @i18n-owner
+
+# Configuration
+next.config.* @devops-owner
+tailwind.config.* @frontend-owner
+postcss.config.* @frontend-owner
+tsconfig.json @devops-owner
+.eslintrc* @devops-owner
+
+# GitHub workflows
+.github/workflows/** @devops-owner
+
+# CI/CD
+.github/dependabot.yml @devops-owner
