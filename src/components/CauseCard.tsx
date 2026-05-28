@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Campaign, Vote, CATEGORY_LABELS } from '../types';
+import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from '../types';
 import VotingComponent from './VotingComponent';
 import CampaignStatusBadge from './CampaignStatusBadge';
 import FundingProgressBar from './FundingProgressBar';
@@ -50,6 +50,9 @@ export default function CauseCard({
     campaign.funding_goal > BigInt(0)
       ? Math.min(100, Math.round((Number(campaign.amount_raised) / Number(campaign.funding_goal)) * 100))
       : 0;
+
+  const raisedXlm = stroopsToXlm(campaign.amount_raised);
+  const goalXlm = stroopsToXlm(campaign.funding_goal);
 
   const isCreator =
     !!userWalletAddress && userWalletAddress === campaign.creator;
@@ -124,7 +127,7 @@ export default function CauseCard({
         {/* Funding progress */}
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400">
-            <span>${campaign.amount_raised.toLocaleString()} raised</span>
+            <span>{raisedXlm.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM raised</span>
             <span>{progressPct}%</span>
           </div>
           <div className="w-full bg-zinc-100 dark:bg-zinc-700 rounded-full h-1.5">
@@ -134,7 +137,7 @@ export default function CauseCard({
             />
           </div>
           <p className="text-xs text-zinc-400 dark:text-zinc-500">
-            Goal: ${campaign.funding_goal.toLocaleString()}
+            Goal: {goalXlm.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM
           </p>
         </div>
 
