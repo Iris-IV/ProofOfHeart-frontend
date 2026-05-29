@@ -83,4 +83,17 @@ describe("DonationModal", () => {
 
     expect(screen.getByRole("button", { name: /Donate/ })).toBeDisabled();
   });
+
+  it("rejects negative and non-numeric amounts", () => {
+    render(<DonationModal {...defaultProps} />);
+
+    const input = screen.getByLabelText("Amount (XLM)");
+    const button = screen.getByRole("button", { name: /Donate/ });
+
+    fireEvent.change(input, { target: { value: "-5" } });
+    expect(button).toBeDisabled();
+
+    fireEvent.change(input, { target: { value: "abc" } });
+    expect(button).toBeDisabled();
+  });
 });
