@@ -1,7 +1,14 @@
 "use client";
-import { getAddress, getNetwork, isConnected, isAllowed, WatchWalletChanges } from "@stellar/freighter-api";
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import {
+  getAddress,
+  getNetwork,
+  isConnected,
+  isAllowed,
+  WatchWalletChanges,
+} from "@stellar/freighter-api";
+import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from "react";
 import { useToast } from "./ToastProvider";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface WalletContextType {
   publicKey: string | null;
@@ -20,6 +27,8 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [walletNetworkWarning, setWalletNetworkWarning] = useState<string | null>(null);
   const { showError, showWarning, showSuccess } = useToast();
+  const queryClient = useQueryClient();
+  const previousPublicKeyRef = useRef<string | null>(null);
   const appNetworkPassphrase = process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE || "";
   const appNetworkLabel = appNetworkPassphrase.includes("Public Global")
     ? "Mainnet"
@@ -57,25 +66,55 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
             `Switch Freighter to ${appNetworkLabel} to continue. Current wallet network does not match the app network.`,
           );
           localStorage.removeItem("stellar_wallet_public_key");
+          // Invalidate queries on network mismatch
+          invalidateWalletQueries();
           return;
         }
 
         setWalletNetworkWarning(null);
-        setPublicKey(key.address);
+        const newPublicKey = key.address;
+        setPublicKey(newPublicKey);
         setIsWalletConnected(true);
-        localStorage.setItem("stellar_wallet_public_key", key.address);
+        localStorage.setItem("stellar_wallet_public_key", newPublicKey);
+
+        // Detect account change and invalidate wallet-scoped queries
+        if (
+          previousPublicKeyRef.current !== null &&
+          previousPublicKeyRef.current !== newPublicKey
+        ) {
+          invalidateWalletQueries();
+        }
+        previousPublicKeyRef.current = newPublicKey;
       } else {
         setWalletNetworkWarning(null);
         setPublicKey(null);
         setIsWalletConnected(false);
         localStorage.removeItem("stellar_wallet_public_key");
+        // Invalidate queries when disconnected
+        if (previousPublicKeyRef.current !== null) {
+          invalidateWalletQueries();
+          previousPublicKeyRef.current = null;
+        }
       }
     } catch {
       setWalletNetworkWarning(null);
       setPublicKey(null);
       setIsWalletConnected(false);
       localStorage.removeItem("stellar_wallet_public_key");
+      // Invalidate queries on error
+      if (previousPublicKeyRef.current !== null) {
+        invalidateWalletQueries();
+        previousPublicKeyRef.current = null;
+      }
     }
+  };
+
+  // Invalidate all wallet-scoped queries when account/network changes
+  const invalidateWalletQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ["admin"] });
+    queryClient.invalidateQueries({ queryKey: ["contributions"] });
+    queryClient.invalidateQueries({ queryKey: ["revenue"] });
+    // Note: campaigns query is not wallet-scoped, so we don't invalidate it
   };
 
   const connectWallet = async () => {
@@ -125,9 +164,12 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     setIsWalletConnected(false);
     setWalletNetworkWarning(null);
     localStorage.removeItem("stellar_wallet_public_key");
+    // Invalidate wallet-scoped queries on disconnect
+    invalidateWalletQueries();
+    previousPublicKeyRef.current = null;
     // Freighter has no programmatic revoke API. Inform the user how to fully sever access.
     showWarning(
-      "Disconnected. To fully revoke Freighter access, open the extension and remove this site from Connected Sites."
+      "Disconnected. To fully revoke Freighter access, open the extension and remove this site from Connected Sites.",
     );
   };
 

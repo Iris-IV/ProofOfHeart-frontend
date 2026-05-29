@@ -4,6 +4,7 @@ import { Campaign, Category, deriveStatus, CampaignStatus } from "../types";
 import { appendWalletTransaction } from "./transactionLog";
 import { parseContractError, getContractErrorCode, ContractError } from "../utils/contractErrors";
 import { assertProductionContractConfig } from "./runtimeEnv";
+import { captureTransactionError } from "./errorTracking";
 
 // ---------------------------------------------------------------------------
 // Environment configuration
@@ -208,7 +209,15 @@ function decodeCampaign(val: StellarSdk.xdr.ScVal): Campaign {
     deadline,
     amount_raised,
     is_active,
-    status: deriveStatus({ is_cancelled, is_verified, is_active, funds_withdrawn, deadline, amount_raised, funding_goal }),
+    status: deriveStatus({
+      is_cancelled,
+      is_verified,
+      is_active,
+      funds_withdrawn,
+      deadline,
+      amount_raised,
+      funding_goal,
+    }),
     created_at: Number(fields["created_at"].u64()),
     funds_withdrawn,
     is_cancelled,
@@ -530,6 +539,9 @@ export async function createCampaign(
     const txResult = await buildAndSubmitTransaction(creator, op, options);
     return txResult.txHash;
   } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    const errorCode = getContractErrorCode(err);
+    captureTransactionError("create_campaign", 0, error, errorCode ? String(errorCode) : undefined);
     throw new Error(parseContractError(err));
   }
 }
@@ -558,6 +570,14 @@ export async function contribute(
     });
     return txResult.txHash;
   } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    const errorCode = getContractErrorCode(err);
+    captureTransactionError(
+      "contribute",
+      campaignId,
+      error,
+      errorCode ? String(errorCode) : undefined,
+    );
     throw new Error(parseContractError(err));
   }
 }
@@ -574,6 +594,14 @@ export async function withdrawFunds(
     const txResult = await buildAndSubmitTransaction(callerAddress, op, options);
     return txResult.txHash;
   } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    const errorCode = getContractErrorCode(err);
+    captureTransactionError(
+      "withdraw_funds",
+      campaignId,
+      error,
+      errorCode ? String(errorCode) : undefined,
+    );
     throw new Error(parseContractError(err));
   }
 }
@@ -597,6 +625,14 @@ export async function cancelCampaign(
     const txResult = await buildAndSubmitTransaction(callerAddress, op, options);
     return txResult.txHash;
   } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    const errorCode = getContractErrorCode(err);
+    captureTransactionError(
+      "cancel_campaign",
+      campaignId,
+      error,
+      errorCode ? String(errorCode) : undefined,
+    );
     throw new Error(parseContractError(err));
   }
 }
@@ -627,6 +663,14 @@ export async function claimRefund(
     });
     return txResult.txHash;
   } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    const errorCode = getContractErrorCode(err);
+    captureTransactionError(
+      "claim_refund",
+      campaignId,
+      error,
+      errorCode ? String(errorCode) : undefined,
+    );
     throw new Error(parseContractError(err));
   }
 }
@@ -819,7 +863,10 @@ export async function voteOnCampaign(
   options?: TransactionLifecycleOptions,
 ): Promise<string> {
   if (USE_MOCKS) {
-    return emitMockLifecycle(`mock_tx_vote_${campaignId}_${approve ? "approve" : "reject"}`, options);
+    return emitMockLifecycle(
+      `mock_tx_vote_${campaignId}_${approve ? "approve" : "reject"}`,
+      options,
+    );
   }
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
@@ -838,6 +885,14 @@ export async function voteOnCampaign(
     });
     return txResult.txHash;
   } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    const errorCode = getContractErrorCode(err);
+    captureTransactionError(
+      "vote_on_campaign",
+      campaignId,
+      error,
+      errorCode ? String(errorCode) : undefined,
+    );
     throw new Error(parseContractError(err));
   }
 }
