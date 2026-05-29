@@ -86,4 +86,16 @@ describe("WithdrawFunds", () => {
     expect(screen.getByRole("button", { name: "Withdraw Funds" })).toBeDisabled();
     expect(screen.getByText("Funding goal has not been reached")).toBeInTheDocument();
   });
+
+  it("handles already-withdrawn state", () => {
+    render(
+      <WithdrawFunds
+        campaign={makeCampaign({ funds_withdrawn: true })}
+        userWalletAddress={CREATOR}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Withdraw Funds" })).toBeDisabled();
+    expect(screen.getByText("Funds have already been withdrawn")).toBeInTheDocument();
+  });
 });
