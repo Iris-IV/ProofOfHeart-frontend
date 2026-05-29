@@ -16,7 +16,8 @@ import UpdatesSection from '@/components/UpdatesSection';
 import { useToast } from '@/components/ToastProvider';
 import VotingComponent from '@/components/VotingComponent';
 import { useWallet } from '@/components/WalletContext';
-import { useCampaign } from '@/hooks/useCampaign';
+import { useLiveCampaignFunding } from '@/hooks/useLiveCampaignFunding';
+import SafeMarkdown from '@/components/SafeMarkdown';
 import { usePlatformFee } from '@/hooks/usePlatformFee';
 import {
   voteOnCampaign,
@@ -29,9 +30,6 @@ import {
   getContribution,
   claimRefund,
 } from '@/lib/contractClient';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeSanitize from 'rehype-sanitize';
 import { useTranslations } from 'next-intl';
 import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from '@/types';
 import { parseContractError } from '@/utils/contractErrors';
@@ -44,7 +42,7 @@ function formatDate(ts: number) {
 export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
   const tContractErrors = useTranslations('ContractErrors');
-  const { campaign: fetchedCampaign, isLoading, error, refetch } = useCampaign(Number(id));
+  const { campaign: fetchedCampaign, isLoading, error, refetch } = useLiveCampaignFunding(Number(id));
   const { platformFeeBps, isLoading: isPlatformFeeLoading, isFallback } = usePlatformFee();
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
@@ -280,11 +278,9 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 </div>
               )}
               <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4 leading-tight">{campaign.title}</h1>
-              <div className="prose prose-zinc dark:prose-invert max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
-                  {campaign.description}
-                </ReactMarkdown>
-              </div>
+              <SafeMarkdown className="prose prose-zinc dark:prose-invert max-w-none">
+                {campaign.description}
+              </SafeMarkdown>
 
               {/* Share + Report toolbar */}
               <div className="flex items-center justify-between flex-wrap gap-3 pt-4 mt-4 border-t border-zinc-100 dark:border-zinc-700">

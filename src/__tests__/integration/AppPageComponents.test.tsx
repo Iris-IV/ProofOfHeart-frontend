@@ -24,14 +24,10 @@ jest.mock("@stellar/stellar-sdk", () => ({
   },
 }));
 
-jest.mock("react-markdown", () => ({
+jest.mock("@/components/SafeMarkdown", () => ({
   __esModule: true,
   default: ({ children }: { children: string }) => <p>{children}</p>,
 }));
-
-jest.mock("remark-gfm", () => ({}));
-
-jest.mock("rehype-sanitize", () => ({}));
 
 jest.mock("@/i18n/routing", () => ({
   Link: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
@@ -45,8 +41,8 @@ jest.mock("@/components/WalletContext", () => ({
   useWallet: () => mockUseWallet(),
 }));
 
-jest.mock("@/hooks/useCampaign", () => ({
-  useCampaign: (id: number) => mockUseCampaign(id),
+jest.mock("@/hooks/useLiveCampaignFunding", () => ({
+  useLiveCampaignFunding: (id: number) => mockUseCampaign(id),
 }));
 
 jest.mock("@/hooks/useCampaigns", () => ({
@@ -177,6 +173,7 @@ describe("app page components", () => {
     });
     mockUseCampaign.mockReturnValue({
       campaign: makeCampaign(),
+      amountRaised: makeCampaign().amount_raised,
       isLoading: false,
       error: null,
       refetch: jest.fn(),
@@ -208,6 +205,7 @@ describe("app page components", () => {
   it("renders the cause detail page with campaign data, voting, actions, and refund state", async () => {
     mockUseCampaign.mockReturnValue({
       campaign: makeCampaign({ status: "cancelled", is_active: false, is_cancelled: true }),
+      amountRaised: makeCampaign({ status: "cancelled", is_active: false, is_cancelled: true }).amount_raised,
       isLoading: false,
       error: null,
       refetch: jest.fn(),

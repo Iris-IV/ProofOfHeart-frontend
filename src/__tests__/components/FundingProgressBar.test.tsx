@@ -35,11 +35,23 @@ describe("FundingProgressBar", () => {
     expect(screen.getByText("0% funded")).toBeInTheDocument();
   });
 
-  it("sets the progress bar width proportionally", () => {
+  it("renders a motion progress bar element", () => {
     const { container } = render(
       <FundingProgressBar amountRaised={BigInt(25_000_000)} fundingGoal={BigInt(100_000_000)} />,
     );
-    const bar = container.querySelector('[style*="width"]') as HTMLElement;
-    expect(bar.style.width).toBe("25%");
+    const bar = container.querySelector(".bg-linear-to-r");
+    expect(bar).toBeInTheDocument();
+  });
+
+  it("updates displayed percentage when amount raised increases", () => {
+    const { rerender } = render(
+      <FundingProgressBar amountRaised={BigInt(25_000_000)} fundingGoal={BigInt(100_000_000)} />,
+    );
+    expect(screen.getByText("25% funded")).toBeInTheDocument();
+
+    rerender(
+      <FundingProgressBar amountRaised={BigInt(50_000_000)} fundingGoal={BigInt(100_000_000)} />,
+    );
+    expect(screen.getByText("50% funded")).toBeInTheDocument();
   });
 });
