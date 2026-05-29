@@ -64,4 +64,15 @@ describe("useCampaigns", () => {
     expect(result.current.campaigns).toHaveLength(2);
     expect(result.current.error).toBeNull();
   });
+
+  it("transitions from loading to error when getAllCampaigns throws", async () => {
+    mockGetAllCampaigns.mockRejectedValue(new Error("network failure"));
+
+    const { result } = renderHook(() => useCampaigns(), { wrapper: createWrapper() });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.campaigns).toEqual([]);
+    expect(result.current.error).toBe("network failure");
+  });
 });
