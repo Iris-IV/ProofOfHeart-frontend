@@ -267,7 +267,7 @@ export default function CreateCampaignPage() {
         publicKey,
       );
 
-      showSuccess(t('successMessage'));
+      showSuccess(t('successMessage', { title: reviewData.title }));
       setIsReviewOpen(false);
       setReviewData(null);
 
@@ -282,11 +282,13 @@ export default function CreateCampaignPage() {
       } else {
         router.push('/causes');
       }
+      // Keep isSubmitting true so the form stays disabled during navigation.
+      // The component will unmount before this matters on the success path.
+      return;
     } catch (err) {
       showError(parseContractError(err));
-    } finally {
-      setIsSubmitting(false);
     }
+    setIsSubmitting(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {

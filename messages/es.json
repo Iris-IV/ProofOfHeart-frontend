@@ -189,7 +189,7 @@
     "editDetails": "Editar Detalles",
     "confirmAndSign": "Confirmar y Firmar",
     "submitting": "Enviando\u2026",
-    "successMessage": "\u00a1Campa\u00f1a creada exitosamente!",
+    "successMessage": "\u00a1Campa\u00f1a \"{title}\" creada exitosamente!",
     "emailWebhookFailed": "La campa\u00f1a se cre\u00f3, pero no pudimos guardar tu suscripci\u00f3n de email opcional.",
     "walletRequiredError": "Por favor conecta tu wallet Freighter antes de crear una campa\u00f1a.",
     "validationTitleRequired": "El t\u00edtulo es obligatorio.",

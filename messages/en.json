@@ -189,7 +189,7 @@
     "editDetails": "Edit Details",
     "confirmAndSign": "Confirm & Sign",
     "submitting": "Submitting\u2026",
-    "successMessage": "Campaign created successfully!",
+    "successMessage": "Campaign \"{title}\" created successfully!",
     "emailWebhookFailed": "Campaign created, but we could not save your optional email subscription.",
     "walletRequiredError": "Please connect your Freighter wallet before creating a campaign.",
     "validationTitleRequired": "Title is required.",
