@@ -32,7 +32,7 @@ import {
 } from "@/lib/contractClient";
 import type { TransactionLifecyclePhase } from "@/lib/contractClient";
 import { isSameAddress } from "@/lib/stellar";
-import { stroopsToXlm, Category, CATEGORY_LABELS, basisPointsToPercentage } from "@/types";
+import { formatStroopsAsXlm, Category, CATEGORY_LABELS, basisPointsToPercentage } from "@/types";
 import { parseContractError } from "@/utils/contractErrors";
 import { explorerTxUrl } from "@/utils/explorer";
 import {
@@ -402,7 +402,7 @@ export default function AdminDashboard() {
         <StatsCard
           icon={<DollarSign className="text-green-500" />}
           label={t("totalRaised")}
-          value={`${stroopsToXlm(totalRaised).toLocaleString()} XLM`}
+          value={`${formatStroopsAsXlm(totalRaised)} XLM`}
         />
         <StatsCard
           icon={<PieChart className="text-purple-500" />}
@@ -484,7 +484,7 @@ export default function AdminDashboard() {
                           <div className="flex items-center gap-2">
                             <span className="text-zinc-400">{t("goal")}:</span>
                             <span className="text-zinc-900 dark:text-zinc-100">
-                              {stroopsToXlm(BigInt(c.funding_goal)).toLocaleString()} XLM
+                              {formatStroopsAsXlm(BigInt(c.funding_goal))} XLM
                             </span>
                           </div>
                         </div>

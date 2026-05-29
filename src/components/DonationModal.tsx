@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { contribute } from "../lib/contractClient";
-import { Campaign, xlmToStroops, stroopsToXlm } from "../types";
+import { Campaign, xlmToStroops, formatStroopsAsXlm, calculateFundingPercentage } from "../types";
 import { useToast } from "./ToastProvider";
 import { useWallet } from "./WalletContext";
 import { parseContractError } from "../utils/contractErrors";
@@ -75,8 +75,10 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [step, onClose]);
 
-  const goal = stroopsToXlm(campaign.funding_goal);
-  const raised = stroopsToXlm(campaign.amount_raised);
+  const goalStr = formatStroopsAsXlm(campaign.funding_goal, { maximumFractionDigits: 7 });
+  const raisedStr = formatStroopsAsXlm(campaign.amount_raised, { maximumFractionDigits: 7 });
+  const goal = parseFloat(goalStr);
+  const raised = parseFloat(raisedStr);
 
   // Robust validation for amount input
   const validateAmount = (value: string): { valid: boolean; error?: string; amount?: number } => {
@@ -139,7 +141,7 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
       return;
     }
 
-    const amountToSend = validation.amount!;
+    const amountToSend = amount;
     setError(null);
     setStep("pending");
     setTxPhase(null);

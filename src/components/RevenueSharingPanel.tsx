@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { claimRevenue, depositRevenue } from "../lib/contractClient";
-import { Campaign, basisPointsToPercentage, stroopsToXlm, xlmToStroops } from "../types";
+import { Campaign, basisPointsToPercentage, formatStroopsAsXlm, xlmToStroops } from "../types";
 import { useToast } from "./ToastProvider";
 import { useWallet } from "./WalletContext";
 import { useRevenueSharing } from "../hooks/useRevenueSharing";
@@ -19,9 +19,7 @@ interface RevenueSharingPanelProps {
 }
 
 function formatXlmAmount(value: bigint): string {
-  return stroopsToXlm(value).toLocaleString(undefined, {
-    maximumFractionDigits: 4,
-  });
+  return formatStroopsAsXlm(value, { maximumFractionDigits: 4 });
 }
 
 export default function RevenueSharingPanel({
@@ -60,7 +58,7 @@ export default function RevenueSharingPanel({
   const handleDeposit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const parsedAmount = Number(depositAmount);
+    const parsedAmount = parseFloat(depositAmount);
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
       showWarning("Enter a revenue amount greater than 0 XLM.");
       return;
@@ -69,7 +67,7 @@ export default function RevenueSharingPanel({
     setIsPending(true);
     setTxPhase(null);
     try {
-      await depositRevenue(campaign.id, xlmToStroops(parsedAmount), {
+      await depositRevenue(campaign.id, xlmToStroops(depositAmount), {
         onStatus: ({ phase }) => setTxPhase(phase),
       });
       setDepositAmount("");

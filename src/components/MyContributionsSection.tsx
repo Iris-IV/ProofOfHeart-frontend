@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { useContributions } from "../hooks/useContributions";
 import { claimRefund, claimRevenue } from "../lib/contractClient";
 import { getStellarExplorerTxUrl } from "../lib/stellarExplorer";
-import { CampaignStatus, stroopsToXlm } from "../types";
+import { CampaignStatus, formatStroopsAsXlm } from "../types";
 import { useToast } from "./ToastProvider";
 import { parseContractError } from "../utils/contractErrors";
 import type { WalletTransactionAction } from "../lib/transactionLog";
@@ -16,9 +16,7 @@ interface MyContributionsSectionProps {
 }
 
 function formatXlmAmount(value: bigint): string {
-  return stroopsToXlm(value).toLocaleString(undefined, {
-    maximumFractionDigits: 7,
-  });
+  return formatStroopsAsXlm(value, { maximumFractionDigits: 7 });
 }
 
 function getStatusLabel(status: CampaignStatus): string {

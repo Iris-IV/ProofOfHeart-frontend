@@ -9,7 +9,7 @@ import FundingProgressBar from '@/components/FundingProgressBar';
 import { CampaignRowSkeleton } from '@/components/Skeleton';
 import { useCampaigns } from '@/hooks/useCampaigns';
 import { formatAddress } from '@/lib/formatAddress';
-import { Category, CATEGORY_LABELS, stroopsToXlm } from '@/types';
+import { Category, CATEGORY_LABELS, formatStroopsAsXlm } from '@/types';
 
 const CATEGORY_ICONS: Record<Category, string> = {
   [Category.Learner]: '🎓',
@@ -149,7 +149,7 @@ export default function ExplorePage() {
                   {campaign.title}
                 </p>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  By {formatAddress(campaign.creator)} · {stroopsToXlm(campaign.amount_raised).toFixed(1)} / {stroopsToXlm(campaign.funding_goal).toFixed(1)} XLM
+                  By {formatAddress(campaign.creator)} · {formatStroopsAsXlm(campaign.amount_raised, { maximumFractionDigits: 1 })} / {formatStroopsAsXlm(campaign.funding_goal, { maximumFractionDigits: 1 })} XLM
                 </p>
                 <div className="mt-1.5">
                   <FundingProgressBar amountRaised={campaign.amount_raised} fundingGoal={campaign.funding_goal} />

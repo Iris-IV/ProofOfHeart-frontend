@@ -25,7 +25,7 @@ import {
   claimRefund,
 } from "../../../lib/contractClient";
 import type { TransactionLifecyclePhase } from "../../../lib/contractClient";
-import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from "../../../types";
+import { Campaign, Vote, CATEGORY_LABELS, formatStroopsAsXlm } from "../../../types";
 import { parseContractError } from "../../../utils/contractErrors";
 
 function formatDate(ts: number) {
@@ -250,8 +250,10 @@ export default function CauseDetailClient({ id }: { id: string }) {
     );
   }
 
-  const raised = stroopsToXlm(campaign.amount_raised);
-  const goal = stroopsToXlm(campaign.funding_goal);
+  const raisedStr = formatStroopsAsXlm(campaign.amount_raised, { maximumFractionDigits: 7 });
+  const goalStr = formatStroopsAsXlm(campaign.funding_goal, { maximumFractionDigits: 7 });
+  const raised = parseFloat(raisedStr);
+  const goal = parseFloat(goalStr);
   const fundingPct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
 
   const approvalRate =
@@ -266,7 +268,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
     campaign.is_cancelled ||
     (now > campaign.deadline && campaign.amount_raised < campaign.funding_goal);
 
-  const refundableXlm = stroopsToXlm(refundableAmount);
+  const refundableXlm = formatStroopsAsXlm(refundableAmount, { maximumFractionDigits: 7 });
 
   return (
     <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">

@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useState } from 'react';
-import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from '../types';
+import { Campaign, Vote, CATEGORY_LABELS, calculateFundingPercentage, formatStroopsAsXlm } from '../types';
 import { formatAddress } from '@/lib/formatAddress';
 import AsyncButtonContent from './AsyncButtonContent';
 import CampaignStatusBadge from './CampaignStatusBadge';
@@ -60,13 +60,10 @@ export default function CauseCard({
   const [isClaimingRefund, setIsClaimingRefund] = useState(false);
   const { showError } = useToast();
 
-  const progressPct =
-    campaign.funding_goal > BigInt(0)
-      ? Math.min(100, Math.round((Number(campaign.amount_raised) / Number(campaign.funding_goal)) * 100))
-      : 0;
+  const progressPct = calculateFundingPercentage(campaign.amount_raised, campaign.funding_goal);
 
-  const raisedXlm = stroopsToXlm(campaign.amount_raised);
-  const goalXlm = stroopsToXlm(campaign.funding_goal);
+  const raisedXlm = formatStroopsAsXlm(campaign.amount_raised, { maximumFractionDigits: 2 });
+  const goalXlm = formatStroopsAsXlm(campaign.funding_goal, { maximumFractionDigits: 2 });
 
   const isCreator =
     !!userWalletAddress && userWalletAddress === campaign.creator;

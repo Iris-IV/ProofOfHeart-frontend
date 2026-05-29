@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Campaign, basisPointsToPercentage, stroopsToXlm, xlmToStroops } from "../types";
+import { Campaign, basisPointsToPercentage, formatStroopsAsXlm, xlmToStroops } from "../types";
 import AsyncButtonContent from "./AsyncButtonContent";
 import { useToast } from "./ToastProvider";
 import { useWallet } from "./WalletContext";
@@ -83,11 +83,10 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
   };
 
   const handleDepositRevenue = async () => {
-    const xlm = parseFloat(revenueAmount);
-    if (!xlm || xlm <= 0) return;
+    if (!revenueAmount || parseFloat(revenueAmount) <= 0) return;
     await handleAction(
       "depositRevenue",
-      (options) => depositRevenue(campaign.id, xlmToStroops(xlm), options),
+      (options) => depositRevenue(campaign.id, xlmToStroops(revenueAmount), options),
       "Revenue deposited!",
     );
     setRevenueAmount("");
@@ -141,7 +140,7 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
     await invoke("contribute", campaign.id, async () => {
       try {
         await withActionTimeout(
-          contribute(campaign.id, publicKey, xlmToStroops(parsedAmount), {
+          contribute(campaign.id, publicKey, xlmToStroops(contributionAmount), {
             onStatus: ({ phase }) => setTxPhase(phase),
           }),
         );
@@ -315,7 +314,7 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
           <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-1">
             Your Contribution
           </h3>
-          <p className="text-2xl font-bold text-blue-600 mb-4">{stroopsToXlm(contribution)} XLM</p>
+          <p className="text-2xl font-bold text-blue-600 mb-4">{formatStroopsAsXlm(contribution)} XLM</p>
           <div className="flex flex-col gap-3">
             <button
               onClick={() =>

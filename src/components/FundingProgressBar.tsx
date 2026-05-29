@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, useSpring, useTransform } from "framer-motion";
-import { stroopsToXlm } from "../types";
+import { calculateFundingPercentage, formatStroopsAsXlm } from "../types";
 
 interface FundingProgressBarProps {
   amountRaised: bigint;
@@ -10,9 +10,7 @@ interface FundingProgressBarProps {
 }
 
 export default function FundingProgressBar({ amountRaised, fundingGoal }: FundingProgressBarProps) {
-  const raised = stroopsToXlm(amountRaised);
-  const goal = stroopsToXlm(fundingGoal);
-  const targetPct = goal > 0 ? Math.min(100, (raised / goal) * 100) : 0;
+  const targetPct = calculateFundingPercentage(amountRaised, fundingGoal);
 
   const [displayPct, setDisplayPct] = useState(targetPct);
   const hasMountedRef = useRef(false);
@@ -31,8 +29,8 @@ export default function FundingProgressBar({ amountRaised, fundingGoal }: Fundin
     setDisplayPct(targetPct);
   }, [targetPct, springPct]);
 
-  const displayRaised = raised.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  const displayGoal = goal.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  const displayRaised = formatStroopsAsXlm(amountRaised, { maximumFractionDigits: 2 });
+  const displayGoal = formatStroopsAsXlm(fundingGoal, { maximumFractionDigits: 2 });
   const roundedPct = Math.round(displayPct);
 
   return (

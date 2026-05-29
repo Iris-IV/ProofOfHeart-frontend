@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { withdrawFunds } from "../lib/contractClient";
-import { Campaign, basisPointsToPercentage, stroopsToXlm } from "../types";
+import { Campaign, basisPointsToPercentage, formatStroopsAsXlm } from "../types";
 import { useToast } from "./ToastProvider";
 import { isSameAddress } from "../lib/stellar";
 import { parseContractError } from "../utils/contractErrors";
@@ -57,7 +57,8 @@ export default function WithdrawFunds({
           : null;
 
   // Fee breakdown
-  const totalRaised = stroopsToXlm(campaign.amount_raised);
+  const totalRaisedStr = formatStroopsAsXlm(campaign.amount_raised, { maximumFractionDigits: 7 });
+  const totalRaised = parseFloat(totalRaisedStr);
   const feeAmount = totalRaised * (platformFeeBps / 10000);
   const creatorAmount = totalRaised - feeAmount;
   const feePct = basisPointsToPercentage(platformFeeBps);

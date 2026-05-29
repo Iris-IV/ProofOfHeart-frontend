@@ -116,17 +116,69 @@ export function deriveCampaignStatus(campaign: Campaign): CampaignStatus {
 }
 
 /**
- * Convert stroops (i128) to a floating-point XLM number for display purposes.
+ * Convert stroops (i128) to a string XLM value for display purposes.
+ * This avoids precision loss from number conversion above 2^53.
  */
-export function stroopsToXlm(stroops: bigint): number {
-  return Number(stroops) / 10_000_000;
+export function stroopsToXlm(stroops: bigint): string {
+  const stroopsStr = stroops.toString();
+  if (stroopsStr.length <= 7) {
+    // Value is less than 1 XLM, pad with leading zeros
+    const padded = stroopsStr.padStart(7, '0');
+    const integerPart = '0';
+    const fractionalPart = padded.slice(-7);
+    // Remove trailing zeros
+    const trimmedFractional = fractionalPart.replace(/0+$/, '');
+    return trimmedFractional.length > 0 ? `${integerPart}.${trimmedFractional}` : '0';
+  } else {
+    const integerPart = stroopsStr.slice(0, -7);
+    const fractionalPart = stroopsStr.slice(-7);
+    // Remove trailing zeros
+    const trimmedFractional = fractionalPart.replace(/0+$/, '');
+    return trimmedFractional.length > 0 ? `${integerPart}.${trimmedFractional}` : integerPart;
+  }
 }
 
 /**
- * Convert an XLM number to stroops (bigint) for contract calls.
+ * Convert an XLM string value to stroops (bigint) for contract calls.
+ * This avoids precision loss from number conversion above 2^53.
  */
-export function xlmToStroops(xlm: number): bigint {
-  return BigInt(Math.round(xlm * 10_000_000));
+export function xlmToStroops(xlm: string): bigint {
+  const trimmed = xlm.trim();
+  if (!trimmed) return BigInt(0);
+  
+  const parts = trimmed.split('.');
+  const integerPart = parts[0] || '0';
+  const fractionalPart = parts[1] || '';
+  
+  // Pad or truncate fractional part to exactly 7 digits (stroops precision)
+  const paddedFractional = fractionalPart.padEnd(7, '0').slice(0, 7);
+  
+  const combined = integerPart + paddedFractional;
+  return BigInt(combined);
+}
+
+/**
+ * Calculate funding percentage using bigint arithmetic to avoid precision loss.
+ * Returns a number between 0 and 100.
+ */
+export function calculateFundingPercentage(amountRaised: bigint, fundingGoal: bigint): number {
+  if (fundingGoal <= BigInt(0)) return 0;
+  // Use bigint arithmetic: (amountRaised * 100) / fundingGoal
+  const percentage = (amountRaised * BigInt(100)) / fundingGoal;
+  return Math.min(100, Number(percentage));
+}
+
+/**
+ * Format a stroops bigint as a localized XLM string for display.
+ */
+export function formatStroopsAsXlm(stroops: bigint, options?: Intl.NumberFormatOptions): string {
+  const xlmStr = stroopsToXlm(stroops);
+  const xlmNum = parseFloat(xlmStr);
+  return xlmNum.toLocaleString(undefined, {
+    maximumFractionDigits: 7,
+    minimumFractionDigits: 0,
+    ...options,
+  });
 }
 
 /**
