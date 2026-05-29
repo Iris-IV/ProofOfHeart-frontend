@@ -75,4 +75,21 @@ describe("useCampaigns", () => {
     expect(result.current.campaigns).toEqual([]);
     expect(result.current.error).toBe("network failure");
   });
+
+  it("refetch re-queries and updates the campaign list", async () => {
+    mockGetAllCampaigns
+      .mockResolvedValueOnce([makeCampaign(1)])
+      .mockResolvedValueOnce([makeCampaign(1), makeCampaign(2)]);
+
+    const { result } = renderHook(() => useCampaigns(), { wrapper: createWrapper() });
+
+    await waitFor(() => expect(result.current.campaigns).toHaveLength(1));
+
+    await act(async () => {
+      result.current.refetch();
+    });
+
+    await waitFor(() => expect(result.current.campaigns).toHaveLength(2));
+    expect(mockGetAllCampaigns).toHaveBeenCalledTimes(2);
+  });
 });
