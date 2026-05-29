@@ -75,9 +75,11 @@ export default function AdminDashboard() {
             ? "Confirming..."
             : null;
 
-  // Load reports from localStorage on mount
+  // Load reports from backend on mount
   useEffect(() => {
-    setReports(getAllReports());
+    getAllReports()
+      .then(setReports)
+      .catch(() => setReports([]));
   }, []);
 
   // Rejection Modal State
@@ -218,10 +220,16 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleMarkReportReviewed = (reportId: string) => {
-    markReportReviewed(reportId);
-    setReports(getAllReports());
-    showSuccess('Report marked as reviewed.');
+  const handleMarkReportReviewed = async (reportId: string) => {
+    try {
+      await markReportReviewed(reportId);
+      setReports((prev) =>
+        prev.map((r) => (r.id === reportId ? { ...r, status: 'reviewed' as const } : r)),
+      );
+      showSuccess('Report marked as reviewed.');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to update report.');
+    }
   };
 
   const handleUpdateFee = async (e: FormEvent) => {

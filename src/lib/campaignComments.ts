@@ -6,6 +6,7 @@ import {
   requestOffchainJson,
   signOffchainPayload,
 } from "./offchainApiClient";
+import type { CommentsPage } from "../hooks/useCampaignComments";
 
 const USE_MOCKS = typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
@@ -68,13 +69,28 @@ async function signPayload(payload: CommentPayload): Promise<string> {
 // Public API
 // ---------------------------------------------------------------------------
 
-export async function getCampaignComments(campaignId: number): Promise<Comment[]> {
+export async function getCampaignComments(
+  campaignId: number,
+  page = 1,
+  pageSize = 20,
+): Promise<CommentsPage> {
   if (USE_MOCKS || !hasOffchainApiBaseUrl()) {
-    return MOCK_COMMENTS[campaignId] ?? [];
+    const all = MOCK_COMMENTS[campaignId] ?? [];
+    const filtered = all.filter((c) => !c.isReported);
+    const items = filtered.slice((page - 1) * pageSize, page * pageSize);
+    return {
+      items,
+      total: filtered.length,
+      page,
+      pageSize,
+      hasMore: page * pageSize < filtered.length,
+    };
   }
 
   try {
-    return await requestOffchainJson<Comment[]>(`/campaigns/${campaignId}/comments`);
+    return await requestOffchainJson<CommentsPage>(
+      `/campaigns/${campaignId}/comments?page=${page}&pageSize=${pageSize}`,
+    );
   } catch (error) {
     throw new Error(`Failed to fetch comments: ${parseContractError(error)}`);
   }
