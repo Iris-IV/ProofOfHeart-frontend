@@ -1,5 +1,4 @@
 "use client";
-"use client";
 
 import { useState } from "react";
 import { withdrawFunds } from "../lib/contractClient";
@@ -8,7 +7,8 @@ import { useToast } from "./ToastProvider";
 import { isSameAddress } from "../lib/stellar";
 import { parseContractError } from "../utils/contractErrors";
 import { explorerTxUrl } from "../utils/explorer";
-import { type TransactionLifecyclePhase } from "../lib/contractClient";
+import { type TransactionLifecyclePhase, type TransactionLifecycleOptions } from "../lib/contractClient";
+import { useWriteGuard } from "../hooks/useWriteGuard";
 
 interface WithdrawFundsProps {
   campaign: Campaign;
@@ -23,11 +23,12 @@ export default function WithdrawFunds({
   platformFeeBps = 300,
   onWithdrawSuccess,
 }: WithdrawFundsProps) {
-  const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
   const { showError, showSuccess } = useToast();
+  const { invoke, isPending } = useWriteGuard();
+  const isWithdrawing = isPending("withdrawFunds", campaign.id);
 
   // Only the campaign creator should see this component
   const isCreator = isSameAddress(userWalletAddress, campaign.creator);
@@ -62,24 +63,25 @@ export default function WithdrawFunds({
   const feePct = basisPointsToPercentage(platformFeeBps);
 
   const handleWithdraw = async () => {
-    setIsWithdrawing(true);
     setTxPhase(null);
-    try {
-      const hash = await withdrawFunds(campaign.id, {
-        onStatus: ({ phase }) => setTxPhase(phase),
-      });
-      setTxHash(hash);
-      showSuccess(
-        `Withdrawal successful! You received ${creatorAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM.`,
-      );
-      onWithdrawSuccess?.();
-    } catch (err) {
-      showError(parseContractError(err));
-    } finally {
-      setIsWithdrawing(false);
-      setShowConfirm(false);
-      setTxPhase(null);
-    }
+    await invoke("withdrawFunds", campaign.id, async () => {
+      try {
+        const hash = await withdrawFunds(campaign.id, {
+          onStatus: ({ phase }) => setTxPhase(phase),
+        } as TransactionLifecycleOptions);
+        setTxHash(hash);
+        showSuccess(
+          `Withdrawal successful! You received ${creatorAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM.`,
+        );
+        onWithdrawSuccess?.();
+      } catch (err) {
+        showError(parseContractError(err));
+        throw err;
+      } finally {
+        setShowConfirm(false);
+        setTxPhase(null);
+      }
+    });
   };
 
   // Success state — show tx hash and amounts, with explorer link

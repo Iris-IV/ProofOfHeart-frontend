@@ -23,6 +23,35 @@ export const CATEGORY_LABELS: Record<Category, string> = {
 
 export type CampaignStatus = "active" | "cancelled" | "funded" | "failed" | "verified";
 
+/**
+ * Raw on-chain fields used to derive CampaignStatus.
+ * Matches the boolean flags the Soroban contract actually stores.
+ */
+export interface RawCampaignFlags {
+  is_cancelled: boolean;
+  is_verified: boolean;
+  is_active: boolean;
+  funds_withdrawn: boolean;
+  deadline: number; // Unix timestamp seconds
+  amount_raised: bigint;
+  funding_goal: bigint;
+}
+
+/**
+ * Single canonical status derivation used by every view.
+ * Priority: cancelled > funded > failed > verified > active
+ */
+export function deriveStatus(flags: RawCampaignFlags): CampaignStatus {
+  if (flags.is_cancelled) return "cancelled";
+  if (flags.funds_withdrawn) return "funded";
+  const now = Math.floor(Date.now() / 1000);
+  if (!flags.is_active && flags.deadline < now && flags.amount_raised < flags.funding_goal) {
+    return "failed";
+  }
+  if (flags.is_verified) return "verified";
+  return "active";
+}
+
 // ---------------------------------------------------------------------------
 // Campaign interface — mirrors the on-chain Campaign struct
 // ---------------------------------------------------------------------------
@@ -80,19 +109,10 @@ export enum ContractErrorCode {
 
 /**
  * Derive the campaign lifecycle status from its boolean flags + deadline.
+ * Delegates to deriveStatus so all views use a single derivation path.
  */
 export function deriveCampaignStatus(campaign: Campaign): CampaignStatus {
-  if (campaign.is_cancelled) return "cancelled";
-  if (campaign.funds_withdrawn) return "funded";
-  if (
-    !campaign.is_active &&
-    campaign.deadline < Math.floor(Date.now() / 1000) &&
-    campaign.amount_raised < campaign.funding_goal
-  ) {
-    return "failed";
-  }
-  if (campaign.is_active) return "active";
-  return "active"; // fallback
+  return deriveStatus(campaign);
 }
 
 /**

@@ -1,6 +1,6 @@
 import { signTransaction, getAddress } from "@stellar/freighter-api";
 import * as StellarSdk from "@stellar/stellar-sdk";
-import { Campaign, CampaignStatus, Category } from "../types";
+import { Campaign, Category, deriveStatus, CampaignStatus } from "../types";
 import { appendWalletTransaction } from "./transactionLog";
 import { parseContractError, getContractErrorCode, ContractError } from "../utils/contractErrors";
 import { assertProductionContractConfig } from "./runtimeEnv";
@@ -70,74 +70,46 @@ async function buildAndSubmitTransaction(
   options?: TransactionLifecycleOptions,
 ): Promise<StellarSdk.rpc.Api.GetSuccessfulTransactionResponse> {
   const server = getServer();
+
   options?.onStatus?.({ phase: "building" });
   const sourceAccount = await server.getAccount(sourcePublicKey);
-  const effectiveFeePerOperation =
-    feePerOperation ?? (await getRecommendedFeePerOperation());
 
-  const submitOnce = async (nextFeePerOperation: number) => {
-    const txBuilder = new StellarSdk.TransactionBuilder(sourceAccount, {
-      fee: `${nextFeePerOperation}`,
-      networkPassphrase: NETWORK_PASSPHRASE,
-    });
-    txBuilder.addOperation(contractOp);
-    txBuilder.setTimeout(300);
+  const txBuilder = new StellarSdk.TransactionBuilder(sourceAccount, {
+    fee: StellarSdk.BASE_FEE,
+    networkPassphrase: NETWORK_PASSPHRASE,
+  });
+  txBuilder.addOperation(contractOp);
+  txBuilder.setTimeout(300);
 
-    const builtTx = txBuilder.build();
-    const simulated = await server.simulateTransaction(builtTx);
+  const builtTx = txBuilder.build();
+  const simulated = await server.simulateTransaction(builtTx);
 
-    if (StellarSdk.rpc.Api.isSimulationError(simulated)) {
-      throw new Error(simulated.error ?? "Transaction simulation failed.");
-    }
+  if (StellarSdk.rpc.Api.isSimulationError(simulated)) {
+    throw new Error(simulated.error ?? "Transaction simulation failed.");
+  }
 
-    const preparedTx = StellarSdk.rpc
-      .assembleTransaction(
-        builtTx,
-        simulated as StellarSdk.rpc.Api.SimulateTransactionSuccessResponse,
-      )
-      .build();
+  const preparedTx = StellarSdk.rpc
+    .assembleTransaction(
+      builtTx,
+      simulated as StellarSdk.rpc.Api.SimulateTransactionSuccessResponse,
+    )
+    .build();
 
   options?.onStatus?.({ phase: "signing" });
   const { signedTxXdr } = await signTransaction(preparedTx.toXDR(), {
     networkPassphrase: NETWORK_PASSPHRASE,
   });
 
-    const signedTx = StellarSdk.TransactionBuilder.fromXDR(
-      signedTxXdr,
-      NETWORK_PASSPHRASE,
-    ) as StellarSdk.Transaction;
-
-    const submissionResult = await server.sendTransaction(signedTx);
-
-    if (submissionResult.status === "ERROR") {
-      throw new Error(
-        stringifyError(
-          (submissionResult as { errorResult?: string; error?: string; message?: string }).errorResult ??
-            (submissionResult as { error?: string }).error ??
-            (submissionResult as { message?: string }).message ??
-            "Transaction submission failed.",
-        ),
-      );
-    }
-
-    let getResult = await server.getTransaction(submissionResult.hash);
-    while (getResult.status === "NOT_FOUND") {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      getResult = await server.getTransaction(submissionResult.hash);
-    }
-
-    if (getResult.status === "FAILED") {
-      throw new Error("Transaction failed on-chain.");
-    }
-
-    return getResult as StellarSdk.rpc.Api.GetSuccessfulTransactionResponse;
-  };
+  const signedTx = StellarSdk.TransactionBuilder.fromXDR(
+    signedTxXdr,
+    NETWORK_PASSPHRASE,
+  ) as StellarSdk.Transaction;
 
   options?.onStatus?.({ phase: "submitting" });
   const submissionResult = await server.sendTransaction(signedTx);
 
   if (submissionResult.status === "ERROR") {
-    options?.onStatus?.({ phase: "failed", txHash: submissionResult.hash, rpcStatus: submissionResult.status });
+    options?.onStatus?.({ phase: "failed", rpcStatus: submissionResult.status });
     throw new Error("Transaction submission failed.");
   }
 
@@ -154,7 +126,6 @@ async function buildAndSubmitTransaction(
       options?.onStatus?.({ phase: "failed", txHash, rpcStatus: getResult.status });
       throw new Error("Transaction confirmation timed out.");
     }
-
     await sleep(pollDelay);
     pollDelay = Math.min(Math.round(pollDelay * 1.5), 6_000);
     getResult = await server.getTransaction(txHash);
@@ -220,20 +191,28 @@ function decodeCampaign(val: StellarSdk.xdr.ScVal): Campaign {
     fields[key] = entry.val();
   }
 
+  const funding_goal = StellarSdk.scValToBigInt(fields["funding_goal"]);
+  const deadline = Number(fields["deadline"].u64());
+  const amount_raised = StellarSdk.scValToBigInt(fields["amount_raised"]);
+  const is_active = fields["is_active"].b();
+  const funds_withdrawn = fields["funds_withdrawn"].b();
+  const is_cancelled = fields["is_cancelled"].b();
+  const is_verified = fields["is_verified"].b();
+
   return {
     id: fields["id"].u32(),
     creator: StellarSdk.Address.fromScVal(fields["creator"]).toString(),
     title: fields["title"].str().toString(),
     description: fields["description"].str().toString(),
-    funding_goal: StellarSdk.scValToBigInt(fields["funding_goal"]),
-    deadline: Number(fields["deadline"].u64()),
-    amount_raised: StellarSdk.scValToBigInt(fields["amount_raised"]),
-    is_active: fields["is_active"].b(),
-    status: fields["status"].str().toString() as CampaignStatus,
+    funding_goal,
+    deadline,
+    amount_raised,
+    is_active,
+    status: deriveStatus({ is_cancelled, is_verified, is_active, funds_withdrawn, deadline, amount_raised, funding_goal }),
     created_at: Number(fields["created_at"].u64()),
-    funds_withdrawn: fields["funds_withdrawn"].b(),
-    is_cancelled: fields["is_cancelled"].b(),
-    is_verified: fields["is_verified"].b(),
+    funds_withdrawn,
+    is_cancelled,
+    is_verified,
     category: fields["category"].u32() as Category,
     has_revenue_sharing: fields["has_revenue_sharing"].b(),
     revenue_share_percentage: fields["revenue_share_percentage"].u32(),
@@ -250,15 +229,21 @@ export const __testUtils = {
 // Mock data
 // ---------------------------------------------------------------------------
 
+function makeMockCampaign(partial: Omit<Campaign, "status">): Campaign {
+  return {
+    ...partial,
+    status: deriveStatus(partial) as CampaignStatus,
+  };
+}
+
 const MOCK_CAMPAIGNS: Campaign[] = [
-  {
+  makeMockCampaign({
     id: 1,
     title: "Clean Water for Rural Communities",
     description: "Providing clean water access to 500 families in rural areas affected by drought.",
     creator: "GABC123456789012345678901234567890123456789012345678901234567890",
     funding_goal: BigInt(100_000_000_000),
     deadline: Math.floor(Date.now() / 1000) + 86400 * 30,
-    status: "active",
     amount_raised: BigInt(65_000_000_000),
     is_active: true,
     funds_withdrawn: false,
@@ -269,8 +254,8 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     created_at: Math.floor(Date.now() / 1000),
     revenue_share_percentage: 0,
     tags: ["water", "rural", "health"],
-  },
-  {
+  }),
+  makeMockCampaign({
     id: 2,
     title: "Education Technology for Underprivileged Children",
     description: "Equipping schools in low-income areas with tablets and educational software.",
@@ -282,14 +267,13 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     funds_withdrawn: false,
     is_cancelled: false,
     is_verified: false,
-    status: "active",
     created_at: Math.floor(Date.now() / 1000),
     category: Category.EducationalStartup,
     has_revenue_sharing: true,
     revenue_share_percentage: 500,
     tags: ["education", "tech", "children"],
-  },
-  {
+  }),
+  makeMockCampaign({
     id: 3,
     title: "Medical Supplies for Remote Clinics",
     description: "Delivering essential medical supplies to clinics in remote areas.",
@@ -298,7 +282,6 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     deadline: Math.floor(Date.now() / 1000) + 86400 * 15,
     amount_raised: BigInt(89_000_000_000),
     is_active: true,
-    status: "active",
     created_at: Math.floor(Date.now() / 1000),
     funds_withdrawn: false,
     is_cancelled: false,
@@ -307,8 +290,8 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     has_revenue_sharing: false,
     revenue_share_percentage: 0,
     tags: ["medical", "clinic", "rural"],
-  },
-  {
+  }),
+  makeMockCampaign({
     id: 4,
     title: "Reforestation of Degraded Lands",
     description: "Planting 100,000 trees across deforested regions.",
@@ -319,14 +302,13 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     is_active: false,
     funds_withdrawn: false,
     is_cancelled: false,
-    status: "active",
     created_at: Math.floor(Date.now() / 1000),
     is_verified: true,
     category: Category.Learner,
     has_revenue_sharing: false,
     revenue_share_percentage: 0,
-  },
-  {
+  }),
+  makeMockCampaign({
     id: 5,
     title: "Mental Health Support for Youth",
     description: "Building free counselling centres for teenagers in underserved areas.",
@@ -335,7 +317,6 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     deadline: Math.floor(Date.now() / 1000) + 86400 * 45,
     amount_raised: BigInt(9_000_000_000),
     is_active: true,
-    status: "active",
     created_at: Math.floor(Date.now() / 1000),
     funds_withdrawn: false,
     is_cancelled: true,
@@ -343,8 +324,8 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     category: Category.Publisher,
     has_revenue_sharing: false,
     revenue_share_percentage: 0,
-  },
-  {
+  }),
+  makeMockCampaign({
     id: 6,
     title: "Solar Energy for Off-Grid Villages",
     description: "Installing solar panels in 20 villages without electricity.",
@@ -353,7 +334,6 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     deadline: Math.floor(Date.now() / 1000) - 86400 * 2,
     amount_raised: BigInt(200_000_000_000),
     is_active: false,
-    status: "active",
     created_at: Math.floor(Date.now() / 1000),
     funds_withdrawn: true,
     is_cancelled: false,
@@ -361,7 +341,7 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     category: Category.EducationalStartup,
     has_revenue_sharing: true,
     revenue_share_percentage: 300,
-  },
+  }),
 ];
 
 // ---------------------------------------------------------------------------
@@ -512,25 +492,26 @@ export async function createCampaign(
 ): Promise<string> {
   if (USE_MOCKS) {
     const txHash = emitMockLifecycle("mock_tx_create_campaign", options);
-    MOCK_CAMPAIGNS.push({
-      id: MOCK_CAMPAIGNS.length + 1,
-      creator,
-      title,
-      description,
-      funding_goal: fundingGoal,
-      deadline: Math.floor(Date.now() / 1000) + durationDays * 86400,
-      amount_raised: BigInt(0),
-      is_active: true,
-      status: "active",
-      created_at: Math.floor(Date.now() / 1000),
-      funds_withdrawn: false,
-      is_cancelled: false,
-      is_verified: false,
-      category,
-      has_revenue_sharing: hasRevenueSharing,
-      revenue_share_percentage: revenueSharePercentage,
-      tags,
-    });
+    MOCK_CAMPAIGNS.push(
+      makeMockCampaign({
+        id: MOCK_CAMPAIGNS.length + 1,
+        creator,
+        title,
+        description,
+        funding_goal: fundingGoal,
+        deadline: Math.floor(Date.now() / 1000) + durationDays * 86400,
+        amount_raised: BigInt(0),
+        is_active: true,
+        created_at: Math.floor(Date.now() / 1000),
+        funds_withdrawn: false,
+        is_cancelled: false,
+        is_verified: false,
+        category,
+        has_revenue_sharing: hasRevenueSharing,
+        revenue_share_percentage: revenueSharePercentage,
+        tags,
+      }),
+    );
     return txHash;
   }
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
