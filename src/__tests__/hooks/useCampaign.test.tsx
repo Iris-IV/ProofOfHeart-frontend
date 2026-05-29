@@ -66,4 +66,16 @@ describe("useCampaign", () => {
     expect(result.current.error).toBeNull();
     expect(result.current.notFound).toBe(false);
   });
+
+  it("transitions from loading to error when getCampaign throws", async () => {
+    mockGetCampaign.mockRejectedValue(new Error("rpc unavailable"));
+
+    const { result } = renderHook(() => useCampaign(1), { wrapper: createWrapper() });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.campaign).toBeNull();
+    expect(result.current.error).toBe("rpc unavailable");
+    expect(result.current.notFound).toBe(false);
+  });
 });
