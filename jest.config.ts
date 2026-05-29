@@ -11,7 +11,6 @@ const config: Config = {
     "src/**/*.{ts,tsx}",
     "!src/**/*.d.ts",
     "!src/types/**",
-    // src/app/** is intentionally included so pages appear in coverage reports.
   ],
   coverageThreshold: {
     global: {
@@ -27,4 +26,16 @@ const config: Config = {
   },
 };
 
-export default createJestConfig(config);
+const markdownEsmPattern =
+  "node_modules/(?!(react-markdown|remark-gfm|rehype-sanitize|hast-util-sanitize|unist-util-visit|unified|bail|is-plain-obj|trough|vfile|vfile-message|devlop|remark-parse|remark-rehype|mdast-util-to-hast|mdast-util-from-markdown|mdast-util-gfm|micromark|micromark-extension-gfm|decode-named-character-reference|character-entities|property-information|hast-util-to-jsx-runtime|hast-util-whitespace|space-separated-tokens|comma-separated-tokens|estree-util-is-identifier-name|html-url-attributes|ccount|escape-string-regexp|markdown-table|longest-streak|trim-lines|zwitch)/)";
+
+export default async function jestConfig() {
+  const nextConfig = await createJestConfig(config)();
+  return {
+    ...nextConfig,
+    transformIgnorePatterns: [
+      ...(nextConfig.transformIgnorePatterns ?? []),
+      markdownEsmPattern,
+    ],
+  };
+}

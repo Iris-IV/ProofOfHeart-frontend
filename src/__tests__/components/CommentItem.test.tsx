@@ -154,4 +154,24 @@ describe('CommentItem', () => {
     expect(screen.getByText('Test comment')).toBeInTheDocument();
     expect(screen.getByText('A reply')).toBeInTheDocument();
   });
+
+  it('renders XSS payloads as inert text without executable markup', async () => {
+    const xssComment = {
+      ...mockComment,
+      content: '<img src=x onerror="alert(1)"><script>alert(1)</script>',
+    };
+
+    const { container } = render(
+      <CommentItem
+        comment={xssComment}
+        isCreator={false}
+        onReply={mockOnReply}
+        onReport={mockOnReport}
+      />,
+    );
+
+    expect(container.querySelector('script')).toBeNull();
+    expect(container.querySelector('img')).toBeNull();
+    expect(await screen.findByText(/onerror="alert\(1\)"/)).toBeInTheDocument();
+  });
 });

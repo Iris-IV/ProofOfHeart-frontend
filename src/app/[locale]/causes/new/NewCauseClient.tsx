@@ -1,9 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import ReactMarkdown from 'react-markdown';
-import rehypeSanitize from 'rehype-sanitize';
-import remarkGfm from 'remark-gfm';
+import SafeMarkdown from '@/components/SafeMarkdown';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ToastProvider';
 import { useWallet } from '@/components/WalletContext';
@@ -465,11 +463,9 @@ export default function CreateCampaignPage() {
               ) : (
                 <div className="px-3 py-2 min-h-[120px] bg-zinc-50 dark:bg-zinc-700 text-sm text-zinc-600 dark:text-zinc-400">
                   {description.trim() ? (
-                    <div className="prose prose-zinc dark:prose-invert max-w-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
-                        {description}
-                      </ReactMarkdown>
-                    </div>
+                    <SafeMarkdown className="prose prose-zinc dark:prose-invert max-w-none">
+                      {description}
+                    </SafeMarkdown>
                   ) : (
                     <span className="italic text-zinc-400">Nothing to preview</span>
                   )}
