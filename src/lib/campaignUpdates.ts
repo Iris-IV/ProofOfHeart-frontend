@@ -1,21 +1,17 @@
-import { signTransaction, getAddress } from "@stellar/freighter-api";
 import * as StellarSdk from "@stellar/stellar-sdk";
 import { CampaignUpdate, UpdatePayload } from "../types";
 import { parseContractError } from "../utils/contractErrors";
+import {
+  hasOffchainApiBaseUrl,
+  requestOffchainJson,
+  signOffchainPayload,
+} from "./offchainApiClient";
 
 // ---------------------------------------------------------------------------
 // Environment configuration
 // ---------------------------------------------------------------------------
 
 const USE_MOCKS = typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_MOCKS === "true";
-
-const SOROBAN_RPC_URL =
-  process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ??
-  process.env.NEXT_PUBLIC_RPC_URL ??
-  "https://soroban-testnet.stellar.org";
-
-const NETWORK_PASSPHRASE =
-  process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
 
 // ---------------------------------------------------------------------------
 // Mock data for campaign updates
@@ -58,53 +54,8 @@ const MOCK_UPDATES: Record<number, CampaignUpdate[]> = {
 
 async function signPayload(payload: UpdatePayload): Promise<string> {
   try {
-    const { address } = await getAddress();
-    
-    // Create a deterministic hash of the payload for signing
-    const payloadString = JSON.stringify({
-      campaignId: payload.campaignId,
-      content: payload.content,
-      timestamp: payload.timestamp,
-    });
-    
-    // Create a hash of the payload
-    const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
-    
-    // Sign the hash using Freighter
-    const { signedTxXdr } = await signTransaction(
-      new StellarSdk.TransactionBuilder(
-        new StellarSdk.Account(address, "0"),
-        {
-          fee: StellarSdk.BASE_FEE,
-          networkPassphrase: NETWORK_PASSPHRASE,
-        }
-      )
-        .addOperation(
-          StellarSdk.Operation.manageData({
-            name: "update_signature",
-            value: payloadHash,
-          })
-        )
-        .setTimeout(30)
-        .build()
-        .toXDR(),
-      {
-        networkPassphrase: NETWORK_PASSPHRASE,
-      }
-    );
-    
-    // Extract the signature from the signed transaction
-    const signedTx = StellarSdk.TransactionBuilder.fromXDR(
-      signedTxXdr,
-      NETWORK_PASSPHRASE
-    ) as StellarSdk.Transaction;
-    
-    const signatures = signedTx.signatures;
-    if (signatures.length === 0) {
-      throw new Error("No signature generated");
-    }
-    
-    return signatures[0].signature().toString("hex");
+    const { signature } = await signOffchainPayload(payload, "update_signature");
+    return signature;
   } catch (error) {
     throw new Error(`Failed to sign payload: ${parseContractError(error)}`);
   }
@@ -119,25 +70,14 @@ async function signPayload(payload: UpdatePayload): Promise<string> {
  * Updates are returned in reverse chronological order (newest first).
  */
 export async function getCampaignUpdates(campaignId: number): Promise<CampaignUpdate[]> {
-  if (USE_MOCKS) {
+  if (USE_MOCKS || !hasOffchainApiBaseUrl()) {
     // Return mock updates or empty array
     return MOCK_UPDATES[campaignId] ?? [];
   }
 
   try {
-    // In production, this would call your backend API
-    // For now, we'll use a placeholder that assumes off-chain storage
-    const response = await fetch(`/api/campaigns/${campaignId}/updates`);
-    
-    if (!response.ok) {
-      if (response.status === 404) {
-        return [];
-      }
-      throw new Error(`Failed to fetch updates: ${response.statusText}`);
-    }
-    
-    const updates = await response.json();
-    
+    const updates = await requestOffchainJson<CampaignUpdate[]>(`/campaigns/${campaignId}/updates`);
+
     // Sort by timestamp descending (newest first)
     return updates.sort((a: CampaignUpdate, b: CampaignUpdate) => b.timestamp - a.timestamp);
   } catch (error) {
@@ -160,7 +100,7 @@ export async function createCampaignUpdate(
   creatorAddress: string,
   notify: boolean = false
 ): Promise<CampaignUpdate> {
-  if (USE_MOCKS) {
+  if (USE_MOCKS || !hasOffchainApiBaseUrl()) {
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 800));
     
@@ -194,32 +134,32 @@ export async function createCampaignUpdate(
   try {
     const timestamp = Math.floor(Date.now() / 1000);
     const payload: UpdatePayload = { campaignId, content, timestamp };
-    
+
     // Sign the payload
     const signature = await signPayload(payload);
-    
-    // Send to backend
-    const response = await fetch(`/api/campaigns/${campaignId}/updates`, {
+
+    return await requestOffchainJson<CampaignUpdate>(`/campaigns/${campaignId}/updates`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+      auth: {
+        purpose: "create_campaign_update",
+        payload: {
+          campaignId,
+          content,
+          authorAddress: creatorAddress,
+          timestamp,
+          signature,
+          notify,
+        },
       },
-      body: JSON.stringify({
+      body: {
         campaignId,
         content,
         authorAddress: creatorAddress,
         timestamp,
         signature,
-        notify, // Pass notify flag to backend
-      }),
+        notify,
+      },
     });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Failed to create update: ${response.statusText}`);
-    }
-    
-    return await response.json();
   } catch (error) {
     throw new Error(`Failed to create campaign update: ${parseContractError(error)}`);
   }

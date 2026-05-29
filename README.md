@@ -104,6 +104,29 @@ NEXT_PUBLIC_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
 NEXT_PUBLIC_CREATOR_EMAIL_WEBHOOK_URL=
 ```
 
+`NEXT_PUBLIC_API_URL` is the base URL for the off-chain service layer used by campaign comments, updates, reports, and wallet transaction history.
+
+Expected endpoints under that base URL:
+
+- `GET /campaigns/:campaignId/updates`
+- `POST /campaigns/:campaignId/updates`
+- `GET /campaigns/:campaignId/comments`
+- `POST /campaigns/:campaignId/comments`
+- `POST /campaigns/:campaignId/comments/:commentId/pin`
+- `POST /campaigns/:campaignId/comments/:commentId/report`
+- `POST /campaign-reports`
+- `PATCH /campaign-reports`
+- `POST /wallet-transactions`
+
+Authenticated off-chain mutations send wallet signatures with:
+
+- `X-Wallet-Address`
+- `X-Request-Signature`
+- `X-Request-Timestamp`
+- `X-Request-Purpose`
+
+The client retries transient failures and falls back to the existing mock/local stores when `NEXT_PUBLIC_API_URL` is not set.
+
 ## 🤝 Contributing!
 
 Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.

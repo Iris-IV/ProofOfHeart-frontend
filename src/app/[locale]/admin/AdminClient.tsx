@@ -30,6 +30,7 @@ import {
   verifyCampaign,
   cancelCampaign,
 } from "@/lib/contractClient";
+import type { TransactionLifecyclePhase } from "@/lib/contractClient";
 import { isSameAddress } from "@/lib/stellar";
 import { stroopsToXlm, Category, CATEGORY_LABELS, basisPointsToPercentage } from "@/types";
 import { parseContractError } from "@/utils/contractErrors";
@@ -62,6 +63,17 @@ export default function AdminDashboard() {
   const [isUpdatingAdmin, setIsUpdatingAdmin] = useState(false);
   const [auditLog, setAuditLog] = useState<AdminAuditLogEntry[]>([]);
   const [reports, setReports] = useState<CampaignReport[]>([]);
+  const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
+  const txPhaseLabel =
+    txPhase === "building"
+      ? "Preparing..."
+      : txPhase === "signing"
+        ? "Signing..."
+        : txPhase === "submitting"
+          ? "Submitting..."
+          : txPhase === "confirming"
+            ? "Confirming..."
+            : null;
 
   // Load reports from localStorage on mount
   useEffect(() => {
@@ -115,12 +127,12 @@ export default function AdminDashboard() {
     return isSameAddress(publicKey, adminAddress);
   }, [publicKey, adminAddress]);
 
-  const refreshAuditLog = (address = publicKey) => {
+  const refreshAuditLog = async (address = publicKey) => {
     if (!address) {
       setAuditLog([]);
       return;
     }
-    setAuditLog(getAdminAuditLog(address, 50));
+    setAuditLog(await getAdminAuditLog(address, 50));
   };
 
   const pendingCampaigns = useMemo(() => {
@@ -143,17 +155,20 @@ export default function AdminDashboard() {
 
   const handleApprove = async (id: number) => {
     setVerifyingId(id);
+    setTxPhase(null);
     try {
-      const txHash = await verifyCampaign(id);
+      const txHash = await verifyCampaign(id, {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       if (publicKey) {
-        appendAdminAuditLog({
+        await appendAdminAuditLog({
           adminAddress: publicKey,
           action: "verify_campaign",
           campaignId: id,
           txHash,
           details: `Approved campaign #${id}`,
         });
-        refreshAuditLog(publicKey);
+        await refreshAuditLog(publicKey);
       }
       showSuccess("Campaign approved successfully!");
       setOptimisticRemovedIds((prev) => [...prev, id]);
@@ -163,6 +178,7 @@ export default function AdminDashboard() {
       showError(parseContractError(err));
     } finally {
       setVerifyingId(null);
+      setTxPhase(null);
     }
   };
 
@@ -174,17 +190,20 @@ export default function AdminDashboard() {
   const handleConfirmReject = async () => {
     if (!campaignToReject) return;
     setCancellingId(campaignToReject.id);
+    setTxPhase(null);
     try {
-      const txHash = await cancelCampaign(campaignToReject.id);
+      const txHash = await cancelCampaign(campaignToReject.id, {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       if (publicKey) {
-        appendAdminAuditLog({
+        await appendAdminAuditLog({
           adminAddress: publicKey,
           action: "reject_campaign",
           campaignId: campaignToReject.id,
           txHash,
           details: `Rejected campaign #${campaignToReject.id}`,
         });
-        refreshAuditLog(publicKey);
+        await refreshAuditLog(publicKey);
       }
       showSuccess("Campaign rejected and cancelled.");
       setOptimisticRemovedIds((prev) => [...prev, campaignToReject.id]);
@@ -195,6 +214,7 @@ export default function AdminDashboard() {
       showError(parseContractError(err));
     } finally {
       setCancellingId(null);
+      setTxPhase(null);
     }
   };
 
@@ -212,18 +232,21 @@ export default function AdminDashboard() {
     if (isNaN(fee) || fee < 0 || fee > 10000) return showError("Invalid fee");
 
     setIsUpdatingFee(true);
+    setTxPhase(null);
     try {
-      const txHash = await updatePlatformFee(fee);
+      const txHash = await updatePlatformFee(fee, {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       if (publicKey) {
         const previousFeeLabel =
           platformFee === null ? "unknown" : `${(platformFee / 100).toFixed(2)}%`;
-        appendAdminAuditLog({
+        await appendAdminAuditLog({
           adminAddress: publicKey,
           action: "update_platform_fee",
           txHash,
           details: `Updated platform fee from ${previousFeeLabel} to ${(fee / 100).toFixed(2)}% (${fee} bps)`,
         });
-        refreshAuditLog(publicKey);
+        await refreshAuditLog(publicKey);
       }
       setPlatformFee(fee);
       showSuccess("Platform fee updated");
@@ -231,6 +254,7 @@ export default function AdminDashboard() {
       showError(parseContractError(err));
     } finally {
       setIsUpdatingFee(false);
+      setTxPhase(null);
     }
   };
 
@@ -242,16 +266,19 @@ export default function AdminDashboard() {
     if (!StellarSdk.StrKey.isValidEd25519PublicKey(nextAdmin)) return showError("Invalid address");
 
     setIsUpdatingAdmin(true);
+    setTxPhase(null);
     try {
-      const txHash = await updateAdmin(nextAdmin);
+      const txHash = await updateAdmin(nextAdmin, {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       if (publicKey) {
-        appendAdminAuditLog({
+        await appendAdminAuditLog({
           adminAddress: publicKey,
           action: "transfer_admin",
           txHash,
           details: `Transferred admin access to ${nextAdmin}`,
         });
-        refreshAuditLog(publicKey);
+        await refreshAuditLog(publicKey);
       }
       setAdminAddress(nextAdmin);
       setNewAdminInput("");
@@ -260,12 +287,13 @@ export default function AdminDashboard() {
       showError(parseContractError(err));
     } finally {
       setIsUpdatingAdmin(false);
+      setTxPhase(null);
     }
   };
 
   useEffect(() => {
     if (isAdmin && publicKey) {
-      refreshAuditLog(publicKey);
+      void refreshAuditLog(publicKey);
       return;
     }
     setAuditLog([]);
@@ -537,7 +565,7 @@ export default function AdminDashboard() {
                 disabled={isUpdatingFee || Number(feeInput) > 10000 || Number(feeInput) < 0}
                 className="w-full py-4 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 rounded-2xl font-black text-sm uppercase tracking-widest hover:opacity-90 active:scale-95 transition disabled:opacity-50"
               >
-                {isUpdatingFee ? t("awaitingSignature") : t("updatePlatformFee")}
+                {isUpdatingFee ? txPhaseLabel ?? t("awaitingSignature") : t("updatePlatformFee")}
               </button>
             </form>
           </section>
@@ -568,7 +596,7 @@ export default function AdminDashboard() {
                 disabled={isUpdatingAdmin}
                 className="w-full py-4 bg-red-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-red-700 active:scale-95 transition shadow-lg shadow-red-500/25 disabled:opacity-50"
               >
-                {isUpdatingAdmin ? t("awaitingSignature") : t("transferAdmin")}
+                {isUpdatingAdmin ? txPhaseLabel ?? t("awaitingSignature") : t("transferAdmin")}
               </button>
             </form>
           </section>

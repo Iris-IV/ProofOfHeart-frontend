@@ -1,10 +1,31 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CausesClient from "@/app/[locale]/causes/CausesClient";
 import { Category, type Campaign } from "@/types";
 
 const mockReplace = jest.fn();
 const mockUseSearchParams = jest.fn();
+const mockRouter = { replace: mockReplace };
+const mockCampaigns = [
+  {
+    id: 1,
+    creator: "GTEST",
+    title: "Education Fund",
+    description: "Support education",
+    created_at: 1_700_000_000,
+    status: "active",
+    funding_goal: 1000n,
+    deadline: 1_800_000_000,
+    amount_raised: 100n,
+    is_active: true,
+    funds_withdrawn: false,
+    is_cancelled: false,
+    is_verified: false,
+    category: Category.Learner,
+    has_revenue_sharing: false,
+    revenue_share_percentage: 0,
+  } satisfies Campaign,
+];
 
 jest.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
@@ -15,31 +36,12 @@ jest.mock("next/navigation", () => ({
 }));
 
 jest.mock("@/i18n/routing", () => ({
-  useRouter: () => ({ replace: mockReplace }),
+  useRouter: () => mockRouter,
 }));
 
 jest.mock("@/hooks/useCampaigns", () => ({
   useCampaigns: () => ({
-    campaigns: [
-      {
-        id: 1,
-        creator: "GTEST",
-        title: "Education Fund",
-        description: "Support education",
-        created_at: 1_700_000_000,
-        status: "active",
-        funding_goal: 1000n,
-        deadline: 1_800_000_000,
-        amount_raised: 100n,
-        is_active: true,
-        funds_withdrawn: false,
-        is_cancelled: false,
-        is_verified: false,
-        category: Category.Learner,
-        has_revenue_sharing: false,
-        revenue_share_percentage: 0,
-      } satisfies Campaign,
-    ],
+    campaigns: mockCampaigns,
     isLoading: false,
     error: null,
     refetch: jest.fn(),
@@ -91,7 +93,9 @@ describe("Causes filters URL sync", () => {
     await user.selectOptions(sortSelect, "oldest");
     await user.type(screen.getByPlaceholderText("searchPlaceholder"), "science");
 
-    jest.advanceTimersByTime(350);
+    act(() => {
+      jest.advanceTimersByTime(350);
+    });
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith(

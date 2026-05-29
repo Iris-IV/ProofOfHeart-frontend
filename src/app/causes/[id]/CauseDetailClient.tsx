@@ -24,6 +24,7 @@ import {
   getContribution,
   claimRefund,
 } from "../../../lib/contractClient";
+import type { TransactionLifecyclePhase } from "../../../lib/contractClient";
 import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from "../../../types";
 import { parseContractError } from "../../../utils/contractErrors";
 
@@ -47,6 +48,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const [voteCounts, setVoteCounts] = useState({ upvotes: 0, downvotes: 0, totalVotes: 0 });
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const { showError, showSuccess, showWarning } = useToast();
+  const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
 
   // Quorum / threshold state
   const [minVotesQuorum, setMinVotesQuorum] = useState<number | undefined>(undefined);
@@ -130,8 +132,11 @@ export default function CauseDetailClient({ id }: { id: string }) {
       return;
     }
     setIsVoting(true);
+    setTxPhase(null);
     try {
-      const txHash = await voteOnCampaign(campaignId, userWalletAddress, voteType === "upvote");
+      const txHash = await voteOnCampaign(campaignId, userWalletAddress, voteType === "upvote", {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       const newVote: Vote = {
         causeId: String(campaignId),
         voter: userWalletAddress,
@@ -151,27 +156,35 @@ export default function CauseDetailClient({ id }: { id: string }) {
       showError(parseContractError(error));
     } finally {
       setIsVoting(false);
+      setTxPhase(null);
     }
   };
 
   const handleVerifyWithVotes = async () => {
     setIsVerifying(true);
+    setTxPhase(null);
     try {
-      await verifyCampaignWithVotes(Number(id));
+      await verifyCampaignWithVotes(Number(id), {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       showSuccess("Campaign verified successfully via community vote!");
       refetch();
     } catch (error) {
       showError(parseContractError(error));
     } finally {
       setIsVerifying(false);
+      setTxPhase(null);
     }
   };
 
   const handleClaimRefund = async () => {
     if (!userWalletAddress || !campaign) return;
     setIsClaimingRefund(true);
+    setTxPhase(null);
     try {
-      const txHash = await claimRefund(campaign.id, userWalletAddress);
+      const txHash = await claimRefund(campaign.id, userWalletAddress, {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       setRefundTxHash(txHash);
       setRefundableAmount(BigInt(0));
       showSuccess("Refund claimed successfully!");
@@ -185,6 +198,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
       }
     } finally {
       setIsClaimingRefund(false);
+      setTxPhase(null);
     }
   };
 
@@ -382,7 +396,13 @@ export default function CauseDetailClient({ id }: { id: string }) {
                       disabled={isClaimingRefund}
                       className="w-full min-h-[44px] py-2 px-4 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white font-semibold rounded-xl transition-colors text-sm"
                     >
-                      {isClaimingRefund ? "Processing…" : "Claim Refund"}
+                      {isClaimingRefund
+                        ? txPhase === "signing"
+                          ? "Signing…"
+                          : txPhase === "confirming"
+                            ? "Confirming…"
+                            : "Processing…"
+                        : "Claim Refund"}
                     </button>
                   </div>
                 ) : (

@@ -8,6 +8,7 @@ import { useToast } from "./ToastProvider";
 import { isSameAddress } from "../lib/stellar";
 import { parseContractError } from "../utils/contractErrors";
 import { explorerTxUrl } from "../utils/explorer";
+import { type TransactionLifecyclePhase } from "../lib/contractClient";
 
 interface WithdrawFundsProps {
   campaign: Campaign;
@@ -25,6 +26,7 @@ export default function WithdrawFunds({
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
   const { showError, showSuccess } = useToast();
 
   // Only the campaign creator should see this component
@@ -61,8 +63,11 @@ export default function WithdrawFunds({
 
   const handleWithdraw = async () => {
     setIsWithdrawing(true);
+    setTxPhase(null);
     try {
-      const hash = await withdrawFunds(campaign.id);
+      const hash = await withdrawFunds(campaign.id, {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       setTxHash(hash);
       showSuccess(
         `Withdrawal successful! You received ${creatorAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM.`,
@@ -73,6 +78,7 @@ export default function WithdrawFunds({
     } finally {
       setIsWithdrawing(false);
       setShowConfirm(false);
+      setTxPhase(null);
     }
   };
 
@@ -161,7 +167,13 @@ export default function WithdrawFunds({
               disabled={isWithdrawing}
               className="flex-1 px-4 py-3 min-h-[44px] bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isWithdrawing ? "Processing…" : "Confirm Withdrawal"}
+              {isWithdrawing
+                ? txPhase === "signing"
+                  ? "Signing…"
+                  : txPhase === "confirming"
+                    ? "Confirming…"
+                    : "Processing…"
+                : "Confirm Withdrawal"}
             </button>
             <button
               onClick={() => setShowConfirm(false)}

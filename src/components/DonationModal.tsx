@@ -6,6 +6,7 @@ import { Campaign, xlmToStroops, stroopsToXlm } from "../types";
 import { useToast } from "./ToastProvider";
 import { useWallet } from "./WalletContext";
 import { parseContractError } from "../utils/contractErrors";
+import { type TransactionLifecyclePhase } from "../lib/contractClient";
 
 const EXPLORER_BASE =
   process.env.NEXT_PUBLIC_EXPLORER_URL ?? "https://stellar.expert/explorer/testnet/tx";
@@ -26,6 +27,7 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
   const [step, setStep] = useState<Step>("input");
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -140,9 +142,12 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
     const amountToSend = validation.amount!;
     setError(null);
     setStep("pending");
+    setTxPhase(null);
     try {
       const stroops = xlmToStroops(amountToSend);
-      const hash = await contribute(campaign.id, publicKey, stroops);
+      const hash = await contribute(campaign.id, publicKey, stroops, {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       setTxHash(hash);
       setStep("confirmed");
       onSuccess();
@@ -151,6 +156,7 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
       showError(msg);
       setError(msg);
       setStep("input");
+      setTxPhase(null);
     }
   };
 
@@ -260,7 +266,13 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
                 disabled={!publicKey || !validation.valid}
                 className="w-full py-3 bg-linear-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200"
               >
-                Donate {amountNum > 0 ? `${amountNum} XLM` : ""}
+                {step === "pending"
+                  ? txPhase === "signing"
+                    ? "Signing..."
+                    : txPhase === "confirming"
+                      ? "Confirming..."
+                      : "Processing..."
+                  : `Donate ${amountNum > 0 ? `${amountNum} XLM` : ""}`}
               </button>
             </>
           )}
@@ -270,7 +282,11 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
             <div className="flex flex-col items-center gap-4 py-6">
               <div className="w-12 h-12 rounded-full border-4 border-blue-500 border-t-transparent motion-safe:animate-spin" />
               <p className="text-zinc-600 dark:text-zinc-400 text-sm text-center">
-                Waiting for Freighter signature and transaction confirmation…
+                {txPhase === "signing"
+                  ? "Waiting for Freighter signature…"
+                  : txPhase === "confirming"
+                    ? "Waiting for ledger confirmation…"
+                    : "Submitting transaction to the network…"}
               </p>
             </div>
           )}

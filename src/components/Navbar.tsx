@@ -12,12 +12,20 @@ import { formatAddress } from "@/lib/formatAddress";
 import LanguageSwitcher from "./LanguageSwitcher";
 import NotificationBell from "./NotificationBell";
 import { useCampaigns } from "@/hooks/useCampaigns";
+import { IS_MOCK_MODE } from "@/lib/runtimeEnv";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuToggleButtonRef = useRef<HTMLButtonElement>(null);
-  const { publicKey, isWalletConnected, connectWallet, disconnectWallet, isLoading } = useWallet();
+  const {
+    publicKey,
+    isWalletConnected,
+    walletNetworkWarning,
+    connectWallet,
+    disconnectWallet,
+    isLoading,
+  } = useWallet();
   const { theme, toggleTheme } = useTheme();
   const t = useTranslations('Common');
   const { admin: adminAddress } = useAdmin();
@@ -93,6 +101,11 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-black/5 bg-white/80 backdrop-blur-md dark:border-white/10 dark:bg-zinc-900/80 transition-all duration-300">
+      {walletNetworkWarning && (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs font-semibold text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200">
+          {walletNetworkWarning}
+        </div>
+      )}
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
         <Link
           href="/"
@@ -131,6 +144,11 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-3">
+          {IS_MOCK_MODE && process.env.NODE_ENV !== "production" && (
+            <span className="hidden sm:inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:border-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
+              Mock Mode
+            </span>
+          )}
           {isTestnet && (
             <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800 uppercase tracking-wider">
               Testnet

@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import ShareButtons from '@/components/ShareButtons';
 import ReportModal from '@/components/ReportModal';
 import CampaignActions from '@/components/CampaignActions';
+import AsyncButtonContent from '@/components/AsyncButtonContent';
 import CampaignStatusBadge from '@/components/CampaignStatusBadge';
 import DeadlineCountdown from '@/components/DeadlineCountdown';
 import DonationModal from '@/components/DonationModal';
@@ -34,6 +35,7 @@ import rehypeSanitize from 'rehype-sanitize';
 import { useTranslations } from 'next-intl';
 import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from '@/types';
 import { parseContractError } from '@/utils/contractErrors';
+import { getAsyncActionErrorMessage, withActionTimeout } from '@/utils/asyncAction';
 
 function formatDate(ts: number) {
   return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(ts * 1000));
@@ -130,7 +132,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
     if (!userWalletAddress) { showWarning('Please connect your wallet first.'); return; }
     setIsVoting(true);
     try {
-      const transactionHash = await voteOnCampaign(campaignId, userWalletAddress, voteType === 'upvote');
+      const transactionHash = await withActionTimeout(voteOnCampaign(campaignId, userWalletAddress, voteType === 'upvote'));
       setUserVote({ causeId: String(campaignId), voter: userWalletAddress, voteType, timestamp: new Date(), transactionHash });
       setVoteCounts((prev) => ({
         upvotes: voteType === 'upvote' ? prev.upvotes + 1 : prev.upvotes,
@@ -140,7 +142,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
       showSuccess('Your vote has been cast successfully.');
       refetch();
     } catch (error) {
-      showError(localizeContractError(parseContractError(error)));
+      showError(getAsyncActionErrorMessage(error, parseContractError));
     } finally {
       setIsVoting(false);
     }
@@ -149,11 +151,11 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const handleVerifyWithVotes = async () => {
     setIsVerifying(true);
     try {
-      await verifyCampaignWithVotes(Number(id));
+      await withActionTimeout(verifyCampaignWithVotes(Number(id)));
       showSuccess('Campaign verified successfully via community vote!');
       refetch();
     } catch (error) {
-      showError(localizeContractError(parseContractError(error)));
+      showError(getAsyncActionErrorMessage(error, parseContractError));
     } finally {
       setIsVerifying(false);
     }
@@ -163,12 +165,12 @@ export default function CauseDetailClient({ id }: { id: string }) {
     if (!userWalletAddress || !campaign) return;
     setIsClaimingRefund(true);
     try {
-      const txHash = await claimRefund(campaign.id, userWalletAddress);
+      const txHash = await withActionTimeout(claimRefund(campaign.id, userWalletAddress));
       setRefundTxHash(txHash);
       setRefundableAmount(BigInt(0));
       showSuccess('Refund claimed successfully!');
     } catch (error) {
-      const msg = parseContractError(error);
+      const msg = getAsyncActionErrorMessage(error, parseContractError);
       if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('no funds')) {
         setAlreadyRefunded(true);
         showWarning('Refund already claimed or no funds to refund.');
@@ -381,9 +383,13 @@ export default function CauseDetailClient({ id }: { id: string }) {
                     <button
                       onClick={handleClaimRefund}
                       disabled={isClaimingRefund}
-                      className="w-full min-h-[44px] py-2 px-4 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white font-semibold rounded-xl transition-colors text-sm"
+                      className="w-full min-h-[44px] py-2 px-4 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white font-semibold rounded-xl transition-colors text-sm inline-flex items-center justify-center gap-2"
                     >
-                      {isClaimingRefund ? 'Processing…' : 'Claim Refund'}
+                      <AsyncButtonContent
+                        isPending={isClaimingRefund}
+                        idleLabel="Claim Refund"
+                        pendingLabel="Claiming refund..."
+                      />
                     </button>
                   </div>
                 ) : (

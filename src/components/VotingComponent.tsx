@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { Campaign, Vote } from "../types";
+import AsyncButtonContent from "./AsyncButtonContent";
 import { useToast } from "./ToastProvider";
 import { parseContractError } from "../utils/contractErrors";
+import { getAsyncActionErrorMessage, withActionTimeout } from "../utils/asyncAction";
 
 interface VotingComponentProps {
   campaign: Campaign;
@@ -63,11 +65,11 @@ export default function VotingComponent({
     }
     if (isVoting) return;
     try {
-      await onVote(campaign.id, voteType);
+      await withActionTimeout(onVote(campaign.id, voteType));
       setLocalVote(voteType);
     } catch (error) {
       console.error("Voting failed:", error);
-      showError(parseContractError(error));
+      showError(getAsyncActionErrorMessage(error, parseContractError));
     }
   };
 
@@ -138,8 +140,16 @@ export default function VotingComponent({
           }
           className={`${getVoteButtonClass("upvote")} flex-1 min-h-[44px] justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          <span aria-hidden="true">✓</span>
-          <span>Approve</span>
+          <AsyncButtonContent
+            isPending={isVoting}
+            idleLabel={
+              <>
+                <span aria-hidden="true">✓</span>
+                <span>Approve</span>
+              </>
+            }
+            pendingLabel="Processing vote..."
+          />
         </button>
 
         <button
@@ -156,8 +166,16 @@ export default function VotingComponent({
           }
           className={`${getVoteButtonClass("downvote")} flex-1 min-h-[44px] justify-center disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          <span aria-hidden="true">✕</span>
-          <span>Reject</span>
+          <AsyncButtonContent
+            isPending={isVoting}
+            idleLabel={
+              <>
+                <span aria-hidden="true">✕</span>
+                <span>Reject</span>
+              </>
+            }
+            pendingLabel="Processing vote..."
+          />
         </button>
       </div>
 
@@ -252,9 +270,13 @@ export default function VotingComponent({
         <button
           onClick={onVerifyWithVotes}
           disabled={isVerifying}
-          className="w-full min-h-[44px] py-2 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-semibold rounded-xl transition-colors text-sm"
+          className="w-full min-h-[44px] py-2 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-semibold rounded-xl transition-colors text-sm inline-flex items-center justify-center gap-2"
         >
-          {isVerifying ? "Verifying…" : "✓ Verify Campaign with Votes"}
+          <AsyncButtonContent
+            isPending={isVerifying}
+            idleLabel="✓ Verify Campaign with Votes"
+            pendingLabel="Verifying..."
+          />
         </button>
       )}
     </div>

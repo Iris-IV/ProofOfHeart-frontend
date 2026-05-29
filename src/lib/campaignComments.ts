@@ -1,12 +1,13 @@
-import { signTransaction, getAddress } from "@stellar/freighter-api";
 import * as StellarSdk from "@stellar/stellar-sdk";
 import { Comment, CommentPayload } from "../types";
 import { parseContractError } from "../utils/contractErrors";
+import {
+  hasOffchainApiBaseUrl,
+  requestOffchainJson,
+  signOffchainPayload,
+} from "./offchainApiClient";
 
 const USE_MOCKS = typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_MOCKS === "true";
-
-const NETWORK_PASSPHRASE =
-  process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
 
 // ---------------------------------------------------------------------------
 // Mock data for campaign comments
@@ -56,49 +57,8 @@ const MOCK_COMMENTS: Record<number, Comment[]> = {
 
 async function signPayload(payload: CommentPayload): Promise<string> {
   try {
-    const { address } = await getAddress();
-
-    const payloadString = JSON.stringify({
-      campaignId: payload.campaignId,
-      content: payload.content,
-      timestamp: payload.timestamp,
-    });
-
-    const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
-
-    const { signedTxXdr } = await signTransaction(
-      new StellarSdk.TransactionBuilder(
-        new StellarSdk.Account(address, "0"),
-        {
-          fee: StellarSdk.BASE_FEE,
-          networkPassphrase: NETWORK_PASSPHRASE,
-        }
-      )
-        .addOperation(
-          StellarSdk.Operation.manageData({
-            name: "comment_signature",
-            value: payloadHash,
-          })
-        )
-        .setTimeout(30)
-        .build()
-        .toXDR(),
-      {
-        networkPassphrase: NETWORK_PASSPHRASE,
-      }
-    );
-
-    const signedTx = StellarSdk.TransactionBuilder.fromXDR(
-      signedTxXdr,
-      NETWORK_PASSPHRASE
-    ) as StellarSdk.Transaction;
-
-    const signatures = signedTx.signatures;
-    if (signatures.length === 0) {
-      throw new Error("No signature generated");
-    }
-
-    return signatures[0].signature().toString("hex");
+    const { signature } = await signOffchainPayload(payload, "comment_signature");
+    return signature;
   } catch (error) {
     throw new Error(`Failed to sign payload: ${parseContractError(error)}`);
   }
@@ -109,18 +69,12 @@ async function signPayload(payload: CommentPayload): Promise<string> {
 // ---------------------------------------------------------------------------
 
 export async function getCampaignComments(campaignId: number): Promise<Comment[]> {
-  if (USE_MOCKS) {
+  if (USE_MOCKS || !hasOffchainApiBaseUrl()) {
     return MOCK_COMMENTS[campaignId] ?? [];
   }
 
   try {
-    const response = await fetch(`/api/campaigns/${campaignId}/comments`);
-    if (!response.ok) {
-      if (response.status === 404) return [];
-      throw new Error(`Failed to fetch comments: ${response.statusText}`);
-    }
-    const comments = await response.json();
-    return comments;
+    return await requestOffchainJson<Comment[]>(`/campaigns/${campaignId}/comments`);
   } catch (error) {
     throw new Error(`Failed to fetch comments: ${parseContractError(error)}`);
   }
@@ -132,7 +86,7 @@ export async function createCampaignComment(
   authorAddress: string,
   parentId: string | null = null
 ): Promise<Comment> {
-  if (USE_MOCKS) {
+  if (USE_MOCKS || !hasOffchainApiBaseUrl()) {
     await new Promise((resolve) => setTimeout(resolve, 800));
 
     const timestamp = Math.floor(Date.now() / 1000);
@@ -165,34 +119,35 @@ export async function createCampaignComment(
 
     const signature = await signPayload(payload);
 
-    const response = await fetch(`/api/campaigns/${campaignId}/comments`, {
+    return await requestOffchainJson<Comment>(`/campaigns/${campaignId}/comments`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+      auth: {
+        purpose: "create_campaign_comment",
+        payload: {
+          campaignId,
+          content,
+          authorAddress,
+          timestamp,
+          parentId,
+          signature,
+        },
       },
-      body: JSON.stringify({
+      body: {
         campaignId,
         content,
         authorAddress,
         timestamp,
         parentId,
         signature,
-      }),
+      },
     });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Failed to create comment: ${response.statusText}`);
-    }
-
-    return await response.json();
   } catch (error) {
     throw new Error(`Failed to create comment: ${parseContractError(error)}`);
   }
 }
 
 export async function pinComment(campaignId: number, commentId: string, isPinned: boolean): Promise<Comment> {
-  if (USE_MOCKS) {
+  if (USE_MOCKS || !hasOffchainApiBaseUrl()) {
     await new Promise((resolve) => setTimeout(resolve, 500));
     const comments = MOCK_COMMENTS[campaignId] || [];
     const commentIndex = comments.findIndex(c => c.id === commentId);
@@ -204,27 +159,21 @@ export async function pinComment(campaignId: number, commentId: string, isPinned
   }
 
   try {
-    const response = await fetch(`/api/campaigns/${campaignId}/comments/${commentId}/pin`, {
+    return await requestOffchainJson<Comment>(`/campaigns/${campaignId}/comments/${commentId}/pin`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+      auth: {
+        purpose: "pin_comment",
+        payload: { campaignId, commentId, isPinned },
       },
-      body: JSON.stringify({ isPinned }),
+      body: { isPinned },
     });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || "Failed to pin comment");
-    }
-
-    return await response.json();
   } catch (error) {
     throw new Error(`Failed to pin comment: ${parseContractError(error)}`);
   }
 }
 
 export async function reportComment(campaignId: number, commentId: string): Promise<Comment> {
-  if (USE_MOCKS) {
+  if (USE_MOCKS || !hasOffchainApiBaseUrl()) {
     await new Promise((resolve) => setTimeout(resolve, 500));
     const comments = MOCK_COMMENTS[campaignId] || [];
     const commentIndex = comments.findIndex(c => c.id === commentId);
@@ -236,19 +185,13 @@ export async function reportComment(campaignId: number, commentId: string): Prom
   }
 
   try {
-    const response = await fetch(`/api/campaigns/${campaignId}/comments/${commentId}/report`, {
+    return await requestOffchainJson<Comment>(`/campaigns/${campaignId}/comments/${commentId}/report`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+      auth: {
+        purpose: "report_comment",
+        payload: { campaignId, commentId },
       },
     });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || "Failed to report comment");
-    }
-
-    return await response.json();
   } catch (error) {
     throw new Error(`Failed to report comment: ${parseContractError(error)}`);
   }

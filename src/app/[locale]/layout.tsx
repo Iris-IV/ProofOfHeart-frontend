@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { ToastProvider } from "@/components/ToastProvider";
 import { WalletProvider } from "@/components/WalletContext";
 import { routing } from '@/i18n/routing';
+import { absoluteUrl, buildAlternates } from "@/lib/seo";
 import type { Metadata } from "next";
 import "../globals.css";
 
@@ -23,12 +24,21 @@ export const metadata: Metadata = {
   title: "ProofOfHeart",
   description:
     "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
+  alternates: buildAlternates(""),
   openGraph: {
     type: "website",
     siteName: "ProofOfHeart",
+    url: absoluteUrl(`/${routing.defaultLocale}`),
     title: "ProofOfHeart",
     description: "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
-    images: ["/proof-of-heart-logo.svg"],
+    images: [
+      {
+        url: "/proof-of-heart-logo.svg",
+        width: 512,
+        height: 512,
+        alt: "ProofOfHeart logo",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",

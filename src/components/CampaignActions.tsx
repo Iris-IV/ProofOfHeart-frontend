@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Campaign, basisPointsToPercentage, stroopsToXlm, xlmToStroops } from "../types";
-import { Spinner } from "./Skeleton";
+import AsyncButtonContent from "./AsyncButtonContent";
 import { useToast } from "./ToastProvider";
 import { useWallet } from "./WalletContext";
 import WithdrawFunds from "./WithdrawFunds";
@@ -19,6 +19,11 @@ import {
 } from "../lib/contractClient";
 import { isSameAddress } from "../lib/stellar";
 import { parseContractError } from "../utils/contractErrors";
+import { getAsyncActionErrorMessage, withActionTimeout } from "../utils/asyncAction";
+import type {
+  TransactionLifecyclePhase,
+  TransactionLifecycleOptions,
+} from "../lib/contractClient";
 
 interface CampaignActionsProps {
   campaign: Campaign;
@@ -32,6 +37,7 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
   const { platformFeeBps } = usePlatformFee();
   const { showSuccess, showError, showWarning } = useToast();
   const [isPending, setIsPending] = useState(false);
+  const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
   const [contributionAmount, setContributionAmount] = useState("");
   const [revenueAmount, setRevenueAmount] = useState("");
   const [showRevenueInput, setShowRevenueInput] = useState(false);
@@ -40,23 +46,42 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
   const isAdmin = isSameAddress(publicKey, admin);
   const isContributor = contribution > BigInt(0);
 
-  const handleAction = async (action: () => Promise<string>, successMsg: string) => {
+  const phaseLabel =
+    txPhase === "building"
+      ? "Preparing..."
+      : txPhase === "signing"
+        ? "Signing..."
+        : txPhase === "submitting"
+          ? "Submitting..."
+          : txPhase === "confirming"
+            ? "Confirming..."
+            : null;
+
+  const handleAction = async (
+    action: (options?: TransactionLifecycleOptions) => Promise<string>,
+    successMsg: string,
+  ) => {
     setIsPending(true);
+    setTxPhase(null);
     try {
-      await action();
+      await withActionTimeout(action({ onStatus: ({ phase }) => setTxPhase(phase) }));
       showSuccess(successMsg);
       if (onActionSuccess) onActionSuccess();
     } catch (err) {
-      showError(parseContractError(err));
+      showError(getAsyncActionErrorMessage(err, parseContractError));
     } finally {
       setIsPending(false);
+      setTxPhase(null);
     }
   };
 
   const handleDepositRevenue = async () => {
     const xlm = parseFloat(revenueAmount);
     if (!xlm || xlm <= 0) return;
-    await handleAction(() => depositRevenue(campaign.id, xlmToStroops(xlm)), "Revenue deposited!");
+    await handleAction(
+      (options) => depositRevenue(campaign.id, xlmToStroops(xlm), options),
+      "Revenue deposited!",
+    );
     setRevenueAmount("");
     setShowRevenueInput(false);
   };
@@ -106,14 +131,19 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
     }
     setIsPending(true);
     try {
-      await contribute(campaign.id, publicKey, xlmToStroops(parsedAmount));
+      await withActionTimeout(
+        contribute(campaign.id, publicKey, xlmToStroops(parsedAmount), {
+          onStatus: ({ phase }) => setTxPhase(phase),
+        }),
+      );
       setContributionAmount("");
       showSuccess("Contribution submitted successfully.");
       onActionSuccess?.();
     } catch (err) {
-      showError(parseContractError(err));
+      showError(getAsyncActionErrorMessage(err, parseContractError));
     } finally {
       setIsPending(false);
+      setTxPhase(null);
     }
   };
 
@@ -153,8 +183,11 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
                 disabled={isPending || !!contributionDisabledReason}
                 className="rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-zinc-400 flex items-center gap-2"
               >
-                {isPending && <Spinner />}
-                {isPending ? "Processing…" : "Contribute"}
+                <AsyncButtonContent
+                  isPending={isPending}
+                  idleLabel="Contribute"
+                  pendingLabel={phaseLabel ?? "Processing..."}
+                />
               </button>
             </div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -180,7 +213,7 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
             <div className="flex flex-col gap-3">
               <button
                 onClick={() =>
-                  handleAction(() => cancelCampaign(campaign.id), "Campaign cancelled.")
+                  handleAction((options) => cancelCampaign(campaign.id, options), "Campaign cancelled.")
                 }
                 disabled={
                   isPending ||
@@ -190,7 +223,11 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
                 }
                 className="w-full py-3 min-h-[44px] bg-red-600 hover:bg-red-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
               >
-                {isPending && <Spinner />} Cancel Campaign
+                <AsyncButtonContent
+                  isPending={isPending}
+                  idleLabel="Cancel Campaign"
+                  pendingLabel={phaseLabel ?? "Cancelling..."}
+                />
               </button>
               {campaign.has_revenue_sharing &&
                 (showRevenueInput ? (
@@ -215,7 +252,11 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
                         disabled={isPending || !revenueAmount}
                         className="flex-1 py-3 min-h-[44px] bg-purple-600 hover:bg-purple-700 disabled:bg-zinc-400 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                       >
-                        {isPending && <Spinner />} Confirm
+                        <AsyncButtonContent
+                          isPending={isPending}
+                          idleLabel="Confirm"
+                          pendingLabel={phaseLabel ?? "Processing..."}
+                        />
                       </button>
                       <button
                         onClick={() => {
@@ -246,11 +287,17 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
           <h3 className="text-base font-semibold text-blue-600 mb-4">Admin Panel</h3>
           <button
-            onClick={() => handleAction(() => verifyCampaign(campaign.id), "Campaign verified!")}
+            onClick={() =>
+              handleAction((options) => verifyCampaign(campaign.id, options), "Campaign verified!")
+            }
             disabled={isPending}
             className="w-full py-3 min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
           >
-            {isPending && <Spinner />} Verify Campaign
+            <AsyncButtonContent
+              isPending={isPending}
+              idleLabel="Verify Campaign"
+              pendingLabel={phaseLabel ?? "Verifying..."}
+            />
           </button>
         </div>
       )}
@@ -264,23 +311,37 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
           <div className="flex flex-col gap-3">
             <button
               onClick={() =>
-                handleAction(() => claimRefund(campaign.id, publicKey!), "Refund claimed!")
+                handleAction(
+                  (options) => claimRefund(campaign.id, publicKey!, options),
+                  "Refund claimed!",
+                )
               }
               disabled={isPending || (campaign.is_active && !isExpired)}
               title={campaign.is_active && !isExpired ? "Cannot refund while active" : ""}
               className="w-full py-3 min-h-[44px] bg-amber-600 hover:bg-amber-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
             >
-              {isPending && <Spinner />} Claim Refund
+              <AsyncButtonContent
+                isPending={isPending}
+                idleLabel="Claim Refund"
+                pendingLabel="Claiming refund..."
+              />
             </button>
             {campaign.has_revenue_sharing && (
               <button
                 onClick={() =>
-                  handleAction(() => claimRevenue(campaign.id, publicKey!), "Revenue claimed!")
+                  handleAction(
+                    (options) => claimRevenue(campaign.id, publicKey!, options),
+                    "Revenue claimed!",
+                  )
                 }
                 disabled={isPending}
                 className="w-full py-3 min-h-[44px] bg-indigo-600 hover:bg-indigo-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
               >
-                {isPending && <Spinner />} Claim Revenue
+                <AsyncButtonContent
+                  isPending={isPending}
+                  idleLabel="Claim Revenue"
+                  pendingLabel="Claiming revenue..."
+                />
               </button>
             )}
           </div>

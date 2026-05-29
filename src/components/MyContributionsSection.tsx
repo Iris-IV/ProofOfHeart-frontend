@@ -9,6 +9,7 @@ import { CampaignStatus, stroopsToXlm } from "../types";
 import { useToast } from "./ToastProvider";
 import { parseContractError } from "../utils/contractErrors";
 import type { WalletTransactionAction } from "../lib/transactionLog";
+import { type TransactionLifecyclePhase } from "../lib/contractClient";
 
 interface MyContributionsSectionProps {
   walletAddress: string;
@@ -73,6 +74,7 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
   const { showError, showSuccess } = useToast();
   const [pendingCampaignId, setPendingCampaignId] = useState<number | null>(null);
   const [pendingAction, setPendingAction] = useState<"refund" | "revenue" | null>(null);
+  const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
   const { contributions, isLoading, isRefreshing, error, refetch } =
     useContributions(walletAddress);
 
@@ -84,8 +86,11 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
   const handleClaimRefund = async (campaignId: number) => {
     setPendingCampaignId(campaignId);
     setPendingAction("refund");
+    setTxPhase(null);
     try {
-      await claimRefund(campaignId, walletAddress);
+      await claimRefund(campaignId, walletAddress, {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       showSuccess("Refund claimed successfully.");
       refetch();
     } catch (err) {
@@ -93,14 +98,18 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
     } finally {
       setPendingCampaignId(null);
       setPendingAction(null);
+      setTxPhase(null);
     }
   };
 
   const handleClaimRevenue = async (campaignId: number) => {
     setPendingCampaignId(campaignId);
     setPendingAction("revenue");
+    setTxPhase(null);
     try {
-      await claimRevenue(campaignId, walletAddress);
+      await claimRevenue(campaignId, walletAddress, {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       showSuccess("Revenue claimed successfully.");
       refetch();
     } catch (err) {
@@ -108,6 +117,7 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
     } finally {
       setPendingCampaignId(null);
       setPendingAction(null);
+      setTxPhase(null);
     }
   };
 
@@ -173,7 +183,13 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                       disabled={isPending}
                       className="inline-flex items-center rounded-full bg-amber-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:bg-zinc-400"
                     >
-                      {isPending && pendingAction === "refund" ? "Claiming..." : "Claim Refund"}
+                      {isPending && pendingAction === "refund"
+                        ? txPhase === "signing"
+                          ? "Signing..."
+                          : txPhase === "confirming"
+                            ? "Confirming..."
+                            : "Claiming..."
+                        : "Claim Refund"}
                     </button>
                   )}
                   {item.canClaimRevenue && (
@@ -183,7 +199,11 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                       className="inline-flex items-center rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-400"
                     >
                       {isPending && pendingAction === "revenue"
-                        ? "Claiming..."
+                        ? txPhase === "signing"
+                          ? "Signing..."
+                          : txPhase === "confirming"
+                            ? "Confirming..."
+                            : "Claiming..."
                         : `Claim Revenue (${formatXlmAmount(item.claimableRevenue)} XLM)`}
                     </button>
                   )}

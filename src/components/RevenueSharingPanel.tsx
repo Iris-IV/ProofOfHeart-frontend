@@ -8,6 +8,7 @@ import { useWallet } from "./WalletContext";
 import { useRevenueSharing } from "../hooks/useRevenueSharing";
 import { isSameAddress } from "../lib/stellar";
 import { parseContractError } from "../utils/contractErrors";
+import { type TransactionLifecyclePhase } from "../lib/contractClient";
 
 interface RevenueSharingPanelProps {
   campaign: Campaign;
@@ -34,6 +35,7 @@ export default function RevenueSharingPanel({
   const { showError, showSuccess, showWarning } = useToast();
   const [depositAmount, setDepositAmount] = useState("");
   const [isPending, setIsPending] = useState(false);
+  const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
 
   const { revenuePool, contribution, claimed, contributorShare, claimable, isLoading, refetch } =
     useRevenueSharing(campaign.id, publicKey, campaign.amount_raised, campaign.has_revenue_sharing);
@@ -65,8 +67,11 @@ export default function RevenueSharingPanel({
     }
 
     setIsPending(true);
+    setTxPhase(null);
     try {
-      await depositRevenue(campaign.id, xlmToStroops(parsedAmount));
+      await depositRevenue(campaign.id, xlmToStroops(parsedAmount), {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       setDepositAmount("");
       refetch();
       onActionSuccess?.();
@@ -75,6 +80,7 @@ export default function RevenueSharingPanel({
       showError(parseContractError(err));
     } finally {
       setIsPending(false);
+      setTxPhase(null);
     }
   };
 
@@ -85,8 +91,11 @@ export default function RevenueSharingPanel({
     }
 
     setIsPending(true);
+    setTxPhase(null);
     try {
-      await claimRevenue(campaign.id, publicKey);
+      await claimRevenue(campaign.id, publicKey, {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       refetch();
       onActionSuccess?.();
       showSuccess("Revenue claimed successfully.");
@@ -94,6 +103,7 @@ export default function RevenueSharingPanel({
       showError(parseContractError(err));
     } finally {
       setIsPending(false);
+      setTxPhase(null);
     }
   };
 
@@ -194,7 +204,13 @@ export default function RevenueSharingPanel({
               disabled={isPending || claimable <= BigInt(0) || !hasContribution}
               className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-400"
             >
-              Claim Revenue
+              {isPending
+                ? txPhase === "signing"
+                  ? "Signing..."
+                  : txPhase === "confirming"
+                    ? "Confirming..."
+                    : "Processing..."
+                : "Claim Revenue"}
             </button>
           </div>
         </div>
@@ -225,7 +241,13 @@ export default function RevenueSharingPanel({
               disabled={isPending}
               className="inline-flex items-center justify-center rounded-full bg-zinc-900 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-400 dark:bg-emerald-600 dark:hover:bg-emerald-700"
             >
-              Deposit Revenue
+              {isPending
+                ? txPhase === "signing"
+                  ? "Signing..."
+                  : txPhase === "confirming"
+                    ? "Confirming..."
+                    : "Processing..."
+                : "Deposit Revenue"}
             </button>
           </form>
         </div>

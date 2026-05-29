@@ -1,5 +1,10 @@
 'use client';
 
+import {
+  hasOffchainApiBaseUrl,
+  requestOffchainJson,
+} from './offchainApiClient';
+
 export type ReportReason =
   | 'scam'
   | 'inappropriate'
@@ -53,6 +58,23 @@ function writeAll(reports: CampaignReport[]): void {
   }
 }
 
+async function syncReport(report: CampaignReport, reviewed = false): Promise<void> {
+  if (!hasOffchainApiBaseUrl()) return;
+
+  try {
+    await requestOffchainJson('/campaign-reports', {
+      method: reviewed ? 'PATCH' : 'POST',
+      auth: {
+        purpose: reviewed ? 'review_campaign_report' : 'submit_campaign_report',
+        payload: report,
+      },
+      body: report,
+    });
+  } catch {
+    // Keep the local cache authoritative when the backend is unavailable.
+  }
+}
+
 export function submitReport(
   campaignId: number,
   campaignTitle: string,
@@ -73,6 +95,7 @@ export function submitReport(
   const all = readAll();
   all.push(report);
   writeAll(all);
+  void syncReport(report);
   return report;
 }
 
@@ -87,4 +110,8 @@ export function getPendingReports(): CampaignReport[] {
 export function markReportReviewed(id: string): void {
   const all = readAll().map((r) => (r.id === id ? { ...r, status: 'reviewed' as const } : r));
   writeAll(all);
+  const reviewedReport = all.find((r) => r.id === id);
+  if (reviewedReport) {
+    void syncReport(reviewedReport, true);
+  }
 }

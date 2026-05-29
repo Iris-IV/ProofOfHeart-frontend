@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ToastProvider';
 import { useWallet } from '@/components/WalletContext';
 import { useRouter } from '@/i18n/routing';
-import { createCampaign, getCampaignCount } from '@/lib/contractClient';
+import { createCampaign, getCampaignCount, type TransactionLifecyclePhase } from '@/lib/contractClient';
 import { Category, CATEGORY_LABELS, xlmToStroops } from '@/types';
 import { parseContractError } from '@/utils/contractErrors';
 
@@ -119,6 +119,7 @@ export default function CreateCampaignPage() {
   const [tagInput, setTagInput] = useState('');
   const [descriptionTab, setDescriptionTab] = useState<'write' | 'preview'>('write');
   const [coverImageUrl, setCoverImageUrl] = useState('');
+  const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
 
   const DRAFT_KEY = 'proof_of_heart_next_draft';
   const CREATOR_EMAIL_WEBHOOK_URL =
@@ -251,6 +252,9 @@ export default function CreateCampaignPage() {
         reviewData.hasRevenueSharing,
         basisPoints,
         reviewData.tags,
+        {
+          onStatus: ({ phase }) => setTxPhase(phase),
+        },
       );
 
       let newCampaignId: number | null = null;
@@ -289,6 +293,7 @@ export default function CreateCampaignPage() {
       showError(parseContractError(err));
     }
     setIsSubmitting(false);
+    setTxPhase(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -962,7 +967,15 @@ export default function CreateCampaignPage() {
                   {isSubmitting && (
                     <span className="inline-block motion-safe:animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
                   )}
-                  {isSubmitting ? t('submitting') : t('confirmAndSign')}
+                  {isSubmitting
+                    ? txPhase === 'building'
+                      ? t('submitting')
+                      : txPhase === 'signing'
+                        ? 'Signing…'
+                        : txPhase === 'confirming'
+                          ? 'Confirming…'
+                          : t('submitting')
+                    : t('confirmAndSign')}
                 </button>
               </div>
             </div>
