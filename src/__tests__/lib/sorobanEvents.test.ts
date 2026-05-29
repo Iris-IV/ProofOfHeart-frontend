@@ -54,7 +54,7 @@ describe("sorobanEvents", () => {
         StellarSdk.nativeToScVal("GABC", { type: "address" }),
       ],
       value: { __bigint: BigInt(1_000_000) },
-    } as Parameters<typeof isContributionMadeEvent>[0];
+    } as unknown as Parameters<typeof isContributionMadeEvent>[0];
 
     expect(isContributionMadeEvent(event, 7)).toBe(true);
     expect(isContributionMadeEvent(event, 8)).toBe(false);
@@ -63,7 +63,7 @@ describe("sorobanEvents", () => {
   it("parses contribution amounts and sums events", () => {
     const event = {
       value: { __bigint: BigInt(2_500_000) },
-    } as Parameters<typeof parseContributionAmount>[0];
+    } as unknown as Parameters<typeof parseContributionAmount>[0];
 
     expect(parseContributionAmount(event)).toBe(BigInt(2_500_000));
     expect(sumContributionAmounts([event, event])).toBe(BigInt(5_000_000));

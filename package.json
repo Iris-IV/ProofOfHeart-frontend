@@ -66,5 +66,6 @@
     "follow-redirects": "1.16.0",
     "@swc/helpers": "0.5.21",
     "postcss": "^8.5.10"
-  }
+  },
+  "_overridesRationale": "axios and follow-redirects overrides are pinned to mitigate high-severity CVEs in transitive dependencies."
 }

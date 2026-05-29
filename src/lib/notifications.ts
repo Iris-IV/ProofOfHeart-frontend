@@ -146,7 +146,7 @@ function deriveLocalNotifications(walletAddress: string): AppNotification[] {
         ...mapped,
       } satisfies AppNotification;
     })
-    .filter((item): item is AppNotification => item !== null);
+    .filter(Boolean) as AppNotification[];
 }
 
 export async function fetchNotifications(walletAddress: string): Promise<AppNotification[]> {

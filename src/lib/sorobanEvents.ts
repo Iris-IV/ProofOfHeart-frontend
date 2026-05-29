@@ -1,6 +1,6 @@
 import * as StellarSdk from "@stellar/stellar-sdk";
 
-type Api = StellarSdk.rpc.Api;
+import Api = StellarSdk.rpc.Api;
 
 const USE_MOCKS =
   typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_MOCKS === "true";

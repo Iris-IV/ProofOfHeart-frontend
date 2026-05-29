@@ -146,6 +146,8 @@ Before going live on the Stellar public network, ensure the following production
 
 ## 🤝 Contributing!
 
+Please review our [Security Policy](SECURITY.md) for information on how to responsibly disclose vulnerabilities.
+
 Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
 
 We welcome contributions! To maintain a clean and consistent codebase, please follow these guidelines:

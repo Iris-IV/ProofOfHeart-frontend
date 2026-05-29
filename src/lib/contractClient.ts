@@ -4,6 +4,13 @@ import { Campaign, Category, deriveStatus, CampaignStatus } from "../types";
 import { appendWalletTransaction } from "./transactionLog";
 import { parseContractError, getContractErrorCode, ContractError } from "../utils/contractErrors";
 import { assertProductionContractConfig } from "./runtimeEnv";
+import {
+  validateAmount,
+  validateFundingGoal,
+  validateDuration,
+  validateRevenueShare,
+  validateStellarAddress
+} from "../utils/validators";
 
 // ---------------------------------------------------------------------------
 // Environment configuration
@@ -121,7 +128,7 @@ async function buildAndSubmitTransaction(
   let pollDelay = 1_000;
   let getResult = await server.getTransaction(txHash);
 
-  while (getResult.status === "NOT_FOUND" || getResult.status === "PENDING") {
+  while (getResult.status === "NOT_FOUND" || (getResult.status as any) === "PENDING") {
     if (Date.now() - startedAt >= timeoutMs) {
       options?.onStatus?.({ phase: "failed", txHash, rpcStatus: getResult.status });
       throw new Error("Transaction confirmation timed out.");
@@ -462,6 +469,8 @@ export async function init(
   platformFee: number,
   options?: TransactionLifecycleOptions,
 ): Promise<string> {
+  validateStellarAddress(admin);
+  validateStellarAddress(token);
   if (USE_MOCKS) return emitMockLifecycle("mock_tx_init", options);
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
@@ -490,6 +499,13 @@ export async function createCampaign(
   tags: string[],
   options?: TransactionLifecycleOptions,
 ): Promise<string> {
+  validateStellarAddress(creator);
+  validateFundingGoal(fundingGoal);
+  validateDuration(durationDays);
+  if (hasRevenueSharing) {
+    validateRevenueShare(revenueSharePercentage);
+  }
+
   if (USE_MOCKS) {
     const txHash = emitMockLifecycle("mock_tx_create_campaign", options);
     MOCK_CAMPAIGNS.push(
@@ -540,6 +556,9 @@ export async function contribute(
   amount: bigint,
   options?: TransactionLifecycleOptions,
 ): Promise<string> {
+  validateStellarAddress(contributor);
+  validateAmount(amount);
+
   if (USE_MOCKS) return emitMockLifecycle("mock_tx_contribute", options);
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
@@ -610,6 +629,7 @@ export async function claimRefund(
   contributor: string,
   options?: TransactionLifecycleOptions,
 ): Promise<string> {
+  validateStellarAddress(contributor);
   if (USE_MOCKS) return emitMockLifecycle("mock_tx_claim_refund", options);
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
@@ -636,6 +656,7 @@ export async function depositRevenue(
   amount: bigint,
   options?: TransactionLifecycleOptions,
 ): Promise<string> {
+  validateAmount(amount);
   if (USE_MOCKS) return emitMockLifecycle("mock_tx_deposit_revenue", options);
   const { address: callerAddress } = await getAddress();
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
@@ -657,6 +678,7 @@ export async function claimRevenue(
   contributor: string,
   options?: TransactionLifecycleOptions,
 ): Promise<string> {
+  validateStellarAddress(contributor);
   if (USE_MOCKS) return emitMockLifecycle("mock_tx_claim_revenue", options);
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
@@ -728,6 +750,7 @@ export async function updateAdmin(
   newAdmin: string,
   options?: TransactionLifecycleOptions,
 ): Promise<string> {
+  validateStellarAddress(newAdmin);
   if (USE_MOCKS) return emitMockLifecycle("mock_tx_update_admin", options);
 
   const { address: callerAddress } = await getAddress();

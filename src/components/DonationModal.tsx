@@ -7,6 +7,7 @@ import { useToast } from "./ToastProvider";
 import { useWallet } from "./WalletContext";
 import { parseContractError } from "../utils/contractErrors";
 import { type TransactionLifecyclePhase } from "../lib/contractClient";
+import { validateContributorNotCreator } from "../utils/validators";
 
 const EXPLORER_BASE =
   process.env.NEXT_PUBLIC_EXPLORER_URL ?? "https://stellar.expert/explorer/testnet/tx";
@@ -132,6 +133,14 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
 
   const handleDonate = async () => {
     if (!publicKey) return;
+
+    try {
+      validateContributorNotCreator(publicKey, campaign.creator);
+    } catch (err) {
+      const msg = parseContractError(err);
+      setError(msg);
+      return;
+    }
 
     const validation = validateAmount(amount);
     if (!validation.valid) {
@@ -266,13 +275,7 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
                 disabled={!publicKey || !validation.valid}
                 className="w-full py-3 bg-linear-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200"
               >
-                {step === "pending"
-                  ? txPhase === "signing"
-                    ? "Signing..."
-                    : txPhase === "confirming"
-                      ? "Confirming..."
-                      : "Processing..."
-                  : `Donate ${amountNum > 0 ? `${amountNum} XLM` : ""}`}
+                {`Donate ${amountNum > 0 ? `${amountNum} XLM` : ""}`}
               </button>
             </>
           )}
