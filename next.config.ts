@@ -8,7 +8,15 @@ const withAnalyzer = withBundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
 
+// Expose the package version to client components at build time.
+const pkg = JSON.parse(
+  require("node:fs").readFileSync(require("node:path").join(__dirname, "package.json"), "utf-8")
+) as { version: string };
+
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_APP_VERSION: pkg.version,
+  },
   output: "standalone",
   reactCompiler: true,
   outputFileTracingRoot: path.join(__dirname),
