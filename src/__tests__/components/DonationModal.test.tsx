@@ -121,4 +121,18 @@ describe("DonationModal", () => {
       }),
     );
   });
+
+  it("hides submit controls while a transaction is in flight", async () => {
+    mockContribute.mockImplementation(() => new Promise(() => {}));
+
+    render(<DonationModal {...defaultProps} />);
+
+    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value: "5" } });
+    fireEvent.click(screen.getByRole("button", { name: /Donate 5 XLM/ }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /Donate/ })).not.toBeInTheDocument();
+    });
+    expect(screen.getByText(/Submitting transaction to the network/)).toBeInTheDocument();
+  });
 });
