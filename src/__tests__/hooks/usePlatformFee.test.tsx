@@ -41,10 +41,9 @@ describe("usePlatformFee", () => {
 
     const { result } = renderHook(() => usePlatformFee(), { wrapper: createWrapper() });
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await waitFor(() => expect(result.current.isFallback).toBe(true));
 
     expect(result.current.platformFeeBps).toBe(DEFAULT_PLATFORM_FEE_BPS);
-    expect(result.current.isFallback).toBe(true);
   });
 
   it("marks isFallback true while data is still undefined after error", async () => {

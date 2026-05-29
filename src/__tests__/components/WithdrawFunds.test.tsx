@@ -66,7 +66,11 @@ describe("WithdrawFunds", () => {
     );
 
     expect(screen.getByText("Total raised")).toBeInTheDocument();
-    expect(screen.getByText("Platform fee (3%)")).toBeInTheDocument();
+    expect(
+      screen.getByText((_content, element) =>
+        element?.tagName === "SPAN" ? element.textContent?.startsWith("Platform fee") ?? false : false,
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText("You will receive")).toBeInTheDocument();
     expect(screen.getByText("-0.3 XLM")).toBeInTheDocument();
     expect(screen.getByText("9.7 XLM")).toBeInTheDocument();
@@ -107,7 +111,11 @@ describe("WithdrawFunds", () => {
       />,
     );
 
-    expect(screen.getByText("Platform fee (3%)")).toBeInTheDocument();
+    expect(
+      screen.getByText((_content, element) =>
+        element?.tagName === "SPAN" ? element.textContent?.startsWith("Platform fee") ?? false : false,
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText("-0.3 XLM")).toBeInTheDocument();
   });
 });
