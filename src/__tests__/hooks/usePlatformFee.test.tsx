@@ -56,4 +56,13 @@ describe("usePlatformFee", () => {
 
     await waitFor(() => expect(result.current.isFallback).toBe(true));
   });
+
+  it("exposes isLoading while the platform fee query is in flight", () => {
+    mockGetPlatformFee.mockReturnValue(new Promise(() => {}));
+
+    const { result } = renderHook(() => usePlatformFee(), { wrapper: createWrapper() });
+
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.platformFeeBps).toBe(DEFAULT_PLATFORM_FEE_BPS);
+  });
 });
