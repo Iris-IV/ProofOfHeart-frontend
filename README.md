@@ -25,7 +25,7 @@ ProofOfHeart empowers everyday people to rally behind the causes they believe in
 | **Styling**    | [Tailwind CSS v4](https://tailwindcss.com/)    |
 | **Animations** | [Framer Motion](https://motion.dev/)           |
 | **Linting**    | [ESLint 9](https://eslint.org/)                |
-| **Runtime**    | Node.js (v20+)                                 |
+| **Runtime**    | Node.js (v22+)                                 |
 
 ## 🏗 Architecture
 
@@ -41,18 +41,6 @@ The project follows the standard **Next.js App Router** architecture:
 
 - Campaign exploration and detail pages backed by the Soroban contract service layer.
 - Wallet-aware creator and contributor actions including withdrawal, refunds, and admin verification.
-- Wallet dashboard contribution history with per-campaign status, claimable refund/revenue actions, and Stellar explorer transaction links.
-- Revenue sharing support for eligible Educational Startup campaigns:
-  creator dashboard deposit flow, contributor claim flow, revenue pool display, and transparent pro-rata breakdowns.
-- Admin dashboard at `/admin` with wallet-gated access, pending campaign verification, platform fee updates, admin transfer, and contract-level stats.
-- Revenue sharing support for eligible Educational Startup campaigns:
-  creator dashboard deposit flow, contributor claim flow, revenue pool display, and transparent pro-rata breakdowns.
-- Admin dashboard at `/admin` with wallet-gated access, pending campaign verification, platform fee updates, admin transfer, and contract-level stats.
-
-## ✨ Current Frontend Features
-
-- Campaign exploration and detail pages backed by the Soroban contract service layer.
-- Wallet-aware creator and contributor actions including withdrawal, refunds, and admin verification.
 - Platform fee transparency across contribution, withdrawal, and cause detail views, with a 3% fallback until the `get_platform_fee` getter is available on-chain.
 - Wallet dashboard contribution history with per-campaign status, claimable refund/revenue actions, and Stellar explorer transaction links.
 - Revenue sharing support for eligible Educational Startup campaigns:
@@ -63,7 +51,7 @@ The project follows the standard **Next.js App Router** architecture:
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (Version 20 or higher)
+- [Node.js](https://nodejs.org/) (Version 22 or higher)
 - [npm](https://www.npmjs.com/)
 
 ### Installation
@@ -126,6 +114,35 @@ Authenticated off-chain mutations send wallet signatures with:
 - `X-Request-Purpose`
 
 The client retries transient failures and falls back to the existing mock/local stores when `NEXT_PUBLIC_API_URL` is not set.
+
+## 🚀 Mainnet Launch Checklist
+
+Before going live on the Stellar public network, ensure the following production-readiness items are complete:
+
+### Smart Contract
+- [ ] `get_platform_fee` getter deployed on mainnet (remove the 3% hardcoded fallback)
+- [ ] Contract address and network passphrase updated to mainnet values in `.env.production`
+- [ ] Full audit of Soroban contract completed and findings addressed
+- [ ] Emergency pause / admin-transfer mechanisms tested on mainnet
+
+### Frontend
+- [ ] `NEXT_PUBLIC_NETWORK_PASSPHRASE` set to `Public Global Stellar Network ; September 2015`
+- [ ] `NEXT_PUBLIC_RPC_URL` pointed at a production Horizon / Soroban RPC endpoint
+- [ ] `NEXT_PUBLIC_API_URL` pointed at the production off-chain service
+- [ ] Error boundary wired to a production error tracker (e.g. Sentry)
+- [ ] All console warnings and TypeScript errors resolved (`npm run build` passes cleanly)
+- [ ] Lighthouse / Core Web Vitals baseline captured
+
+### Security & Operations
+- [ ] Content Security Policy (CSP) headers configured for production
+- [ ] Rate limiting enabled on off-chain API endpoints
+- [ ] Secrets rotated; no `.env.local` values committed to the repository
+- [ ] Docker production image built and smoke-tested (`docker build` + `docker run`)
+- [ ] CI pipeline passes on `main` (lint → build → tests)
+
+### Communications
+- [ ] Community announcement drafted
+- [ ] Docs/README updated with mainnet contract address and explorer links
 
 ## 🤝 Contributing!
 
