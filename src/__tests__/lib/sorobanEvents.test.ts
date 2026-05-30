@@ -17,6 +17,10 @@ import {
   parseVoteCastApprove,
   scValToTopicSegment,
   voteCastTopicFilter,
+  contributionMadeTopicFilter,
+  isContributionMadeEvent,
+  parseContributionAmount,
+  sumContributionAmounts,
 } from '@/lib/sorobanEvents';
 
 describe('sorobanEvents vote cast', () => {
