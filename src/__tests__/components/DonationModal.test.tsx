@@ -26,6 +26,34 @@ jest.mock("@/hooks/usePlatformFee", () => ({
   }),
 }));
 
+jest.mock("next-intl", () => ({
+  useTranslations: () => (key: string, values?: Record<string, unknown>) => {
+    const map: Record<string, string> = {
+      title: "Fund This Cause",
+      confirmedTitle: "Donation Confirmed",
+      amountLabel: "Amount (XLM)",
+      percentFunded: `${values?.percent}% funded`,
+      afterDonation: `After your donation: ${values?.percent}% funded`,
+      goalReached: "Goal reached!",
+      contributionLine: "Contribution",
+      networkFeeLine: "Est. network fee",
+      totalLine: "Total from your wallet",
+      donate: "Donate",
+      donateAmount: `Donate ${values?.amount} XLM`,
+      platformFeeNote: `A platform fee of ${values?.feePercent} is deducted from funds when withdrawn by the creator. Your full donation goes toward the campaign total.`,
+      networkFeeNote: "Network fee note",
+      waitingSignature: "Waiting for Freighter signature…",
+      waitingConfirmation: "Waiting for ledger confirmation…",
+      submitting: "Submitting transaction to the network…",
+      donatedSuccess: `${values?.amount} XLM donated successfully`,
+      thankYou: "Thank you for supporting this cause.",
+      viewExplorer: "View on Stellar Explorer →",
+      close: "Close",
+    };
+    return map[key] ?? key;
+  },
+}));
+
 jest.mock("@/lib/analytics", () => ({
   trackClickContribute: jest.fn(),
   trackEnterAmount: jest.fn(),
@@ -103,6 +131,16 @@ describe("DonationModal", () => {
     expect(
       screen.getByText(/A platform fee of 3% is deducted from funds when withdrawn by the creator/),
     ).toBeInTheDocument();
+  });
+
+  it("shows estimated network fee and total wallet cost when amount is entered", () => {
+    render(<DonationModal {...defaultProps} />);
+
+    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value: "10" } });
+
+    expect(screen.getByText("Est. network fee")).toBeInTheDocument();
+    expect(screen.getByText("Total from your wallet")).toBeInTheDocument();
+    expect(screen.getByText(/10\.01\s*XLM/)).toBeInTheDocument();
   });
 
   it("calls contribute with amount converted to stroops", async () => {

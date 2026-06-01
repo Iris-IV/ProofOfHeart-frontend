@@ -17,6 +17,7 @@ import {
   getApproveVotes,
   getRejectVotes,
 } from "@/lib/contractClient";
+import { CAUSES_PAGE_SIZE } from "@/lib/causesList";
 import { SORT_OPTIONS } from "@/lib/mockCauses";
 import { Campaign, Vote, CATEGORY_LABELS, CampaignStatus, Category } from "@/types";
 import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncAction";
@@ -72,6 +73,7 @@ function CausesContent() {
     Record<number, { upvotes: number; downvotes: number; totalVotes: number }>
   >({});
   const [isVotingFor, setIsVotingFor] = useState<number | null>(null);
+  const [visibleCount, setVisibleCount] = useState(CAUSES_PAGE_SIZE);
   const { publicKey: userWalletAddress } = useWallet();
   const { showError, showSuccess, showWarning } = useToast();
 
@@ -156,7 +158,7 @@ function CausesContent() {
   // Vote handler
   // -------------------------------------------------------------------------
 
-  const handleVote = async (campaignId: number, voteType: "upvote" | "downvote") => {
+  const handleVote = useCallback(async (campaignId: number, voteType: "upvote" | "downvote") => {
     if (!userWalletAddress) {
       showWarning("Please connect your wallet first.");
       return;
@@ -199,13 +201,13 @@ function CausesContent() {
     } finally {
       setIsVotingFor(null);
     }
-  };
+  }, [userWalletAddress, userVotes, showWarning, showSuccess, showError]);
 
   // -------------------------------------------------------------------------
   // Cancel handler
   // -------------------------------------------------------------------------
 
-  const handleCancel = async (campaignId: number) => {
+  const handleCancel = useCallback(async (campaignId: number) => {
     if (!userWalletAddress) {
       showWarning("Please connect your wallet first.");
       return;
@@ -223,13 +225,13 @@ function CausesContent() {
     } catch (error) {
       showError(getAsyncActionErrorMessage(error, parseContractError));
     }
-  };
+  }, [userWalletAddress, showWarning, showSuccess, showError]);
 
   // -------------------------------------------------------------------------
   // Claim refund handler
   // -------------------------------------------------------------------------
 
-  const handleClaimRefund = async (campaignId: number) => {
+  const handleClaimRefund = useCallback(async (campaignId: number) => {
     if (!userWalletAddress) {
       showWarning("Please connect your wallet first.");
       return;
@@ -240,7 +242,11 @@ function CausesContent() {
     } catch (error) {
       showError(getAsyncActionErrorMessage(error, parseContractError));
     }
-  };
+  }, [userWalletAddress, showWarning, showSuccess, showError]);
+
+  const handleTagClick = useCallback((nextTag: string) => {
+    setTag(nextTag);
+  }, []);
 
   // -------------------------------------------------------------------------
   // Filtering + sorting
@@ -295,6 +301,17 @@ function CausesContent() {
 
     return result;
   }, [campaigns, debouncedSearch, category, status, sort, tag, voteCounts]);
+
+  useEffect(() => {
+    setVisibleCount(CAUSES_PAGE_SIZE);
+  }, [debouncedSearch, category, status, sort, tag]);
+
+  const visibleCampaigns = useMemo(
+    () => filteredCampaigns.slice(0, visibleCount),
+    [filteredCampaigns, visibleCount],
+  );
+
+  const hasMoreCampaigns = visibleCount < filteredCampaigns.length;
 
   const hasActiveFilters =
     debouncedSearch || category !== "all" || status !== "all" || sort !== "newest" || tag;
@@ -470,7 +487,7 @@ function CausesContent() {
               onClick={refetch}
               className="px-5 py-2 bg-red-600 text-white rounded-full text-sm font-medium hover:bg-red-700 transition-colors"
             >
-              Try again
+              {t("tryAgain")}
             </button>
           </div>
         )}
@@ -503,23 +520,48 @@ function CausesContent() {
             </div>
 
             {filteredCampaigns.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredCampaigns.map((campaign) => (
-                  <CauseCard
-                    key={campaign.id}
-                    campaign={campaign}
-                    userWalletAddress={userWalletAddress}
-                    onVote={handleVote}
-                    onCancel={handleCancel}
-                    onClaimRefund={handleClaimRefund}
-                    onTagClick={(t: string) => setTag(t)}
-                    userVote={userVotes[campaign.id]}
-                    upvotes={voteCounts[campaign.id]?.upvotes ?? 0}
-                    downvotes={voteCounts[campaign.id]?.downvotes ?? 0}
-                    totalVotes={voteCounts[campaign.id]?.totalVotes ?? 0}
-                  />
-                ))}
-              </div>
+              <>
+                {filteredCampaigns.length > CAUSES_PAGE_SIZE && (
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                    {t("showingRange", {
+                      shown: visibleCampaigns.length,
+                      total: filteredCampaigns.length,
+                    })}
+                  </p>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {visibleCampaigns.map((campaign) => (
+                    <CauseCard
+                      key={campaign.id}
+                      campaign={campaign}
+                      userWalletAddress={userWalletAddress}
+                      onVote={handleVote}
+                      onCancel={handleCancel}
+                      onClaimRefund={handleClaimRefund}
+                      onTagClick={handleTagClick}
+                      userVote={userVotes[campaign.id]}
+                      upvotes={voteCounts[campaign.id]?.upvotes ?? 0}
+                      downvotes={voteCounts[campaign.id]?.downvotes ?? 0}
+                      totalVotes={voteCounts[campaign.id]?.totalVotes ?? 0}
+                    />
+                  ))}
+                </div>
+                {hasMoreCampaigns && (
+                  <div className="mt-8 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setVisibleCount((count) =>
+                          Math.min(count + CAUSES_PAGE_SIZE, filteredCampaigns.length),
+                        )
+                      }
+                      className="px-6 py-2.5 rounded-full text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                    >
+                      {t("loadMore")}
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-20">
                 <div className="text-5xl mb-4">🔍</div>
