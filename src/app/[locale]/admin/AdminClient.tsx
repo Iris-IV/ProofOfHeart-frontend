@@ -14,11 +14,12 @@ import {
   Smartphone,
   Flag,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
+import TransferAdminModal from "@/components/TransferAdminModal";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { Link } from "@/i18n/routing";
 import { appendAdminAuditLog, AdminAuditLogEntry, getAdminAuditLog } from "@/lib/adminLog";
@@ -32,7 +33,8 @@ import {
 } from "@/lib/contractClient";
 import type { TransactionLifecyclePhase } from "@/lib/contractClient";
 import { isSameAddress } from "@/lib/stellar";
-import { formatStroopsAsXlm, Category, CATEGORY_LABELS, basisPointsToPercentage } from "@/types";
+import { formatAmount } from "@/lib/formatters";
+import { Category, CATEGORY_LABELS, basisPointsToPercentage } from "@/types";
 import { parseContractError } from "@/utils/contractErrors";
 import { explorerTxUrl } from "@/utils/explorer";
 import {
@@ -56,6 +58,9 @@ export default function AdminDashboard() {
   const [platformFee, setPlatformFee] = useState<number | null>(null);
   const [feeInput, setFeeInput] = useState("");
   const [newAdminInput, setNewAdminInput] = useState("");
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isFeeConfirmModalOpen, setIsFeeConfirmModalOpen] = useState(false);
+  const [pendingFee, setPendingFee] = useState<number | null>(null);
 
   const [verifyingId, setVerifyingId] = useState<number | null>(null);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
@@ -116,10 +121,10 @@ export default function AdminDashboard() {
   // Reconcile optimistic updates when raw data changes
   useEffect(() => {
     if (optimisticRemovedIds.length === 0) return;
-    
+
     // Remove IDs from optimistic list if they are no longer in the "actually pending" server data
     setOptimisticRemovedIds(prev => prev.filter(id => {
-      const isStillInServerData = campaigns.some(c => 
+      const isStillInServerData = campaigns.some(c =>
         c.id === id && !c.is_verified && c.is_active && !c.is_cancelled
       );
       return isStillInServerData;
@@ -233,13 +238,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleUpdateFee = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!isAdmin) return showWarning("Only admin can update fee");
-
-    const fee = Number(feeInput);
-    if (isNaN(fee) || fee < 0 || fee > 10000) return showError("Invalid fee");
-
+  const performFeeUpdate = async (fee: number) => {
     setIsUpdatingFee(true);
     setTxPhase(null);
     try {
@@ -267,6 +266,29 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleUpdateFee = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!isAdmin) return showWarning("Only admin can update fee");
+
+    const fee = Number(feeInput);
+    if (isNaN(fee) || fee < 0 || fee > 10000) return showError("Invalid fee");
+
+    if (fee > 1000) {
+      setPendingFee(fee);
+      setIsFeeConfirmModalOpen(true);
+      return;
+    }
+
+    await performFeeUpdate(fee);
+  };
+
+  const handleConfirmFeeUpdate = async () => {
+    if (pendingFee === null) return;
+    setIsFeeConfirmModalOpen(false);
+    await performFeeUpdate(pendingFee);
+    setPendingFee(null);
+  };
+
   const handleTransferAdmin = async (e: FormEvent) => {
     e.preventDefault();
     if (!isAdmin) return showWarning("Only admin can transfer");
@@ -274,6 +296,11 @@ export default function AdminDashboard() {
     const nextAdmin = newAdminInput.trim();
     if (!StellarSdk.StrKey.isValidEd25519PublicKey(nextAdmin)) return showError("Invalid address");
 
+    setIsTransferModalOpen(true);
+  };
+
+  const executeTransferAdmin = async () => {
+    const nextAdmin = newAdminInput.trim();
     setIsUpdatingAdmin(true);
     setTxPhase(null);
     try {
@@ -292,6 +319,7 @@ export default function AdminDashboard() {
       setAdminAddress(nextAdmin);
       setNewAdminInput("");
       showSuccess("Admin access transferred");
+      setIsTransferModalOpen(false);
     } catch (err) {
       showError(parseContractError(err));
     } finally {
@@ -404,7 +432,7 @@ export default function AdminDashboard() {
         <StatsCard
           icon={<DollarSign className="text-green-500" />}
           label={t("totalRaised")}
-          value={`${formatStroopsAsXlm(totalRaised)} XLM`}
+          value={`${formatAmount(totalRaised, locale)} XLM`}
         />
         <StatsCard
           icon={<PieChart className="text-purple-500" />}
@@ -487,7 +515,7 @@ export default function AdminDashboard() {
                           <div className="flex items-center gap-2">
                             <span className="text-zinc-400">{t("goal")}:</span>
                             <span className="text-zinc-900 dark:text-zinc-100">
-                              {formatStroopsAsXlm(BigInt(c.funding_goal))} XLM
+                              {formatAmount(BigInt(c.funding_goal), locale)} XLM
                             </span>
                           </div>
                         </div>
@@ -683,20 +711,15 @@ export default function AdminDashboard() {
           ) : (
             <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {reports.map((report) => (
-                <div key={report.id} className={`p-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4 ${
-                  report.status === 'reviewed' ? 'opacity-50' : ''
-                }`}>
+                <div key={report.id} className={`p-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4 ${report.status === 'reviewed' ? 'opacity-50' : ''
+                  }`}>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       {/* red-400 on red-900/30 is ~2.6:1; red-300 gives ~4.8:1 — meets WCAG AA */}
                       <span className="text-xs font-bold px-2 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
                         {REPORT_REASON_LABELS[report.reason]}
                       </span>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                        report.status === 'pending'
-                          ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-300'
-                      }`}>
+
                         {report.status}
                       </span>
                     </div>
@@ -746,6 +769,34 @@ export default function AdminDashboard() {
         onClose={() => setIsRejectModalOpen(false)}
         title={t("reject")}
         confirmLabel={t("reject")}
+      />
+      <TransferAdminModal
+        newAdminAddress={newAdminInput}
+        isOpen={isTransferModalOpen}
+        isTransferring={isUpdatingAdmin}
+        onConfirm={executeTransferAdmin}
+        onClose={() => setIsTransferModalOpen(false)}
+        title="Confirm Admin Transfer"
+        body="This action is irreversible. Type CONFIRM to transfer administrative control to the new address."
+        confirmLabel="Type CONFIRM to proceed"
+        typeConfirmPlaceholder="CONFIRM"
+        cancelLabel="Cancel"
+        confirmButtonLabel="Transfer Admin"
+      />
+      <TransferAdminModal
+        isOpen={isFeeConfirmModalOpen}
+        isTransferring={isUpdatingFee}
+        onConfirm={handleConfirmFeeUpdate}
+        onClose={() => {
+          setIsFeeConfirmModalOpen(false);
+          setPendingFee(null);
+        }}
+        title="Confirm High Fee Update"
+        body="Fees above 10% require extra confirmation before being applied. Type CONFIRM to continue."
+        confirmLabel="Type CONFIRM to continue"
+        typeConfirmPlaceholder="CONFIRM"
+        cancelLabel="Cancel"
+        confirmButtonLabel="Update Fee"
       />
     </div>
   );

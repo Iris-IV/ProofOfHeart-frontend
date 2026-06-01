@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Campaign, basisPointsToPercentage, formatStroopsAsXlm, xlmToStroops } from "../types";
+import { useLocale } from "next-intl";
+import { Campaign, basisPointsToPercentage, xlmToStroops } from "../types";
+import { formatAmount } from "@/lib/formatters";
 import AsyncButtonContent from "./AsyncButtonContent";
 import { useToast } from "./ToastProvider";
 import { useWallet } from "./WalletContext";
@@ -36,6 +38,7 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
   const { admin } = useAdmin();
   const { contribution } = useContribution(campaign.id, publicKey);
   const { platformFeeBps } = usePlatformFee();
+  const locale = useLocale();
   const { showSuccess, showError, showWarning } = useToast();
   const { invoke, isPending } = useWriteGuard();
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
@@ -324,7 +327,7 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
           <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-1">
             Your Contribution
           </h3>
-          <p className="text-2xl font-bold text-blue-600 mb-4">{formatStroopsAsXlm(contribution)} XLM</p>
+          <p className="text-2xl font-bold text-blue-600 mb-4">{formatAmount(contribution, locale, { maximumFractionDigits: 2 })} XLM</p>
           <div className="flex flex-col gap-3">
             <button
               onClick={() =>

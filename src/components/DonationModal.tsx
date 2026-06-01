@@ -92,10 +92,9 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [step, onClose]);
 
-  const goalStr = formatStroopsAsXlm(campaign.funding_goal, { maximumFractionDigits: 7 });
-  const raisedStr = formatStroopsAsXlm(campaign.amount_raised, { maximumFractionDigits: 7 });
-  const goal = parseFloat(goalStr);
-  const raised = parseFloat(raisedStr);
+  const locale = useLocale();
+  const goal = Number(stroopsToXlm(campaign.funding_goal));
+  const raised = Number(stroopsToXlm(campaign.amount_raised));
 
   // Robust validation for amount input
   const validateAmount = (value: string): { valid: boolean; error?: string; amount?: number } => {
@@ -255,8 +254,7 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
             <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
               <span>{t("percentFunded", { percent: currentPct })}</span>
               <span>
-                {raised.toLocaleString(undefined, { maximumFractionDigits: 2 })} /{" "}
-                {goal.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM
+                {formatAmount(campaign.amount_raised, locale, { maximumFractionDigits: 2 })} / {formatAmount(campaign.funding_goal, locale, { maximumFractionDigits: 2 })} XLM
               </span>
             </div>
             <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">

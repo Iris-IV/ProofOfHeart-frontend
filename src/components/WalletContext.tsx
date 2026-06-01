@@ -1,4 +1,5 @@
 "use client";
+import * as StellarSdk from "@stellar/stellar-sdk";
 import {
   getAddress,
   getNetwork,
@@ -9,6 +10,7 @@ import {
 import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from "react";
 import { useToast } from "./ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
+import { IS_MOCK_MODE } from "@/lib/runtimeEnv";
 
 interface WalletContextType {
   publicKey: string | null;
@@ -18,6 +20,8 @@ interface WalletContextType {
   disconnectWallet: () => void;
   isLoading: boolean;
 }
+
+const MOCK_PUBLIC_KEY = IS_MOCK_MODE ? StellarSdk.Keypair.random().publicKey() : null;
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
@@ -37,6 +41,17 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       : "the app network";
 
   useEffect(() => {
+    if (IS_MOCK_MODE) {
+      const storedKey = typeof window !== "undefined" ? localStorage.getItem("stellar_wallet_public_key") : null;
+      if (storedKey) {
+        setPublicKey(storedKey);
+        setIsWalletConnected(true);
+        previousPublicKeyRef.current = storedKey;
+      }
+      setWalletNetworkWarning(null);
+      return;
+    }
+
     // Always re-verify with Freighter rather than blindly trusting localStorage (#97)
     void checkWalletConnection();
 
@@ -51,6 +66,20 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const checkWalletConnection = async () => {
+    if (IS_MOCK_MODE) {
+      const storedKey = typeof window !== "undefined" ? localStorage.getItem("stellar_wallet_public_key") : null;
+      if (storedKey) {
+        setPublicKey(storedKey);
+        setIsWalletConnected(true);
+        previousPublicKeyRef.current = storedKey;
+      } else {
+        setPublicKey(null);
+        setIsWalletConnected(false);
+      }
+      setWalletNetworkWarning(null);
+      return;
+    }
+
     try {
       const connected = await isConnected();
       const allowed = await isAllowed();
@@ -120,6 +149,20 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const connectWallet = async () => {
     setIsLoading(true);
     try {
+      if (IS_MOCK_MODE) {
+        const mockAddress = MOCK_PUBLIC_KEY;
+        if (!mockAddress) {
+          throw new Error("Mock wallet initialization failed.");
+        }
+        setPublicKey(mockAddress);
+        setIsWalletConnected(true);
+        setWalletNetworkWarning(null);
+        localStorage.setItem("stellar_wallet_public_key", mockAddress);
+        previousPublicKeyRef.current = mockAddress;
+        showSuccess("Mock wallet connected successfully.");
+        return;
+      }
+
       const connected = await isConnected();
       if (!connected) {
         showWarning("Freighter wallet not found. Opening install page…");

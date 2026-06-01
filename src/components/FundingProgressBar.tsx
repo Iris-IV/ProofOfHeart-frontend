@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useLocale } from "next-intl";
 import { motion, useSpring, useTransform } from "framer-motion";
-import { calculateFundingPercentage, formatStroopsAsXlm } from "../types";
+import { calculateFundingPercentage } from "../types";
+import { formatAmount } from "@/lib/formatters";
 
 interface FundingProgressBarProps {
   amountRaised: bigint;
@@ -10,6 +12,7 @@ interface FundingProgressBarProps {
 }
 
 export default function FundingProgressBar({ amountRaised, fundingGoal }: FundingProgressBarProps) {
+  const locale = useLocale();
   const targetPct = calculateFundingPercentage(amountRaised, fundingGoal);
 
   const [displayPct, setDisplayPct] = useState(targetPct);
@@ -29,8 +32,8 @@ export default function FundingProgressBar({ amountRaised, fundingGoal }: Fundin
     setDisplayPct(targetPct);
   }, [targetPct, springPct]);
 
-  const displayRaised = formatStroopsAsXlm(amountRaised, { maximumFractionDigits: 2 });
-  const displayGoal = formatStroopsAsXlm(fundingGoal, { maximumFractionDigits: 2 });
+  const displayRaised = formatAmount(amountRaised, locale, { maximumFractionDigits: 2 });
+  const displayGoal = formatAmount(fundingGoal, locale, { maximumFractionDigits: 2 });
   const roundedPct = Math.round(displayPct);
 
   return (

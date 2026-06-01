@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { getCampaign } from '@/lib/contractClient';
-import { CATEGORY_LABELS, formatStroopsAsXlm } from '@/types';
+import { CATEGORY_LABELS, stroopsToXlm } from '@/types';
 
 export const runtime = 'edge';
 export const revalidate = 300; // Cache for 5 minutes
@@ -26,15 +26,13 @@ export default async function Image({ params }: { params: Promise<{ id: string; 
 
   try {
     const campaign = await getCampaign(Number(id));
-    
+
     if (!campaign) {
       throw new Error('Campaign not found');
     }
-    
-    const raisedStr = formatStroopsAsXlm(campaign.amount_raised, { maximumFractionDigits: 7 });
-    const goalStr = formatStroopsAsXlm(campaign.funding_goal, { maximumFractionDigits: 7 });
-    const raised = parseFloat(raisedStr);
-    const goal = parseFloat(goalStr);
+
+    const raised = Number(stroopsToXlm(campaign.amount_raised));
+    const goal = Number(stroopsToXlm(campaign.funding_goal));
     const fundingPct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
     const categoryLabel = CATEGORY_LABELS[campaign.category] ?? 'Other';
     const title = truncate(campaign.title || 'Untitled Campaign', 80);

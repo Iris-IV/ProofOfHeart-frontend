@@ -2,14 +2,15 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { useMemo, useState } from 'react';
 import CampaignStatusBadge from '@/components/CampaignStatusBadge';
 import FundingProgressBar from '@/components/FundingProgressBar';
 import { CampaignRowSkeleton } from '@/components/Skeleton';
 import { useCampaigns } from '@/hooks/useCampaigns';
 import { formatAddress } from '@/lib/formatAddress';
-import { Category, CATEGORY_LABELS, formatStroopsAsXlm } from '@/types';
+import { Category, CATEGORY_LABELS } from '@/types';
+import { formatAmount } from '@/lib/formatters';
 
 const CATEGORY_ICONS: Record<Category, string> = {
   [Category.Learner]: '🎓',
@@ -20,6 +21,7 @@ const CATEGORY_ICONS: Record<Category, string> = {
 
 export default function ExplorePage() {
   const t = useTranslations('Explore');
+  const locale = useLocale();
   const { campaigns, isLoading, error, refetch } = useCampaigns();
   const [activeCategory, setActiveCategory] = useState<'all' | Category>('all');
 
@@ -149,7 +151,7 @@ export default function ExplorePage() {
                   {campaign.title}
                 </p>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  By {formatAddress(campaign.creator)} · {formatStroopsAsXlm(campaign.amount_raised, { maximumFractionDigits: 1 })} / {formatStroopsAsXlm(campaign.funding_goal, { maximumFractionDigits: 1 })} XLM
+                  By {formatAddress(campaign.creator)} · {formatAmount(campaign.amount_raised, locale, { maximumFractionDigits: 1 })} / {formatAmount(campaign.funding_goal, locale, { maximumFractionDigits: 1 })} XLM
                 </p>
                 <div className="mt-1.5">
                   <FundingProgressBar amountRaised={campaign.amount_raised} fundingGoal={campaign.funding_goal} />

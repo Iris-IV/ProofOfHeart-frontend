@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 interface TransferAdminModalProps {
-  newAdminAddress: string;
+  newAdminAddress?: string;
   isOpen: boolean;
   isTransferring: boolean;
   onConfirm: () => Promise<void>;
@@ -44,10 +44,11 @@ export default function TransferAdminModal({
   const requiredWord = "CONFIRM";
   const canConfirm = confirmInput.trim() === requiredWord;
 
-  // Reset input when modal opens/closes
+  // Reset input and focus when modal opens
   useEffect(() => {
     if (isOpen) {
       setConfirmInput("");
+      inputRef.current?.focus();
     }
   }, [isOpen]);
 
@@ -104,14 +105,16 @@ export default function TransferAdminModal({
           {title}
         </h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">{body}</p>
-        <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-3">
-          <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 mb-1">
-            New Admin Address
-          </p>
-          <p className="font-mono text-xs text-zinc-900 dark:text-zinc-100 break-all">
-            {newAdminAddress}
-          </p>
-        </div>
+        {newAdminAddress ? (
+          <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-3">
+            <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 mb-1">
+              New Admin Address
+            </p>
+            <p className="font-mono text-xs text-zinc-900 dark:text-zinc-100 break-all">
+              {newAdminAddress}
+            </p>
+          </div>
+        ) : null}
         <div>
           <label
             htmlFor="confirm-input"
@@ -131,6 +134,7 @@ export default function TransferAdminModal({
         </div>
         <div className="flex gap-3">
           <button
+            type="button"
             ref={keepActiveRef}
             onClick={onClose}
             className="flex-1 px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
@@ -138,6 +142,7 @@ export default function TransferAdminModal({
             {cancelLabel}
           </button>
           <button
+            type="button"
             ref={confirmRef}
             onClick={onConfirm}
             disabled={!canConfirm || isTransferring}
