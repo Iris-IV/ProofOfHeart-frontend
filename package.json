@@ -44,6 +44,8 @@
   "devDependencies": {
     "@changesets/changelog-github": "^0.7.0",
     "@changesets/cli": "^2.31.0",
+    "@commitlint/cli": "^19.3.0",
+    "@commitlint/config-conventional": "^19.2.2",
     "@next/bundle-analyzer": "^16.2.6",
     "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4.3.0",
@@ -61,6 +63,7 @@
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-unused-imports": "^4.4.1",
+    "husky": "^9.1.7",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
     "prettier": "^3.8.3",
@@ -69,7 +72,7 @@
     "typescript": "^6"
   },
   "overrides": {
-    "axios": "1.15.2",
+    "axios": "1.16.1",
     "follow-redirects": "1.16.0",
     "@swc/helpers": "0.5.21",
     "postcss": "^8.5.10"

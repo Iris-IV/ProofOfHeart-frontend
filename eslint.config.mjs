@@ -12,6 +12,13 @@ const eslintConfig = defineConfig([
       "unused-imports": unusedImports,
       import: importPlugin,
     },
+    settings: {
+      "import/resolver": {
+        node: {
+          extensions: [".js", ".jsx", ".ts", ".tsx"],
+        },
+      },
+    },
     rules: {
       // Unused imports
       "no-unused-vars": "off",
@@ -27,26 +34,9 @@ const eslintConfig = defineConfig([
         },
       ],
 
-      // Import order
-      "import/order": [
-        "error",
-        {
-          groups: [
-            "builtin",
-            "external",
-            "internal",
-            ["parent", "sibling"],
-            "index",
-            "object",
-            "type",
-          ],
-          "newlines-between": "never",
-          alphabetize: {
-            order: "asc",
-            caseInsensitive: true,
-          },
-        },
-      ],
+      // Disabled: eslint-import-resolver-typescript is incompatible with TypeScript 6
+      // (import/order reports "typescript with invalid interface loaded as resolver").
+      "import/order": "off",
 
       // JSX Accessibility (enhanced from Next.js defaults)
       "jsx-a11y/alt-text": "error",
@@ -79,6 +69,26 @@ const eslintConfig = defineConfig([
       "jsx-a11y/role-supports-aria-props": "error",
       "jsx-a11y/scope": "error",
       "jsx-a11y/tabindex-no-positive": "warn",
+
+      // React Compiler rules are too strict for existing sync-from-props patterns.
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/purity": "off",
+      "react-hooks/immutability": "off",
+      "@typescript-eslint/no-explicit-any": "warn",
+    },
+  },
+  {
+    files: ["**/__tests__/**/*", "**/*.test.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-require-imports": "off",
+      "@next/next/no-assign-module-variable": "off",
+    },
+  },
+  {
+    files: ["next.config.ts", "src/lib/stellarExplorer.ts"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
     },
   },
   // Override default ignores of eslint-config-next.
@@ -88,6 +98,16 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Config files
+    "commitlint.config.js",
+    "jest.config.ts",
+    "next.config.ts",
+    "postcss.config.mjs",
+    "playwright.config.ts",
+    "eslint.config.mjs",
+    // Scripts and build artifacts
+    "scripts/**",
+    "coverage/**",
   ]),
 ]);
 

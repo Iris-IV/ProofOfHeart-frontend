@@ -13,11 +13,8 @@ jest.mock('@stellar/stellar-sdk', () => {
 
 import * as StellarSdk from '@stellar/stellar-sdk';
 import {
-  isVoteCastEvent,
-  parseVoteCastApprove,
   scValToTopicSegment,
   voteCastTopicFilter,
-  contributionMadeTopicFilter,
   isContributionMadeEvent,
   parseContributionAmount,
   sumContributionAmounts,

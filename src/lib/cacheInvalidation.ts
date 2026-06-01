@@ -3,6 +3,7 @@
  * Maps event topics to React Query keys to invalidate, scoped by campaign id.
  */
 
+import type { QueryClient } from '@tanstack/react-query';
 import * as StellarSdk from '@stellar/stellar-sdk';
 
 type Api = StellarSdk.rpc.Api.EventResponse;

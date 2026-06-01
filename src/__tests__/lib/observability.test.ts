@@ -1,5 +1,4 @@
 import {
-  evaluateAlerts,
   getObservabilityMetricsSnapshot,
   ingestObservabilityEvent,
   resetObservabilityMetricsForTests,

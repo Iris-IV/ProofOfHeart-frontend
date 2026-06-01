@@ -17,12 +17,9 @@ import UpdatesSection from '@/components/UpdatesSection';
 import { useToast } from '@/components/ToastProvider';
 import VotingComponent from '@/components/VotingComponent';
 import { useWallet } from '@/components/WalletContext';
-import { useCampaign } from '@/hooks/useCampaign';
 import { useLiveCampaignFunding } from '@/hooks/useLiveCampaignFunding';
 import { useLiveVoteTallies } from '@/hooks/useLiveVoteTallies';
 import { usePlatformFee } from '@/hooks/usePlatformFee';
-import { useLiveCampaignFunding } from '@/hooks/useLiveCampaignFunding';
-import SafeMarkdown from '@/components/SafeMarkdown';
 import {
   voteOnCampaign,
   hasVoted,
@@ -37,7 +34,7 @@ import { CauseDetailSkeleton } from "@/components/Skeleton";
 import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from "@/types";
 import { parseContractError } from "@/utils/contractErrors";
 import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncAction";
-import { trackViewCampaign, trackConnectWallet } from "@/lib/analytics";
+import { trackViewCampaign } from "@/lib/analytics";
 import { formatXlm, formatDate } from "@/lib/formatters";
 
 export default function CauseDetailClient({ id }: { id: string }) {
@@ -435,7 +432,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                     <p className="text-sm text-zinc-700 dark:text-zinc-300">
                       Your refundable contribution:{" "}
                       <span className="font-semibold">
-                        {formatXlm(refundableAmountNumber, locale)} XLM
+                        {formatXlm(refundableXlm, locale)} XLM
                       </span>
                     </p>
                     <button

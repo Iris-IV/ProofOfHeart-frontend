@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, RefreshCcw } from "lucide-react";
-import React, { Component, ErrorInfo, ReactNode, useEffect } from "react";
+import React, { Component, ErrorInfo, ReactNode } from "react";
 import { captureError, setupGlobalErrorHandlers } from "@/lib/errorTracking";
 
 interface ErrorReport {

@@ -9,6 +9,7 @@ import { useRevenueSharing } from "../hooks/useRevenueSharing";
 import { isSameAddress } from "../lib/stellar";
 import { parseContractError } from "../utils/contractErrors";
 import { type TransactionLifecyclePhase } from "../lib/contractClient";
+import Tooltip from "./Tooltip";
 
 interface RevenueSharingPanelProps {
   campaign: Campaign;
@@ -50,6 +51,15 @@ export default function RevenueSharingPanel({
 
     return `${formatXlmAmount(contribution)} XLM contribution × ${formatXlmAmount(revenuePool)} XLM pool ÷ ${formatXlmAmount(campaign.amount_raised)} XLM raised = ${formatXlmAmount(contributorShare)} XLM`;
   }, [campaign.amount_raised, contribution, contributorShare, revenuePool]);
+
+  const contributorSharePercentage = useMemo(() => {
+    if (campaign.amount_raised <= BigInt(0)) {
+      return "0";
+    }
+    const percentage =
+      (Number(contribution) / Number(campaign.amount_raised)) * 100;
+    return percentage.toFixed(2);
+  }, [campaign.amount_raised, contribution]);
 
   if (!campaign.has_revenue_sharing) {
     return null;
@@ -126,33 +136,45 @@ export default function RevenueSharingPanel({
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl bg-white/80 p-4 ring-1 ring-zinc-200 dark:bg-zinc-900/60 dark:ring-zinc-700">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            Total Pool
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Total Pool
+            </p>
+            <Tooltip content="The total amount of revenue that has been deposited into this campaign's revenue pool available for all contributors to claim." />
+          </div>
           <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
             {formatXlmAmount(revenuePool)} XLM
           </p>
         </div>
         <div className="rounded-2xl bg-white/80 p-4 ring-1 ring-zinc-200 dark:bg-zinc-900/60 dark:ring-zinc-700">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            Your Share
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Your Share
+            </p>
+            <Tooltip content={`Your proportional share of the revenue pool based on your ${contributorSharePercentage}% contribution to the campaign. Calculated as: (your contribution ÷ total raised) × total pool.`} />
+          </div>
           <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
             {formatXlmAmount(contributorShare)} XLM
           </p>
         </div>
         <div className="rounded-2xl bg-white/80 p-4 ring-1 ring-zinc-200 dark:bg-zinc-900/60 dark:ring-zinc-700">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            Already Claimed
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Already Claimed
+            </p>
+            <Tooltip content="The total amount of revenue you have already claimed from your share. This is deducted from your total share to calculate the claimable amount." />
+          </div>
           <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
             {formatXlmAmount(claimed)} XLM
           </p>
         </div>
         <div className="rounded-2xl bg-white/80 p-4 ring-1 ring-zinc-200 dark:bg-zinc-900/60 dark:ring-zinc-700">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            Claimable Now
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Claimable Now
+            </p>
+            <Tooltip content="The amount of revenue you can claim right now. This is your share minus what you've already claimed." />
+          </div>
           <p className="mt-2 text-xl font-semibold text-emerald-700 dark:text-emerald-300">
             {formatXlmAmount(claimable)} XLM
           </p>
@@ -160,9 +182,12 @@ export default function RevenueSharingPanel({
       </div>
 
       <div className="mt-4 rounded-2xl border border-zinc-200/80 bg-white/85 p-4 dark:border-zinc-700 dark:bg-zinc-900/60">
-        <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-          Pro-rata calculation
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            Pro-rata calculation
+          </p>
+          <Tooltip content="Your revenue share is calculated proportionally based on your contribution to the campaign. The formula is: (your contribution ÷ total raised) × available pool = your claimable share." />
+        </div>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{breakdown}</p>
       </div>
 

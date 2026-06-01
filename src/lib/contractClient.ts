@@ -210,37 +210,6 @@ function emitMockLifecycle(txHash: string, options?: TransactionLifecycleOptions
   return txHash;
 }
 
-function validateStellarAddress(address: string): void {
-  if (!StellarSdk.StrKey.isValidEd25519PublicKey(address)) {
-    throw new Error(`Invalid Stellar address: ${address}`);
-  }
-}
-
-function validateFundingGoal(goal: bigint): void {
-  if (goal <= BigInt(0)) throw new Error("Funding goal must be greater than zero.");
-}
-
-function validateDuration(days: number): void {
-  if (days < 1 || days > 365) throw new Error("Duration must be between 1 and 365 days.");
-}
-
-function validateRevenueShare(bps: number): void {
-  if (bps < 1 || bps > 5000) throw new Error("Revenue share must be between 1 and 5000 bps.");
-}
-
-function validateAmount(amount: bigint): void {
-  if (amount <= BigInt(0)) throw new Error("Amount must be greater than zero.");
-}
-
-function captureTransactionError(
-  operation: string,
-  campaignId: number,
-  error: Error,
-  errorCode?: string,
-): void {
-  recordObservabilityKind("contract_error", error.message, { operation });
-}
-
 async function invokeViewMethod(
   method: string,
   args: StellarSdk.xdr.ScVal[] = [],

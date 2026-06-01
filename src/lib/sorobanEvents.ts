@@ -62,14 +62,14 @@ export function contributionMadeTopicFilter(campaignId: number): string[][] {
   return [[scValToTopicSegment(eventSymbol), scValToTopicSegment(campaignTopic), '*']];
 }
 
-export function isContributionMadeEvent(event: rpc.Api.EventResponse, campaignId: number): boolean {
+export function isContributionMadeEvent(event: ApiEventResponse, campaignId: number): boolean {
   if (event.topic.length < 2) return false;
   const topicName = StellarSdk.scValToNative(event.topic[0]);
   const eventCampaignId = StellarSdk.scValToNative(event.topic[1]);
   return topicName === CONTRIBUTION_MADE_TOPIC && eventCampaignId === campaignId;
 }
 
-export function parseContributionAmount(event: rpc.Api.EventResponse): bigint {
+export function parseContributionAmount(event: ApiEventResponse): bigint {
   const val = event.value;
   if (val && typeof val === 'object' && '__bigint' in val) {
     return (val as { __bigint: bigint }).__bigint;
@@ -81,59 +81,7 @@ export function parseContributionAmount(event: rpc.Api.EventResponse): bigint {
   }
 }
 
-export interface FetchContributionEventsResult {
-  events: rpc.Api.EventResponse[];
-  cursor: string;
-  latestLedger: number;
-}
-
-export interface FetchContributionEventsOptions {
-  campaignId: number;
-  cursor?: string;
-  startLedger?: number;
-  limit?: number;
-}
-
-/**
- * Poll Soroban RPC for `contribution_made` events on the configured contract.
- * Returns an empty result when mocks are enabled or the contract is not configured.
- */
-export async function fetchContributionMadeEvents(
-  options: FetchContributionEventsOptions,
-): Promise<FetchContributionEventsResult | null> {
-  if (!isEventStreamingAvailable()) {
-    return null;
-  }
-
-  const { campaignId, cursor, startLedger, limit = 100 } = options;
-  const server = getServer();
-
-  const filters: rpc.Api.EventFilter[] = [
-    {
-      type: 'contract',
-      contractIds: [CONTRACT_ADDRESS],
-      topics: contributionMadeTopicFilter(campaignId),
-    },
-  ];
-
-  const request: rpc.Api.GetEventsRequest = cursor
-    ? { filters, cursor, limit }
-    : {
-        filters,
-        startLedger: startLedger ?? (await server.getLatestLedger()).sequence - 1,
-        limit,
-      };
-
-  const response = await server.getEvents(request);
-
-  return {
-    events: response.events.filter((event) => isContributionMadeEvent(event, campaignId)),
-    cursor: response.cursor,
-    latestLedger: response.latestLedger,
-  };
-}
-
-export function sumContributionAmounts(events: rpc.Api.EventResponse[]): bigint {
+export function sumContributionAmounts(events: ApiEventResponse[]): bigint {
   return events.reduce((total, event) => total + parseContributionAmount(event), BigInt(0));
 }
 
@@ -157,26 +105,9 @@ export interface FetchContributionMadeEventsOptions {
   limit?: number;
 }
 
-const CONTRIBUTION_MADE_TOPIC = 'contribution_made';
-
-export function isContributionMadeEvent(event: ApiEventResponse, campaignId: number): boolean {
-  if (event.topic.length < 2) return false;
-  const topicName = StellarSdk.scValToNative(event.topic[0]);
-  const eventCampaignId = StellarSdk.scValToNative(event.topic[1]);
-  return topicName === CONTRIBUTION_MADE_TOPIC && eventCampaignId === campaignId;
-}
-
-export function sumContributionAmounts(events: ApiEventResponse[]): bigint {
-  return events.reduce((sum, event) => {
-    try {
-      const amount = BigInt(StellarSdk.scValToNative(event.value) as number);
-      return sum + amount;
-    } catch {
-      return sum;
-    }
-  }, BigInt(0));
-}
-
+/**
+ * Poll Soroban RPC for `contribution_made` events on the configured contract.
+ */
 export async function fetchContributionMadeEvents(
   options: FetchContributionMadeEventsOptions,
 ): Promise<FetchVoteCastEventsResult | null> {
@@ -187,12 +118,12 @@ export async function fetchContributionMadeEvents(
   const { campaignId, cursor, startLedger, limit = 100 } = options;
   const server = getServer();
 
-  const eventSymbol = StellarSdk.nativeToScVal(CONTRIBUTION_MADE_TOPIC, { type: 'symbol' });
-  const campaignTopic = StellarSdk.nativeToScVal(campaignId, { type: 'u32' });
-  const topics = [[scValToTopicSegment(eventSymbol), scValToTopicSegment(campaignTopic), '*']];
-
   const filters: ApiEventFilter[] = [
-    { type: 'contract', contractIds: [CONTRACT_ADDRESS], topics },
+    {
+      type: 'contract',
+      contractIds: [CONTRACT_ADDRESS],
+      topics: contributionMadeTopicFilter(campaignId),
+    },
   ];
 
   const request: ApiGetEventsRequest = cursor
@@ -206,7 +137,7 @@ export async function fetchContributionMadeEvents(
   const response = await server.getEvents(request);
 
   return {
-    events: response.events.filter((e) => isContributionMadeEvent(e, campaignId)),
+    events: response.events.filter((event) => isContributionMadeEvent(event, campaignId)),
     cursor: response.cursor,
     latestLedger: response.latestLedger,
   };

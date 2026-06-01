@@ -66,7 +66,7 @@ class EventSubscriber {
     if (!this.isPolling || !CONTRACT_ADDRESS) return;
 
     try {
-      let requestArgs: any = {
+      const requestArgs: any = {
         limit: 100,
         filters: [
           {

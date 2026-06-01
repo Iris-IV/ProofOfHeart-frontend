@@ -1,12 +1,19 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
-import { Campaign, Vote, CATEGORY_LABELS, calculateFundingPercentage } from '../types';
-import { formatAddress } from '@/lib/formatAddress';
-import { formatShortDate } from '@/lib/formatters';
+import { memo, useState } from 'react';
 import { useLocale } from 'next-intl';
-import Amount from './Amount';
+import { formatAddress } from '@/lib/formatAddress';
+import { formatXlm, formatShortDate } from '@/lib/formatters';
+import { getAsyncActionErrorMessage, withActionTimeout } from '@/utils/asyncAction';
+import { parseContractError } from '@/utils/contractErrors';
+import {
+  Campaign,
+  Vote,
+  CATEGORY_LABELS,
+  calculateFundingPercentage,
+  formatStroopsAsXlm,
+} from '../types';
 import AsyncButtonContent from './AsyncButtonContent';
 import CampaignStatusBadge from './CampaignStatusBadge';
 import CancelCampaignModal from './cancelCampaignModal';
@@ -14,9 +21,6 @@ import DeadlineCountdown from './DeadlineCountdown';
 import FundingProgressBar from './FundingProgressBar';
 import { useToast } from './ToastProvider';
 import VotingComponent from './VotingComponent';
-import { formatAddress } from '@/lib/formatAddress';
-import { getAsyncActionErrorMessage, withActionTimeout } from '@/utils/asyncAction';
-import { parseContractError } from '@/utils/contractErrors';
 
 interface CauseCardProps {
   campaign: Campaign;
@@ -42,7 +46,7 @@ function formatDate(ts: number, locale: string) {
 }
 
 
-export default function CauseCard({
+function CauseCard({
   campaign,
   userWalletAddress,
   onVote,
@@ -265,3 +269,30 @@ export default function CauseCard({
     </div>
   );
 }
+
+function causeCardPropsAreEqual(prev: CauseCardProps, next: CauseCardProps): boolean {
+  const prevCampaign = prev.campaign;
+  const nextCampaign = next.campaign;
+
+  return (
+    prev.userWalletAddress === next.userWalletAddress &&
+    prev.userVote === next.userVote &&
+    prev.upvotes === next.upvotes &&
+    prev.downvotes === next.downvotes &&
+    prev.totalVotes === next.totalVotes &&
+    prev.onVote === next.onVote &&
+    prev.onCancel === next.onCancel &&
+    prev.onClaimRefund === next.onClaimRefund &&
+    prev.onTagClick === next.onTagClick &&
+    prevCampaign.id === nextCampaign.id &&
+    prevCampaign.status === nextCampaign.status &&
+    prevCampaign.title === nextCampaign.title &&
+    prevCampaign.amount_raised === nextCampaign.amount_raised &&
+    prevCampaign.funding_goal === nextCampaign.funding_goal &&
+    prevCampaign.deadline === nextCampaign.deadline &&
+    prevCampaign.funds_withdrawn === nextCampaign.funds_withdrawn &&
+    prevCampaign.cover_image_url === nextCampaign.cover_image_url
+  );
+}
+
+export default memo(CauseCard, causeCardPropsAreEqual);

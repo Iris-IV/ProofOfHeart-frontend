@@ -384,7 +384,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                     <p className="text-sm text-zinc-700 dark:text-zinc-300">
                       Your refundable contribution:{" "}
                       <span className="font-semibold">
-                        {formatXlm(parseFloat(refundableXlm), locale)} XLM
+                        {formatXlm(refundableXlm, locale)} XLM
                       </span>
                     </p>
                     <button
