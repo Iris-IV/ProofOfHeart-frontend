@@ -43,6 +43,19 @@ describe("FundingProgressBar", () => {
     expect(bar).toBeInTheDocument();
   });
 
+  it("exposes an accessible progressbar with current value", () => {
+    render(
+      <FundingProgressBar amountRaised={BigInt(50_000_000)} fundingGoal={BigInt(100_000_000)} />,
+    );
+    const progressbar = screen.getByRole("progressbar");
+
+    expect(progressbar).toHaveAttribute("aria-valuenow", "50");
+    expect(progressbar).toHaveAttribute("aria-valuemin", "0");
+    expect(progressbar).toHaveAttribute("aria-valuemax", "100");
+    expect(progressbar).toHaveAttribute("aria-valuetext", "50% funded, 5 of 10 XLM");
+    expect(progressbar).toHaveAttribute("aria-labelledby");
+  });
+
   it("updates displayed percentage when amount raised increases", () => {
     const { rerender } = render(
       <FundingProgressBar amountRaised={BigInt(25_000_000)} fundingGoal={BigInt(100_000_000)} />,
