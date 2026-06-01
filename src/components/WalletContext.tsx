@@ -114,6 +114,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     queryClient.invalidateQueries({ queryKey: ["admin"] });
     queryClient.invalidateQueries({ queryKey: ["contributions"] });
     queryClient.invalidateQueries({ queryKey: ["revenue"] });
+    queryClient.invalidateQueries({ queryKey: ["stellarBalance"] });
     // Note: campaigns query is not wallet-scoped, so we don't invalidate it
   };
 
