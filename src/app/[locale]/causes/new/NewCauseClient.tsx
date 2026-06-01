@@ -235,7 +235,7 @@ export default function CreateCampaignPage() {
     setIsSubmitting(true);
 
     try {
-      const fundingGoalStroops = xlmToStroops(reviewData.fundingGoalXlm);
+      const fundingGoalStroops = xlmToStroops(reviewData.fundingGoalXlm.toString());
       const basisPoints = reviewData.hasRevenueSharing
         ? Math.round(reviewData.revenueSharePercentage * 100)
         : 0;

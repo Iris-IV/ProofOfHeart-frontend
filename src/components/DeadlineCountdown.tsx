@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLocale } from "next-intl";
 
 interface DeadlineCountdownProps {
   deadline: number; // Unix timestamp in seconds
@@ -25,6 +26,7 @@ function getTimeLeft(deadline: number): TimeLeft | null {
 
 export default function DeadlineCountdown({ deadline }: DeadlineCountdownProps) {
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(() => getTimeLeft(deadline));
+  const locale = useLocale();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -65,10 +67,11 @@ export default function DeadlineCountdown({ deadline }: DeadlineCountdownProps) 
       <span>
         {timeLeft.days > 0 && (
           <>
-            <strong>{timeLeft.days}</strong>d{" "}
+            <strong>{new Intl.NumberFormat(locale).format(timeLeft.days)}</strong>d{" "}
           </>
         )}
-        <strong>{timeLeft.hours}</strong>h <strong>{timeLeft.minutes}</strong>m remaining
+        <strong>{new Intl.NumberFormat(locale).format(timeLeft.hours)}</strong>h{" "}
+        <strong>{new Intl.NumberFormat(locale).format(timeLeft.minutes)}</strong>m remaining
       </span>
     </div>
   );

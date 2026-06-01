@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useWallet } from "@/components/WalletContext";
 import { useTheme } from "@/hooks/useTheme";
-import { Link } from '@/i18n/routing';
+import { Link, usePathname } from '@/i18n/routing';
 import { useAdmin } from "@/hooks/useAdmin";
 import { formatAddress } from "@/lib/formatAddress";
 import LanguageSwitcher from "./LanguageSwitcher";
@@ -27,6 +27,7 @@ export default function Navbar() {
     isLoading,
   } = useWallet();
   const { theme, toggleTheme } = useTheme();
+  const pathname = usePathname();
   const t = useTranslations('Common');
   const { admin: adminAddress } = useAdmin();
 
@@ -123,11 +124,18 @@ export default function Navbar() {
 
         {/* Desktop Nav */}
         <nav className="hidden items-center gap-2 md:flex" aria-label="Primary">
-          {navLinks.map((link) => (
+          {navLinks.map((link) => {
+            const isActive = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
+            return (
             <Link
               key={link.href}
               href={link.href as Parameters<typeof Link>[0]['href']}
-              className="relative rounded-lg px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-black/5 hover:text-zinc-950 dark:text-zinc-200 dark:hover:bg-white/10 dark:hover:text-white transition-all group"
+              aria-current={isActive ? 'page' : undefined}
+              className={`relative rounded-lg px-4 py-2 text-sm font-medium transition-all group focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
+                isActive
+                  ? 'text-zinc-950 dark:text-white'
+                  : 'text-zinc-700 hover:bg-black/5 hover:text-zinc-950 dark:text-zinc-200 dark:hover:bg-white/10 dark:hover:text-white'
+              }`}
             >
               <span className="flex items-center gap-1.5">
                 {link.href === '/admin' && <ShieldCheck size={14} className="text-blue-500" />}
@@ -138,9 +146,12 @@ export default function Navbar() {
                   </span>
                 )}
               </span>
-              <span className="absolute bottom-1 left-4 right-4 h-0.5 bg-blue-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
+              <span className={`absolute bottom-1 left-4 right-4 h-0.5 bg-blue-500 transition-transform origin-left ${
+                isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+              }`} />
             </Link>
-          ))}
+            );
+          })}
         </nav>
 
         <div className="flex items-center gap-3">
@@ -235,14 +246,20 @@ export default function Navbar() {
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
             <nav aria-label="Mobile">
               <ul className="flex flex-col gap-2">
-                {navLinks.map((link) => (
+                {navLinks.map((link) => {
+                  const isActive = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
+                  return (
                   <li key={link.href}>
                     <Link
                       href={link.href as Parameters<typeof Link>[0]['href']}
                       onClick={() => setMenuOpen(false)}
-                      className={`block rounded-xl px-4 py-3 text-base font-semibold transition-all ${link.href === '/admin'
-                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
-                        : 'text-zinc-800 hover:bg-black/5 dark:text-zinc-200 dark:hover:bg-white/10'
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`block rounded-xl px-4 py-3 text-base font-semibold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
+                        isActive
+                          ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+                          : link.href === '/admin'
+                            ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+                            : 'text-zinc-800 hover:bg-black/5 dark:text-zinc-200 dark:hover:bg-white/10'
                         }`}
                     >
                       <span className="flex items-center gap-2">
@@ -256,7 +273,8 @@ export default function Navbar() {
                       </span>
                     </Link>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </nav>
 

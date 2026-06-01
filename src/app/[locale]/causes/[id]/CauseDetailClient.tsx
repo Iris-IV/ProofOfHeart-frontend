@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import ShareButtons from '@/components/ShareButtons';
+import SafeMarkdown from '@/components/SafeMarkdown';
 import ReportModal from '@/components/ReportModal';
 import CampaignActions from '@/components/CampaignActions';
 import AsyncButtonContent from '@/components/AsyncButtonContent';
@@ -17,6 +18,7 @@ import { useToast } from '@/components/ToastProvider';
 import VotingComponent from '@/components/VotingComponent';
 import { useWallet } from '@/components/WalletContext';
 import { useCampaign } from '@/hooks/useCampaign';
+import { useLiveCampaignFunding } from '@/hooks/useLiveCampaignFunding';
 import { useLiveVoteTallies } from '@/hooks/useLiveVoteTallies';
 import { usePlatformFee } from '@/hooks/usePlatformFee';
 import {
@@ -28,23 +30,18 @@ import {
   getContribution,
   claimRefund,
 } from "@/lib/contractClient";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
+import { CauseDetailSkeleton } from "@/components/Skeleton";
 import { Campaign, Vote, CATEGORY_LABELS, formatStroopsAsXlm } from "@/types";
 import { parseContractError } from "@/utils/contractErrors";
 import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncAction";
 import { trackViewCampaign, trackConnectWallet } from "@/lib/analytics";
-
-function formatDate(ts: number) {
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  }).format(new Date(ts * 1000));
-}
+import { formatXlm, formatDate } from "@/lib/formatters";
 
 export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
   const tContractErrors = useTranslations("ContractErrors");
+  const locale = useLocale();
   const {
     campaign: fetchedCampaign,
     isLoading,
@@ -198,28 +195,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
-        <main className="container mx-auto px-4 py-8 max-w-5xl">
-          <div className="motion-safe:animate-pulse space-y-6">
-            <div className="h-5 bg-zinc-200 dark:bg-zinc-700 rounded w-48" />
-            <div className="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 p-6 space-y-4">
-              <div className="h-8 bg-zinc-200 dark:bg-zinc-700 rounded w-3/4" />
-              <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-full" />
-              <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-5/6" />
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700 h-20"
-                />
-              ))}
-            </div>
-          </div>
-        </main>
-      </div>
-    );
+    return <CauseDetailSkeleton />;
   }
 
   if (error) {
@@ -367,7 +343,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 },
                 {
                   label: "XLM Raised",
-                  value: raised.toLocaleString(undefined, { maximumFractionDigits: 2 }),
+                  value: formatXlm(raised, locale),
                   cls: "text-zinc-900 dark:text-zinc-50",
                 },
               ].map(({ label, value, cls }) => (
@@ -387,7 +363,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
               </h2>
               <DeadlineCountdown deadline={campaign.deadline} />
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
-                Ends {formatDate(campaign.deadline)}
+                Ends {formatDate(campaign.deadline, locale)}
               </p>
             </div>
 
@@ -415,9 +391,9 @@ export default function CauseDetailClient({ id }: { id: string }) {
               <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
                 A platform fee of {platformFeePercent.toFixed(2)}% is deducted from funds when
                 withdrawn by the creator. Based on the current amount raised, that is{" "}
-                {estimatedFeeAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM in
+                {formatXlm(estimatedFeeAmount, locale)} XLM in
                 fees and{" "}
-                {estimatedCreatorReceives.toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
+                {formatXlm(estimatedCreatorReceives, locale)}{" "}
                 XLM delivered to the creator.
               </p>
               {isFallback && (
@@ -459,7 +435,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                     <p className="text-sm text-zinc-700 dark:text-zinc-300">
                       Your refundable contribution:{" "}
                       <span className="font-semibold">
-                        {refundableXlm.toLocaleString(undefined, { maximumFractionDigits: 4 })} XLM
+                        {formatXlm(parseFloat(refundableXlm), locale)} XLM
                       </span>
                     </p>
                     <button
@@ -532,7 +508,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                     {campaign.creator.slice(0, 10)}...{campaign.creator.slice(-6)}
                   </p>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Deadline: {formatDate(campaign.deadline)}
+                    Deadline: {formatDate(campaign.deadline, locale)}
                   </p>
                 </div>
               </div>

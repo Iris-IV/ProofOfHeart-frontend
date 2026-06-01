@@ -27,14 +27,7 @@ import {
 import type { TransactionLifecyclePhase } from "../../../lib/contractClient";
 import { Campaign, Vote, CATEGORY_LABELS, formatStroopsAsXlm } from "../../../types";
 import { parseContractError } from "../../../utils/contractErrors";
-
-function formatDate(ts: number) {
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  }).format(new Date(ts * 1000));
-}
+import { formatXlm, formatDate as fmtDate } from "../../../lib/formatters";
 
 export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
@@ -48,6 +41,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const [voteCounts, setVoteCounts] = useState({ upvotes: 0, downvotes: 0, totalVotes: 0 });
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const { showError, showSuccess, showWarning } = useToast();
+  const locale = typeof navigator !== 'undefined' ? navigator.language : 'en';
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
 
   // Quorum / threshold state
@@ -332,7 +326,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
               </div>
               <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700 text-center">
                 <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-                  {raised.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  {formatXlm(raised, locale)}
                 </div>
                 <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">XLM Raised</div>
               </div>
@@ -345,7 +339,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
               </h2>
               <DeadlineCountdown deadline={campaign.deadline} />
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
-                Ends {formatDate(campaign.deadline)}
+                Ends {fmtDate(campaign.deadline, locale)}
               </p>
             </div>
 
@@ -390,7 +384,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                     <p className="text-sm text-zinc-700 dark:text-zinc-300">
                       Your refundable contribution:{" "}
                       <span className="font-semibold">
-                        {refundableXlm.toLocaleString(undefined, { maximumFractionDigits: 4 })} XLM
+                        {formatXlm(parseFloat(refundableXlm), locale)} XLM
                       </span>
                     </p>
                     <button
@@ -472,7 +466,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                     {campaign.creator.slice(0, 10)}...{campaign.creator.slice(-6)}
                   </p>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Deadline: {formatDate(campaign.deadline)}
+                    Deadline: {fmtDate(campaign.deadline, locale)}
                   </p>
                 </div>
               </div>

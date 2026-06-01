@@ -4,6 +4,8 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { Campaign, Vote, CATEGORY_LABELS, calculateFundingPercentage, formatStroopsAsXlm } from '../types';
 import { formatAddress } from '@/lib/formatAddress';
+import { formatXlm, formatShortDate } from '@/lib/formatters';
+import { useLocale } from 'next-intl';
 import AsyncButtonContent from './AsyncButtonContent';
 import CampaignStatusBadge from './CampaignStatusBadge';
 import CancelCampaignModal from './cancelCampaignModal';
@@ -33,12 +35,8 @@ const CATEGORY_ICONS: Record<string, string> = {
   healthcare:  '🏥',
 };
 
-function formatDate(ts: number) {
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }).format(new Date(ts * 1000));
+function formatDate(ts: number, locale: string) {
+  return formatShortDate(ts, locale);
 }
 
 
@@ -55,6 +53,7 @@ export default function CauseCard({
   totalVotes = 0,
 }: CauseCardProps) {
   const [isVoting, setIsVoting] = useState(false);
+  const locale = useLocale();
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isClaimingRefund, setIsClaimingRefund] = useState(false);
@@ -162,7 +161,7 @@ export default function CauseCard({
         {/* Funding progress */}
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400">
-            <span>{raisedXlm.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM raised</span>
+            <span>{formatXlm(parseFloat(raisedXlm), locale)} XLM raised</span>
             <span>{progressPct}%</span>
           </div>
           <div className="w-full bg-zinc-100 dark:bg-zinc-700 rounded-full h-1.5">
@@ -172,7 +171,7 @@ export default function CauseCard({
             />
           </div>
           <p className="text-xs text-zinc-400 dark:text-zinc-500">
-            Goal: {goalXlm.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM
+            Goal: {formatXlm(parseFloat(goalXlm), locale)} XLM
           </p>
         </div>
 
@@ -199,7 +198,7 @@ export default function CauseCard({
 
         {/* Created date */}
         <p className="text-xs text-zinc-400 dark:text-zinc-500">
-          Created {formatDate(campaign.created_at)}
+          Created {formatDate(campaign.created_at, locale)}
         </p>
       </div>
 

@@ -11,8 +11,18 @@ export const size = {
 };
 export const contentType = 'image/png';
 
-export default async function Image({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function Image({ params }: { params: Promise<{ id: string; locale: string }> }) {
+  const { id, locale } = await params;
+  const safeLocale = locale === 'es' ? 'es' : 'en';
+
+  /** Truncate a string to maxLen chars, appending ellipsis if needed. */
+  function truncate(str: string, maxLen: number): string {
+    return str.length > maxLen ? str.slice(0, maxLen - 1) + '…' : str;
+  }
+
+  function fmtNumber(n: number): string {
+    return new Intl.NumberFormat(safeLocale, { maximumFractionDigits: 2 }).format(n);
+  }
 
   try {
     const campaign = await getCampaign(Number(id));
@@ -27,6 +37,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     const goal = parseFloat(goalStr);
     const fundingPct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
     const categoryLabel = CATEGORY_LABELS[campaign.category] ?? 'Other';
+    const title = truncate(campaign.title || 'Untitled Campaign', 80);
 
     return new ImageResponse(
       (
@@ -92,14 +103,10 @@ export default async function Image({ params }: { params: Promise<{ id: string }
                 lineHeight: 1.2,
                 margin: 0,
                 maxWidth: '1000px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
+                wordBreak: 'break-word',
               }}
             >
-              {campaign.title}
+              {title}
             </h1>
           </div>
 
@@ -136,7 +143,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
                   color: '#18181b',
                 }}
               >
-                {raised.toLocaleString()} XLM
+                {fmtNumber(raised)} XLM
               </div>
             </div>
 
@@ -165,7 +172,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
                   color: '#18181b',
                 }}
               >
-                {goal.toLocaleString()} XLM
+                {fmtNumber(goal)} XLM
               </div>
             </div>
 

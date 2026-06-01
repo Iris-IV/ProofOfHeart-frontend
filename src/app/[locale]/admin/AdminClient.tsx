@@ -42,6 +42,7 @@ import {
   type CampaignReport,
 } from "@/lib/campaignReports";
 import CancelCampaignModal from "@/components/cancelCampaignModal";
+import { AdminSkeleton } from "@/components/Skeleton";
 import { Campaign } from "@/types";
 
 export default function AdminDashboard() {
@@ -327,12 +328,7 @@ export default function AdminDashboard() {
   }
 
   if (isAdminLoading || isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-12 h-12 motion-safe:animate-spin text-amber-500 mb-4" />
-        <p className="text-zinc-500 font-medium">Authorizing secure session...</p>
-      </div>
-    );
+    return <AdminSkeleton />;
   }
 
   if (!isAdmin) {

@@ -18,10 +18,10 @@ type FunnelStep =
   | "funnel_confirmed"
   | "funnel_error";
 
-interface FunnelEventData {
+interface FunnelEventData extends Record<string, unknown> {
   step: FunnelStep;
-  campaignId?: string; // Hashed or anonymized campaign ID
-  errorType?: string; // Generic error category, no sensitive details
+  campaignId?: string;
+  errorType?: string;
   timestamp?: number;
 }
 

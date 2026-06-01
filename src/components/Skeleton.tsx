@@ -139,6 +139,32 @@ export function DashboardSkeleton() {
   );
 }
 
+/** Skeleton for the admin dashboard page */
+export function AdminSkeleton() {
+  return (
+    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 space-y-8">
+      <Skeleton className="h-48 w-full rounded-[2.5rem]" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-36 rounded-[2rem]" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-8 space-y-4">
+          <Skeleton className="h-8 w-48" />
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-[2rem]" />
+          ))}
+        </div>
+        <div className="lg:col-span-4 space-y-6">
+          <Skeleton className="h-64 rounded-[2.5rem]" />
+          <Skeleton className="h-48 rounded-[2.5rem]" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Inline spinner for buttons / transaction pending states */
 export function Spinner({ className = "h-4 w-4" }: { className?: string }) {
   return (
