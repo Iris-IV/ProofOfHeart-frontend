@@ -10,9 +10,16 @@ import CampaignActions from '@/components/CampaignActions';
 import AsyncButtonContent from '@/components/AsyncButtonContent';
 import CampaignStatusBadge from '@/components/CampaignStatusBadge';
 import DeadlineCountdown from '@/components/DeadlineCountdown';
-import DonationModal from '@/components/DonationModal';
+import dynamic from 'next/dynamic';
 import FundingProgressBar from '@/components/FundingProgressBar';
-import RevenueSharingPanel from '@/components/RevenueSharingPanel';
+
+const DonationModal = dynamic(() => import('@/components/DonationModal'), {
+  ssr: false,
+});
+
+const RevenueSharingPanel = dynamic(() => import('@/components/RevenueSharingPanel'), {
+  ssr: false,
+});
 import UpdatesSection from '@/components/UpdatesSection';
 import { useToast } from '@/components/ToastProvider';
 import VotingComponent from '@/components/VotingComponent';

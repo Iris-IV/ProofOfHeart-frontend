@@ -1,6 +1,12 @@
 import { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { buildAlternates } from "@/lib/seo";
-import AdminClient from "./AdminClient";
+import { AdminSkeleton } from "@/components/Skeleton";
+
+const AdminClient = dynamic(() => import("./AdminClient"), {
+  ssr: false,
+  loading: () => <AdminSkeleton />,
+});
 
 type Props = { params: Promise<{ locale: string }> };
 

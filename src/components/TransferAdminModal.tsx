@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 interface TransferAdminModalProps {
   newAdminAddress?: string;
@@ -36,6 +37,7 @@ export default function TransferAdminModal({
   cancelLabel,
   confirmButtonLabel,
 }: TransferAdminModalProps) {
+  const t = useTranslations("Admin");
   const keepActiveRef = useRef<HTMLButtonElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -108,7 +110,7 @@ export default function TransferAdminModal({
         {newAdminAddress ? (
           <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-3">
             <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 mb-1">
-              New Admin Address
+              {t("newAdminAddress")}
             </p>
             <p className="font-mono text-xs text-zinc-900 dark:text-zinc-100 break-all">
               {newAdminAddress}
@@ -148,7 +150,7 @@ export default function TransferAdminModal({
             disabled={!canConfirm || isTransferring}
             className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
-            {isTransferring ? "Transferring..." : confirmButtonLabel}
+            {isTransferring ? t("transferring") : confirmButtonLabel}
           </button>
         </div>
       </div>

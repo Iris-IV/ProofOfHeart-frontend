@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { ObservabilityMetricsSnapshot } from '@/lib/observability/types';
 
 function formatRate(rate: number): string {
@@ -8,6 +9,7 @@ function formatRate(rate: number): string {
 }
 
 export default function ObservabilityDashboard() {
+  const t = useTranslations("Observability");
   const [metrics, setMetrics] = useState<ObservabilityMetricsSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,16 +20,16 @@ export default function ObservabilityDashboard() {
     try {
       const response = await fetch('/api/observability/metrics');
       if (!response.ok) {
-        throw new Error(`Metrics request failed (${response.status})`);
+        throw new Error(t("metricsRequestFailed", { status: response.status }));
       }
       const data = (await response.json()) as ObservabilityMetricsSnapshot;
       setMetrics(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load metrics');
+      setError(err instanceof Error ? err.message : t("loadError"));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -38,7 +40,7 @@ export default function ObservabilityDashboard() {
   }, [load]);
 
   if (isLoading && !metrics) {
-    return <p className="text-sm text-zinc-500">Loading observability metrics…</p>;
+    return <p className="text-sm text-zinc-500">{t("loading")}</p>;
   }
 
   if (error) {
@@ -57,9 +59,9 @@ export default function ObservabilityDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">RPC &amp; transaction health</h2>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{t("healthTitle")}</h2>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Rolling window: {Math.round(rates.windowMs / 60_000)} min · Updated {new Date(metrics.updatedAt).toLocaleTimeString()}
+            {t("healthSubtitle", { minutes: Math.round(rates.windowMs / 60_000), time: new Date(metrics.updatedAt).toLocaleTimeString() })}
           </p>
         </div>
         <button
@@ -67,7 +69,7 @@ export default function ObservabilityDashboard() {
           onClick={() => void load()}
           className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
         >
-          Refresh
+          {t("refresh")}
         </button>
       </div>
 
@@ -93,10 +95,10 @@ export default function ObservabilityDashboard() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: 'Simulation failures', value: formatRate(rates.simulationFailureRate) },
-          { label: 'Submission failures', value: formatRate(rates.submissionFailureRate) },
-          { label: 'RPC timeouts', value: formatRate(rates.rpcTimeoutRate) },
-          { label: 'Contract errors', value: formatRate(rates.contractErrorRate) },
+          { label: t("simulationFailures"), value: formatRate(rates.simulationFailureRate) },
+          { label: t("submissionFailures"), value: formatRate(rates.submissionFailureRate) },
+          { label: t("rpcTimeouts"), value: formatRate(rates.rpcTimeoutRate) },
+          { label: t("contractErrors"), value: formatRate(rates.contractErrorRate) },
         ].map(({ label, value }) => (
           <div
             key={label}
@@ -110,7 +112,7 @@ export default function ObservabilityDashboard() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800">
-          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Failures by kind</h3>
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">{t("failuresByKind")}</h3>
           <ul className="space-y-1 text-sm text-zinc-600 dark:text-zinc-300">
             {Object.entries(counters.byKind).map(([kind, count]) => (
               <li key={kind} className="flex justify-between gap-4">
@@ -119,13 +121,13 @@ export default function ObservabilityDashboard() {
               </li>
             ))}
             {Object.keys(counters.byKind).length === 0 && (
-              <li className="text-zinc-400">No events in the current window.</li>
+              <li className="text-zinc-400">{t("noEventsInWindow")}</li>
             )}
           </ul>
         </div>
 
         <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800">
-          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Contract error codes</h3>
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">{t("contractErrorCodes")}</h3>
           <ul className="space-y-1 text-sm text-zinc-600 dark:text-zinc-300">
             {Object.entries(counters.byContractErrorCode).map(([code, count]) => (
               <li key={code} className="flex justify-between gap-4">
@@ -134,14 +136,14 @@ export default function ObservabilityDashboard() {
               </li>
             ))}
             {Object.keys(counters.byContractErrorCode).length === 0 && (
-              <li className="text-zinc-400">No contract errors in the current window.</li>
+              <li className="text-zinc-400">{t("noContractErrors")}</li>
             )}
           </ul>
         </div>
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800">
-        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">Recent events</h3>
+        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">{t("recentEvents")}</h3>
         <div className="max-h-64 overflow-y-auto space-y-2">
           {recentEvents.map((event) => (
             <pre
@@ -152,7 +154,7 @@ export default function ObservabilityDashboard() {
             </pre>
           ))}
           {recentEvents.length === 0 && (
-            <p className="text-sm text-zinc-400">No recent events recorded yet.</p>
+            <p className="text-sm text-zinc-400">{t("noRecentEvents")}</p>
           )}
         </div>
       </div>

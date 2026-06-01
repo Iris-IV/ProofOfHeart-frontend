@@ -1,4 +1,9 @@
-import ObservabilityDashboard from '@/components/admin/ObservabilityDashboard';
+import dynamic from 'next/dynamic';
+
+const ObservabilityDashboard = dynamic(
+  () => import('@/components/admin/ObservabilityDashboard'),
+  { ssr: false },
+);
 
 export default function AdminObservabilityPage() {
   return (
