@@ -1,6 +1,6 @@
-import { notFound } from 'next/navigation';
-import { NextIntlClientProvider } from 'next-intl';
-import { getMessages, getTranslations } from 'next-intl/server';
+import { notFound } from "next/navigation";
+import { NextIntlClientProvider } from "next-intl";
+import { getMessages, getTranslations } from "next-intl/server";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
@@ -8,7 +8,8 @@ import { QueryProvider } from "@/components/QueryProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ToastProvider } from "@/components/ToastProvider";
 import { WalletProvider } from "@/components/WalletContext";
-import { routing } from '@/i18n/routing';
+import { DevMockPanel } from "@/components/DevMockPanel";
+import { routing } from "@/i18n/routing";
 import { absoluteUrl, buildAlternates } from "@/lib/seo";
 import type { Metadata } from "next";
 import "../globals.css";
@@ -24,13 +25,20 @@ export const metadata: Metadata = {
   title: "ProofOfHeart",
   description:
     "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
-  alternates: buildAlternates(""),
+  alternates: {
+    languages: {
+      en: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://proofofheart.xyz"}/en`,
+      es: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://proofofheart.xyz"}/es`,
+      "x-default": `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://proofofheart.xyz"}/en`,
+    },
+  },
   openGraph: {
     type: "website",
     siteName: "ProofOfHeart",
     url: absoluteUrl(`/${routing.defaultLocale}`),
     title: "ProofOfHeart",
-    description: "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
+    description:
+      "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
     images: [
       {
         url: "/proof-of-heart-logo.svg",
@@ -43,7 +51,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "ProofOfHeart",
-    description: "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
+    description:
+      "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
     images: ["/proof-of-heart-logo.svg"],
   },
 };
@@ -65,7 +74,7 @@ export default async function RootLayout({
   // Providing all messages to the client
   // side is the easiest way to get started
   const messages = await getMessages();
-  const t = await getTranslations('Common');
+  const t = await getTranslations("Common");
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -92,11 +101,11 @@ export default async function RootLayout({
       </head>
       <body className="antialiased">
         <NextIntlClientProvider messages={messages} locale={locale}>
-          <a 
-            href="#main" 
+          <a
+            href="#main"
             className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:bg-white focus:px-3 focus:py-1 focus:text-sm focus:shadow"
           >
-            {t('skipToMainContent')}
+            {t("skipToMainContent")}
           </a>
           <QueryProvider>
             <ThemeProvider>
@@ -109,6 +118,7 @@ export default async function RootLayout({
                         {children}
                       </main>
                       <Footer />
+                      <DevMockPanel />
                     </div>
                   </WalletProvider>
                 </ToastProvider>

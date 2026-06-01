@@ -98,6 +98,16 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Config files
+    "commitlint.config.js",
+    "jest.config.ts",
+    "next.config.ts",
+    "postcss.config.mjs",
+    "playwright.config.ts",
+    "eslint.config.mjs",
+    // Scripts and build artifacts
+    "scripts/**",
+    "coverage/**",
   ]),
 ]);
 
