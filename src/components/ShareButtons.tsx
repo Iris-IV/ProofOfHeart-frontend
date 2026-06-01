@@ -4,13 +4,15 @@ import { useState } from 'react';
 import { useToast } from '@/components/ToastProvider';
 
 interface ShareButtonsProps {
-  url: string;
+  url?: string;
   title: string;
 }
 
 export default function ShareButtons({ url, title }: ShareButtonsProps) {
   const { showSuccess } = useToast();
   const [copied, setCopied] = useState(false);
+
+  if (!url) return null;
 
   const encoded = encodeURIComponent(url);
   const encodedTitle = encodeURIComponent(title);
