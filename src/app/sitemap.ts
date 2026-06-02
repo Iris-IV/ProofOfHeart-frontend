@@ -1,23 +1,32 @@
 import { MetadataRoute } from "next";
-
-const BASE_URL = "https://proofofheart.org";
-const LOCALES = ["en", "es"];
+import { getAllCampaigns } from "@/lib/contractClient";
+import { absoluteUrl } from "@/lib/seo";
+import { routing } from "@/i18n/routing";
 
 // Static routes to include in the sitemap.
 // All paths are relative — the sitemap builder prepends /${locale} for each locale.
 // Do NOT include non-localized bare paths here; canonical URLs are locale-prefixed.
 const STATIC_ROUTES = ["", "/causes", "/causes/new", "/about", "/dashboard"];
 
-async function getCampaignIds(): Promise<number[]> {
+/** Caps dynamic URLs so sitemap generation stays bounded as campaign count grows. */
+const MAX_CAMPAIGN_SITEMAP_URLS = 10_000;
+
+async function getCampaignSitemapEntries(): Promise<
+  Pick<MetadataRoute.Sitemap[number], "url" | "lastModified" | "changeFrequency" | "priority">[]
+> {
   try {
-    const res = await fetch(`${BASE_URL}/api/campaigns`, {
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data.map((c: { id: number }) => c.id);
+    const campaigns = await getAllCampaigns();
+    const capped = campaigns.slice(0, MAX_CAMPAIGN_SITEMAP_URLS);
+
+    return capped.flatMap((campaign) =>
+      routing.locales.map((locale) => ({
+        url: absoluteUrl(`/${locale}/causes/${campaign.id}`),
+        lastModified: new Date(campaign.created_at * 1000),
+        changeFrequency: "hourly" as const,
+        priority: 0.9,
+      })),
+    );
   } catch {
-    // If the API is unreachable during build, return empty array
     return [];
   }
 }
@@ -25,25 +34,14 @@ async function getCampaignIds(): Promise<number[]> {
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const campaignIds = await getCampaignIds();
+  const campaignEntries = await getCampaignSitemapEntries();
 
-  // Build static routes for all locales
   const staticEntries: MetadataRoute.Sitemap = STATIC_ROUTES.flatMap((route) =>
-    LOCALES.map((locale) => ({
-      url: `${BASE_URL}/${locale}${route}`,
+    routing.locales.map((locale) => ({
+      url: absoluteUrl(`/${locale}${route}`),
       lastModified: new Date(),
       changeFrequency: "daily" as const,
       priority: route === "" ? 1 : 0.8,
-    })),
-  );
-
-  // Build dynamic campaign routes for all locales
-  const campaignEntries: MetadataRoute.Sitemap = campaignIds.flatMap((id) =>
-    LOCALES.map((locale) => ({
-      url: `${BASE_URL}/${locale}/causes/${id}`,
-      lastModified: new Date(),
-      changeFrequency: "hourly" as const,
-      priority: 0.9,
     })),
   );
 
