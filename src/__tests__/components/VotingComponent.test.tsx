@@ -109,4 +109,85 @@ describe("VotingComponent Accessibility & Interaction", () => {
     await userEvent.click(rejectBtn);
     expect(mockOnVote).toHaveBeenCalledWith(campaign.id, "downvote");
   });
+
+  it("disables voting and shows voted message when user has already voted", () => {
+    const userVote = {
+      causeId: "1",
+      voter: "GUSER1",
+      voteType: "upvote" as const,
+      timestamp: new Date(),
+      transactionHash: "tx123",
+    };
+
+    render(
+      <VotingComponent
+        campaign={campaign}
+        userWalletAddress="GUSER1"
+        onVote={mockOnVote}
+        isVoting={false}
+        userVote={userVote}
+      />
+    );
+
+    const approveBtn = screen.getByRole("button", { name: "approveCampaignAria" });
+    const rejectBtn = screen.getByRole("button", { name: "rejectCampaignAria" });
+
+    expect(approveBtn).toBeDisabled();
+    expect(rejectBtn).toBeDisabled();
+    expect(screen.getByText("votedUpvote")).toBeInTheDocument();
+  });
+
+  it("disables voting and shows prompt when user is not a token holder", () => {
+    render(
+      <VotingComponent
+        campaign={campaign}
+        userWalletAddress="GUSER1"
+        onVote={mockOnVote}
+        isVoting={false}
+        isTokenHolder={false}
+      />
+    );
+
+    const approveBtn = screen.getByRole("button", { name: "approveCampaignAria" });
+    const rejectBtn = screen.getByRole("button", { name: "rejectCampaignAria" });
+
+    expect(approveBtn).toBeDisabled();
+    expect(rejectBtn).toBeDisabled();
+    expect(screen.getByText("tokenHoldersOnlyPrompt")).toBeInTheDocument();
+  });
+
+  it("disables voting when voting is in progress", () => {
+    render(
+      <VotingComponent
+        campaign={campaign}
+        userWalletAddress="GUSER1"
+        onVote={mockOnVote}
+        isVoting={true}
+      />
+    );
+
+    const approveBtn = screen.getByRole("button", { name: "approveCampaignAria" });
+    const rejectBtn = screen.getByRole("button", { name: "rejectCampaignAria" });
+
+    expect(approveBtn).toBeDisabled();
+    expect(rejectBtn).toBeDisabled();
+  });
+
+  it("disables voting and shows prompt when no wallet is connected", () => {
+    render(
+      <VotingComponent
+        campaign={campaign}
+        userWalletAddress={null}
+        onVote={mockOnVote}
+        isVoting={false}
+      />
+    );
+
+    const approveBtn = screen.getByRole("button", { name: "approveCampaignAria" });
+    const rejectBtn = screen.getByRole("button", { name: "rejectCampaignAria" });
+
+    expect(approveBtn).toBeDisabled();
+    expect(rejectBtn).toBeDisabled();
+    expect(screen.getByText("connectWalletPrompt")).toBeInTheDocument();
+  });
 });
