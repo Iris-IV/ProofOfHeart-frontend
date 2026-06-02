@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLocale } from "next-intl";
+import { subscribeToCountdownTick } from "@/hooks/useCountdownTick";
 
 interface DeadlineCountdownProps {
   deadline: number; // Unix timestamp in seconds
@@ -24,31 +25,50 @@ function getTimeLeft(deadline: number): TimeLeft | null {
   };
 }
 
+const ClockIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+    />
+  </svg>
+);
+
 export default function DeadlineCountdown({ deadline }: DeadlineCountdownProps) {
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(() => getTimeLeft(deadline));
   const locale = useLocale();
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const remaining = getTimeLeft(deadline);
-      setTimeLeft(remaining);
-      if (!remaining) clearInterval(interval);
-    }, 60_000); // update every minute
+    return subscribeToCountdownTick(() => {
+      setTimeLeft((prev) => {
+        // Already ended — cheap no-op on future ticks
+        if (prev === null) return null;
 
-    return () => clearInterval(interval);
+        const next = getTimeLeft(deadline);
+        if (!next) return null;
+
+        // When days ≥ 1, the display shows "Xd Xh" only (no minutes).
+        // Skip re-render unless days or hours actually changed.
+        const farDeadline = next.days >= 1;
+        if (
+          prev.days === next.days &&
+          prev.hours === next.hours &&
+          (farDeadline || prev.minutes === next.minutes)
+        ) {
+          return prev; // bail out — React won't schedule a re-render
+        }
+
+        return next;
+      });
+    });
   }, [deadline]);
 
   if (!timeLeft) {
     return (
       <div className="flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
+        <ClockIcon />
         <span>Campaign ended</span>
       </div>
     );
@@ -71,7 +91,13 @@ export default function DeadlineCountdown({ deadline }: DeadlineCountdownProps) 
           </>
         )}
         <strong>{new Intl.NumberFormat(locale).format(timeLeft.hours)}</strong>h{" "}
-        <strong>{new Intl.NumberFormat(locale).format(timeLeft.minutes)}</strong>m remaining
+        {/* Show minutes only when < 1 day remains; far deadlines only need hourly updates */}
+        {timeLeft.days === 0 && (
+          <>
+            <strong>{new Intl.NumberFormat(locale).format(timeLeft.minutes)}</strong>m{" "}
+          </>
+        )}
+        remaining
       </span>
     </div>
   );

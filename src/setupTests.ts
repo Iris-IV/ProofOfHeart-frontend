@@ -14,4 +14,5 @@ jest.mock("next-intl", () => ({
     () =>
     (key: string, values?: Record<string, string | number>) =>
       values?.count === 1 ? `${key}_one` : key,
+  useLocale: () => "en",
 }));
