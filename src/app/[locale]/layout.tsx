@@ -81,21 +81,7 @@ export default async function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  const stored = localStorage.getItem('theme');
-                  const isDark = stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches);
-                  if (isDark) {
-                    document.documentElement.classList.add('dark');
-                  } else {
-                    document.documentElement.classList.remove('dark');
-                  }
-                } catch (e) {
-                  console.warn('Failed to apply theme before hydration:', e);
-                }
-              })();
-            `,
+            __html: getThemeBlockingScript(),
           }}
         />
       </head>

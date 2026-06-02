@@ -1,5 +1,6 @@
 import { createNavigation } from "next-intl/navigation";
 import { defineRouting } from "next-intl/routing";
+import { LOCALE_COOKIE_MAX_AGE } from "@/lib/preferences";
 
 export const routing = defineRouting({
   // A list of all locales that are supported
@@ -7,6 +8,11 @@ export const routing = defineRouting({
 
   // Used when no locale matches
   defaultLocale: "en",
+
+  // Persist explicit locale choice across browser sessions (#429)
+  localeCookie: {
+    maxAge: LOCALE_COOKIE_MAX_AGE,
+  },
 });
 
 // Lightweight wrappers around Next.js' navigation APIs
