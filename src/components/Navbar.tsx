@@ -6,21 +6,35 @@ import { useTranslations } from 'next-intl';
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useWallet } from "@/components/WalletContext";
 import { useTheme } from "@/hooks/useTheme";
-import { Link } from '@/i18n/routing';
-import { getAdmin } from "@/lib/contractClient";
+import { Link, usePathname } from '@/i18n/routing';
+import { useAdmin } from "@/hooks/useAdmin";
 import { formatAddress } from "@/lib/formatAddress";
 import LanguageSwitcher from "./LanguageSwitcher";
 import NotificationBell from "./NotificationBell";
 import { useCampaigns } from "@/hooks/useCampaigns";
+import { IS_MOCK_MODE } from "@/lib/runtimeEnv";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuToggleButtonRef = useRef<HTMLButtonElement>(null);
-  const { publicKey, isWalletConnected, connectWallet, disconnectWallet, isLoading } = useWallet();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  const {
+    publicKey,
+    isWalletConnected,
+    walletNetworkWarning,
+    connectWallet,
+    disconnectWallet,
+    isLoading,
+  } = useWallet();
   const { theme, toggleTheme } = useTheme();
+  const pathname = usePathname();
   const t = useTranslations('Common');
-  const [adminAddress, setAdminAddress] = useState<string | null>(null);
+  const { admin: adminAddress } = useAdmin();
 
   const { campaigns } = useCampaigns();
   const pendingCount = useMemo(() => {
@@ -30,10 +44,6 @@ export default function Navbar() {
   const networkPassphrase = process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE || '';
   const isTestnet = networkPassphrase.includes('Test SDF');
   const isMainnet = networkPassphrase.includes('Public Global');
-
-  useEffect(() => {
-    getAdmin().then(setAdminAddress).catch(() => { });
-  }, []);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -97,6 +107,11 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-black/5 bg-white/80 backdrop-blur-md dark:border-white/10 dark:bg-zinc-900/80 transition-all duration-300">
+      {walletNetworkWarning && (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs font-semibold text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200">
+          {walletNetworkWarning}
+        </div>
+      )}
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
         <Link
           href="/"
@@ -114,11 +129,18 @@ export default function Navbar() {
 
         {/* Desktop Nav */}
         <nav className="hidden items-center gap-2 md:flex" aria-label="Primary">
-          {navLinks.map((link) => (
+          {navLinks.map((link) => {
+            const isActive = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
+            return (
             <Link
               key={link.href}
               href={link.href as Parameters<typeof Link>[0]['href']}
-              className="relative rounded-lg px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-black/5 hover:text-zinc-950 dark:text-zinc-200 dark:hover:bg-white/10 dark:hover:text-white transition-all group"
+              aria-current={isActive ? 'page' : undefined}
+              className={`relative rounded-lg px-4 py-2 text-sm font-medium transition-all group focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
+                isActive
+                  ? 'text-zinc-950 dark:text-white'
+                  : 'text-zinc-700 hover:bg-black/5 hover:text-zinc-950 dark:text-zinc-200 dark:hover:bg-white/10 dark:hover:text-white'
+              }`}
             >
               <span className="flex items-center gap-1.5">
                 {link.href === '/admin' && <ShieldCheck size={14} className="text-blue-500" />}
@@ -129,12 +151,20 @@ export default function Navbar() {
                   </span>
                 )}
               </span>
-              <span className="absolute bottom-1 left-4 right-4 h-0.5 bg-blue-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
+              <span className={`absolute bottom-1 left-4 right-4 h-0.5 bg-blue-500 transition-transform origin-left ${
+                isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+              }`} />
             </Link>
-          ))}
+            );
+          })}
         </nav>
 
         <div className="flex items-center gap-3">
+          {IS_MOCK_MODE && process.env.NODE_ENV !== "production" && (
+            <span className="hidden sm:inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:border-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
+              Mock Mode
+            </span>
+          )}
           {isTestnet && (
             <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800 uppercase tracking-wider">
               Testnet
@@ -154,9 +184,15 @@ export default function Navbar() {
             onClick={toggleTheme}
             className="flex size-9 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-950 hover:bg-black/5 dark:border-white/15 dark:bg-zinc-800 dark:text-white dark:hover:bg-white/10 transition-colors shadow-sm"
             aria-label="Toggle theme"
-            aria-pressed={theme === 'dark'}
+            aria-pressed={mounted && theme === 'dark'}
           >
-            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+            {!mounted ? (
+              <span className="size-[18px]" />
+            ) : theme === 'light' ? (
+              <Moon size={18} />
+            ) : (
+              <Sun size={18} />
+            )}
           </button>
 
           <div className="hidden md:flex items-center gap-2 ml-2">
@@ -221,14 +257,20 @@ export default function Navbar() {
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
             <nav aria-label="Mobile">
               <ul className="flex flex-col gap-2">
-                {navLinks.map((link) => (
+                {navLinks.map((link) => {
+                  const isActive = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
+                  return (
                   <li key={link.href}>
                     <Link
                       href={link.href as Parameters<typeof Link>[0]['href']}
                       onClick={() => setMenuOpen(false)}
-                      className={`block rounded-xl px-4 py-3 text-base font-semibold transition-all ${link.href === '/admin'
-                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
-                        : 'text-zinc-800 hover:bg-black/5 dark:text-zinc-200 dark:hover:bg-white/10'
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`block rounded-xl px-4 py-3 text-base font-semibold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
+                        isActive
+                          ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+                          : link.href === '/admin'
+                            ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+                            : 'text-zinc-800 hover:bg-black/5 dark:text-zinc-200 dark:hover:bg-white/10'
                         }`}
                     >
                       <span className="flex items-center gap-2">
@@ -242,7 +284,8 @@ export default function Navbar() {
                       </span>
                     </Link>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </nav>
 

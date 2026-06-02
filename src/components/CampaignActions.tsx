@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
-import { Campaign, basisPointsToPercentage, stroopsToXlm, xlmToStroops } from "../types";
-import { Spinner } from "./Skeleton";
+import React, { useState, useCallback } from "react";
+import { useLocale } from "next-intl";
+import { Campaign, basisPointsToPercentage, xlmToStroops } from "../types";
+import { formatAmount } from "@/lib/formatters";
+import AsyncButtonContent from "./AsyncButtonContent";
 import { useToast } from "./ToastProvider";
 import { useWallet } from "./WalletContext";
 import WithdrawFunds from "./WithdrawFunds";
@@ -19,6 +21,12 @@ import {
 } from "../lib/contractClient";
 import { isSameAddress } from "../lib/stellar";
 import { parseContractError } from "../utils/contractErrors";
+import { getAsyncActionErrorMessage, withActionTimeout } from "../utils/asyncAction";
+import type {
+  TransactionLifecyclePhase,
+  TransactionLifecycleOptions,
+} from "../lib/contractClient";
+import { useWriteGuard } from "../hooks/useWriteGuard";
 
 interface CampaignActionsProps {
   campaign: Campaign;
@@ -30,8 +38,10 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
   const { admin } = useAdmin();
   const { contribution } = useContribution(campaign.id, publicKey);
   const { platformFeeBps } = usePlatformFee();
+  const locale = useLocale();
   const { showSuccess, showError, showWarning } = useToast();
-  const [isPending, setIsPending] = useState(false);
+  const { invoke, isPending } = useWriteGuard();
+  const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
   const [contributionAmount, setContributionAmount] = useState("");
   const [revenueAmount, setRevenueAmount] = useState("");
   const [showRevenueInput, setShowRevenueInput] = useState(false);
@@ -40,26 +50,104 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
   const isAdmin = isSameAddress(publicKey, admin);
   const isContributor = contribution > BigInt(0);
 
-  const handleAction = async (action: () => Promise<string>, successMsg: string) => {
-    setIsPending(true);
-    try {
-      await action();
-      showSuccess(successMsg);
-      if (onActionSuccess) onActionSuccess();
-    } catch (err) {
-      showError(parseContractError(err));
-    } finally {
-      setIsPending(false);
-    }
+  const phaseLabel =
+    txPhase === "building"
+      ? "Preparing..."
+      : txPhase === "signing"
+        ? "Signing..."
+        : txPhase === "submitting"
+          ? "Submitting..."
+          : txPhase === "confirming"
+            ? "Confirming..."
+            : null;
+
+  const handleAction = async (
+    actionKey: string,
+    action: (options?: TransactionLifecycleOptions) => Promise<string>,
+    successMsg: string,
+  ) => {
+    setTxPhase(null);
+    const result = await invoke(actionKey, campaign.id, async () => {
+      try {
+        const txHash = await withActionTimeout(
+          action({ onStatus: ({ phase }) => setTxPhase(phase) }),
+        );
+        showSuccess(successMsg);
+        if (onActionSuccess) onActionSuccess();
+        return txHash;
+      } catch (err) {
+        showError(getAsyncActionErrorMessage(err, parseContractError));
+        throw err;
+      } finally {
+        setTxPhase(null);
+      }
+    });
+    return result;
   };
 
   const handleDepositRevenue = async () => {
-    const xlm = parseFloat(revenueAmount);
-    if (!xlm || xlm <= 0) return;
-    await handleAction(() => depositRevenue(campaign.id, xlmToStroops(xlm)), "Revenue deposited!");
+    if (!revenueAmount || parseFloat(revenueAmount) <= 0) return;
+    await handleAction(
+      "depositRevenue",
+      (options) => depositRevenue(campaign.id, xlmToStroops(revenueAmount), options),
+      "Revenue deposited!",
+    );
     setRevenueAmount("");
     setShowRevenueInput(false);
   };
+
+  const isExpired = Math.floor(Date.now() / 1000) > campaign.deadline;
+  const contributionDisabledReason = isCreator
+    ? "Creators cannot contribute to their own campaign."
+    : campaign.is_cancelled
+      ? "This campaign has been cancelled."
+      : !campaign.is_active || campaign.funds_withdrawn || isExpired
+        ? "This campaign is no longer accepting contributions."
+        : null;
+
+  const handleContribute = useCallback(async () => {
+    const parsedAmount = Number(contributionAmount);
+    if (!publicKey) {
+      showWarning("Connect your wallet to contribute.");
+      return;
+    }
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      showWarning("Enter a contribution amount greater than 0 XLM.");
+      return;
+    }
+    if (contributionDisabledReason) {
+      showWarning(contributionDisabledReason);
+      return;
+    }
+    setTxPhase(null);
+    await invoke("contribute", campaign.id, async () => {
+      try {
+        await withActionTimeout(
+          contribute(campaign.id, publicKey, xlmToStroops(contributionAmount), {
+            onStatus: ({ phase }) => setTxPhase(phase),
+          }),
+        );
+        setContributionAmount("");
+        showSuccess("Contribution submitted successfully.");
+        onActionSuccess?.();
+      } catch (err) {
+        showError(getAsyncActionErrorMessage(err, parseContractError));
+        throw err;
+      } finally {
+        setTxPhase(null);
+      }
+    });
+  }, [
+    contributionAmount,
+    publicKey,
+    contributionDisabledReason,
+    campaign.id,
+    invoke,
+    showWarning,
+    showSuccess,
+    showError,
+    onActionSuccess,
+  ]);
 
   if (!isWalletConnected) {
     return (
@@ -80,42 +168,6 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
       </div>
     );
   }
-
-  const isExpired = Math.floor(Date.now() / 1000) > campaign.deadline;
-  const contributionDisabledReason = isCreator
-    ? "Creators cannot contribute to their own campaign."
-    : campaign.is_cancelled
-      ? "This campaign has been cancelled."
-      : !campaign.is_active || campaign.funds_withdrawn || isExpired
-        ? "This campaign is no longer accepting contributions."
-        : null;
-
-  const handleContribute = async () => {
-    const parsedAmount = Number(contributionAmount);
-    if (!publicKey) {
-      showWarning("Connect your wallet to contribute.");
-      return;
-    }
-    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      showWarning("Enter a contribution amount greater than 0 XLM.");
-      return;
-    }
-    if (contributionDisabledReason) {
-      showWarning(contributionDisabledReason);
-      return;
-    }
-    setIsPending(true);
-    try {
-      await contribute(campaign.id, publicKey, xlmToStroops(parsedAmount));
-      setContributionAmount("");
-      showSuccess("Contribution submitted successfully.");
-      onActionSuccess?.();
-    } catch (err) {
-      showError(parseContractError(err));
-    } finally {
-      setIsPending(false);
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -145,16 +197,19 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
                 value={contributionAmount}
                 onChange={(e) => setContributionAmount(e.target.value)}
                 placeholder="Amount in XLM"
-                disabled={isPending || !!contributionDisabledReason}
+                disabled={isPending("contribute", campaign.id) || !!contributionDisabledReason}
                 className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-zinc-900 outline-none transition focus:border-blue-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50"
               />
               <button
                 onClick={handleContribute}
-                disabled={isPending || !!contributionDisabledReason}
+                disabled={isPending("contribute", campaign.id) || !!contributionDisabledReason}
                 className="rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-zinc-400 flex items-center gap-2"
               >
-                {isPending && <Spinner />}
-                {isPending ? "Processing…" : "Contribute"}
+                <AsyncButtonContent
+                  isPending={isPending("contribute", campaign.id)}
+                  idleLabel="Contribute"
+                  pendingLabel={phaseLabel ?? "Processing..."}
+                />
               </button>
             </div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -180,17 +235,21 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
             <div className="flex flex-col gap-3">
               <button
                 onClick={() =>
-                  handleAction(() => cancelCampaign(campaign.id), "Campaign cancelled.")
+                  handleAction("cancelCampaign", (options) => cancelCampaign(campaign.id, options), "Campaign cancelled.")
                 }
                 disabled={
-                  isPending ||
+                  isPending("cancelCampaign", campaign.id) ||
                   !campaign.is_active ||
                   campaign.is_cancelled ||
                   campaign.funds_withdrawn
                 }
                 className="w-full py-3 min-h-[44px] bg-red-600 hover:bg-red-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
               >
-                {isPending && <Spinner />} Cancel Campaign
+                <AsyncButtonContent
+                  isPending={isPending("cancelCampaign", campaign.id)}
+                  idleLabel="Cancel Campaign"
+                  pendingLabel={phaseLabel ?? "Cancelling..."}
+                />
               </button>
               {campaign.has_revenue_sharing &&
                 (showRevenueInput ? (
@@ -212,10 +271,14 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
                     <div className="flex gap-2">
                       <button
                         onClick={handleDepositRevenue}
-                        disabled={isPending || !revenueAmount}
+                        disabled={isPending("depositRevenue", campaign.id) || !revenueAmount}
                         className="flex-1 py-3 min-h-[44px] bg-purple-600 hover:bg-purple-700 disabled:bg-zinc-400 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                       >
-                        {isPending && <Spinner />} Confirm
+                        <AsyncButtonContent
+                          isPending={isPending("depositRevenue", campaign.id)}
+                          idleLabel="Confirm"
+                          pendingLabel={phaseLabel ?? "Processing..."}
+                        />
                       </button>
                       <button
                         onClick={() => {
@@ -231,7 +294,7 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
                 ) : (
                   <button
                     onClick={() => setShowRevenueInput(true)}
-                    disabled={isPending || campaign.is_cancelled}
+                    disabled={isPending("depositRevenue", campaign.id) || campaign.is_cancelled}
                     className="w-full py-3 min-h-[44px] bg-purple-600 hover:bg-purple-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors"
                   >
                     Deposit Revenue
@@ -246,11 +309,15 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
           <h3 className="text-base font-semibold text-blue-600 mb-4">Admin Panel</h3>
           <button
-            onClick={() => handleAction(() => verifyCampaign(campaign.id), "Campaign verified!")}
-            disabled={isPending}
+            onClick={() => handleAction("verifyCampaign", (options) => verifyCampaign(campaign.id, options), "Campaign verified!")}
+            disabled={isPending("verifyCampaign", campaign.id)}
             className="w-full py-3 min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
           >
-            {isPending && <Spinner />} Verify Campaign
+            <AsyncButtonContent
+              isPending={isPending("verifyCampaign", campaign.id)}
+              idleLabel="Verify Campaign"
+              pendingLabel={phaseLabel ?? "Verifying..."}
+            />
           </button>
         </div>
       )}
@@ -260,27 +327,35 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
           <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-1">
             Your Contribution
           </h3>
-          <p className="text-2xl font-bold text-blue-600 mb-4">{stroopsToXlm(contribution)} XLM</p>
+          <p className="text-2xl font-bold text-blue-600 mb-4">{formatAmount(contribution, locale, { maximumFractionDigits: 2 })} XLM</p>
           <div className="flex flex-col gap-3">
             <button
               onClick={() =>
-                handleAction(() => claimRefund(campaign.id, publicKey!), "Refund claimed!")
+                handleAction("claimRefund", (options) => claimRefund(campaign.id, publicKey!, options), "Refund claimed!")
               }
-              disabled={isPending || (campaign.is_active && !isExpired)}
+              disabled={isPending("claimRefund", campaign.id) || (campaign.is_active && !isExpired)}
               title={campaign.is_active && !isExpired ? "Cannot refund while active" : ""}
               className="w-full py-3 min-h-[44px] bg-amber-600 hover:bg-amber-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
             >
-              {isPending && <Spinner />} Claim Refund
+              <AsyncButtonContent
+                isPending={isPending("claimRefund", campaign.id)}
+                idleLabel="Claim Refund"
+                pendingLabel="Claiming refund..."
+              />
             </button>
             {campaign.has_revenue_sharing && (
               <button
                 onClick={() =>
-                  handleAction(() => claimRevenue(campaign.id, publicKey!), "Revenue claimed!")
+                  handleAction("claimRevenue", (options) => claimRevenue(campaign.id, publicKey!, options), "Revenue claimed!")
                 }
-                disabled={isPending}
+                disabled={isPending("claimRevenue", campaign.id)}
                 className="w-full py-3 min-h-[44px] bg-indigo-600 hover:bg-indigo-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
               >
-                {isPending && <Spinner />} Claim Revenue
+                <AsyncButtonContent
+                  isPending={isPending("claimRevenue", campaign.id)}
+                  idleLabel="Claim Revenue"
+                  pendingLabel="Claiming revenue..."
+                />
               </button>
             )}
           </div>

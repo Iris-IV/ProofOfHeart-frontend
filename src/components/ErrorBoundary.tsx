@@ -2,9 +2,17 @@
 
 import { AlertCircle, RefreshCcw } from "lucide-react";
 import React, { Component, ErrorInfo, ReactNode } from "react";
+import { captureError, setupGlobalErrorHandlers } from "@/lib/errorTracking";
+
+interface ErrorReport {
+  name: string;
+  message: string;
+  stack?: string;
+}
 
 interface Props {
   children?: ReactNode;
+  onError?: (report: ErrorReport) => void;
 }
 
 interface State {
@@ -17,6 +25,11 @@ class ErrorBoundary extends Component<Props, State> {
     hasError: false,
   };
 
+  // Setup global error handlers on mount
+  public componentDidMount() {
+    setupGlobalErrorHandlers();
+  }
+
   public static getDerivedStateFromError(error: Error): State {
     // Update state so the next render will show the fallback UI.
     return { hasError: true, error };
@@ -24,7 +37,19 @@ class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
-    // Here you could add error logging to an external service like Sentry
+
+    // Send to external tracker
+    captureError(error, {
+      componentStack: errorInfo.componentStack,
+      type: "react_error_boundary",
+    });
+
+    // Call custom error handler if provided
+    this.props.onError?.({
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    });
   }
 
   private handleReset = () => {

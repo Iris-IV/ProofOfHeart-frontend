@@ -1,11 +1,9 @@
-const NETWORK_PASSPHRASE =
-  process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
-
+/**
+ * @deprecated Use explorerTxUrl from src/utils/explorer.ts instead.
+ * This function is kept for backward compatibility.
+ */
 export function getStellarExplorerTxUrl(txHash: string): string {
-  const isTestnet = NETWORK_PASSPHRASE.toLowerCase().includes("test");
-  const base = isTestnet
-    ? "https://stellar.expert/explorer/testnet/tx"
-    : "https://stellar.expert/explorer/public/tx";
-
-  return `${base}/${txHash}`;
+  // Re-export from the centralized explorer utility
+  const { explorerTxUrl } = require("../utils/explorer");
+  return explorerTxUrl(txHash);
 }

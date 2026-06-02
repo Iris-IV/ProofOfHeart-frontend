@@ -2,6 +2,10 @@ import { render, screen } from '@testing-library/react';
 import UpdateItem from '@/components/UpdateItem';
 import { CampaignUpdate } from '@/types';
 
+jest.mock('@/lib/campaignUpdates', () => ({
+  verifyUpdateSignature: jest.fn().mockResolvedValue(true),
+}));
+
 const mockUpdate: CampaignUpdate = {
   id: 'test-update-1',
   campaignId: 1,
@@ -84,5 +88,17 @@ describe('UpdateItem', () => {
     render(<UpdateItem update={mockUpdate} />);
     const article = screen.getByRole('article');
     expect(article).toHaveAttribute('aria-label');
+  });
+
+  it('renders XSS payloads as inert text without executable markup', () => {
+    const xssUpdate: CampaignUpdate = {
+      ...mockUpdate,
+      content: '<a href="javascript:alert(1)">click</a>',
+    };
+
+    const { container } = render(<UpdateItem update={xssUpdate} />);
+
+    expect(container.querySelector('a')).toBeNull();
+    expect(screen.getByText(/javascript:alert\(1\)/)).toBeInTheDocument();
   });
 });

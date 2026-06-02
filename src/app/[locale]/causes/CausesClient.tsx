@@ -1,25 +1,34 @@
-'use client';
+"use client";
 
-import { useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
-import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
-import CauseCard from '@/components/CauseCard';
-import { CauseCardSkeleton } from '@/components/Skeleton';
-import { useToast } from '@/components/ToastProvider';
-import { useWallet } from '@/components/WalletContext';
-import { useCampaigns } from '@/hooks/useCampaigns';
-import { useRouter } from '@/i18n/routing';
-import { cancelCampaign, claimRefund, voteOnCampaign, hasVoted } from '@/lib/contractClient';
-import { SORT_OPTIONS } from '@/lib/mockCauses';
-import { Campaign, Vote, CATEGORY_LABELS, CampaignStatus, Category } from '@/types';
-import { parseContractError } from '@/utils/contractErrors';
-import { explorerTxUrl } from '@/utils/explorer';
+import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
+import CauseCard from "@/components/CauseCard";
+import { CauseCardSkeleton } from "@/components/Skeleton";
+import { useToast } from "@/components/ToastProvider";
+import { useWallet } from "@/components/WalletContext";
+import { useCampaigns } from "@/hooks/useCampaigns";
+import { useRouter } from "@/i18n/routing";
+import {
+  cancelCampaign,
+  claimRefund,
+  voteOnCampaign,
+  hasVoted,
+  getApproveVotes,
+  getRejectVotes,
+} from "@/lib/contractClient";
+import { CAUSES_PAGE_SIZE } from "@/lib/causesList";
+import { SORT_OPTIONS } from "@/lib/mockCauses";
+import { Campaign, Vote, CATEGORY_LABELS, CampaignStatus, Category } from "@/types";
+import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncAction";
+import { parseContractError } from "@/utils/contractErrors";
+import { explorerTxUrl } from "@/utils/explorer";
 
 const CATEGORY_ICONS: Record<Category, string> = {
-  [Category.Learner]: '🎓',
-  [Category.EducationalStartup]: '🚀',
-  [Category.Educator]: '👩‍🏫',
-  [Category.Publisher]: '📚',
+  [Category.Learner]: "🎓",
+  [Category.EducationalStartup]: "🚀",
+  [Category.Educator]: "👩‍🏫",
+  [Category.Publisher]: "📚",
 };
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -36,26 +45,35 @@ function useDebounce<T>(value: T, delay: number): T {
 // ---------------------------------------------------------------------------
 
 function CausesContent() {
-  const t = useTranslations('Causes');
+  const t = useTranslations("Causes");
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [rawSearch, setRawSearch] = useState(searchParams.get('q') ?? '');
-  const [category, setCategory] = useState(searchParams.get('category') ?? 'all');
-  const [status, setStatus] = useState(searchParams.get('status') ?? 'all');
-  const [sort, setSort] = useState(searchParams.get('sort') ?? 'newest');
-  const [tag, setTag] = useState(searchParams.get('tag') ?? '');
+  const [rawSearch, setRawSearch] = useState(searchParams.get("q") ?? "");
+  const [category, setCategory] = useState(searchParams.get("category") ?? "all");
+  const [status, setStatus] = useState(searchParams.get("status") ?? "all");
+  const [sort, setSort] = useState(searchParams.get("sort") ?? "newest");
+  const [tag, setTag] = useState(searchParams.get("tag") ?? "");
 
   const debouncedSearch = useDebounce(rawSearch, 300);
 
-  const STATUS_OPTIONS: ('all' | CampaignStatus)[] = ['all', 'active', 'cancelled', 'funded', 'failed'];
+  const STATUS_OPTIONS: ("all" | CampaignStatus)[] = [
+    "all",
+    "active",
+    "cancelled",
+    "funded",
+    "failed",
+  ];
 
   const { campaigns: rawCampaigns, isLoading, error, refetch } = useCampaigns();
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [userVotes, setUserVotes] = useState<Record<string, Vote>>({});
-  const [voteCounts, setVoteCounts] = useState<Record<number, { upvotes: number; downvotes: number; totalVotes: number }>>({});
+  const [voteCounts, setVoteCounts] = useState<
+    Record<number, { upvotes: number; downvotes: number; totalVotes: number }>
+  >({});
   const [isVotingFor, setIsVotingFor] = useState<number | null>(null);
+  const [visibleCount, setVisibleCount] = useState(CAUSES_PAGE_SIZE);
   const { publicKey: userWalletAddress } = useWallet();
   const { showError, showSuccess, showWarning } = useToast();
 
@@ -67,13 +85,13 @@ function CausesContent() {
   // Sync URL query params whenever filters change
   useEffect(() => {
     const params = new URLSearchParams();
-    if (debouncedSearch) params.set('q', debouncedSearch);
-    if (category !== 'all') params.set('category', category);
-    if (status !== 'all') params.set('status', status);
-    if (sort !== 'newest') params.set('sort', sort);
-    if (tag) params.set('tag', tag);
+    if (debouncedSearch) params.set("q", debouncedSearch);
+    if (category !== "all") params.set("category", category);
+    if (status !== "all") params.set("status", status);
+    if (sort !== "newest") params.set("sort", sort);
+    if (tag) params.set("tag", tag);
     const qs = params.toString();
-    router.replace(qs ? `/causes?${qs}` : '/causes', { scroll: false });
+    router.replace(qs ? `/causes?${qs}` : "/causes", { scroll: false });
   }, [debouncedSearch, category, status, sort, tag, router]);
 
   // Load user votes whenever wallet or campaigns change
@@ -88,40 +106,72 @@ function CausesContent() {
             votes[campaign.id] = {
               causeId: String(campaign.id),
               voter: userWalletAddress,
-              voteType: 'upvote',
+              voteType: "upvote",
               timestamp: new Date(),
-              transactionHash: '',
+              transactionHash: "",
             };
           }
         } catch {
           // ignore per-campaign errors
         }
-      })
+      }),
     );
     setUserVotes(votes);
   }, [userWalletAddress, campaigns]);
+
+  const loadVoteCounts = useCallback(async () => {
+    const counts: Record<number, { upvotes: number; downvotes: number; totalVotes: number }> = {};
+    await Promise.all(
+      campaigns.map(async (campaign) => {
+        try {
+          const [approves, rejects] = await Promise.all([
+            getApproveVotes(campaign.id),
+            getRejectVotes(campaign.id),
+          ]);
+          counts[campaign.id] = {
+            upvotes: approves,
+            downvotes: rejects,
+            totalVotes: approves + rejects,
+          };
+        } catch {
+          counts[campaign.id] = { upvotes: 0, downvotes: 0, totalVotes: 0 };
+        }
+      }),
+    );
+    setVoteCounts(counts);
+  }, [campaigns]);
 
   useEffect(() => {
     if (userWalletAddress) loadUserVotes();
     else setUserVotes({});
   }, [userWalletAddress, loadUserVotes]);
 
+  useEffect(() => {
+    if (campaigns.length > 0) {
+      loadVoteCounts();
+      return;
+    }
+    setVoteCounts({});
+  }, [campaigns, loadVoteCounts]);
+
   // -------------------------------------------------------------------------
   // Vote handler
   // -------------------------------------------------------------------------
 
-  const handleVote = async (campaignId: number, voteType: 'upvote' | 'downvote') => {
+  const handleVote = useCallback(async (campaignId: number, voteType: "upvote" | "downvote") => {
     if (!userWalletAddress) {
-      showWarning('Please connect your wallet first.');
+      showWarning("Please connect your wallet first.");
       return;
     }
     if (userVotes[campaignId]) {
-      showWarning('You have already voted on this cause.');
+      showWarning("You have already voted on this cause.");
       return;
     }
     setIsVotingFor(campaignId);
     try {
-      const transactionHash = await voteOnCampaign(campaignId, userWalletAddress, voteType === 'upvote');
+      const transactionHash = await withActionTimeout(
+        voteOnCampaign(campaignId, userWalletAddress, voteType === "upvote"),
+      );
       const newVote: Vote = {
         causeId: String(campaignId),
         voter: userWalletAddress,
@@ -130,69 +180,73 @@ function CausesContent() {
         transactionHash,
       };
       setUserVotes((prev) => ({ ...prev, [campaignId]: newVote }));
-      setVoteCounts((prev: Record<number, { upvotes: number; downvotes: number; totalVotes: number }>) => {
-        const current = prev[campaignId] ?? { upvotes: 0, downvotes: 0, totalVotes: 0 };
-        return {
-          ...prev,
-          [campaignId]: {
-            upvotes: voteType === 'upvote' ? current.upvotes + 1 : current.upvotes,
-            downvotes: voteType === 'downvote' ? current.downvotes + 1 : current.downvotes,
-            totalVotes: current.totalVotes + 1,
-          },
-        };
-      });
+      setVoteCounts(
+        (prev: Record<number, { upvotes: number; downvotes: number; totalVotes: number }>) => {
+          const current = prev[campaignId] ?? { upvotes: 0, downvotes: 0, totalVotes: 0 };
+          return {
+            ...prev,
+            [campaignId]: {
+              upvotes: voteType === "upvote" ? current.upvotes + 1 : current.upvotes,
+              downvotes: voteType === "downvote" ? current.downvotes + 1 : current.downvotes,
+              totalVotes: current.totalVotes + 1,
+            },
+          };
+        },
+      );
       showSuccess(
-        `Your vote has been cast successfully. <a href="${explorerTxUrl(transactionHash)}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;">View on Explorer</a>`
+        `Your vote has been cast successfully. <a href="${explorerTxUrl(transactionHash)}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;">View on Explorer</a>`,
       );
     } catch (error) {
-      showError(parseContractError(error));
+      showError(getAsyncActionErrorMessage(error, parseContractError));
     } finally {
       setIsVotingFor(null);
     }
-  };
+  }, [userWalletAddress, userVotes, showWarning, showSuccess, showError]);
 
   // -------------------------------------------------------------------------
   // Cancel handler
   // -------------------------------------------------------------------------
 
-  const handleCancel = async (campaignId: number) => {
+  const handleCancel = useCallback(async (campaignId: number) => {
     if (!userWalletAddress) {
-      showWarning('Please connect your wallet first.');
+      showWarning("Please connect your wallet first.");
       return;
     }
     try {
-      await cancelCampaign(campaignId);
+      await withActionTimeout(cancelCampaign(campaignId));
 
       // Optimistic update: mark campaign as cancelled immediately so the UI
       // reflects the new state without waiting for a re-fetch.
       setCampaigns((prev) =>
-        prev.map((c) =>
-          c.id === campaignId ? { ...c, status: 'cancelled' as const } : c
-        )
+        prev.map((c) => (c.id === campaignId ? { ...c, status: "cancelled" as const } : c)),
       );
 
-      showSuccess('Campaign cancelled. Contributors can now claim full refunds.');
+      showSuccess("Campaign cancelled. Contributors can now claim full refunds.");
     } catch (error) {
-      showError(parseContractError(error));
+      showError(getAsyncActionErrorMessage(error, parseContractError));
     }
-  };
+  }, [userWalletAddress, showWarning, showSuccess, showError]);
 
   // -------------------------------------------------------------------------
   // Claim refund handler
   // -------------------------------------------------------------------------
 
-  const handleClaimRefund = async (campaignId: number) => {
+  const handleClaimRefund = useCallback(async (campaignId: number) => {
     if (!userWalletAddress) {
-      showWarning('Please connect your wallet first.');
+      showWarning("Please connect your wallet first.");
       return;
     }
     try {
-      await claimRefund(campaignId, userWalletAddress);
-      showSuccess('Refund claimed successfully. Funds will appear in your wallet shortly.');
+      await withActionTimeout(claimRefund(campaignId, userWalletAddress));
+      showSuccess("Refund claimed successfully. Funds will appear in your wallet shortly.");
     } catch (error) {
-      showError(parseContractError(error));
+      showError(getAsyncActionErrorMessage(error, parseContractError));
     }
-  };
+  }, [userWalletAddress, showWarning, showSuccess, showError]);
+
+  const handleTagClick = useCallback((nextTag: string) => {
+    setTag(nextTag);
+  }, []);
 
   // -------------------------------------------------------------------------
   // Filtering + sorting
@@ -205,22 +259,22 @@ function CausesContent() {
       const q = debouncedSearch.toLowerCase();
       result = result.filter(
         (c) =>
-            c.title.toLowerCase().includes(q) ||
-            c.description.toLowerCase().includes(q) ||
-            (CATEGORY_LABELS[c.category] ?? '').toLowerCase().includes(q) ||
-            c.tags?.some((t) => t.toLowerCase().includes(q))
-        );
-      }
-  
-      if (category !== 'all') result = result.filter((c) => String(c.category) === category);
-      if (status !== 'all') result = result.filter((c) => c.status === status);
-      if (tag) result = result.filter((c) => c.tags?.includes(tag));
+          c.title.toLowerCase().includes(q) ||
+          c.description.toLowerCase().includes(q) ||
+          (CATEGORY_LABELS[c.category] ?? "").toLowerCase().includes(q) ||
+          c.tags?.some((t) => t.toLowerCase().includes(q)),
+      );
+    }
+
+    if (category !== "all") result = result.filter((c) => String(c.category) === category);
+    if (status !== "all") result = result.filter((c) => c.status === status);
+    if (tag) result = result.filter((c) => c.tags?.includes(tag));
 
     switch (sort) {
-      case 'oldest':
+      case "oldest":
         result.sort((a, b) => a.deadline - b.deadline);
         break;
-      case 'most_voted': {
+      case "most_voted": {
         result.sort((a, b) => {
           const aTotal = voteCounts[b.id]?.totalVotes ?? 0;
           const bTotal = voteCounts[a.id]?.totalVotes ?? 0;
@@ -228,10 +282,10 @@ function CausesContent() {
         });
         break;
       }
-      case 'most_funded':
+      case "most_funded":
         result.sort((a, b) => Number(b.amount_raised - a.amount_raised));
         break;
-      case 'approval_rate': {
+      case "approval_rate": {
         result.sort((a, b) => {
           const aVotes = voteCounts[a.id];
           const bVotes = voteCounts[b.id];
@@ -248,15 +302,26 @@ function CausesContent() {
     return result;
   }, [campaigns, debouncedSearch, category, status, sort, tag, voteCounts]);
 
+  useEffect(() => {
+    setVisibleCount(CAUSES_PAGE_SIZE);
+  }, [debouncedSearch, category, status, sort, tag]);
+
+  const visibleCampaigns = useMemo(
+    () => filteredCampaigns.slice(0, visibleCount),
+    [filteredCampaigns, visibleCount],
+  );
+
+  const hasMoreCampaigns = visibleCount < filteredCampaigns.length;
+
   const hasActiveFilters =
-    debouncedSearch || category !== 'all' || status !== 'all' || sort !== 'newest' || tag;
+    debouncedSearch || category !== "all" || status !== "all" || sort !== "newest" || tag;
 
   const clearFilters = () => {
-    setRawSearch('');
-    setCategory('all');
-    setStatus('all');
-    setSort('newest');
-    setTag('');
+    setRawSearch("");
+    setCategory("all");
+    setStatus("all");
+    setSort("newest");
+    setTag("");
   };
 
   // -------------------------------------------------------------------------
@@ -269,18 +334,16 @@ function CausesContent() {
         {/* Page heading */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-2">
-            {t('pageTitle')}
+            {t("pageTitle")}
           </h1>
-          <p className="text-zinc-600 dark:text-zinc-400">
-            {t('pageSubtitle')}
-          </p>
+          <p className="text-zinc-600 dark:text-zinc-400">{t("pageSubtitle")}</p>
           {tag && (
             <div className="flex items-center gap-2 mt-4 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-lg w-fit">
               <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
                 Filter: #{tag}
               </span>
               <button
-                onClick={() => setTag('')}
+                onClick={() => setTag("")}
                 className="ml-1 text-blue-400 hover:text-blue-600 dark:hover:text-blue-200 transition-colors"
                 aria-label="Clear tag filter"
               >
@@ -312,12 +375,12 @@ function CausesContent() {
               type="text"
               value={rawSearch}
               onChange={(e) => setRawSearch(e.target.value)}
-              placeholder={t('searchPlaceholder')}
+              placeholder={t("searchPlaceholder")}
               className="w-full pl-9 pr-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             />
             {rawSearch && (
               <button
-                onClick={() => setRawSearch('')}
+                onClick={() => setRawSearch("")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
               >
                 ✕
@@ -329,14 +392,14 @@ function CausesContent() {
           <div className="flex flex-wrap gap-3 items-center">
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
-                {t('labelCategory')}
+                {t("labelCategory")}
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 className="text-sm rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="all">{t('allCategories')}</option>
+                <option value="all">{t("allCategories")}</option>
                 {Object.entries(CATEGORY_LABELS).map(([val, label]) => (
                   <option key={val} value={val}>
                     {label}
@@ -347,7 +410,7 @@ function CausesContent() {
 
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                {t('labelStatus')}
+                {t("labelStatus")}
               </label>
               <select
                 value={status}
@@ -356,7 +419,7 @@ function CausesContent() {
               >
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>
-                    {s === 'all' ? t('allStatuses') : s.charAt(0).toUpperCase() + s.slice(1)}
+                    {s === "all" ? t("allStatuses") : s.charAt(0).toUpperCase() + s.slice(1)}
                   </option>
                 ))}
               </select>
@@ -364,7 +427,7 @@ function CausesContent() {
 
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                {t('labelSortBy')}
+                {t("labelSortBy")}
               </label>
               <select
                 value={sort}
@@ -384,7 +447,7 @@ function CausesContent() {
                 onClick={clearFilters}
                 className="text-xs text-blue-600 dark:text-blue-400 hover:underline ml-auto"
               >
-                {t('clearFilters')}
+                {t("clearFilters")}
               </button>
             )}
           </div>
@@ -393,17 +456,24 @@ function CausesContent() {
         {/* Category pills */}
         {!isLoading && !error && (
           <div className="flex flex-wrap gap-2 mb-6">
-            {(['all', ...Object.values(Category).filter((v) => typeof v === 'number')] as ('all' | Category)[]).map((cat) => (
+            {(
+              ["all", ...Object.values(Category).filter((v) => typeof v === "number")] as (
+                | "all"
+                | Category
+              )[]
+            ).map((cat) => (
               <button
                 key={String(cat)}
-                onClick={() => setCategory(cat === 'all' ? 'all' : String(cat))}
+                onClick={() => setCategory(cat === "all" ? "all" : String(cat))}
                 className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                  (cat === 'all' ? category === 'all' : category === String(cat))
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                  (cat === "all" ? category === "all" : category === String(cat))
+                    ? "bg-blue-600 text-white"
+                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
                 }`}
               >
-                {cat === 'all' ? 'All' : `${CATEGORY_ICONS[cat as Category]} ${CATEGORY_LABELS[cat as Category]}`}
+                {cat === "all"
+                  ? t("all")
+                  : `${CATEGORY_ICONS[cat as Category]} ${CATEGORY_LABELS[cat as Category]}`}
               </button>
             ))}
           </div>
@@ -417,7 +487,7 @@ function CausesContent() {
               onClick={refetch}
               className="px-5 py-2 bg-red-600 text-white rounded-full text-sm font-medium hover:bg-red-700 transition-colors"
             >
-              Try again
+              {t("tryAgain")}
             </button>
           </div>
         )}
@@ -436,47 +506,77 @@ function CausesContent() {
           <>
             <div className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 flex items-center gap-3">
               <span>
-                {t(filteredCampaigns.length === 1 ? 'causesFound_one' : 'causesFound_other', { count: filteredCampaigns.length })}
-                {debouncedSearch && <span>{t('causesFoundFor', { query: debouncedSearch })}</span>}
+                {t(filteredCampaigns.length === 1 ? "causesFound_one" : "causesFound_other", {
+                  count: filteredCampaigns.length,
+                })}
+                {debouncedSearch && <span>{t("causesFoundFor", { query: debouncedSearch })}</span>}
               </span>
               {isVotingFor !== null && (
                 <span className="inline-flex items-center gap-1">
                   <span className="inline-block motion-safe:animate-spin rounded-full h-3 w-3 border-b border-zinc-500" />
-                  {t('processingVote')}
+                  {t("processingVote")}
                 </span>
               )}
             </div>
 
             {filteredCampaigns.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredCampaigns.map((campaign) => (
-                  <CauseCard
-                    key={campaign.id}
-                    campaign={campaign}
-                    userWalletAddress={userWalletAddress}
-                    onVote={handleVote}
-                    onCancel={handleCancel}
-                    onClaimRefund={handleClaimRefund}
-                    onTagClick={(t: string) => setTag(t)}
-                    userVote={userVotes[campaign.id]}
-                  />
-                ))}
-              </div>
+              <>
+                {filteredCampaigns.length > CAUSES_PAGE_SIZE && (
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                    {t("showingRange", {
+                      shown: visibleCampaigns.length,
+                      total: filteredCampaigns.length,
+                    })}
+                  </p>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {visibleCampaigns.map((campaign) => (
+                    <CauseCard
+                      key={campaign.id}
+                      campaign={campaign}
+                      userWalletAddress={userWalletAddress}
+                      onVote={handleVote}
+                      onCancel={handleCancel}
+                      onClaimRefund={handleClaimRefund}
+                      onTagClick={handleTagClick}
+                      userVote={userVotes[campaign.id]}
+                      upvotes={voteCounts[campaign.id]?.upvotes ?? 0}
+                      downvotes={voteCounts[campaign.id]?.downvotes ?? 0}
+                      totalVotes={voteCounts[campaign.id]?.totalVotes ?? 0}
+                    />
+                  ))}
+                </div>
+                {hasMoreCampaigns && (
+                  <div className="mt-8 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setVisibleCount((count) =>
+                          Math.min(count + CAUSES_PAGE_SIZE, filteredCampaigns.length),
+                        )
+                      }
+                      className="px-6 py-2.5 rounded-full text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                    >
+                      {t("loadMore")}
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-20">
                 <div className="text-5xl mb-4">🔍</div>
                 <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-                  {campaigns.length === 0 ? t('noCausesYet') : t('noCausesFound')}
+                  {campaigns.length === 0 ? t("noCausesYet") : t("noCausesFound")}
                 </h2>
                 <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-                  {campaigns.length === 0 ? t('beFirstToSubmit') : t('tryDifferentKeyword')}
+                  {campaigns.length === 0 ? t("beFirstToSubmit") : t("tryDifferentKeyword")}
                 </p>
                 {campaigns.length > 0 && (
                   <button
                     onClick={clearFilters}
                     className="px-6 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
                   >
-                    {t('clearAllFilters')}
+                    {t("clearAllFilters")}
                   </button>
                 )}
               </div>

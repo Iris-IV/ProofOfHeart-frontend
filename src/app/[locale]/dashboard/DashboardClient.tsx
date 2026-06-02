@@ -2,40 +2,25 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import MyContributionsSection from "@/components/MyContributionsSection";
-import { Spinner } from "@/components/Skeleton";
+import { Spinner, DashboardSkeleton } from "@/components/Skeleton";
 import { useWallet } from "@/components/WalletContext";
 import { useCampaigns } from "@/hooks/useCampaigns";
-import { getStellarBalance } from "@/lib/getStellarBalance";
+import { useStellarBalance } from "@/hooks/useStellarBalance";
 import { isSameAddress } from "@/lib/stellar";
 import { explorerTxUrl } from "@/utils/explorer";
 
 export default function DashboardPage() {
   const t = useTranslations("Dashboard");
   const { publicKey, isWalletConnected } = useWallet();
-  const { campaigns } = useCampaigns();
-  const [balance, setBalance] = useState<number | null>(null);
-  const [balanceLoading, setBalanceLoading] = useState(false);
-  const [balanceError, setBalanceError] = useState<string | null>(null);
-
-  const fetchBalance = useCallback(async () => {
-    if (!publicKey) return;
-    setBalanceLoading(true);
-    setBalanceError(null);
-    try {
-      const bal = await getStellarBalance(publicKey);
-      setBalance(bal);
-    } catch {
-      setBalanceError(t("balanceFetchError"));
-    } finally {
-      setBalanceLoading(false);
-    }
-  }, [publicKey]);
-
-  useEffect(() => {
-    if (publicKey) fetchBalance();
-  }, [publicKey, fetchBalance]);
+  const { campaigns, isLoading: campaignsLoading } = useCampaigns();
+  const {
+    balance,
+    isLoading: balanceLoading,
+    error: balanceQueryError,
+  } = useStellarBalance(publicKey);
+  const balanceError = balanceQueryError ? t("balanceFetchError") : null;
 
   const mockVotes = useMemo(
     () => [
@@ -84,6 +69,10 @@ export default function DashboardPage() {
         </Link>
       </div>
     );
+  }
+
+  if (campaignsLoading || balanceLoading) {
+    return <DashboardSkeleton />;
   }
 
   return (

@@ -1,6 +1,5 @@
-import { buildAlternates } from "@/lib/seo";
+import { absoluteUrl, buildAlternates } from "@/lib/seo";
 import { getCampaign } from "@/lib/contractClient";
-import { CATEGORY_LABELS, stroopsToXlm } from "@/types";
 import CauseDetailClient from "./CauseDetailClient";
 
 type Props = { params: Promise<{ locale: string; id: string }> };
@@ -14,24 +13,27 @@ export async function generateMetadata({ params }: Props) {
     if (!campaign) {
       return {
         title: 'Campaign | ProofOfHeart',
-        alternates: buildAlternates(`/causes/${id}`),
+        alternates: buildAlternates(`/causes/${id}`, locale),
       };
     }
     
-    const raised = stroopsToXlm(campaign.amount_raised);
-    const goal = stroopsToXlm(campaign.funding_goal);
-    const categoryLabel = CATEGORY_LABELS[campaign.category] ?? 'Other';
+    const description = campaign.description.slice(0, 160);
+    const imageUrl = campaign.cover_image_url
+      ? absoluteUrl(campaign.cover_image_url)
+      : absoluteUrl(`/${locale}/causes/${id}/opengraph-image`);
     
     return {
       title: `${campaign.title} | ProofOfHeart`,
-      description: campaign.description.slice(0, 160),
+      description,
       openGraph: {
         title: campaign.title,
-        description: campaign.description.slice(0, 160),
+        description,
         type: 'website',
+        siteName: 'ProofOfHeart',
+        url: absoluteUrl(`/${locale}/causes/${id}`),
         images: [
           {
-            url: `/causes/${id}/opengraph-image`,
+            url: imageUrl,
             width: 1200,
             height: 630,
             alt: campaign.title,
@@ -41,15 +43,15 @@ export async function generateMetadata({ params }: Props) {
       twitter: {
         card: 'summary_large_image',
         title: campaign.title,
-        description: campaign.description.slice(0, 160),
-        images: [`/causes/${id}/opengraph-image`],
+        description,
+        images: [imageUrl],
       },
-      alternates: buildAlternates(`/causes/${id}`),
+      alternates: buildAlternates(`/causes/${id}`, locale),
     };
   } catch (error) {
     return {
       title: 'Campaign | ProofOfHeart',
-      alternates: buildAlternates(`/causes/${id}`),
+      alternates: buildAlternates(`/causes/${id}`, locale),
     };
   }
 }

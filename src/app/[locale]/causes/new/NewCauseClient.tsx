@@ -1,14 +1,12 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import ReactMarkdown from 'react-markdown';
-import rehypeSanitize from 'rehype-sanitize';
-import remarkGfm from 'remark-gfm';
+import SafeMarkdown from '@/components/SafeMarkdown';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ToastProvider';
 import { useWallet } from '@/components/WalletContext';
 import { useRouter } from '@/i18n/routing';
-import { createCampaign, getCampaignCount } from '@/lib/contractClient';
+import { createCampaign, getCampaignCount, type TransactionLifecyclePhase } from '@/lib/contractClient';
 import { Category, CATEGORY_LABELS, xlmToStroops } from '@/types';
 import { parseContractError } from '@/utils/contractErrors';
 
@@ -119,6 +117,7 @@ export default function CreateCampaignPage() {
   const [tagInput, setTagInput] = useState('');
   const [descriptionTab, setDescriptionTab] = useState<'write' | 'preview'>('write');
   const [coverImageUrl, setCoverImageUrl] = useState('');
+  const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
 
   const DRAFT_KEY = 'proof_of_heart_next_draft';
   const CREATOR_EMAIL_WEBHOOK_URL =
@@ -236,7 +235,7 @@ export default function CreateCampaignPage() {
     setIsSubmitting(true);
 
     try {
-      const fundingGoalStroops = xlmToStroops(reviewData.fundingGoalXlm);
+      const fundingGoalStroops = xlmToStroops(reviewData.fundingGoalXlm.toString());
       const basisPoints = reviewData.hasRevenueSharing
         ? Math.round(reviewData.revenueSharePercentage * 100)
         : 0;
@@ -251,6 +250,9 @@ export default function CreateCampaignPage() {
         reviewData.hasRevenueSharing,
         basisPoints,
         reviewData.tags,
+        {
+          onStatus: ({ phase }) => setTxPhase(phase),
+        },
       );
 
       let newCampaignId: number | null = null;
@@ -267,7 +269,7 @@ export default function CreateCampaignPage() {
         publicKey,
       );
 
-      showSuccess(t('successMessage'));
+      showSuccess(t('successMessage', { title: reviewData.title }));
       setIsReviewOpen(false);
       setReviewData(null);
 
@@ -282,11 +284,14 @@ export default function CreateCampaignPage() {
       } else {
         router.push('/causes');
       }
+      // Keep isSubmitting true so the form stays disabled during navigation.
+      // The component will unmount before this matters on the success path.
+      return;
     } catch (err) {
       showError(parseContractError(err));
-    } finally {
-      setIsSubmitting(false);
     }
+    setIsSubmitting(false);
+    setTxPhase(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -458,11 +463,9 @@ export default function CreateCampaignPage() {
               ) : (
                 <div className="px-3 py-2 min-h-[120px] bg-zinc-50 dark:bg-zinc-700 text-sm text-zinc-600 dark:text-zinc-400">
                   {description.trim() ? (
-                    <div className="prose prose-zinc dark:prose-invert max-w-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
-                        {description}
-                      </ReactMarkdown>
-                    </div>
+                    <SafeMarkdown className="prose prose-zinc dark:prose-invert max-w-none">
+                      {description}
+                    </SafeMarkdown>
                   ) : (
                     <span className="italic text-zinc-400">Nothing to preview</span>
                   )}
@@ -960,7 +963,15 @@ export default function CreateCampaignPage() {
                   {isSubmitting && (
                     <span className="inline-block motion-safe:animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
                   )}
-                  {isSubmitting ? t('submitting') : t('confirmAndSign')}
+                  {isSubmitting
+                    ? txPhase === 'building'
+                      ? t('submitting')
+                      : txPhase === 'signing'
+                        ? 'Signing…'
+                        : txPhase === 'confirming'
+                          ? 'Confirming…'
+                          : t('submitting')
+                    : t('confirmAndSign')}
                 </button>
               </div>
             </div>

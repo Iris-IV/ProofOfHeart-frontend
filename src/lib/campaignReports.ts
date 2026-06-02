@@ -1,5 +1,10 @@
 'use client';
 
+import {
+  hasOffchainApiBaseUrl,
+  requestOffchainJson,
+} from './offchainApiClient';
+
 export type ReportReason =
   | 'scam'
   | 'inappropriate'
@@ -26,65 +31,63 @@ export interface CampaignReport {
   status: 'pending' | 'reviewed';
 }
 
-const STORAGE_KEY = 'proof_of_heart_reports_v1';
+const USE_MOCKS = typeof process !== 'undefined' && process.env.NEXT_PUBLIC_USE_MOCKS === 'true';
 
-function canUseStorage(): boolean {
-  return typeof window !== 'undefined';
-}
+// ---------------------------------------------------------------------------
+// Backend API functions
+// ---------------------------------------------------------------------------
 
-function readAll(): CampaignReport[] {
-  if (!canUseStorage()) return [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeAll(reports: CampaignReport[]): void {
-  if (!canUseStorage()) return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(reports));
-  } catch {
-    // ignore
-  }
-}
-
-export function submitReport(
+export async function submitReport(
   campaignId: number,
   campaignTitle: string,
   reason: ReportReason,
   notes: string,
   reporterAddress: string | null,
-): CampaignReport {
-  const report: CampaignReport = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    campaignId,
-    campaignTitle,
-    reason,
-    notes,
-    reporterAddress,
-    timestamp: Date.now(),
-    status: 'pending',
-  };
-  const all = readAll();
-  all.push(report);
-  writeAll(all);
-  return report;
+): Promise<CampaignReport> {
+  if (USE_MOCKS || !hasOffchainApiBaseUrl()) {
+    return {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      campaignId,
+      campaignTitle,
+      reason,
+      notes,
+      reporterAddress,
+      timestamp: Date.now(),
+      status: 'pending',
+    };
+  }
+
+  return requestOffchainJson<CampaignReport>('/campaign-reports', {
+    method: 'POST',
+    auth: {
+      purpose: 'submit_campaign_report',
+      payload: { campaignId, campaignTitle, reason, notes, reporterAddress },
+    },
+    body: { campaignId, campaignTitle, reason, notes, reporterAddress },
+  });
 }
 
-export function getAllReports(): CampaignReport[] {
-  return readAll().sort((a, b) => b.timestamp - a.timestamp);
+export async function getAllReports(): Promise<CampaignReport[]> {
+  if (USE_MOCKS || !hasOffchainApiBaseUrl()) return [];
+  return requestOffchainJson<CampaignReport[]>('/campaign-reports');
 }
 
-export function getPendingReports(): CampaignReport[] {
-  return getAllReports().filter((r) => r.status === 'pending');
+export async function getPendingReports(): Promise<CampaignReport[]> {
+  if (USE_MOCKS || !hasOffchainApiBaseUrl()) return [];
+  return requestOffchainJson<CampaignReport[]>('/campaign-reports?status=pending');
 }
 
-export function markReportReviewed(id: string): void {
-  const all = readAll().map((r) => (r.id === id ? { ...r, status: 'reviewed' as const } : r));
-  writeAll(all);
+export async function markReportReviewed(id: string): Promise<CampaignReport> {
+  if (USE_MOCKS || !hasOffchainApiBaseUrl()) {
+    return { id, campaignId: 0, campaignTitle: '', reason: 'other', notes: '', reporterAddress: null, timestamp: 0, status: 'reviewed' };
+  }
+
+  return requestOffchainJson<CampaignReport>(`/campaign-reports/${id}`, {
+    method: 'PATCH',
+    auth: {
+      purpose: 'review_campaign_report',
+      payload: { id, status: 'reviewed' },
+    },
+    body: { status: 'reviewed' },
+  });
 }

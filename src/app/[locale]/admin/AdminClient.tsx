@@ -14,10 +14,16 @@ import {
   Smartphone,
   Flag,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
+import dynamic from "next/dynamic";
+
+const TransferAdminModal = dynamic(() => import("@/components/TransferAdminModal"), {
+  ssr: false,
+});
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { Link } from "@/i18n/routing";
 import { appendAdminAuditLog, AdminAuditLogEntry, getAdminAuditLog } from "@/lib/adminLog";
@@ -29,8 +35,10 @@ import {
   verifyCampaign,
   cancelCampaign,
 } from "@/lib/contractClient";
+import type { TransactionLifecyclePhase } from "@/lib/contractClient";
 import { isSameAddress } from "@/lib/stellar";
-import { stroopsToXlm, Category, CATEGORY_LABELS, basisPointsToPercentage } from "@/types";
+import { formatAmount } from "@/lib/formatters";
+import { Category, CATEGORY_LABELS, basisPointsToPercentage } from "@/types";
 import { parseContractError } from "@/utils/contractErrors";
 import { explorerTxUrl } from "@/utils/explorer";
 import {
@@ -39,19 +47,27 @@ import {
   REPORT_REASON_LABELS,
   type CampaignReport,
 } from "@/lib/campaignReports";
-import CancelCampaignModal from "@/components/cancelCampaignModal";
+const CancelCampaignModal = dynamic(() => import("@/components/cancelCampaignModal"), {
+  ssr: false,
+});
+import { AdminSkeleton } from "@/components/Skeleton";
 import { Campaign } from "@/types";
 
 export default function AdminDashboard() {
   const { campaigns, isLoading, refetch, isRefreshing } = useCampaigns();
   const { publicKey, isWalletConnected, connectWallet, isLoading: isWalletLoading } = useWallet();
+  const queryClient = useQueryClient();
   const { showSuccess, showError, showWarning } = useToast();
   const t = useTranslations("Admin");
+  const locale = useLocale();
 
   const [adminAddress, setAdminAddress] = useState<string | null>(null);
   const [platformFee, setPlatformFee] = useState<number | null>(null);
   const [feeInput, setFeeInput] = useState("");
   const [newAdminInput, setNewAdminInput] = useState("");
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isFeeConfirmModalOpen, setIsFeeConfirmModalOpen] = useState(false);
+  const [pendingFee, setPendingFee] = useState<number | null>(null);
 
   const [verifyingId, setVerifyingId] = useState<number | null>(null);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
@@ -60,10 +76,23 @@ export default function AdminDashboard() {
   const [isUpdatingAdmin, setIsUpdatingAdmin] = useState(false);
   const [auditLog, setAuditLog] = useState<AdminAuditLogEntry[]>([]);
   const [reports, setReports] = useState<CampaignReport[]>([]);
+  const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
+  const txPhaseLabel =
+    txPhase === "building"
+      ? t("preparing")
+      : txPhase === "signing"
+        ? t("signing")
+        : txPhase === "submitting"
+          ? t("submitting")
+          : txPhase === "confirming"
+            ? t("confirming")
+            : null;
 
-  // Load reports from localStorage on mount
+  // Load reports from backend on mount
   useEffect(() => {
-    setReports(getAllReports());
+    getAllReports()
+      .then(setReports)
+      .catch(() => setReports([]));
   }, []);
 
   // Rejection Modal State
@@ -98,39 +127,27 @@ export default function AdminDashboard() {
 
   // Reconcile optimistic updates when raw data changes
   useEffect(() => {
-    if (optimisticPendingIds.size === 0) return;
-    
-    setOptimisticPendingIds((prev) => {
-      const next = new Set(prev);
-      let changed = false;
+    if (optimisticRemovedIds.length === 0) return;
 
-      for (const id of next) {
-        // If it is no longer pending on the server (either verified, inactive, or cancelled),
-        // we can safely remove it from our optimistic hidden set.
-        const isStillInServerData = campaigns.some(
-          (c) => c.id === id && !c.is_verified && c.is_active && !c.is_cancelled
-        );
-
-        if (!isStillInServerData) {
-          next.delete(id);
-          changed = true;
-        }
-      }
-
-      return changed ? next : prev;
-    });
+    // Remove IDs from optimistic list if they are no longer in the "actually pending" server data
+    setOptimisticRemovedIds(prev => prev.filter(id => {
+      const isStillInServerData = campaigns.some(c =>
+        c.id === id && !c.is_verified && c.is_active && !c.is_cancelled
+      );
+      return isStillInServerData;
+    }));
   }, [campaigns]);
 
   const isAdmin = useMemo(() => {
     return isSameAddress(publicKey, adminAddress);
   }, [publicKey, adminAddress]);
 
-  const refreshAuditLog = (address = publicKey) => {
+  const refreshAuditLog = async (address = publicKey) => {
     if (!address) {
       setAuditLog([]);
       return;
     }
-    setAuditLog(getAdminAuditLog(address, 50));
+    setAuditLog(await getAdminAuditLog(address, 50));
   };
 
   const pendingCampaigns = useMemo(() => {
@@ -153,25 +170,30 @@ export default function AdminDashboard() {
 
   const handleApprove = async (id: number) => {
     setVerifyingId(id);
+    setTxPhase(null);
     try {
-      const txHash = await verifyCampaign(id);
+      const txHash = await verifyCampaign(id, {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       if (publicKey) {
-        appendAdminAuditLog({
+        await appendAdminAuditLog({
           adminAddress: publicKey,
           action: "verify_campaign",
           campaignId: id,
           txHash,
           details: `Approved campaign #${id}`,
         });
-        refreshAuditLog(publicKey);
+        await refreshAuditLog(publicKey);
       }
-      showSuccess("Campaign approved successfully!");
-      setOptimisticPendingIds((prev) => new Set(prev).add(id));
+      showSuccess(t("approveSuccess"));
+      setOptimisticRemovedIds((prev) => [...prev, id]);
       refetch();
+      queryClient.invalidateQueries({ queryKey: ['campaign', id] });
     } catch (err) {
       showError(parseContractError(err));
     } finally {
       setVerifyingId(null);
+      setTxPhase(null);
     }
   };
 
@@ -182,99 +204,140 @@ export default function AdminDashboard() {
 
   const handleConfirmReject = async () => {
     if (!campaignToReject) return;
-    const id = campaignToReject.id;
-    setCancellingId(id);
+    setCancellingId(campaignToReject.id);
+    setTxPhase(null);
     try {
-      const txHash = await cancelCampaign(id);
+      const txHash = await cancelCampaign(campaignToReject.id, {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       if (publicKey) {
-        appendAdminAuditLog({
+        await appendAdminAuditLog({
           adminAddress: publicKey,
           action: "reject_campaign",
-          campaignId: id,
+          campaignId: campaignToReject.id,
           txHash,
-          details: `Rejected campaign #${id}`,
+          details: `Rejected campaign #${campaignToReject.id}`,
         });
-        refreshAuditLog(publicKey);
+        await refreshAuditLog(publicKey);
       }
-      showSuccess("Campaign rejected and cancelled.");
-      setOptimisticPendingIds((prev) => new Set(prev).add(id));
+      showSuccess(t("rejectSuccess"));
+      setOptimisticRemovedIds((prev) => [...prev, campaignToReject.id]);
       setIsRejectModalOpen(false);
       refetch();
+      queryClient.invalidateQueries({ queryKey: ['campaign', campaignToReject.id] });
     } catch (err) {
       showError(parseContractError(err));
     } finally {
       setCancellingId(null);
+      setTxPhase(null);
     }
   };
 
-  const handleMarkReportReviewed = (reportId: string) => {
-    markReportReviewed(reportId);
-    setReports(getAllReports());
-    showSuccess('Report marked as reviewed.');
+  const handleMarkReportReviewed = async (reportId: string) => {
+    try {
+      await markReportReviewed(reportId);
+      setReports((prev) =>
+        prev.map((r) => (r.id === reportId ? { ...r, status: 'reviewed' as const } : r)),
+      );
+      showSuccess(t("reportReviewedSuccess"));
+    } catch (err) {
+      showError(err instanceof Error ? err.message : t("reportReviewError"));
+    }
   };
 
-  const handleUpdateFee = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!isAdmin) return showWarning("Only admin can update fee");
-
-    const fee = Number(feeInput);
-    if (isNaN(fee) || fee < 0 || fee > 10000) return showError("Invalid fee");
-
+  const performFeeUpdate = async (fee: number) => {
     setIsUpdatingFee(true);
+    setTxPhase(null);
     try {
-      const txHash = await updatePlatformFee(fee);
+      const txHash = await updatePlatformFee(fee, {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       if (publicKey) {
         const previousFeeLabel =
           platformFee === null ? "unknown" : `${(platformFee / 100).toFixed(2)}%`;
-        appendAdminAuditLog({
+        await appendAdminAuditLog({
           adminAddress: publicKey,
           action: "update_platform_fee",
           txHash,
           details: `Updated platform fee from ${previousFeeLabel} to ${(fee / 100).toFixed(2)}% (${fee} bps)`,
         });
-        refreshAuditLog(publicKey);
+        await refreshAuditLog(publicKey);
       }
       setPlatformFee(fee);
-      showSuccess("Platform fee updated");
+      showSuccess(t("feeUpdateSuccess"));
     } catch (err) {
       showError(parseContractError(err));
     } finally {
       setIsUpdatingFee(false);
+      setTxPhase(null);
     }
+  };
+
+  const handleUpdateFee = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!isAdmin) return showWarning(t("adminOnlyFee"));
+
+    const fee = Number(feeInput);
+    if (isNaN(fee) || fee < 0 || fee > 10000) return showError(t("invalidFee"));
+
+    if (fee > 1000) {
+      setPendingFee(fee);
+      setIsFeeConfirmModalOpen(true);
+      return;
+    }
+
+    await performFeeUpdate(fee);
+  };
+
+  const handleConfirmFeeUpdate = async () => {
+    if (pendingFee === null) return;
+    setIsFeeConfirmModalOpen(false);
+    await performFeeUpdate(pendingFee);
+    setPendingFee(null);
   };
 
   const handleTransferAdmin = async (e: FormEvent) => {
     e.preventDefault();
-    if (!isAdmin) return showWarning("Only admin can transfer");
+    if (!isAdmin) return showWarning(t("adminOnlyTransfer"));
 
     const nextAdmin = newAdminInput.trim();
-    if (!StellarSdk.StrKey.isValidEd25519PublicKey(nextAdmin)) return showError("Invalid address");
+    if (!StellarSdk.StrKey.isValidEd25519PublicKey(nextAdmin)) return showError(t("invalidAddress"));
 
+    setIsTransferModalOpen(true);
+  };
+
+  const executeTransferAdmin = async () => {
+    const nextAdmin = newAdminInput.trim();
     setIsUpdatingAdmin(true);
+    setTxPhase(null);
     try {
-      const txHash = await updateAdmin(nextAdmin);
+      const txHash = await updateAdmin(nextAdmin, {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       if (publicKey) {
-        appendAdminAuditLog({
+        await appendAdminAuditLog({
           adminAddress: publicKey,
           action: "transfer_admin",
           txHash,
           details: `Transferred admin access to ${nextAdmin}`,
         });
-        refreshAuditLog(publicKey);
+        await refreshAuditLog(publicKey);
       }
       setAdminAddress(nextAdmin);
       setNewAdminInput("");
-      showSuccess("Admin access transferred");
+      showSuccess(t("adminTransferSuccess"));
+      setIsTransferModalOpen(false);
     } catch (err) {
       showError(parseContractError(err));
     } finally {
       setIsUpdatingAdmin(false);
+      setTxPhase(null);
     }
   };
 
   useEffect(() => {
     if (isAdmin && publicKey) {
-      refreshAuditLog(publicKey);
+      void refreshAuditLog(publicKey);
       return;
     }
     setAuditLog([]);
@@ -284,28 +347,23 @@ export default function AdminDashboard() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
         <Smartphone size={64} className="text-zinc-300 mb-6 motion-safe:animate-pulse" />
-        <h1 className="text-3xl font-bold mb-4 tracking-tight">Wallet Required</h1>
+        <h1 className="text-3xl font-bold mb-4 tracking-tight">{t("walletRequired")}</h1>
         <p className="text-zinc-500 dark:text-zinc-400 max-w-md mb-8">
-          Please connect your administrative wallet to access the platform controls.
+          {t("walletRequiredDesc")}
         </p>
         <button
           onClick={connectWallet}
           disabled={isWalletLoading}
           className="px-8 py-3 bg-zinc-950 dark:bg-amber-400 text-white dark:text-zinc-950 font-bold rounded-2xl transition hover:opacity-90 disabled:opacity-50"
         >
-          {isWalletLoading ? "Connecting..." : "Connect Wallet"}
+          {isWalletLoading ? t("connecting") : t("connectWallet")}
         </button>
       </div>
     );
   }
 
   if (isAdminLoading || isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-12 h-12 motion-safe:animate-spin text-amber-500 mb-4" />
-        <p className="text-zinc-500 font-medium">Authorizing secure session...</p>
-      </div>
-    );
+    return <AdminSkeleton />;
   }
 
   if (!isAdmin) {
@@ -315,20 +373,16 @@ export default function AdminDashboard() {
           <ShieldAlert size={40} />
         </div>
         <h1 className="text-3xl font-bold mb-2 text-zinc-900 dark:text-zinc-50">
-          Unauthorized Access
+          {t("unauthorized")}
         </h1>
         <p className="text-zinc-500 dark:text-zinc-400 max-w-md mb-8">
-          Your wallet{" "}
-          <span className="font-mono text-zinc-900 dark:text-zinc-100">
-            {publicKey?.slice(0, 8)}...
-          </span>{" "}
-          is not registered as the administrator.
+          {t("unauthorizedDesc", { address: `${publicKey?.slice(0, 8)}...` })}
         </p>
         <Link
           href="/"
           className="px-8 py-3 bg-white border border-zinc-200 rounded-2xl font-bold hover:bg-zinc-50 transition shadow-sm"
         >
-          Return Home
+          {t("returnHome")}
         </Link>
       </div>
     );
@@ -361,6 +415,12 @@ export default function AdminDashboard() {
                 {adminAddress}
               </span>
             </div>
+            <Link
+              href="/admin/observability"
+              className="rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+            >
+              {t("observabilityLink")}
+            </Link>
           </div>
         </div>
       </section>
@@ -375,7 +435,7 @@ export default function AdminDashboard() {
         <StatsCard
           icon={<DollarSign className="text-green-500" />}
           label={t("totalRaised")}
-          value={`${stroopsToXlm(totalRaised).toLocaleString()} XLM`}
+          value={`${formatAmount(totalRaised, locale)} XLM`}
         />
         <StatsCard
           icon={<PieChart className="text-purple-500" />}
@@ -395,7 +455,8 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between px-2">
             <h2 className="text-2xl font-bold flex items-center gap-3">
               {t("verificationQueue")}
-              <span className="text-sm font-bold px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500">
+              {/* zinc-500 on zinc-800 is ~3.2:1; zinc-300 on zinc-800 is ~8.5:1 — meets WCAG AA */}
+              <span className="text-sm font-bold px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-300">
                 {pendingCampaigns.length}
               </span>
             </h2>
@@ -422,7 +483,7 @@ export default function AdminDashboard() {
                 <p className="text-lg font-bold text-zinc-900 dark:text-zinc-50 mb-1">
                   {t("noPending")}
                 </p>
-                <p className="text-sm text-zinc-500">{t("subtitle")}</p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("subtitle")}</p>
               </div>
             ) : (
               <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -457,7 +518,7 @@ export default function AdminDashboard() {
                           <div className="flex items-center gap-2">
                             <span className="text-zinc-400">{t("goal")}:</span>
                             <span className="text-zinc-900 dark:text-zinc-100">
-                              {stroopsToXlm(BigInt(c.funding_goal)).toLocaleString()} XLM
+                              {formatAmount(BigInt(c.funding_goal), locale)} XLM
                             </span>
                           </div>
                         </div>
@@ -512,7 +573,7 @@ export default function AdminDashboard() {
           <section className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 p-8 shadow-sm">
             <h3 className="text-xl font-bold mb-2">{t("updatePlatformFee")}</h3>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8 leading-relaxed">
-              Configure the percentage taken from successful campaigns to support the platform.
+              {t("feeDescription")}
             </p>
             <form onSubmit={handleUpdateFee} className="space-y-6">
               <div>
@@ -535,7 +596,7 @@ export default function AdminDashboard() {
                     {Number(feeInput) > 1000 && (
                       <p className="text-sm font-medium text-amber-600 dark:text-amber-400 flex items-center gap-2">
                         <span>⚠️</span>
-                        <span>Warning: Fee exceeds 10% (1000 bps)</span>
+                        <span>{t("feeWarning")}</span>
                       </p>
                     )}
                   </div>
@@ -546,7 +607,7 @@ export default function AdminDashboard() {
                 disabled={isUpdatingFee || Number(feeInput) > 10000 || Number(feeInput) < 0}
                 className="w-full py-4 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 rounded-2xl font-black text-sm uppercase tracking-widest hover:opacity-90 active:scale-95 transition disabled:opacity-50"
               >
-                {isUpdatingFee ? t("awaitingSignature") : t("updatePlatformFee")}
+                {isUpdatingFee ? txPhaseLabel ?? t("awaitingSignature") : t("updatePlatformFee")}
               </button>
             </form>
           </section>
@@ -557,7 +618,7 @@ export default function AdminDashboard() {
               {t("transferAdmin")}
             </h3>
             <p className="text-sm text-red-800/70 dark:text-red-400/70 mb-8 leading-relaxed">
-              Irreversible action. Move all administrative powers to a new address.
+              {t("transferAdminDesc")}
             </p>
             <form onSubmit={handleTransferAdmin} className="space-y-6">
               <div>
@@ -577,19 +638,19 @@ export default function AdminDashboard() {
                 disabled={isUpdatingAdmin}
                 className="w-full py-4 bg-red-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-red-700 active:scale-95 transition shadow-lg shadow-red-500/25 disabled:opacity-50"
               >
-                {isUpdatingAdmin ? t("awaitingSignature") : t("transferAdmin")}
+                {isUpdatingAdmin ? txPhaseLabel ?? t("awaitingSignature") : t("transferAdmin")}
               </button>
             </form>
           </section>
 
           <section className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800 p-8 shadow-sm">
-            <h3 className="text-xl font-bold mb-2">Recent Admin Activity</h3>
+            <h3 className="text-xl font-bold mb-2">{t("recentActivity")}</h3>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 leading-relaxed">
-              Last 50 moderation and governance actions performed by this admin wallet.
+              {t("recentActivityDesc")}
             </p>
             {auditLog.length === 0 ? (
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                No admin activity recorded on this device yet.
+                {t("noActivity")}
               </p>
             ) : (
               <ul className="space-y-3 max-h-80 overflow-y-auto pr-1">
@@ -625,7 +686,7 @@ export default function AdminDashboard() {
               <ShieldAlert size={20} className="text-amber-500" />
               {t("responsibility")}
             </div>
-            <p className="text-xs text-zinc-500 leading-relaxed italic">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed italic">
               {t("responsibilityText")}
             </p>
           </div>
@@ -637,9 +698,9 @@ export default function AdminDashboard() {
         <div className="flex items-center justify-between px-2 mb-6">
           <h2 className="text-2xl font-bold flex items-center gap-3">
             <Flag size={22} className="text-red-500" />
-            Abuse Reports
-            <span className="text-sm font-bold px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500">
-              {reports.filter((r) => r.status === 'pending').length} pending
+            {t("abuseReports")}
+            <span className="text-sm font-bold px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-300">
+              {t("pendingReports", { count: reports.filter((r: CampaignReport) => r.status === "pending").length })}
             </span>
           </h2>
         </div>
@@ -648,25 +709,21 @@ export default function AdminDashboard() {
           {reports.length === 0 ? (
             <div className="p-16 text-center">
               <Flag size={32} className="mx-auto text-zinc-300 mb-4" />
-              <p className="text-zinc-500 font-medium">No reports yet</p>
+              <p className="text-zinc-500 font-medium">{t("noReports")}</p>
             </div>
           ) : (
             <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {reports.map((report) => (
-                <div key={report.id} className={`p-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4 ${
-                  report.status === 'reviewed' ? 'opacity-50' : ''
-                }`}>
+                <div key={report.id} className={`p-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4 ${report.status === 'reviewed' ? 'opacity-50' : ''
+                  }`}>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
+                      {/* red-400 on red-900/30 is ~2.6:1; red-300 gives ~4.8:1 — meets WCAG AA */}
+                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
                         {REPORT_REASON_LABELS[report.reason]}
                       </span>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                        report.status === 'pending'
-                          ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'
-                      }`}>
-                        {report.status}
+                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-300">
+                        {report.status === "pending" ? t("pending") : t("reviewed")}
                       </span>
                     </div>
                     <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
@@ -677,9 +734,9 @@ export default function AdminDashboard() {
                     )}
                     <p className="text-xs text-zinc-400">
                       {report.reporterAddress
-                        ? `By ${report.reporterAddress.slice(0, 8)}...${report.reporterAddress.slice(-6)}`
-                        : 'Anonymous'}
-                      {' · '}
+                        ? t("reportBy", { address: `${report.reporterAddress.slice(0, 8)}...${report.reporterAddress.slice(-6)}` })
+                        : t("anonymous")}
+                      {" · "}
                       {new Date(report.timestamp).toLocaleString()}
                     </p>
                   </div>
@@ -688,7 +745,7 @@ export default function AdminDashboard() {
                       href={`/causes/${report.campaignId}`}
                       className="inline-flex items-center gap-1.5 px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
                     >
-                      View <ExternalLink size={12} />
+                      {t("view")} <ExternalLink size={12} />
                     </Link>
                     {report.status === 'pending' && (
                       <button
@@ -696,7 +753,7 @@ export default function AdminDashboard() {
                         onClick={() => handleMarkReportReviewed(report.id)}
                         className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-500 text-white rounded-xl text-sm font-medium hover:bg-green-600 transition"
                       >
-                        <CheckCircle size={14} /> Reviewed
+                        <CheckCircle size={14} /> {t("reviewed")}
                       </button>
                     )}
                   </div>
@@ -716,6 +773,34 @@ export default function AdminDashboard() {
         title={t("reject")}
         confirmLabel={t("reject")}
       />
+      <TransferAdminModal
+        newAdminAddress={newAdminInput}
+        isOpen={isTransferModalOpen}
+        isTransferring={isUpdatingAdmin}
+        onConfirm={executeTransferAdmin}
+        onClose={() => setIsTransferModalOpen(false)}
+        title={t("confirmTransferTitle")}
+        body={t("confirmTransferBody")}
+        confirmLabel={t("typeConfirm")}
+        typeConfirmPlaceholder="CONFIRM"
+        cancelLabel={t("cancel")}
+        confirmButtonLabel={t("confirmTransfer")}
+      />
+      <TransferAdminModal
+        isOpen={isFeeConfirmModalOpen}
+        isTransferring={isUpdatingFee}
+        onConfirm={handleConfirmFeeUpdate}
+        onClose={() => {
+          setIsFeeConfirmModalOpen(false);
+          setPendingFee(null);
+        }}
+        title={t("confirmHighFeeTitle")}
+        body={t("confirmHighFeeBody")}
+        confirmLabel={t("confirmFeeContinue")}
+        typeConfirmPlaceholder="CONFIRM"
+        cancelLabel={t("cancel")}
+        confirmButtonLabel={t("updateFee")}
+      />
     </div>
   );
 }
@@ -734,7 +819,7 @@ function StatsCard({
       <div className="size-12 rounded-2xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform" aria-hidden="true">
         {icon}
       </div>
-      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 dark:text-zinc-300 mb-2 block">
+      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 dark:text-zinc-200 mb-2 block">
         {label}
       </span>
       <span className="text-2xl font-black text-zinc-900 dark:text-zinc-50">{value}</span>

@@ -84,7 +84,14 @@ export default function Footer() {
 
         <div className="mt-10 flex flex-col gap-2 border-t border-black/5 pt-6 text-sm text-zinc-500 dark:border-white/10 dark:text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
           <p>{t("rights", { year })}</p>
-          <p>{t("builtWith")}</p>
+          <p className="flex items-center gap-3">
+            <span>{t("builtWith")}</span>
+            {process.env.NEXT_PUBLIC_APP_VERSION && (
+              <span className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                v{process.env.NEXT_PUBLIC_APP_VERSION}
+              </span>
+            )}
+          </p>
         </div>
       </div>
     </footer>

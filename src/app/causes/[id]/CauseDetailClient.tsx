@@ -24,16 +24,10 @@ import {
   getContribution,
   claimRefund,
 } from "../../../lib/contractClient";
-import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from "../../../types";
+import type { TransactionLifecyclePhase } from "../../../lib/contractClient";
+import { Campaign, Vote, CATEGORY_LABELS, formatStroopsAsXlm } from "../../../types";
 import { parseContractError } from "../../../utils/contractErrors";
-
-function formatDate(ts: number) {
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  }).format(new Date(ts * 1000));
-}
+import { formatXlm, formatDate as fmtDate } from "../../../lib/formatters";
 
 export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
@@ -47,6 +41,8 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const [voteCounts, setVoteCounts] = useState({ upvotes: 0, downvotes: 0, totalVotes: 0 });
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const { showError, showSuccess, showWarning } = useToast();
+  const locale = typeof navigator !== 'undefined' ? navigator.language : 'en';
+  const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
 
   // Quorum / threshold state
   const [minVotesQuorum, setMinVotesQuorum] = useState<number | undefined>(undefined);
@@ -130,8 +126,11 @@ export default function CauseDetailClient({ id }: { id: string }) {
       return;
     }
     setIsVoting(true);
+    setTxPhase(null);
     try {
-      const txHash = await voteOnCampaign(campaignId, userWalletAddress, voteType === "upvote");
+      const txHash = await voteOnCampaign(campaignId, userWalletAddress, voteType === "upvote", {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       const newVote: Vote = {
         causeId: String(campaignId),
         voter: userWalletAddress,
@@ -151,27 +150,35 @@ export default function CauseDetailClient({ id }: { id: string }) {
       showError(parseContractError(error));
     } finally {
       setIsVoting(false);
+      setTxPhase(null);
     }
   };
 
   const handleVerifyWithVotes = async () => {
     setIsVerifying(true);
+    setTxPhase(null);
     try {
-      await verifyCampaignWithVotes(Number(id));
+      await verifyCampaignWithVotes(Number(id), {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       showSuccess("Campaign verified successfully via community vote!");
       refetch();
     } catch (error) {
       showError(parseContractError(error));
     } finally {
       setIsVerifying(false);
+      setTxPhase(null);
     }
   };
 
   const handleClaimRefund = async () => {
     if (!userWalletAddress || !campaign) return;
     setIsClaimingRefund(true);
+    setTxPhase(null);
     try {
-      const txHash = await claimRefund(campaign.id, userWalletAddress);
+      const txHash = await claimRefund(campaign.id, userWalletAddress, {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       setRefundTxHash(txHash);
       setRefundableAmount(BigInt(0));
       showSuccess("Refund claimed successfully!");
@@ -185,6 +192,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
       }
     } finally {
       setIsClaimingRefund(false);
+      setTxPhase(null);
     }
   };
 
@@ -236,8 +244,10 @@ export default function CauseDetailClient({ id }: { id: string }) {
     );
   }
 
-  const raised = stroopsToXlm(campaign.amount_raised);
-  const goal = stroopsToXlm(campaign.funding_goal);
+  const raisedStr = formatStroopsAsXlm(campaign.amount_raised, { maximumFractionDigits: 7 });
+  const goalStr = formatStroopsAsXlm(campaign.funding_goal, { maximumFractionDigits: 7 });
+  const raised = parseFloat(raisedStr);
+  const goal = parseFloat(goalStr);
   const fundingPct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
 
   const approvalRate =
@@ -252,7 +262,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
     campaign.is_cancelled ||
     (now > campaign.deadline && campaign.amount_raised < campaign.funding_goal);
 
-  const refundableXlm = stroopsToXlm(refundableAmount);
+  const refundableXlm = parseFloat(formatStroopsAsXlm(refundableAmount, { maximumFractionDigits: 7 })) || 0;
 
   return (
     <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
@@ -316,7 +326,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
               </div>
               <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700 text-center">
                 <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-                  {raised.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  {formatXlm(raised, locale)}
                 </div>
                 <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">XLM Raised</div>
               </div>
@@ -329,7 +339,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
               </h2>
               <DeadlineCountdown deadline={campaign.deadline} />
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
-                Ends {formatDate(campaign.deadline)}
+                Ends {fmtDate(campaign.deadline, locale)}
               </p>
             </div>
 
@@ -374,7 +384,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                     <p className="text-sm text-zinc-700 dark:text-zinc-300">
                       Your refundable contribution:{" "}
                       <span className="font-semibold">
-                        {refundableXlm.toLocaleString(undefined, { maximumFractionDigits: 4 })} XLM
+                        {formatXlm(refundableXlm, locale)} XLM
                       </span>
                     </p>
                     <button
@@ -382,7 +392,13 @@ export default function CauseDetailClient({ id }: { id: string }) {
                       disabled={isClaimingRefund}
                       className="w-full min-h-[44px] py-2 px-4 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white font-semibold rounded-xl transition-colors text-sm"
                     >
-                      {isClaimingRefund ? "Processing…" : "Claim Refund"}
+                      {isClaimingRefund
+                        ? txPhase === "signing"
+                          ? "Signing…"
+                          : txPhase === "confirming"
+                            ? "Confirming…"
+                            : "Processing…"
+                        : "Claim Refund"}
                     </button>
                   </div>
                 ) : (
@@ -450,7 +466,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                     {campaign.creator.slice(0, 10)}...{campaign.creator.slice(-6)}
                   </p>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Deadline: {formatDate(campaign.deadline)}
+                    Deadline: {fmtDate(campaign.deadline, locale)}
                   </p>
                 </div>
               </div>

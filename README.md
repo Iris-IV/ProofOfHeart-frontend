@@ -25,7 +25,7 @@ ProofOfHeart empowers everyday people to rally behind the causes they believe in
 | **Styling**    | [Tailwind CSS v4](https://tailwindcss.com/)    |
 | **Animations** | [Framer Motion](https://motion.dev/)           |
 | **Linting**    | [ESLint 9](https://eslint.org/)                |
-| **Runtime**    | Node.js (v20+)                                 |
+| **Runtime**    | Node.js (v22+)                                 |
 
 ## 🏗 Architecture
 
@@ -41,18 +41,6 @@ The project follows the standard **Next.js App Router** architecture:
 
 - Campaign exploration and detail pages backed by the Soroban contract service layer.
 - Wallet-aware creator and contributor actions including withdrawal, refunds, and admin verification.
-- Wallet dashboard contribution history with per-campaign status, claimable refund/revenue actions, and Stellar explorer transaction links.
-- Revenue sharing support for eligible Educational Startup campaigns:
-  creator dashboard deposit flow, contributor claim flow, revenue pool display, and transparent pro-rata breakdowns.
-- Admin dashboard at `/admin` with wallet-gated access, pending campaign verification, platform fee updates, admin transfer, and contract-level stats.
-- Revenue sharing support for eligible Educational Startup campaigns:
-  creator dashboard deposit flow, contributor claim flow, revenue pool display, and transparent pro-rata breakdowns.
-- Admin dashboard at `/admin` with wallet-gated access, pending campaign verification, platform fee updates, admin transfer, and contract-level stats.
-
-## ✨ Current Frontend Features
-
-- Campaign exploration and detail pages backed by the Soroban contract service layer.
-- Wallet-aware creator and contributor actions including withdrawal, refunds, and admin verification.
 - Platform fee transparency across contribution, withdrawal, and cause detail views, with a 3% fallback until the `get_platform_fee` getter is available on-chain.
 - Wallet dashboard contribution history with per-campaign status, claimable refund/revenue actions, and Stellar explorer transaction links.
 - Revenue sharing support for eligible Educational Startup campaigns:
@@ -63,7 +51,7 @@ The project follows the standard **Next.js App Router** architecture:
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (Version 20 or higher)
+- [Node.js](https://nodejs.org/) (Version 22 or higher)
 - [npm](https://www.npmjs.com/)
 
 ### Installation
@@ -104,7 +92,61 @@ NEXT_PUBLIC_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
 NEXT_PUBLIC_CREATOR_EMAIL_WEBHOOK_URL=
 ```
 
+`NEXT_PUBLIC_API_URL` is the base URL for the off-chain service layer used by campaign comments, updates, reports, and wallet transaction history.
+
+Expected endpoints under that base URL:
+
+- `GET /campaigns/:campaignId/updates`
+- `POST /campaigns/:campaignId/updates`
+- `GET /campaigns/:campaignId/comments`
+- `POST /campaigns/:campaignId/comments`
+- `POST /campaigns/:campaignId/comments/:commentId/pin`
+- `POST /campaigns/:campaignId/comments/:commentId/report`
+- `POST /campaign-reports`
+- `PATCH /campaign-reports`
+- `POST /wallet-transactions`
+
+Authenticated off-chain mutations send wallet signatures with:
+
+- `X-Wallet-Address`
+- `X-Request-Signature`
+- `X-Request-Timestamp`
+- `X-Request-Purpose`
+
+The client retries transient failures and falls back to the existing mock/local stores when `NEXT_PUBLIC_API_URL` is not set.
+
+## 🚀 Mainnet Launch Checklist
+
+Before going live on the Stellar public network, ensure the following production-readiness items are complete:
+
+### Smart Contract
+- [ ] `get_platform_fee` getter deployed on mainnet (remove the 3% hardcoded fallback)
+- [ ] Contract address and network passphrase updated to mainnet values in `.env.production`
+- [ ] Full audit of Soroban contract completed and findings addressed
+- [ ] Emergency pause / admin-transfer mechanisms tested on mainnet
+
+### Frontend
+- [ ] `NEXT_PUBLIC_NETWORK_PASSPHRASE` set to `Public Global Stellar Network ; September 2015`
+- [ ] `NEXT_PUBLIC_RPC_URL` pointed at a production Horizon / Soroban RPC endpoint
+- [ ] `NEXT_PUBLIC_API_URL` pointed at the production off-chain service
+- [ ] Error boundary wired to a production error tracker (e.g. Sentry)
+- [ ] All console warnings and TypeScript errors resolved (`npm run build` passes cleanly)
+- [ ] Lighthouse / Core Web Vitals baseline captured
+
+### Security & Operations
+- [ ] Content Security Policy (CSP) headers configured for production
+- [ ] Rate limiting enabled on off-chain API endpoints
+- [ ] Secrets rotated; no `.env.local` values committed to the repository
+- [ ] Docker production image built and smoke-tested (`docker build` + `docker run`)
+- [ ] CI pipeline passes on `main` (lint → build → tests)
+
+### Communications
+- [ ] Community announcement drafted
+- [ ] Docs/README updated with mainnet contract address and explorer links
+
 ## 🤝 Contributing!
+
+Please review our [Security Policy](SECURITY.md) for information on how to responsibly disclose vulnerabilities.
 
 Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
 
@@ -146,6 +188,31 @@ To run the production container:
 ```bash
 docker run -p 3000:3000 proofofheart-frontend
 ```
+
+## 🛡 Error Reporting
+
+`src/components/ErrorBoundary.tsx` exposes an optional `onError` prop that receives a PII-safe error report (`name`, `message`, `stack`) whenever a React render error is caught.
+
+### Wiring Sentry (or another provider)
+
+1. Install the SDK: `npm install @sentry/nextjs`
+2. Follow the [Sentry Next.js setup guide](https://docs.sentry.io/platforms/javascript/guides/nextjs/) to create `sentry.client.config.ts`.
+3. Pass `onError` wherever you render `<ErrorBoundary>`:
+
+```tsx
+import * as Sentry from "@sentry/nextjs";
+import ErrorBoundary from "@/components/ErrorBoundary";
+
+<ErrorBoundary
+  onError={({ name, message, stack }) =>
+    Sentry.captureException(Object.assign(new Error(message), { name, stack }))
+  }
+>
+  {children}
+</ErrorBoundary>
+```
+
+Only `error.name`, `error.message`, and `error.stack` are forwarded — no user data or wallet addresses are included by default.
 
 ## 📄 License
 

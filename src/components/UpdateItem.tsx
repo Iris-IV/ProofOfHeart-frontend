@@ -73,7 +73,6 @@ export default function UpdateItem({ update }: UpdateItemProps) {
   return (
     <article
       className="group bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-6 shadow-xs hover:shadow-md transition-all duration-300 ring-1 ring-zinc-900/5"
-      role="article"
       aria-label={`Update from ${shortenedAuthor}`}
     >
       <div className="flex items-start justify-between gap-4 mb-4">

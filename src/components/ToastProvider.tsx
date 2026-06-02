@@ -117,8 +117,6 @@ function Toast({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: string)
 
   return (
     <div
-      role={isError ? "alert" : "status"}
-      aria-live={isError ? "assertive" : "polite"}
       className={`
         flex items-start gap-3 w-full max-w-sm rounded-xl border px-4 py-3 shadow-lg
         transition-all duration-300 ease-in-out
@@ -138,6 +136,7 @@ function Toast({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: string)
 
       {/* Dismiss */}
       <button
+        type="button"
         onClick={handleDismiss}
         aria-label="Dismiss notification"
         className="shrink-0 opacity-60 hover:opacity-100 transition-opacity text-lg leading-none mt-0.5"
@@ -161,9 +160,15 @@ function ToastContainer({
 }) {
   if (toasts.length === 0) return null;
 
+  const hasError = toasts.some((t) => t.type === "error");
+
   return (
     <div
+      aria-live={hasError ? "assertive" : "polite"}
+      aria-atomic="true"
+      aria-relevant="additions"
       aria-label="Notifications"
+      role="status"
       className="fixed bottom-[calc(env(safe-area-inset-bottom)_+_1.25rem)] left-1/2 -translate-x-1/2 w-full px-4 sm:w-auto sm:px-0 sm:left-auto sm:right-5 sm:translate-x-0 z-50 flex flex-col gap-2 items-center sm:items-end pointer-events-none"
     >
       {toasts.map((t) => (

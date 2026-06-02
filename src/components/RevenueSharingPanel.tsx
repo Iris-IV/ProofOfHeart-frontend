@@ -2,12 +2,14 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { claimRevenue, depositRevenue } from "../lib/contractClient";
-import { Campaign, basisPointsToPercentage, stroopsToXlm, xlmToStroops } from "../types";
+import { Campaign, basisPointsToPercentage, formatStroopsAsXlm, xlmToStroops } from "../types";
 import { useToast } from "./ToastProvider";
 import { useWallet } from "./WalletContext";
 import { useRevenueSharing } from "../hooks/useRevenueSharing";
 import { isSameAddress } from "../lib/stellar";
 import { parseContractError } from "../utils/contractErrors";
+import { type TransactionLifecyclePhase } from "../lib/contractClient";
+import Tooltip from "./Tooltip";
 
 interface RevenueSharingPanelProps {
   campaign: Campaign;
@@ -18,9 +20,7 @@ interface RevenueSharingPanelProps {
 }
 
 function formatXlmAmount(value: bigint): string {
-  return stroopsToXlm(value).toLocaleString(undefined, {
-    maximumFractionDigits: 4,
-  });
+  return formatStroopsAsXlm(value, { maximumFractionDigits: 4 });
 }
 
 export default function RevenueSharingPanel({
@@ -34,6 +34,7 @@ export default function RevenueSharingPanel({
   const { showError, showSuccess, showWarning } = useToast();
   const [depositAmount, setDepositAmount] = useState("");
   const [isPending, setIsPending] = useState(false);
+  const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
 
   const { revenuePool, contribution, claimed, contributorShare, claimable, isLoading, refetch } =
     useRevenueSharing(campaign.id, publicKey, campaign.amount_raised, campaign.has_revenue_sharing);
@@ -51,6 +52,15 @@ export default function RevenueSharingPanel({
     return `${formatXlmAmount(contribution)} XLM contribution × ${formatXlmAmount(revenuePool)} XLM pool ÷ ${formatXlmAmount(campaign.amount_raised)} XLM raised = ${formatXlmAmount(contributorShare)} XLM`;
   }, [campaign.amount_raised, contribution, contributorShare, revenuePool]);
 
+  const contributorSharePercentage = useMemo(() => {
+    if (campaign.amount_raised <= BigInt(0)) {
+      return "0";
+    }
+    const percentage =
+      (Number(contribution) / Number(campaign.amount_raised)) * 100;
+    return percentage.toFixed(2);
+  }, [campaign.amount_raised, contribution]);
+
   if (!campaign.has_revenue_sharing) {
     return null;
   }
@@ -58,15 +68,18 @@ export default function RevenueSharingPanel({
   const handleDeposit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const parsedAmount = Number(depositAmount);
+    const parsedAmount = parseFloat(depositAmount);
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
       showWarning("Enter a revenue amount greater than 0 XLM.");
       return;
     }
 
     setIsPending(true);
+    setTxPhase(null);
     try {
-      await depositRevenue(campaign.id, xlmToStroops(parsedAmount));
+      await depositRevenue(campaign.id, xlmToStroops(depositAmount), {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       setDepositAmount("");
       refetch();
       onActionSuccess?.();
@@ -75,6 +88,7 @@ export default function RevenueSharingPanel({
       showError(parseContractError(err));
     } finally {
       setIsPending(false);
+      setTxPhase(null);
     }
   };
 
@@ -85,8 +99,11 @@ export default function RevenueSharingPanel({
     }
 
     setIsPending(true);
+    setTxPhase(null);
     try {
-      await claimRevenue(campaign.id, publicKey);
+      await claimRevenue(campaign.id, publicKey, {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
       refetch();
       onActionSuccess?.();
       showSuccess("Revenue claimed successfully.");
@@ -94,6 +111,7 @@ export default function RevenueSharingPanel({
       showError(parseContractError(err));
     } finally {
       setIsPending(false);
+      setTxPhase(null);
     }
   };
 
@@ -118,33 +136,45 @@ export default function RevenueSharingPanel({
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl bg-white/80 p-4 ring-1 ring-zinc-200 dark:bg-zinc-900/60 dark:ring-zinc-700">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            Total Pool
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Total Pool
+            </p>
+            <Tooltip content="The total amount of revenue that has been deposited into this campaign's revenue pool available for all contributors to claim." />
+          </div>
           <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
             {formatXlmAmount(revenuePool)} XLM
           </p>
         </div>
         <div className="rounded-2xl bg-white/80 p-4 ring-1 ring-zinc-200 dark:bg-zinc-900/60 dark:ring-zinc-700">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            Your Share
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Your Share
+            </p>
+            <Tooltip content={`Your proportional share of the revenue pool based on your ${contributorSharePercentage}% contribution to the campaign. Calculated as: (your contribution ÷ total raised) × total pool.`} />
+          </div>
           <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
             {formatXlmAmount(contributorShare)} XLM
           </p>
         </div>
         <div className="rounded-2xl bg-white/80 p-4 ring-1 ring-zinc-200 dark:bg-zinc-900/60 dark:ring-zinc-700">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            Already Claimed
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Already Claimed
+            </p>
+            <Tooltip content="The total amount of revenue you have already claimed from your share. This is deducted from your total share to calculate the claimable amount." />
+          </div>
           <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
             {formatXlmAmount(claimed)} XLM
           </p>
         </div>
         <div className="rounded-2xl bg-white/80 p-4 ring-1 ring-zinc-200 dark:bg-zinc-900/60 dark:ring-zinc-700">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            Claimable Now
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Claimable Now
+            </p>
+            <Tooltip content="The amount of revenue you can claim right now. This is your share minus what you've already claimed." />
+          </div>
           <p className="mt-2 text-xl font-semibold text-emerald-700 dark:text-emerald-300">
             {formatXlmAmount(claimable)} XLM
           </p>
@@ -152,9 +182,12 @@ export default function RevenueSharingPanel({
       </div>
 
       <div className="mt-4 rounded-2xl border border-zinc-200/80 bg-white/85 p-4 dark:border-zinc-700 dark:bg-zinc-900/60">
-        <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-          Pro-rata calculation
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            Pro-rata calculation
+          </p>
+          <Tooltip content="Your revenue share is calculated proportionally based on your contribution to the campaign. The formula is: (your contribution ÷ total raised) × available pool = your claimable share." />
+        </div>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{breakdown}</p>
       </div>
 
@@ -194,7 +227,13 @@ export default function RevenueSharingPanel({
               disabled={isPending || claimable <= BigInt(0) || !hasContribution}
               className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-400"
             >
-              Claim Revenue
+              {isPending
+                ? txPhase === "signing"
+                  ? "Signing..."
+                  : txPhase === "confirming"
+                    ? "Confirming..."
+                    : "Processing..."
+                : "Claim Revenue"}
             </button>
           </div>
         </div>
@@ -225,7 +264,13 @@ export default function RevenueSharingPanel({
               disabled={isPending}
               className="inline-flex items-center justify-center rounded-full bg-zinc-900 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-400 dark:bg-emerald-600 dark:hover:bg-emerald-700"
             >
-              Deposit Revenue
+              {isPending
+                ? txPhase === "signing"
+                  ? "Signing..."
+                  : txPhase === "confirming"
+                    ? "Confirming..."
+                    : "Processing..."
+                : "Deposit Revenue"}
             </button>
           </form>
         </div>

@@ -130,7 +130,7 @@ NEXT_PUBLIC_TOKEN_CONTRACT_ID=
 
 # Soroban RPC endpoint
 # Testnet:  https://soroban-testnet.stellar.org
-# Mainnet:  https://mainnet.stellar.validationcloud.io/v1/<API_KEY>
+# Mainnet: Use server-side proxy at /api/rpc (see MAINNET_RPC_URL in server env)
 NEXT_PUBLIC_RPC_URL=https://soroban-testnet.stellar.org
 
 # "testnet" | "mainnet" | "futurenet"
@@ -377,6 +377,47 @@ RPC event streaming API when building real-time update features.
 | `("campaign_verified", campaign_id)`              | `()` or `approve_votes: u32`     | `verify_campaign` / `verify_campaign_with_votes` |
 | `("fee_updated",)`                                | `(old_fee, new_fee): (u32, u32)` | `update_platform_fee`                            |
 
+### 8.1 Event-Driven Cache Invalidation
+
+The frontend uses React Query (`@tanstack/react-query`) for data caching. When contract events occur, we perform **targeted cache invalidation** scoped by campaign id to avoid over-invalidation.
+
+**Implementation:** `src/lib/cacheInvalidation.ts`
+
+The `invalidateQueriesForEvent()` function maps each event topic to the appropriate React Query keys:
+
+| Event topic         | Query keys invalidated (scoped by campaign id)                                                                                                                         |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `contribution_made` | `['campaign', campaignId]`, `['campaignUpdates', campaignId]`, `['campaignComments', campaignId]`, `['contributions', walletAddress]` (if current user is contributor) |
+| `withdraw_funds`    | `['campaign', campaignId]`, `['campaignUpdates', campaignId]`, `['contributions', walletAddress]` (current user), `['revenueSharing', campaignId, walletAddress]`      |
+| `cancel_campaign`   | `['campaign', campaignId]`, `['campaignUpdates', campaignId]`, `['campaigns']` (list)                                                                                  |
+| `claim_refund`      | `['campaign', campaignId]`, `['contributions', walletAddress]` (if current user is contributor)                                                                        |
+| `vote_on_campaign`  | `['campaign', campaignId]`, `['campaigns']` (list)                                                                                                                     |
+| `deposit_revenue`   | `['campaign', campaignId]`, `['revenueSharing', campaignId, *]` (all users)                                                                                            |
+| `verify_campaign`   | `['campaign', campaignId]`, `['campaigns']` (list), `['admin']`                                                                                                        |
+
+**Usage in event hooks:**
+
+```ts
+import { invalidateQueriesForEvents } from "@/lib/cacheInvalidation";
+import { useQueryClient } from "@tanstack/react-query";
+import { useWallet } from "@/components/WalletContext";
+
+const queryClient = useQueryClient();
+const { publicKey: currentWalletAddress } = useWallet();
+
+// When new events are received from polling
+if (unseen.length > 0) {
+  invalidateQueriesForEvents(queryClient, unseen, currentWalletAddress);
+}
+```
+
+**Key principles:**
+
+- **Scope by campaign id:** Only invalidate queries for the specific campaign affected by the event
+- **Scope by wallet address:** Only invalidate user-specific queries (contributions, revenue) when the current user is involved
+- **Avoid broad invalidation:** Never invalidate all campaigns unless the event truly affects the entire list (e.g., verification status changes)
+- **Batch processing:** Use `invalidateQueriesForEvents()` for batches to avoid duplicate invalidations for the same campaign
+
 ---
 
 ## 9. Testing: Testnet vs Mainnet
@@ -418,7 +459,8 @@ NEXT_PUBLIC_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
 ### Mainnet (production)
 
 ```env
-NEXT_PUBLIC_RPC_URL=https://mainnet.stellar.validationcloud.io/v1/<API_KEY>
+# Use server-side proxy for mainnet to keep API keys secure
+MAINNET_RPC_URL=https://mainnet.stellar.validationcloud.io/v1/<API_KEY>
 NEXT_PUBLIC_STELLAR_NETWORK=mainnet
 NEXT_PUBLIC_NETWORK_PASSPHRASE=Public Global Stellar Network ; September 2015
 ```

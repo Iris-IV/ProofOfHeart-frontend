@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node ./scripts/validate-production-build.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "format": "prettier --write .",
@@ -19,17 +19,22 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "analyze": "ANALYZE=true next build --webpack"
+    "analyze": "ANALYZE=true next build --webpack",
+    "bundle-size": "node scripts/bundle-size-check.mjs",
+    "bundle-size:update": "node scripts/bundle-size-check.mjs --update-baseline",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "changeset publish"
   },
   "dependencies": {
     "@dmystical-coder/fundstacks-headless-sdk": "^0.2.0",
     "@stellar/freighter-api": "^6.0.1",
     "@stellar/stellar-sdk": "^15.1.0",
-    "@tanstack/react-query": "^5.100.9",
-    "framer-motion": "^12.37.0",
-    "lucide-react": "^1.14.0",
+    "@tanstack/react-query": "^5.100.14",
+    "framer-motion": "^12.40.0",
+    "lucide-react": "^1.17.0",
     "next": "^16.2.6",
-    "next-intl": "^4.11.2",
+    "next-intl": "^4.13.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-markdown": "^10.1.0",
@@ -37,8 +42,12 @@
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^0.7.0",
+    "@changesets/cli": "^2.31.0",
+    "@commitlint/cli": "^19.3.0",
+    "@commitlint/config-conventional": "^19.2.2",
     "@next/bundle-analyzer": "^16.2.6",
-    "@playwright/test": "^1.52.0",
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4.3.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
@@ -49,11 +58,12 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
-    "eslint": "^10",
+    "eslint": "^9.14.0",
     "eslint-config-next": "^16.2.6",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-unused-imports": "^4.4.1",
+    "husky": "^9.1.7",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
     "prettier": "^3.8.3",
@@ -62,9 +72,10 @@
     "typescript": "^6"
   },
   "overrides": {
-    "axios": "1.15.2",
+    "axios": "1.16.1",
     "follow-redirects": "1.16.0",
     "@swc/helpers": "0.5.21",
     "postcss": "^8.5.10"
-  }
+  },
+  "_overridesRationale": "axios and follow-redirects overrides are pinned to mitigate high-severity CVEs in transitive dependencies."
 }

@@ -1,8 +1,14 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import {
+  hasStoredTheme,
+  resolveInitialTheme,
+  writeStoredTheme,
+  type Theme,
+} from '@/lib/preferences';
 
-export type Theme = 'light' | 'dark';
+export type { Theme };
 
 interface ThemeContextType {
   theme: Theme;
@@ -13,38 +19,25 @@ interface ThemeContextType {
 export const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const [theme, setThemeState] = useState<Theme>('light');
-  const [mounted, setMounted] = useState(false);
-  const [hasExplicitChoice, setHasExplicitChoice] = useState(false);
+  const [theme, setThemeState] = useState<Theme>(() => resolveInitialTheme());
+  const [hasExplicitChoice, setHasExplicitChoice] = useState(() => hasStoredTheme());
 
-  useEffect(() => {
-    const stored = localStorage.getItem('theme');
+  const useSafeLayoutEffect = typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
 
-    if (stored === 'light' || stored === 'dark') {
-      setThemeState(stored);
-      setHasExplicitChoice(true);
-    } else {
-      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setThemeState(systemDark ? 'dark' : 'light');
-    }
-
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-
+  useSafeLayoutEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
+  }, [theme]);
 
+  useEffect(() => {
     if (hasExplicitChoice) {
-      localStorage.setItem('theme', theme);
+      writeStoredTheme(theme);
     }
-  }, [theme, mounted, hasExplicitChoice]);
+  }, [theme, hasExplicitChoice]);
 
   const setTheme = (nextTheme: Theme) => {
     setThemeState(nextTheme);

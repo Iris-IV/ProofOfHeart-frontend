@@ -1,0 +1,130 @@
+name: Bundle Size
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  bundle-size:
+    name: Bundle size budget check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.next/cache
+          key: ${{ runner.os }}-nextjs-bundle-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.ts','**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-bundle-${{ hashFiles('**/package-lock.json') }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (standalone)
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_USE_MOCKS: true
+
+      - name: Run bundle-size check
+        id: budget
+        run: node scripts/bundle-size-check.mjs
+        continue-on-error: true
+
+      - name: Read summary
+        id: summary
+        if: always()
+        run: |
+          if [ -f bundle-size-summary.json ]; then
+            echo "baseline_kb=$(jq -r '.baselineKb' bundle-size-summary.json)" >> $GITHUB_OUTPUT
+            echo "current_kb=$(jq -r '.currentKb' bundle-size-summary.json)"   >> $GITHUB_OUTPUT
+            echo "delta_kb=$(jq -r '.deltaKb' bundle-size-summary.json)"       >> $GITHUB_OUTPUT
+            echo "delta_pct=$(jq -r '.deltaPercent' bundle-size-summary.json)" >> $GITHUB_OUTPUT
+            echo "budget_kb=$(jq -r '.budgetKb' bundle-size-summary.json)"     >> $GITHUB_OUTPUT
+            echo "exceeded=$(jq -r '.exceeded' bundle-size-summary.json)"      >> $GITHUB_OUTPUT
+            echo "changed=$(jq -r '.changedChunks' bundle-size-summary.json)"  >> $GITHUB_OUTPUT
+          else
+            echo "exceeded=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post PR comment with bundle delta
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const exceeded  = '${{ steps.summary.outputs.exceeded }}' === 'true';
+            const baseline  = '${{ steps.summary.outputs.baseline_kb }}';
+            const current   = '${{ steps.summary.outputs.current_kb }}';
+            const delta     = '${{ steps.summary.outputs.delta_kb }}';
+            const deltaPct  = '${{ steps.summary.outputs.delta_pct }}';
+            const budget    = '${{ steps.summary.outputs.budget_kb }}';
+            const changed   = '${{ steps.summary.outputs.changed }}';
+
+            const icon   = exceeded ? '❌' : '✅';
+            const status = exceeded
+              ? `**BUDGET EXCEEDED** — reduce bundle or update baseline`
+              : 'Within budget';
+
+            const sign = parseFloat(delta) >= 0 ? '+' : '';
+            const body = [
+              `## ${icon} Bundle size report`,
+              '',
+              `| Metric | Value |`,
+              `|--------|-------|`,
+              `| Baseline | ${baseline} KB |`,
+              `| Current  | ${current} KB |`,
+              `| Delta    | ${sign}${delta} KB (${sign}${deltaPct}%) |`,
+              `| Budget   | ±${budget} KB |`,
+              `| Status   | ${status} |`,
+              `| Changed chunks | ${changed} |`,
+              '',
+              exceeded
+                ? '> To accept this increase, run `node scripts/bundle-size-check.mjs --update-baseline` and commit the updated `scripts/bundle-size-baseline.json`.'
+                : '',
+            ].join('\n');
+
+            const marker = '<!-- bundle-size-report -->';
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body.includes(marker));
+            const fullBody = marker + '\n' + body;
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: fullBody,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: fullBody,
+              });
+            }
+
+      - name: Fail if budget exceeded
+        if: steps.budget.outcome == 'failure'
+        run: |
+          echo "❌ Bundle size budget exceeded. See the PR comment for details."
+          exit 1

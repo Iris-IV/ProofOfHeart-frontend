@@ -1,8 +1,11 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { Bell } from 'lucide-react';
-import { useNotifications, type AppNotification } from '@/hooks/useNotifications';
+import { Bell, ExternalLink } from 'lucide-react';
+import { useNotifications } from '@/hooks/useNotifications';
+import { useWallet } from '@/components/WalletContext';
+import type { AppNotification } from '@/lib/notifications';
 
 const EVENT_ICONS: Record<AppNotification['type'], string> = {
   contribution_confirmed: '💜',
@@ -10,7 +13,9 @@ const EVENT_ICONS: Record<AppNotification['type'], string> = {
   campaign_cancelled: '❌',
   refund_available: '↩',
   revenue_deposited: '💰',
+  revenue_claimed: '💸',
   new_update: '📢',
+  campaign_verified: '✅',
 };
 
 function timeAgo(ts: number): string {
@@ -22,7 +27,8 @@ function timeAgo(ts: number): string {
 }
 
 export default function NotificationBell() {
-  const { notifications, unreadCount, markAllRead, markRead } = useNotifications();
+  const { publicKey } = useWallet();
+  const { notifications, unreadCount, markAllRead, markRead } = useNotifications(publicKey);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -45,7 +51,7 @@ export default function NotificationBell() {
   }, [open]);
 
   const handleOpen = () => {
-    setOpen((v) => !v);
+    setOpen((value) => !value);
   };
 
   return (
@@ -88,22 +94,36 @@ export default function NotificationBell() {
           <ul className="max-h-80 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800">
             {notifications.length === 0 ? (
               <li className="px-4 py-8 text-center text-sm text-zinc-400 dark:text-zinc-500">
-                No notifications yet
+                {publicKey ? 'No notifications yet' : 'Connect your wallet to see notifications'}
               </li>
             ) : (
               notifications.map((n) => (
                 <li
                   key={n.id}
-                  className={`px-4 py-3 flex items-start gap-3 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors ${!n.read ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
-                  onClick={() => markRead(n.id)}
+                  className={`px-4 py-3 flex items-start gap-3 transition-colors ${
+                    !n.read ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''
+                  }`}
                 >
                   <span className="text-lg shrink-0 mt-0.5">{EVENT_ICONS[n.type]}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-zinc-800 dark:text-zinc-200 leading-snug">{n.message}</p>
                     <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{timeAgo(n.timestamp)}</p>
+                    <Link
+                      href={n.href}
+                      onClick={() => void markRead(n.id)}
+                      className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+                    >
+                      View details
+                      <ExternalLink size={12} aria-hidden="true" />
+                    </Link>
                   </div>
                   {!n.read && (
-                    <span className="mt-1.5 shrink-0 w-2 h-2 rounded-full bg-blue-500" aria-hidden="true" />
+                    <button
+                      type="button"
+                      onClick={() => void markRead(n.id)}
+                      className="mt-1.5 shrink-0 w-2 h-2 rounded-full bg-blue-500"
+                      aria-label={`Mark notification for campaign ${n.campaignId} as read`}
+                    />
                   )}
                 </li>
               ))

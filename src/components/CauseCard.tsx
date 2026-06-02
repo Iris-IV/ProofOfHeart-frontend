@@ -1,13 +1,25 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { memo, useState } from 'react';
+import { useLocale } from 'next-intl';
 import { formatAddress } from '@/lib/formatAddress';
-import { Campaign, Vote, CATEGORY_LABELS } from '../types';
+import { formatXlm, formatShortDate } from '@/lib/formatters';
+import { getAsyncActionErrorMessage, withActionTimeout } from '@/utils/asyncAction';
+import { parseContractError } from '@/utils/contractErrors';
+import {
+  Campaign,
+  Vote,
+  CATEGORY_LABELS,
+  calculateFundingPercentage,
+  formatStroopsAsXlm,
+} from '../types';
+import AsyncButtonContent from './AsyncButtonContent';
 import CampaignStatusBadge from './CampaignStatusBadge';
 import CancelCampaignModal from './cancelCampaignModal';
 import DeadlineCountdown from './DeadlineCountdown';
 import FundingProgressBar from './FundingProgressBar';
+import { useToast } from './ToastProvider';
 import VotingComponent from './VotingComponent';
 
 interface CauseCardProps {
@@ -18,24 +30,23 @@ interface CauseCardProps {
   onClaimRefund: (campaignId: number) => Promise<void>;
   onTagClick?: (tag: string) => void;
   userVote?: Vote;
+  upvotes?: number;
+  downvotes?: number;
+  totalVotes?: number;
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
   environment: '🌱',
-  education:   '📚',
-  healthcare:  '🏥',
+  education: '📚',
+  healthcare: '🏥',
 };
 
-function formatDate(ts: number) {
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }).format(new Date(ts * 1000));
+function formatDate(ts: number, locale: string) {
+  return formatShortDate(ts, locale);
 }
 
 
-export default function CauseCard({
+function CauseCard({
   campaign,
   userWalletAddress,
   onVote,
@@ -43,16 +54,18 @@ export default function CauseCard({
   onClaimRefund,
   onTagClick,
   userVote,
+  upvotes = 0,
+  downvotes = 0,
+  totalVotes = 0,
 }: CauseCardProps) {
   const [isVoting, setIsVoting] = useState(false);
+  const locale = useLocale();
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isClaimingRefund, setIsClaimingRefund] = useState(false);
+  const { showError } = useToast();
 
-  const progressPct =
-    campaign.funding_goal > BigInt(0)
-      ? Math.min(100, Math.round((Number(campaign.amount_raised) / Number(campaign.funding_goal)) * 100))
-      : 0;
+  const progressPct = calculateFundingPercentage(campaign.amount_raised, campaign.funding_goal);
 
   const isCreator =
     !!userWalletAddress && userWalletAddress === campaign.creator;
@@ -75,7 +88,9 @@ export default function CauseCard({
   const handleVote = async (_campaignId: number, voteType: 'upvote' | 'downvote') => {
     setIsVoting(true);
     try {
-      await onVote(campaign.id, voteType);
+      await withActionTimeout(onVote(campaign.id, voteType));
+    } catch (error) {
+      showError(getAsyncActionErrorMessage(error, parseContractError));
     } finally {
       setIsVoting(false);
     }
@@ -84,8 +99,10 @@ export default function CauseCard({
   const handleCancelConfirm = async () => {
     setIsCancelling(true);
     try {
-      await onCancel(campaign.id);
+      await withActionTimeout(onCancel(campaign.id));
       setIsCancelModalOpen(false);
+    } catch (error) {
+      showError(getAsyncActionErrorMessage(error, parseContractError));
     } finally {
       setIsCancelling(false);
     }
@@ -94,14 +111,16 @@ export default function CauseCard({
   const handleClaimRefund = async () => {
     setIsClaimingRefund(true);
     try {
-      await onClaimRefund(campaign.id);
+      await withActionTimeout(onClaimRefund(campaign.id));
+    } catch (error) {
+      showError(getAsyncActionErrorMessage(error, parseContractError));
     } finally {
       setIsClaimingRefund(false);
     }
   };
 
   return (
-    <div className="flex flex-col bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 overflow-hidden hover:shadow-md transition-shadow duration-200">
+    <div className="flex h-full min-h-[640px] flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition-transform duration-200 hover:motion-safe:-translate-y-0.5 hover:border-blue-200 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-blue-800">
 
       {/* ── Cover image ── */}
       <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-700">
@@ -142,20 +161,22 @@ export default function CauseCard({
           {campaign.description}
         </p>
 
-        {/* Tags */}
-        {campaign.tags && campaign.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            {campaign.tags.map((tag) => (
-              <span
-                key={tag}
-                onClick={() => onTagClick?.(tag)}
-                className="inline-flex items-center px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-700/50 text-zinc-600 dark:text-zinc-400 text-[10px] font-medium border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
-              >
-                #{tag}
-              </span>
-            ))}
+        {/* Funding progress */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400">
+            <span><Amount value={campaign.amount_raised} maximumFractionDigits={2} /> XLM raised</span>
+            <span>{progressPct}%</span>
           </div>
-        )}
+          <div className="w-full bg-zinc-100 dark:bg-zinc-700 rounded-full h-1.5">
+            <div
+              className="bg-blue-500 h-1.5 rounded-full transition-all"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500">
+            Goal: <Amount value={campaign.funding_goal} maximumFractionDigits={2} /> XLM
+          </p>
+        </div>
 
         {/* Funding progress */}
         {campaign.funding_goal > BigInt(0) && (
@@ -180,7 +201,7 @@ export default function CauseCard({
 
         {/* Created date */}
         <p className="text-xs text-zinc-400 dark:text-zinc-500">
-          Created {formatDate(campaign.created_at)}
+          Created {formatDate(campaign.created_at, locale)}
         </p>
       </div>
 
@@ -195,6 +216,9 @@ export default function CauseCard({
             isVoting={isVoting}
             onVote={handleVote}
             userWalletAddress={userWalletAddress}
+            upvotes={upvotes}
+            downvotes={downvotes}
+            totalVotes={totalVotes}
           />
         )}
 
@@ -213,14 +237,12 @@ export default function CauseCard({
             disabled={isClaimingRefund}
             className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
           >
-            {isClaimingRefund ? (
-              <>
-                <span className="inline-block motion-safe:animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
-                Claiming Refund…
-              </>
-            ) : (
-              '↩ Claim Refund'
-            )}
+            <AsyncButtonContent
+              isPending={isClaimingRefund}
+              idleLabel="↩ Claim Refund"
+              pendingLabel="Claiming refund..."
+              spinnerClassName="h-3.5 w-3.5"
+            />
           </button>
         )}
 
@@ -247,3 +269,30 @@ export default function CauseCard({
     </div>
   );
 }
+
+function causeCardPropsAreEqual(prev: CauseCardProps, next: CauseCardProps): boolean {
+  const prevCampaign = prev.campaign;
+  const nextCampaign = next.campaign;
+
+  return (
+    prev.userWalletAddress === next.userWalletAddress &&
+    prev.userVote === next.userVote &&
+    prev.upvotes === next.upvotes &&
+    prev.downvotes === next.downvotes &&
+    prev.totalVotes === next.totalVotes &&
+    prev.onVote === next.onVote &&
+    prev.onCancel === next.onCancel &&
+    prev.onClaimRefund === next.onClaimRefund &&
+    prev.onTagClick === next.onTagClick &&
+    prevCampaign.id === nextCampaign.id &&
+    prevCampaign.status === nextCampaign.status &&
+    prevCampaign.title === nextCampaign.title &&
+    prevCampaign.amount_raised === nextCampaign.amount_raised &&
+    prevCampaign.funding_goal === nextCampaign.funding_goal &&
+    prevCampaign.deadline === nextCampaign.deadline &&
+    prevCampaign.funds_withdrawn === nextCampaign.funds_withdrawn &&
+    prevCampaign.cover_image_url === nextCampaign.cover_image_url
+  );
+}
+
+export default memo(CauseCard, causeCardPropsAreEqual);
