@@ -88,9 +88,18 @@ export function getContractErrorCode(error: unknown): ContractError | null {
     return error.code;
   }
 
+  let message = "";
   if (error instanceof Error) {
+    message = error.message;
+  } else if (typeof error === "string") {
+    message = error;
+  } else if (typeof error === "object" && error !== null) {
+    message = (error as any).message || (error as any).error?.message || JSON.stringify(error);
+  }
+
+  if (message) {
     // Soroban SDK typically formats contract errors as "Error(Contract, #N)"
-    const sorobanMatch = error.message.match(/Error\s*\(\s*Contract\s*,\s*#(\d+)\s*\)/i);
+    const sorobanMatch = message.match(/Error\s*\(\s*Contract\s*,\s*#(\d+)\s*\)/i);
     if (sorobanMatch) {
       const code = parseInt(sorobanMatch[1], 10);
       if (code in ContractError) {
@@ -99,7 +108,7 @@ export function getContractErrorCode(error: unknown): ContractError | null {
     }
 
     // Alternative formats: "contractError: N" or "contract error N"
-    const codeMatch = error.message.match(/contract\s*[Ee]rror[:\s]+(\d+)/);
+    const codeMatch = message.match(/contract\s*[Ee]rror[:\s]+(\d+)/i);
     if (codeMatch) {
       const code = parseInt(codeMatch[1], 10);
       if (code in ContractError) {
@@ -140,11 +149,18 @@ export function parseContractError(error: unknown): string {
     return errorTranslationKeys[code] ?? FALLBACK_KEY;
   }
 
+  let message = "";
   if (error instanceof Error) {
-    // Return the raw message if it looks human-readable (not a stack trace)
-    if (error.message && !error.message.includes("at ") && error.message.length < 200) {
-      return error.message;
-    }
+    message = error.message;
+  } else if (typeof error === "string") {
+    message = error;
+  } else if (typeof error === "object" && error !== null) {
+    message = (error as any).message || (error as any).error?.message || "";
+  }
+
+  // Return the raw message if it looks human-readable (not a stack trace)
+  if (message && !message.includes("at ") && message.length < 200) {
+    return message;
   }
 
   return FALLBACK_KEY;

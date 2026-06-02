@@ -10,7 +10,7 @@ import {
 } from "./observability";
 import { assertProductionContractConfig } from "./runtimeEnv";
 import { appendWalletTransaction } from "./transactionLog";
-import { Campaign, Category, deriveStatus, CampaignStatus } from "../types";
+import { Campaign, Category, deriveStatus, CampaignStatus, Milestone } from "../types";
 import { parseContractError, getContractErrorCode, ContractError } from "../utils/contractErrors";
 import {
   validateStellarAddress,
@@ -272,11 +272,33 @@ function decodeCampaign(val: StellarSdk.xdr.ScVal): Campaign {
   const is_cancelled = fields["is_cancelled"].b();
   const is_verified = fields["is_verified"].b();
 
+  let rawDescription = fields["description"].str().toString();
+  let cover_image_url: string | undefined = undefined;
+  let milestones: any[] | undefined = undefined;
+  
+  const EXT_MARKER = "\n\n===POH_EXT===\n";
+  const extIndex = rawDescription.indexOf(EXT_MARKER);
+  if (extIndex !== -1) {
+    try {
+      const extData = JSON.parse(rawDescription.substring(extIndex + EXT_MARKER.length));
+      cover_image_url = extData.coverImageUrl;
+      if (extData.milestones && Array.isArray(extData.milestones)) {
+        milestones = extData.milestones.map((m: any) => ({
+          targetAmount: BigInt(m.targetAmount),
+          description: m.description
+        }));
+      }
+    } catch (e) {
+      console.warn("Failed to parse campaign extension data", e);
+    }
+    rawDescription = rawDescription.substring(0, extIndex);
+  }
+
   return {
     id: fields["id"].u32(),
     creator: StellarSdk.Address.fromScVal(fields["creator"]).toString(),
     title: fields["title"].str().toString(),
-    description: fields["description"].str().toString(),
+    description: rawDescription,
     funding_goal,
     deadline,
     amount_raised,
@@ -298,6 +320,8 @@ function decodeCampaign(val: StellarSdk.xdr.ScVal): Campaign {
     has_revenue_sharing: fields["has_revenue_sharing"].b(),
     revenue_share_percentage: fields["revenue_share_percentage"].u32(),
     tags: fields["tags"] ? (fields["tags"] as any).vec().map((v: any) => v.str().toString()) : [],
+    cover_image_url,
+    milestones,
   };
 }
 
@@ -335,6 +359,11 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     created_at: Math.floor(Date.now() / 1000),
     revenue_share_percentage: 0,
     tags: ["water", "rural", "health"],
+    milestones: [
+      { targetAmount: BigInt(25_000_000_000), description: "First 100 families connected" },
+      { targetAmount: BigInt(50_000_000_000), description: "Next 200 families connected" },
+      { targetAmount: BigInt(75_000_000_000), description: "Final 200 families connected" },
+    ],
   }),
   makeMockCampaign({
     id: 2,
@@ -571,13 +600,22 @@ export async function createCampaign(
   hasRevenueSharing: boolean,
   revenueSharePercentage: number,
   tags: string[],
-  options?: TransactionLifecycleOptions,
+  options?: TransactionLifecycleOptions & { coverImageUrl?: string; milestones?: Milestone[] },
 ): Promise<string> {
   validateStellarAddress(creator);
   validateFundingGoal(fundingGoal);
   validateDuration(durationDays);
   if (hasRevenueSharing) {
     validateRevenueShare(revenueSharePercentage);
+  }
+
+  let finalDescription = description;
+  if (options?.coverImageUrl || (options?.milestones && options.milestones.length > 0)) {
+    const ext = {
+      coverImageUrl: options.coverImageUrl,
+      milestones: options.milestones?.map(m => ({ targetAmount: m.targetAmount.toString(), description: m.description }))
+    };
+    finalDescription = `${description}\n\n===POH_EXT===\n${JSON.stringify(ext)}`;
   }
 
   if (USE_MOCKS) {
@@ -587,7 +625,7 @@ export async function createCampaign(
         id: MOCK_CAMPAIGNS.length + 1,
         creator,
         title,
-        description,
+        description: finalDescription,
         funding_goal: fundingGoal,
         deadline: Math.floor(Date.now() / 1000) + durationDays * 86400,
         amount_raised: BigInt(0),
@@ -600,6 +638,8 @@ export async function createCampaign(
         has_revenue_sharing: hasRevenueSharing,
         revenue_share_percentage: revenueSharePercentage,
         tags,
+        cover_image_url: options?.coverImageUrl,
+        milestones: options?.milestones,
       }),
     );
     return txHash;
@@ -609,7 +649,7 @@ export async function createCampaign(
     "create_campaign",
     new StellarSdk.Address(creator).toScVal(),
     StellarSdk.nativeToScVal(title, { type: "string" }),
-    StellarSdk.nativeToScVal(description, { type: "string" }),
+    StellarSdk.nativeToScVal(finalDescription, { type: "string" }),
     StellarSdk.nativeToScVal(fundingGoal, { type: "i128" }),
     StellarSdk.nativeToScVal(durationDays, { type: "u64" }),
     StellarSdk.nativeToScVal(category, { type: "u32" }),

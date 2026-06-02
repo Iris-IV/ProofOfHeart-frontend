@@ -8,6 +8,7 @@ import { Spinner, DashboardSkeleton } from "@/components/Skeleton";
 import { useWallet } from "@/components/WalletContext";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { useStellarBalance } from "@/hooks/useStellarBalance";
+import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
 import { isSameAddress } from "@/lib/stellar";
 import { explorerTxUrl } from "@/utils/explorer";
 
@@ -21,6 +22,12 @@ export default function DashboardPage() {
     error: balanceQueryError,
   } = useStellarBalance(publicKey);
   const balanceError = balanceQueryError ? t("balanceFetchError") : null;
+  const { savedIds } = useSavedCampaigns();
+
+  const savedCampaigns = useMemo(
+    () => campaigns.filter((c) => savedIds.includes(c.id)),
+    [campaigns, savedIds]
+  );
 
   const mockVotes = useMemo(
     () => [
@@ -89,6 +96,28 @@ export default function DashboardPage() {
           <span className="text-red-500">{balanceError}</span>
         ) : (
           <span className="text-zinc-900 dark:text-zinc-50 font-mono">{balance} XLM</span>
+        )}
+      </section>
+
+      <section className="mb-8">
+        <h2 className="text-xl font-semibold mb-2">Saved Campaigns</h2>
+        {savedCampaigns.length === 0 ? (
+          <span className="text-zinc-500 dark:text-zinc-400">You haven't saved any campaigns yet.</span>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {savedCampaigns.map((campaign) => (
+              <Link
+                key={campaign.id}
+                href={`/causes/${campaign.id}`}
+                className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
+              >
+                <div className="font-medium text-zinc-900 dark:text-zinc-50">{campaign.title}</div>
+                <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2 break-words">
+                  {campaign.description}
+                </div>
+              </Link>
+            ))}
+          </div>
         )}
       </section>
 

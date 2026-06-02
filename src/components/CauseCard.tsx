@@ -21,6 +21,7 @@ import DeadlineCountdown from './DeadlineCountdown';
 import FundingProgressBar from './FundingProgressBar';
 import { useToast } from './ToastProvider';
 import VotingComponent from './VotingComponent';
+import { useSavedCampaigns } from '@/hooks/useSavedCampaigns';
 
 interface CauseCardProps {
   campaign: Campaign;
@@ -63,7 +64,8 @@ function CauseCard({
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isClaimingRefund, setIsClaimingRefund] = useState(false);
-  const { showError } = useToast();
+  const { showError, showWarning } = useToast();
+  const { isSaved, toggleSaved } = useSavedCampaigns();
 
   const progressPct = calculateFundingPercentage(campaign.amount_raised, campaign.funding_goal);
 
@@ -138,6 +140,32 @@ function CauseCard({
             {categoryIcon || '💡'}
           </div>
         )}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!userWalletAddress) {
+              showWarning('Please connect your wallet to save campaigns.');
+              return;
+            }
+            toggleSaved(campaign.id);
+          }}
+          className="absolute top-2 right-2 p-2 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm rounded-full text-zinc-700 dark:text-zinc-200 hover:bg-white dark:hover:bg-zinc-800 transition-colors shadow-sm"
+          title={isSaved(campaign.id) ? "Remove from saved" : "Save campaign"}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill={isSaved(campaign.id) ? "currentColor" : "none"}
+            stroke="currentColor"
+            className={`w-5 h-5 ${isSaved(campaign.id) ? 'text-blue-500' : ''}`}
+            strokeWidth={1.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+          </svg>
+        </button>
       </div>
 
       {/* ── Card body ── */}
@@ -152,12 +180,12 @@ function CauseCard({
         </div>
 
         {/* Title */}
-        <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 leading-snug line-clamp-2">
+        <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 leading-snug line-clamp-2 break-words h-[3rem]">
           {campaign.title}
         </h3>
 
         {/* Description */}
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3 leading-relaxed">
+        <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3 leading-relaxed break-words h-[4.5rem]">
           {campaign.description}
         </p>
 
@@ -183,6 +211,7 @@ function CauseCard({
           <FundingProgressBar
             amountRaised={campaign.amount_raised}
             fundingGoal={campaign.funding_goal}
+            milestones={campaign.milestones}
           />
         )}
 
