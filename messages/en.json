@@ -422,5 +422,25 @@
     "noContractErrors": "No contract errors in the current window.",
     "recentEvents": "Recent events",
     "noRecentEvents": "No recent events recorded yet."
+  },
+  "Onboarding": {
+    "tourLabel": "Welcome tour",
+    "skip": "Skip",
+    "back": "Back",
+    "next": "Next",
+    "done": "Get started",
+    "stepProgress": "Step {current} of {total}",
+    "step_connect_icon": "🔗",
+    "step_connect_title": "Connect your wallet",
+    "step_connect_body": "Click "Connect Wallet" in the top-right corner. ProofOfHeart uses the Freighter extension to sign transactions securely — your keys never leave your device.",
+    "step_chooseCause_icon": "🌟",
+    "step_chooseCause_title": "Choose a cause",
+    "step_chooseCause_body": "Browse community-validated causes on the Explore page. Every cause is reviewed by the community and recorded on the Stellar blockchain.",
+    "step_contribute_icon": "💛",
+    "step_contribute_title": "Contribute",
+    "step_contribute_body": "Open a cause and click "Fund This Cause". Enter an XLM amount and review the breakdown — contribution, network fee, and platform fee — before signing.",
+    "step_confirm_icon": "✅",
+    "step_confirm_title": "Confirm & track",
+    "step_confirm_body": "Freighter will ask you to sign the transaction. Once confirmed on-chain, your contribution appears in your Dashboard with a link to the Stellar explorer."
   }
 }
