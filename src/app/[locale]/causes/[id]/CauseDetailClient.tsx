@@ -24,6 +24,7 @@ import UpdatesSection from '@/components/UpdatesSection';
 import { useToast } from '@/components/ToastProvider';
 import VotingComponent from '@/components/VotingComponent';
 import { useWallet } from '@/components/WalletContext';
+import { useSavedCampaigns } from '@/hooks/useSavedCampaigns';
 import { useLiveCampaignFunding } from '@/hooks/useLiveCampaignFunding';
 import { useLiveVoteTallies } from '@/hooks/useLiveVoteTallies';
 import { usePlatformFee } from '@/hooks/usePlatformFee';
@@ -65,7 +66,9 @@ export default function CauseDetailClient({ id }: { id: string }) {
   });
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const { showError, showSuccess, showWarning } = useToast();
+  const { isSaved, toggleSaved } = useSavedCampaigns();
 
   // Quorum / threshold state
   const [minVotesQuorum, setMinVotesQuorum] = useState<number | undefined>(undefined);
@@ -301,23 +304,73 @@ export default function CauseDetailClient({ id }: { id: string }) {
                   />
                 </div>
               )}
-              <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4 leading-tight">
+              <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4 leading-tight break-words">
                 {campaign.title}
               </h1>
-              <SafeMarkdown className="prose prose-zinc dark:prose-invert max-w-none">
-                {campaign.description}
-              </SafeMarkdown>
+              <div className="relative">
+                <div className={`overflow-hidden transition-all duration-300 ${!isDescriptionExpanded ? 'max-h-[250px] relative' : ''}`}>
+                  <SafeMarkdown className="prose prose-zinc dark:prose-invert max-w-none break-words">
+                    {campaign.description}
+                  </SafeMarkdown>
+                  {!isDescriptionExpanded && (
+                    <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white dark:from-zinc-800 to-transparent pointer-events-none" />
+                  )}
+                </div>
+                {campaign.description && campaign.description.length > 500 && (
+                  <div className="mt-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                      className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-3 py-1 transition-colors"
+                      aria-expanded={isDescriptionExpanded}
+                      aria-controls="campaign-description"
+                    >
+                      {isDescriptionExpanded ? 'Show less' : 'Read more'}
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* Share + Report toolbar */}
               <div className="flex items-center justify-between flex-wrap gap-3 pt-4 mt-4 border-t border-zinc-100 dark:border-zinc-700">
-                <ShareButtons
-                  url={
-                    typeof window !== "undefined"
-                      ? window.location.href
-                      : `https://proofofheart.org/causes/${campaign.id}`
-                  }
-                  title={campaign.title}
-                />
+                <div className="flex items-center gap-4">
+                  <ShareButtons
+                    url={
+                      typeof window !== "undefined"
+                        ? window.location.href
+                        : `https://proofofheart.org/causes/${campaign.id}`
+                    }
+                    title={campaign.title}
+                  />
+                  <button
+                    onClick={() => {
+                      if (!userWalletAddress) {
+                        showWarning('Please connect your wallet to save campaigns.');
+                        return;
+                      }
+                      toggleSaved(campaign.id);
+                    }}
+                    className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
+                      isSaved(campaign.id)
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                    }`}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill={isSaved(campaign.id) ? "currentColor" : "none"}
+                      stroke="currentColor"
+                      className="w-4 h-4"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                    </svg>
+                    {isSaved(campaign.id) ? 'Saved' : 'Save'}
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => setIsReportModalOpen(true)}
