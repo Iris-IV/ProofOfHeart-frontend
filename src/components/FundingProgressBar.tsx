@@ -35,17 +35,30 @@ export default function FundingProgressBar({ amountRaised, fundingGoal }: Fundin
   const displayRaised = formatAmount(amountRaised, locale, { maximumFractionDigits: 2 });
   const displayGoal = formatAmount(fundingGoal, locale, { maximumFractionDigits: 2 });
   const roundedPct = Math.round(displayPct);
+  const fundingLabelId = useId();
+  const fundingValueText = `${roundedPct}% funded, ${displayRaised} of ${displayGoal} XLM`;
 
   return (
     <div>
       <div className="flex justify-between text-xs text-zinc-600 dark:text-zinc-400 mb-1">
-        <span className="font-medium">{roundedPct}% funded</span>
+        <span id={fundingLabelId} className="font-medium">
+          {roundedPct}% funded
+        </span>
         <span>
           {displayRaised} / {displayGoal} XLM
         </span>
       </div>
-      <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5 overflow-hidden">
+      <div
+        role="progressbar"
+        aria-labelledby={fundingLabelId}
+        aria-valuenow={roundedPct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuetext={fundingValueText}
+        className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5 overflow-hidden"
+      >
         <motion.div
+          aria-hidden="true"
           className="bg-linear-to-r from-blue-500 to-purple-500 h-1.5 rounded-full"
           style={{ width: barWidth }}
         />
