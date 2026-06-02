@@ -427,7 +427,7 @@ export default function CreateCampaignPage() {
               ) : (
                 <span />
               )}
-              <span className="text-xs text-zinc-400 ml-auto">{title.length}/100</span>
+              <span className="text-xs text-zinc-400 ms-auto">{title.length}/100</span>
             </div>
           </div>
 
@@ -496,7 +496,7 @@ export default function CreateCampaignPage() {
               ) : (
                 <span />
               )}
-              <span className="text-xs text-zinc-400 ml-auto">{description.length}/1,000</span>
+              <span className="text-xs text-zinc-400 ms-auto">{description.length}/1,000</span>
             </div>
           </div>
 
@@ -544,7 +544,7 @@ export default function CreateCampaignPage() {
                 {t('labelFundingGoal')} <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs font-semibold select-none">
+                <span className="absolute start-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs font-semibold select-none">
                   XLM
                 </span>
                 <input
@@ -557,7 +557,7 @@ export default function CreateCampaignPage() {
                   aria-invalid={Boolean(errorKeys.fundingGoal)}
                   aria-describedby={errorKeys.fundingGoal ? 'funding-goal-error' : undefined}
                   placeholder="e.g. 1000"
-                  className={`w-full pl-12 pr-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+                  className={`w-full ps-12 pe-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
                     errorKeys.fundingGoal
                       ? 'border-red-400 dark:border-red-500'
                       : 'border-zinc-200 dark:border-zinc-600'

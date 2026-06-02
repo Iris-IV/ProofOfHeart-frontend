@@ -157,12 +157,12 @@ export default function Navbar() {
                 {link.href === '/admin' && <ShieldCheck size={14} className="text-blue-500" />}
                 {link.label}
                 {link.href === '/admin' && pendingCount > 0 && (
-                  <span className="ml-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white animate-in zoom-in duration-300">
+                  <span className="ms-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white animate-in zoom-in duration-300">
                     {pendingCount}
                   </span>
                 )}
               </span>
-              <span className={`absolute bottom-1 left-4 right-4 h-0.5 bg-blue-500 transition-transform origin-left ${
+              <span className={`absolute bottom-1 start-4 end-4 h-0.5 bg-blue-500 transition-transform origin-left rtl:origin-right ${
                 isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
               }`} />
             </Link>
@@ -186,7 +186,7 @@ export default function Navbar() {
               Mainnet
             </span>
           )}
-          <div className="hidden sm:block border-r border-zinc-200 dark:border-zinc-800 h-6 mx-1" />
+          <div className="hidden sm:block border-e border-zinc-200 dark:border-zinc-800 h-6 mx-1" />
           <LanguageSwitcher />
 
           <NotificationBell />
@@ -206,7 +206,7 @@ export default function Navbar() {
             )}
           </button>
 
-          <div className="hidden md:flex items-center gap-2 ml-2">
+          <div className="hidden md:flex items-center gap-2 ms-2">
             {!isWalletConnected ? (
               <button
                 type="button"
@@ -288,7 +288,7 @@ export default function Navbar() {
                         {link.href === '/admin' && <ShieldCheck size={18} />}
                         {link.label}
                         {link.href === '/admin' && pendingCount > 0 && (
-                          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                          <span className="ms-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
                             {pendingCount}
                           </span>
                         )}

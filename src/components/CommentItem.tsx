@@ -76,7 +76,7 @@ export default function CommentItem({
   };
 
   return (
-    <div className={`mt-4 ${!isTopLevel ? 'ml-2 sm:ml-8 border-l border-zinc-200 dark:border-zinc-800 pl-4 sm:pl-6' : ''}`}>
+    <div className={`mt-4 ${!isTopLevel ? 'ms-2 sm:ms-8 border-s border-zinc-200 dark:border-zinc-800 ps-4 sm:ps-6' : ''}`}>
       <article
         className={`group bg-white dark:bg-zinc-800/80 rounded-2xl border ${
           comment.isPinned ? 'border-purple-300 dark:border-purple-500/50 shadow-xs' : 'border-zinc-200 dark:border-zinc-800'
@@ -104,14 +104,14 @@ export default function CommentItem({
                 </span>
                 {isVerified && (
                   <span className="inline-flex items-center text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 px-1.5 py-0.5 rounded-full font-bold" title="Verified Signature">
-                    <svg className="w-2.5 h-2.5 mr-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                    <svg className="w-2.5 h-2.5 me-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     Verified
                   </span>
                 )}
                 {comment.isReported && (
-                  <span className="text-[10px] text-red-500 font-bold ml-1 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded-full border border-red-200 dark:border-red-800">
+                  <span className="text-[10px] text-red-500 font-bold ms-1 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded-full border border-red-200 dark:border-red-800">
                     Reported
                   </span>
                 )}
@@ -149,7 +149,7 @@ export default function CommentItem({
           </div>
         </div>
 
-        <div className="text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap break-words text-sm ml-0 sm:ml-13 mb-3">
+        <div className="text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap break-words text-sm ms-0 sm:ms-13 mb-3">
           {comment.isReported ? (
              <span className="italic text-zinc-500">This comment has been reported and is under review.</span>
           ) : (
@@ -157,7 +157,7 @@ export default function CommentItem({
           )}
         </div>
 
-        <div className="ml-0 sm:ml-13 flex gap-4 text-xs font-medium border-t border-zinc-100 dark:border-zinc-800/60 pt-3">
+        <div className="ms-0 sm:ms-13 flex gap-4 text-xs font-medium border-t border-zinc-100 dark:border-zinc-800/60 pt-3">
           <button
             onClick={() => setShowReplyForm(!showReplyForm)}
             className="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors flex items-center gap-1.5"

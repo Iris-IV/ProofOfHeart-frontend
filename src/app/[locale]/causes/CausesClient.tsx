@@ -344,7 +344,7 @@ function CausesContent() {
               </span>
               <button
                 onClick={() => setTag("")}
-                className="ml-1 text-blue-400 hover:text-blue-600 dark:hover:text-blue-200 transition-colors"
+                className="ms-1 text-blue-400 hover:text-blue-600 dark:hover:text-blue-200 transition-colors"
                 aria-label="Clear tag filter"
               >
                 ✕
@@ -358,7 +358,7 @@ function CausesContent() {
           {/* Search */}
           <div className="relative" role="search">
             <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400"
+              className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -449,7 +449,7 @@ function CausesContent() {
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline ml-auto"
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline ms-auto"
               >
                 {t("clearFilters")}
               </button>

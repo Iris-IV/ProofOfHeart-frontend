@@ -78,7 +78,7 @@ export default async function RootLayout({
   const t = await getTranslations("Common");
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale} dir={getTextDirection(locale)} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -90,7 +90,7 @@ export default async function RootLayout({
         <NextIntlClientProvider messages={messages} locale={locale}>
           <a
             href="#main"
-            className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:bg-white focus:px-3 focus:py-1 focus:text-sm focus:shadow"
+            className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:start-2 focus:z-[100] focus:bg-white focus:px-3 focus:py-1 focus:text-sm focus:shadow"
           >
             {t("skipToMainContent")}
           </a>
