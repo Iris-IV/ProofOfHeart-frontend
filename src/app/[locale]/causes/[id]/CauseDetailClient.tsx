@@ -379,6 +379,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 <FundingProgressBar
                   amountRaised={campaign.amount_raised}
                   fundingGoal={campaign.funding_goal}
+                  milestones={campaign.milestones}
                 />
               </div>
             )}

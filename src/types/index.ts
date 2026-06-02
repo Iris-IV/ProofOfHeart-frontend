@@ -56,6 +56,11 @@ export function deriveStatus(flags: RawCampaignFlags): CampaignStatus {
 // Campaign interface — mirrors the on-chain Campaign struct
 // ---------------------------------------------------------------------------
 
+export interface Milestone {
+  targetAmount: bigint;
+  description: string;
+}
+
 export interface Campaign {
   id: number;
   creator: string;
@@ -75,6 +80,7 @@ export interface Campaign {
   revenue_share_percentage: number; // basis points (e.g. 300 = 3%)
   tags?: string[];
   cover_image_url?: string;
+  milestones?: Milestone[];
 }
 
 // ---------------------------------------------------------------------------

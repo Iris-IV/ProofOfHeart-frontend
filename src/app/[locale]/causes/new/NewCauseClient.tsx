@@ -36,6 +36,7 @@ interface ReviewData {
   estimatedDeadlineTimestamp: number;
   tags: string[];
   coverImageUrl: string;
+  milestones: { targetAmount: bigint; description: string }[];
 }
 
 const IMAGE_URL_RE = /^https?:\/\/.+\..+/;
@@ -114,6 +115,7 @@ export default function CreateCampaignPage() {
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [reviewData, setReviewData] = useState<ReviewData | null>(null);
   const [tags, setTags] = useState<string[]>([]);
+  const [milestones, setMilestones] = useState<{ targetAmount: string; description: string }[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [descriptionTab, setDescriptionTab] = useState<'write' | 'preview'>('write');
   const [coverImageUrl, setCoverImageUrl] = useState('');
@@ -139,6 +141,7 @@ export default function CreateCampaignPage() {
           setRevenueSharePercentage(parsed.revenueSharePercentage);
         if (parsed.tags) setTags(parsed.tags);
         if (parsed.coverImageUrl) setCoverImageUrl(parsed.coverImageUrl);
+        if (parsed.milestones) setMilestones(parsed.milestones);
       }
     } catch (e) {
       console.warn('Failed to load draft from localStorage:', e);
@@ -160,6 +163,7 @@ export default function CreateCampaignPage() {
           revenueSharePercentage,
           tags,
           coverImageUrl,
+          milestones,
         }),
       );
     } catch (e) {
@@ -175,6 +179,8 @@ export default function CreateCampaignPage() {
     hasRevenueSharing,
     revenueSharePercentage,
     tags,
+    coverImageUrl,
+    milestones,
   ]);
 
   const isStartup = category === Category.EducationalStartup;
@@ -252,6 +258,8 @@ export default function CreateCampaignPage() {
         reviewData.tags,
         {
           onStatus: ({ phase }) => setTxPhase(phase),
+          coverImageUrl: reviewData.coverImageUrl,
+          milestones: reviewData.milestones as any,
         },
       );
 
@@ -323,6 +331,13 @@ export default function CreateCampaignPage() {
     const parsedGoal = parseFloat(fundingGoal);
     const parsedDays = parseInt(durationDays, 10);
 
+    const parsedMilestones = milestones
+      .filter((m) => m.targetAmount.trim() && m.description.trim())
+      .map((m) => ({
+        targetAmount: xlmToStroops(m.targetAmount),
+        description: m.description.trim(),
+      }));
+
     setReviewData({
       title: title.trim(),
       description: description.trim(),
@@ -335,6 +350,7 @@ export default function CreateCampaignPage() {
       estimatedDeadlineTimestamp: Math.floor(Date.now() / 1000) + parsedDays * 86400,
       tags,
       coverImageUrl: coverImageUrl.trim(),
+      milestones: parsedMilestones,
     });
     setIsReviewOpen(true);
   };
@@ -797,6 +813,72 @@ export default function CreateCampaignPage() {
               />
             )}
           </div>
+
+          {/* Milestones */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Milestones (Stretch Goals) <span className="text-xs font-normal text-zinc-400">(optional)</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setMilestones([...milestones, { targetAmount: '', description: '' }])}
+                className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline"
+              >
+                + Add Milestone
+              </button>
+            </div>
+            
+            {milestones.length > 0 && (
+              <div className="space-y-3">
+                {milestones.map((m, idx) => (
+                  <div key={idx} className="flex gap-2 items-start p-3 bg-zinc-50 dark:bg-zinc-700/50 rounded-lg border border-zinc-200 dark:border-zinc-600">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-zinc-500 w-24 shrink-0">Target (XLM)</span>
+                        <input
+                          type="number"
+                          value={m.targetAmount}
+                          onChange={(e) => {
+                            const newM = [...milestones];
+                            newM[idx].targetAmount = e.target.value;
+                            setMilestones(newM);
+                          }}
+                          placeholder="e.g. 1500"
+                          min="0"
+                          step="any"
+                          className="w-full px-2 py-1.5 rounded-md border text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 border-zinc-200 dark:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-zinc-500 w-24 shrink-0">Description</span>
+                        <input
+                          type="text"
+                          value={m.description}
+                          onChange={(e) => {
+                            const newM = [...milestones];
+                            newM[idx].description = e.target.value;
+                            setMilestones(newM);
+                          }}
+                          placeholder="What will this unlock?"
+                          className="w-full px-2 py-1.5 rounded-md border text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 border-zinc-200 dark:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setMilestones(milestones.filter((_, i) => i !== idx))}
+                      className="text-zinc-400 hover:text-red-500 p-1 transition-colors"
+                      aria-label="Remove milestone"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
 
           {/* Actions */}
           <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-700">
