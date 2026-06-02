@@ -105,17 +105,17 @@ describe("DonationModal", () => {
   it("rejects zero amounts by disabling submit", () => {
     render(<DonationModal {...defaultProps} />);
 
-    const input = screen.getByLabelText("Amount (XLM)");
+    const input = screen.getByLabelText("amountLabel");
     fireEvent.change(input, { target: { value: "0" } });
 
-    expect(screen.getByRole("button", { name: /Donate/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /donate/i })).toBeDisabled();
   });
 
   it("rejects negative and non-numeric amounts", () => {
     render(<DonationModal {...defaultProps} />);
 
-    const input = screen.getByLabelText("Amount (XLM)");
-    const button = screen.getByRole("button", { name: /Donate/ });
+    const input = screen.getByLabelText("amountLabel");
+    const button = screen.getByRole("button", { name: /donate/i });
 
     fireEvent.change(input, { target: { value: "-5" } });
     expect(button).toBeDisabled();
@@ -127,9 +127,7 @@ describe("DonationModal", () => {
   it("renders the platform fee explanation", () => {
     render(<DonationModal {...defaultProps} />);
 
-    expect(
-      screen.getByText(/A platform fee of 3% is deducted from funds when withdrawn by the creator/),
-    ).toBeInTheDocument();
+    expect(screen.getByText("platformFeeNote")).toBeInTheDocument();
   });
 
   it("shows estimated network fee and total wallet cost when amount is entered", () => {
@@ -149,8 +147,8 @@ describe("DonationModal", () => {
 
     render(<DonationModal {...defaultProps} />);
 
-    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value: "10" } });
-    fireEvent.click(screen.getByRole("button", { name: /Donate 10 XLM/ }));
+    fireEvent.change(screen.getByLabelText("amountLabel"), { target: { value: "10" } });
+    fireEvent.click(screen.getByRole("button", { name: "donateWithAmount" }));
 
     await waitFor(() =>
       expect(mockContribute).toHaveBeenCalledWith(1, CONTRIBUTOR, BigInt(100_000_000), {
@@ -164,12 +162,12 @@ describe("DonationModal", () => {
 
     render(<DonationModal {...defaultProps} />);
 
-    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value: "5" } });
-    fireEvent.click(screen.getByRole("button", { name: /Donate 5 XLM/ }));
+    fireEvent.change(screen.getByLabelText("amountLabel"), { target: { value: "5" } });
+    fireEvent.click(screen.getByRole("button", { name: "donateWithAmount" }));
 
     await waitFor(() => {
-      expect(screen.queryByRole("button", { name: /Donate/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /donate/i })).not.toBeInTheDocument();
     });
-    expect(screen.getByText(/Submitting transaction to the network/)).toBeInTheDocument();
+    expect(screen.getByText("submittingTransaction")).toBeInTheDocument();
   });
 });
