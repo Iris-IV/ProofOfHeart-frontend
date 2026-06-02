@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useId } from "react";
+import dynamic from "next/dynamic";
 import { useLocale } from "next-intl";
-import { motion, useSpring, useTransform } from "framer-motion";
 import { calculateFundingPercentage } from "../types";
 import { formatAmount } from "@/lib/formatters";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
+
+// Framer Motion is isolated here and only loaded when motion is wanted
+const AnimatedProgressFill = dynamic(() => import("./AnimatedProgressFill"), {
+  ssr: false,
+});
 
 interface FundingProgressBarProps {
   amountRaised: bigint;
@@ -14,27 +20,11 @@ interface FundingProgressBarProps {
 export default function FundingProgressBar({ amountRaised, fundingGoal }: FundingProgressBarProps) {
   const locale = useLocale();
   const targetPct = calculateFundingPercentage(amountRaised, fundingGoal);
-
-  const [displayPct, setDisplayPct] = useState(targetPct);
-  const hasMountedRef = useRef(false);
-
-  const springPct = useSpring(targetPct, { stiffness: 120, damping: 20, mass: 0.6 });
-  const barWidth = useTransform(springPct, (value) => `${value}%`);
-
-  useEffect(() => {
-    if (!hasMountedRef.current) {
-      hasMountedRef.current = true;
-      setDisplayPct(targetPct);
-      springPct.jump(targetPct);
-      return;
-    }
-    springPct.set(targetPct);
-    setDisplayPct(targetPct);
-  }, [targetPct, springPct]);
+  const prefersReducedMotion = useReducedMotion();
 
   const displayRaised = formatAmount(amountRaised, locale, { maximumFractionDigits: 2 });
   const displayGoal = formatAmount(fundingGoal, locale, { maximumFractionDigits: 2 });
-  const roundedPct = Math.round(displayPct);
+  const roundedPct = Math.round(targetPct);
   const fundingLabelId = useId();
   const fundingValueText = `${roundedPct}% funded, ${displayRaised} of ${displayGoal} XLM`;
 
@@ -57,11 +47,17 @@ export default function FundingProgressBar({ amountRaised, fundingGoal }: Fundin
         aria-valuetext={fundingValueText}
         className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5 overflow-hidden"
       >
-        <motion.div
-          aria-hidden="true"
-          className="bg-linear-to-r from-blue-500 to-purple-500 h-1.5 rounded-full"
-          style={{ width: barWidth }}
-        />
+        {prefersReducedMotion ? (
+          // Instant static fill — no animation, no layout shift
+          <div
+            aria-hidden="true"
+            className="bg-linear-to-r from-blue-500 to-purple-500 h-1.5 rounded-full"
+            style={{ width: `${targetPct}%` }}
+          />
+        ) : (
+          // Spring-animated fill — Framer Motion chunk loads lazily
+          <AnimatedProgressFill targetPct={targetPct} />
+        )}
       </div>
     </div>
   );
