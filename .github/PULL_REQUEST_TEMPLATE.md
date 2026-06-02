@@ -15,19 +15,20 @@ Closes #
 ## Contributor Checklist
 
 - [ ] Linked the related issue above.
-- [ ] Reviewed `CONTRIBUTING.md` for branch, commit, and PR title conventions.
-- [ ] Confirmed this follows the current Stellar Wave contribution flow, if applicable.
+- [ ] Reviewed [`CONTRIBUTING.md`](CONTRIBUTING.md) for branch, commit, and PR title conventions.
+- [ ] Followed the **Stellar Wave** contribution flow (branch → commit → PR → review → merge).
 - [ ] Added or updated tests when behavior changed.
 - [ ] Updated docs, examples, or translations when needed.
 
 ## Validation
 
-- [ ] `npm run lint`
-- [ ] `npm run format:check`
-- [ ] `npm run typecheck`
-- [ ] `npm test`
-- [ ] `npm run build`
-- [ ] Not run; reason:
+Run the following commands before submitting:
+
+- [ ] `npm run lint` — passes with no errors
+- [ ] `npm run format:check` — passes with no errors
+- [ ] `npm run typecheck` — passes with no errors
+- [ ] `npm test` — all tests pass
+- [ ] `npm run build` — builds successfully
 
 ## Notes for Reviewers
 
