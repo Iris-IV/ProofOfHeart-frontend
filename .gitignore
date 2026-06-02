@@ -43,5 +43,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 fix.md
+pr.md
+PR_CONTENT.md
+PR_DESCRIPTION_*.md
+.codex
 # bundle-size CI artefact
 bundle-size-summary.json
