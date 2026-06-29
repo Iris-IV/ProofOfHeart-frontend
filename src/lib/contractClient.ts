@@ -12,6 +12,7 @@ import { assertProductionContractConfig } from "./runtimeEnv";
 import { appendWalletTransaction } from "./transactionLog";
 import { Campaign, Category, deriveStatus, CampaignStatus, Milestone } from "../types";
 import { parseContractError, getContractErrorCode, ContractError } from "../utils/contractErrors";
+import { wrapFreighterError } from "../utils/freighterErrors";
 import {
   validateStellarAddress,
   validateFundingGoal,
@@ -128,9 +129,14 @@ async function buildAndSubmitTransaction(
     .build();
 
   options?.onStatus?.({ phase: "signing" });
-  const { signedTxXdr } = await signTransaction(preparedTx.toXDR(), {
-    networkPassphrase: NETWORK_PASSPHRASE,
-  });
+  let signedTxXdr: string;
+  try {
+    ({ signedTxXdr } = await signTransaction(preparedTx.toXDR(), {
+      networkPassphrase: NETWORK_PASSPHRASE,
+    }));
+  } catch (error) {
+    wrapFreighterError(error);
+  }
 
   const signedTx = StellarSdk.TransactionBuilder.fromXDR(
     signedTxXdr,
