@@ -1,5 +1,5 @@
 "use client";
-import * as StellarSdk from "@stellar/stellar-sdk";
+import { Keypair } from "@stellar/stellar-sdk";
 import {
   getAddress,
   getNetwork,
@@ -22,7 +22,7 @@ interface WalletContextType {
   isLoading: boolean;
 }
 
-const MOCK_PUBLIC_KEY = IS_MOCK_MODE ? StellarSdk.Keypair.random().publicKey() : null;
+const MOCK_PUBLIC_KEY = IS_MOCK_MODE ? Keypair.random().publicKey() : null;
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
