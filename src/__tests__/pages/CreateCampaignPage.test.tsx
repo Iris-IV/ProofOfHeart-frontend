@@ -512,3 +512,47 @@ describe("CreateCampaignPage — character counters", () => {
     expect(screen.getByText("4/1,000")).toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cover image upload
+// ---------------------------------------------------------------------------
+
+describe("CreateCampaignPage — cover image upload", () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    setWalletConnected();
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ url: "https://ipfs.io/ipfs/QmUploadedHash" }),
+    }) as typeof fetch;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it("renders an upload button for the cover image field", () => {
+    render(<CreateCampaignPage />);
+    expect(screen.getByRole("button", { name: /coverImageUpload/i })).toBeInTheDocument();
+  });
+
+  it("uploads a selected image and populates the cover URL field", async () => {
+    render(<CreateCampaignPage />);
+
+    const file = new File([new Uint8Array(512).fill(1)], "cover.png", { type: "image/png" });
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+
+    await userEvent.upload(fileInput, file);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/upload-image",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+
+    expect(await screen.findByDisplayValue("https://ipfs.io/ipfs/QmUploadedHash")).toBeInTheDocument();
+    expect(mockShowSuccess).toHaveBeenCalledWith("coverImageUploadSuccess");
+  });
+});
