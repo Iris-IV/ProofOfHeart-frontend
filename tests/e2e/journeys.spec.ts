@@ -10,6 +10,11 @@ import { test, expect } from "@playwright/test";
  */
 test.describe("Critical User Journeys", () => {
   test.beforeEach(async ({ page }) => {
+    // Seed localStorage before any script runs so the OnboardingTour does
+    // not appear and block pointer events during the test.
+    await page.addInitScript(() => {
+      localStorage.setItem("onboarding_tour_dismissed", "1");
+    });
     // Ensure we are in mock mode
     await page.goto("/");
   });
