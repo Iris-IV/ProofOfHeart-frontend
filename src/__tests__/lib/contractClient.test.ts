@@ -381,7 +381,10 @@ describe("contractClient", () => {
     expect(await module.withdrawFunds(1)).toMatch(/^hash-/);
     expect(await module.cancelCampaign(1)).toMatch(/^hash-/);
     expect(await module.claimRefund(1, TEST_USER)).toMatch(/^hash-/);
-    expect(await module.claimAllRefunds([1, 2], TEST_USER)).toEqual([expect.stringMatching(/^hash-/), expect.stringMatching(/^hash-/)]);
+    expect(await module.claimAllRefunds([1, 2], TEST_USER)).toEqual([
+      expect.stringMatching(/^hash-/),
+      expect.stringMatching(/^hash-/),
+    ]);
     expect(await module.depositRevenue(1, BigInt(80_000_000))).toMatch(/^hash-/);
     expect(await module.claimRevenue(1, TEST_USER)).toMatch(/^hash-/);
     expect(await module.verifyCampaign(1)).toMatch(/^hash-/);

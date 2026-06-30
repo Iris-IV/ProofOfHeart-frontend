@@ -56,9 +56,10 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
   const [pendingCampaignId, setPendingCampaignId] = useState<number | null>(null);
   const [pendingAction, setPendingAction] = useState<"refund" | "revenue" | null>(null);
   const [isClaimAllPending, setIsClaimAllPending] = useState(false);
-  const [claimAllProgress, setClaimAllProgress] = useState<{ current: number; total: number } | null>(
-    null,
-  );
+  const [claimAllProgress, setClaimAllProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
   const { contributions, isLoading, isRefreshing, error, refetch } =
     useContributions(walletAddress);
@@ -69,10 +70,7 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
   );
 
   const refundableCampaignIds = useMemo(
-    () =>
-      contributions
-        .filter((item) => item.canClaimRefund)
-        .map((item) => item.campaign.id),
+    () => contributions.filter((item) => item.canClaimRefund).map((item) => item.campaign.id),
     [contributions],
   );
 
