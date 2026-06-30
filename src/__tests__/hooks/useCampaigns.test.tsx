@@ -5,16 +5,18 @@ import { useCampaigns } from "@/hooks/useCampaigns";
 import { Category, type Campaign } from "@/types";
 
 jest.mock("@/lib/contractClient", () => ({
-  getAllCampaigns: jest.fn(),
+  getCampaignsChunk: jest.fn(),
 }));
 
 jest.mock("@/hooks/useWindowVisibility", () => ({
   useWindowVisibility: () => true,
 }));
 
-import { getAllCampaigns } from "@/lib/contractClient";
+import { getCampaignsChunk } from "@/lib/contractClient";
 
-const mockGetAllCampaigns = getAllCampaigns as jest.MockedFunction<typeof getAllCampaigns>;
+const mockGetCampaignsChunk = getCampaignsChunk as jest.MockedFunction<
+  typeof getCampaignsChunk
+>;
 
 function makeCampaign(id: number): Campaign {
   return {
@@ -37,6 +39,10 @@ function makeCampaign(id: number): Campaign {
   };
 }
 
+function chunkResult(...campaigns: Campaign[]) {
+  return { campaigns, totalCount: campaigns.length };
+}
+
 function createWrapper() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -52,7 +58,7 @@ describe("useCampaigns", () => {
   });
 
   it("transitions from loading to success with campaign list", async () => {
-    mockGetAllCampaigns.mockResolvedValue([makeCampaign(1), makeCampaign(2)]);
+    mockGetCampaignsChunk.mockResolvedValue(chunkResult(makeCampaign(1), makeCampaign(2)));
 
     const { result } = renderHook(() => useCampaigns(), { wrapper: createWrapper() });
 
@@ -65,8 +71,8 @@ describe("useCampaigns", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("transitions from loading to error when getAllCampaigns throws", async () => {
-    mockGetAllCampaigns.mockRejectedValue(new Error("network failure"));
+  it("transitions from loading to error when getCampaignsChunk throws", async () => {
+    mockGetCampaignsChunk.mockRejectedValue(new Error("network failure"));
 
     const { result } = renderHook(() => useCampaigns(), { wrapper: createWrapper() });
 
@@ -76,10 +82,26 @@ describe("useCampaigns", () => {
     expect(result.current.error).toBe("network failure");
   });
 
+  it("exposes pagination controls", async () => {
+    const campaigns = Array.from({ length: 25 }, (_, i) => makeCampaign(i + 1));
+    mockGetCampaignsChunk.mockImplementation(async (startIndex: number) => {
+      const chunk = campaigns.slice(startIndex, startIndex + 20);
+      return { campaigns: chunk, totalCount: campaigns.length };
+    });
+
+    const { result } = renderHook(() => useCampaigns(), { wrapper: createWrapper() });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.campaigns).toHaveLength(20);
+    expect(result.current.hasNextPage).toBe(true);
+    expect(result.current.isAllLoaded).toBe(false);
+  });
+
   it("refetch re-queries and updates the campaign list", async () => {
-    mockGetAllCampaigns
-      .mockResolvedValueOnce([makeCampaign(1)])
-      .mockResolvedValueOnce([makeCampaign(1), makeCampaign(2)]);
+    mockGetCampaignsChunk
+      .mockResolvedValueOnce(chunkResult(makeCampaign(1)))
+      .mockResolvedValueOnce(chunkResult(makeCampaign(1), makeCampaign(2)));
 
     const { result } = renderHook(() => useCampaigns(), { wrapper: createWrapper() });
 
@@ -90,6 +112,6 @@ describe("useCampaigns", () => {
     });
 
     await waitFor(() => expect(result.current.campaigns).toHaveLength(2));
-    expect(mockGetAllCampaigns).toHaveBeenCalledTimes(2);
+    expect(mockGetCampaignsChunk).toHaveBeenCalledTimes(2);
   });
 });
