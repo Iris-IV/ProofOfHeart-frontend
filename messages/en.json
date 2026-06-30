@@ -12,7 +12,8 @@
     "currentLanguage": "Current language: {language}",
     "languageChanged": "Language changed to {language}",
     "skipToMainContent": "Skip to main content",
-    "xlmPrecisionWarning": "Rounded to {amount} XLM"
+    "xlmPrecisionWarning": "Rounded to {amount} XLM",
+    "profile": "Profile"
   },
   "Home": {
     "heroTitle": "Decentralized validation for heart-driven causes.",
@@ -468,5 +469,19 @@
     "fundingGoalLabel": "Funding Goal",
     "amountRaisedLabel": "Amount Raised",
     "deadlineLabel": "Funding Deadline"
+  },
+  "Profile": {
+    "noWallet": "Connect your wallet to view your profile.",
+    "noWalletSub": "Your impact, contributions, and saved campaigns will appear here.",
+    "connectWallet": "Connect Wallet",
+    "connecting": "Connecting...",
+    "walletAddress": "Wallet address",
+    "totalContributed": "Total Contributed",
+    "campaignsBacked": "Campaigns Backed",
+    "campaignsCreated": "Campaigns Created",
+    "savedCampaigns": "Saved Campaigns",
+    "createdCampaigns": "Created Campaigns",
+    "noSavedCampaigns": "No saved campaigns yet.",
+    "browseCauses": "Browse causes"
   }
 }

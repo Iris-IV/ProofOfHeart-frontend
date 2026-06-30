@@ -12,7 +12,8 @@
     "currentLanguage": "Idioma actual: {language}",
     "languageChanged": "Idioma cambiado a {language}",
     "skipToMainContent": "Saltar al contenido principal",
-    "xlmPrecisionWarning": "Redondeado a {amount} XLM"
+    "xlmPrecisionWarning": "Redondeado a {amount} XLM",
+    "profile": "Perfil"
   },
   "Home": {
     "heroTitle": "Validación descentralizada para causas impulsadas por el corazón.",
@@ -468,5 +469,19 @@
     "fundingGoalLabel": "Meta de financiamiento",
     "amountRaisedLabel": "Monto recaudado",
     "deadlineLabel": "Fecha límite de financiamiento"
+  },
+  "Profile": {
+    "noWallet": "Conecta tu billetera para ver tu perfil.",
+    "noWalletSub": "Tu impacto, contribuciones y campañas guardadas aparecerán aquí.",
+    "connectWallet": "Conectar billetera",
+    "connecting": "Conectando...",
+    "walletAddress": "Dirección de billetera",
+    "totalContributed": "Total contribuido",
+    "campaignsBacked": "Campañas apoyadas",
+    "campaignsCreated": "Campañas creadas",
+    "savedCampaigns": "Campañas guardadas",
+    "createdCampaigns": "Campañas creadas",
+    "noSavedCampaigns": "Aún no tienes campañas guardadas.",
+    "browseCauses": "Explorar causas"
   }
 }
