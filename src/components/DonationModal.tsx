@@ -79,7 +79,7 @@ export default function DonationModal({
         if (active && updated) {
           setLiveCampaign(updated);
         }
-      } catch (err) {
+      } catch {
         // ignore polling errors
       }
     };
