@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { fetchContributionMadeEvents, sumContributionAmounts } from "../lib/sorobanEvents";
+import { subscribeContributionMadeEvents, sumContributionAmounts } from "../lib/sorobanEvents";
 import { useWindowVisibility } from "./useWindowVisibility";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWallet } from "@/components/WalletContext";
 import { invalidateQueriesForEvents } from "@/lib/cacheInvalidation";
-
-const EVENT_POLL_INTERVAL = Number(process.env.NEXT_PUBLIC_CONTRIBUTION_EVENTS_POLL_MS) || 5_000;
 
 const USE_MOCKS = typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
@@ -18,7 +16,7 @@ export interface UseCampaignContributionEventsOptions {
 }
 
 /**
- * Polls Soroban `contribution_made` events for a campaign and reports new amounts.
+ * Streams Soroban `contribution_made` events for a campaign and reports new amounts.
  * Deduplicates by event id so reconnects do not double-count.
  */
 export function useCampaignContributionEvents({
@@ -28,7 +26,6 @@ export function useCampaignContributionEvents({
 }: UseCampaignContributionEventsOptions): void {
   const isVisible = useWindowVisibility();
   const seenEventIdsRef = useRef<Set<string>>(new Set());
-  const cursorRef = useRef<string | undefined>(undefined);
   const onContributionsRef = useRef(onContributions);
   const queryClient = useQueryClient();
   const { publicKey: currentWalletAddress } = useWallet();
@@ -39,7 +36,6 @@ export function useCampaignContributionEvents({
 
   useEffect(() => {
     seenEventIdsRef.current = new Set();
-    cursorRef.current = undefined;
   }, [campaignId]);
 
   useEffect(() => {
@@ -47,18 +43,9 @@ export function useCampaignContributionEvents({
       return;
     }
 
-    let cancelled = false;
-
-    const poll = async () => {
-      try {
-        const result = await fetchContributionMadeEvents({
-          campaignId,
-          cursor: cursorRef.current,
-        });
-        if (!result || cancelled) return;
-
-        cursorRef.current = result.cursor;
-
+    const subscription = subscribeContributionMadeEvents({
+      campaignId,
+      onEvents: (result) => {
         const unseen = result.events.filter((event) => !seenEventIdsRef.current.has(event.id));
         for (const event of unseen) {
           seenEventIdsRef.current.add(event.id);
@@ -67,23 +54,16 @@ export function useCampaignContributionEvents({
         if (unseen.length > 0) {
           const delta = sumContributionAmounts(unseen);
           onContributionsRef.current?.(delta, unseen.length);
-
-          // Invalidate relevant queries for the new events
           invalidateQueriesForEvents(queryClient, unseen, currentWalletAddress);
         }
-      } catch {
+      },
+      onError: () => {
         // RPC errors are non-fatal; reconciliation via get_campaign covers drift.
-      }
-    };
-
-    void poll();
-    const intervalId = window.setInterval(() => {
-      void poll();
-    }, EVENT_POLL_INTERVAL);
+      },
+    });
 
     return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
+      subscription?.unsubscribe();
     };
-  }, [campaignId, enabled, isVisible]);
+  }, [campaignId, enabled, isVisible, queryClient, currentWalletAddress]);
 }
