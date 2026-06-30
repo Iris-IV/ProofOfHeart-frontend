@@ -349,7 +349,9 @@
     "invalidAmount": "Por favor, ingresa un monto válido.",
     "amountMustBePositive": "El monto debe ser mayor que cero.",
     "invalidNumberFormat": "Formato de número inválido.",
-    "maxDecimalPlaces": "Se permiten máximo 7 decimales."
+    "maxDecimalPlaces": "Se permiten máximo 7 decimales.",
+    "amountExceedsRemainingGoal": "El monto supera la meta de financiamiento restante.",
+    "campaignAlreadyFunded": "Esta causa ya está completamente financiada."
   },
   "WithdrawFunds": {
     "withdrawalSuccessToast": "¡Retiro exitoso! Recibiste {amount} XLM.",
