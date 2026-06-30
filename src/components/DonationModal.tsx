@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
+import { useQuery } from "@tanstack/react-query";
 import { contribute } from "../lib/contractClient";
 import { getEstimatedContributeNetworkFeeXlm } from "../lib/networkFee";
 import { Campaign, basisPointsToPercentage } from "../types";
@@ -45,7 +46,11 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
   const { publicKey } = useWallet();
   const { showError } = useToast();
   const { platformFeeBps } = usePlatformFee();
-  const estimatedNetworkFeeXlm = useMemo(() => getEstimatedContributeNetworkFeeXlm(), []);
+  const { data: estimatedNetworkFeeXlm = 0.01 } = useQuery({
+    queryKey: ["networkFee"],
+    queryFn: getEstimatedContributeNetworkFeeXlm,
+    staleTime: 30_000,
+  });
 
   const [amount, setAmount] = useState("");
   const [step, setStep] = useState<Step>("input");
