@@ -1,4 +1,4 @@
-import { parseContractError, ContractError, ContractErrorException } from '../utils/contractErrors';
+import { parseContractError } from '../utils/contractErrors';
 
 describe('parseContractError', () => {
   it('handles Error(Contract, #n) format', () => {

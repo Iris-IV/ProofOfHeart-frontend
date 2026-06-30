@@ -102,7 +102,7 @@ export default function DashboardPage() {
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-2">Saved Campaigns</h2>
         {savedCampaigns.length === 0 ? (
-          <span className="text-zinc-500 dark:text-zinc-400">You haven't saved any campaigns yet.</span>
+          <span className="text-zinc-500 dark:text-zinc-400">You haven&apos;t saved any campaigns yet.</span>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {savedCampaigns.map((campaign) => (

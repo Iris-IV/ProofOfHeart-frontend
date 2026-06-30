@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { memo, useState } from 'react';
 import { useLocale } from 'next-intl';
 import { formatAddress } from '@/lib/formatAddress';
-import { formatXlm, formatShortDate } from '@/lib/formatters';
+import { formatShortDate } from '@/lib/formatters';
 import { getAsyncActionErrorMessage, withActionTimeout } from '@/utils/asyncAction';
 import { parseContractError } from '@/utils/contractErrors';
 import {

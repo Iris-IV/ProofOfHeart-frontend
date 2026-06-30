@@ -1,9 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState, useId } from "react";
+import { useId } from "react";
 import { useLocale } from "next-intl";
-import { motion, useSpring, useTransform } from "framer-motion";
 import { calculateFundingPercentage, Milestone } from "../types";
 import { formatAmount } from "@/lib/formatters";
 import { useReducedMotion } from "@/hooks/useReducedMotion";

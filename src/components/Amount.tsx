@@ -16,7 +16,8 @@ export default function Amount({
   minimumFractionDigits,
   className,
 }: AmountProps) {
-  const resolvedLocale = locale ?? useLocale();
+  const defaultLocale = useLocale();
+  const resolvedLocale = locale ?? defaultLocale;
 
   return (
     <span className={className}>

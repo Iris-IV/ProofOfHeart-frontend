@@ -12,7 +12,7 @@ import { DevMockPanel } from "@/components/DevMockPanel";
 import OnboardingTour from "@/components/OnboardingTour";
 import MaintenanceBypass from "@/components/MaintenanceBypass";
 import { routing } from "@/i18n/routing";
-import { absoluteUrl, buildAlternates } from "@/lib/seo";
+import { absoluteUrl } from "@/lib/seo";
 import { getTextDirection } from "@/lib/direction";
 import { getThemeBlockingScript } from "@/lib/preferences";
 import type { Metadata } from "next";

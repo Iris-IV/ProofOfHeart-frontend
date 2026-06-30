@@ -1,4 +1,4 @@
-import { Campaign, CampaignStatus, deriveStatus } from "@/types";
+import { Campaign, CampaignStatus } from "@/types";
 import type { MockScenario } from "@/hooks/useDevMockScenario";
 
 /**

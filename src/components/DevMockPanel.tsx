@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { IS_MOCK_MODE } from "@/lib/runtimeEnv";
 
 /**
