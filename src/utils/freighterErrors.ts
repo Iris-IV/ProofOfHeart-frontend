@@ -25,7 +25,7 @@ const CANCEL_PATTERNS = [
 
 export function isUserRejection(error: unknown): boolean {
   if (!error) return false;
-  const msg = typeof error === "string" ? error : (error as Error).message ?? "";
+  const msg = typeof error === "string" ? error : ((error as Error).message ?? "");
   const lower = msg.toLowerCase();
   return CANCEL_PATTERNS.some((p) => lower.includes(p.toLowerCase()));
 }

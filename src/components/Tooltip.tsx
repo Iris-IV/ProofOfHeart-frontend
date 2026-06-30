@@ -10,12 +10,7 @@ interface TooltipProps {
   className?: string;
 }
 
-export default function Tooltip({
-  content,
-  children,
-  side = "top",
-  className = "",
-}: TooltipProps) {
+export default function Tooltip({ content, children, side = "top", className = "" }: TooltipProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const sideClasses = {

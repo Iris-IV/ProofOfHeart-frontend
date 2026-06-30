@@ -30,8 +30,8 @@ export default function MaintenancePage() {
             Down for maintenance
           </h1>
           <p style={{ color: "#a1a1aa", maxWidth: "32rem", margin: "0 auto 1.5rem" }}>
-            ProofOfHeart is temporarily offline while we perform an upgrade.
-            All on-chain funds are safe. We&apos;ll be back shortly.
+            ProofOfHeart is temporarily offline while we perform an upgrade. All on-chain funds are
+            safe. We&apos;ll be back shortly.
           </p>
           {eta && (
             <p

@@ -68,9 +68,7 @@ describe("WithdrawFunds", () => {
     expect(screen.getByText("totalRaised")).toBeInTheDocument();
     expect(
       screen.getByText((_content, element) =>
-        element?.tagName === "SPAN"
-          ? element.textContent === "platformFeeWithPercent"
-          : false,
+        element?.tagName === "SPAN" ? element.textContent === "platformFeeWithPercent" : false,
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("youWillReceive")).toBeInTheDocument();
@@ -115,9 +113,7 @@ describe("WithdrawFunds", () => {
 
     expect(
       screen.getByText((_content, element) =>
-        element?.tagName === "SPAN"
-          ? element.textContent === "platformFeeWithPercent"
-          : false,
+        element?.tagName === "SPAN" ? element.textContent === "platformFeeWithPercent" : false,
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("-0.3 XLM")).toBeInTheDocument();

@@ -8,11 +8,7 @@ const config: Config = {
   setupFilesAfterEnv: ["<rootDir>/src/setupTests.ts"],
   testPathIgnorePatterns: ["<rootDir>/node_modules/", "<rootDir>/.next/", "<rootDir>/tests/"],
   coverageProvider: "v8",
-  collectCoverageFrom: [
-    "src/**/*.{ts,tsx}",
-    "!src/**/*.d.ts",
-    "!src/types/**",
-  ],
+  collectCoverageFrom: ["src/**/*.{ts,tsx}", "!src/**/*.d.ts", "!src/types/**"],
   coverageThreshold: {
     global: {
       statements: 15,
@@ -34,9 +30,6 @@ export default async function jestConfig() {
   const nextConfig = await createJestConfig(config)();
   return {
     ...nextConfig,
-    transformIgnorePatterns: [
-      ...(nextConfig.transformIgnorePatterns ?? []),
-      markdownEsmPattern,
-    ],
+    transformIgnorePatterns: [...(nextConfig.transformIgnorePatterns ?? []), markdownEsmPattern],
   };
 }

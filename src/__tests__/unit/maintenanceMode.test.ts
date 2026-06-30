@@ -18,10 +18,7 @@ function getAllowlist(env: Record<string, string | undefined>): string[] {
     .filter(Boolean);
 }
 
-function isBypassed(
-  cookieValue: string | undefined,
-  allowlist: string[],
-): boolean {
+function isBypassed(cookieValue: string | undefined, allowlist: string[]): boolean {
   if (allowlist.length === 0) return false;
   return allowlist.includes((cookieValue ?? "").toLowerCase());
 }
@@ -45,9 +42,11 @@ describe("maintenance mode helpers", () => {
 
   describe("getAllowlist", () => {
     it("parses comma-separated addresses", () => {
-      expect(
-        getAllowlist({ NEXT_PUBLIC_MAINTENANCE_ALLOWLIST: "GABC, GDEF , gHIJ" }),
-      ).toEqual(["gabc", "gdef", "ghij"]);
+      expect(getAllowlist({ NEXT_PUBLIC_MAINTENANCE_ALLOWLIST: "GABC, GDEF , gHIJ" })).toEqual([
+        "gabc",
+        "gdef",
+        "ghij",
+      ]);
     });
 
     it("returns empty array when env var is absent", () => {

@@ -99,7 +99,10 @@ export async function appendAdminAuditLog(
   }
 }
 
-export async function getAdminAuditLog(adminAddress: string, limit = 50): Promise<AdminAuditLogEntry[]> {
+export async function getAdminAuditLog(
+  adminAddress: string,
+  limit = 50,
+): Promise<AdminAuditLogEntry[]> {
   const normalizedAddress = normalizeAddress(adminAddress);
 
   try {

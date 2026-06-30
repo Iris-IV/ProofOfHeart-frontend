@@ -1,4 +1,10 @@
-import { formatNumber, formatXlm, formatDate, formatShortDate, formatAmount } from "@/lib/formatters";
+import {
+  formatNumber,
+  formatXlm,
+  formatDate,
+  formatShortDate,
+  formatAmount,
+} from "@/lib/formatters";
 
 describe("formatNumber", () => {
   it("formats with en grouping separators", () => {

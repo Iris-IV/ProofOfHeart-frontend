@@ -1,7 +1,7 @@
 # Dependabot configuration — Issue #176
 # Keeps npm dependencies and GitHub Actions up to date automatically.
 # PRs are opened weekly so security advisories are caught promptly.
-# 
+#
 # Triage Policy:
 # - High/Critical security Dependabot PRs must be reviewed and merged within 48 hours.
 # - Low/Moderate or non-security PRs are grouped and reviewed weekly.

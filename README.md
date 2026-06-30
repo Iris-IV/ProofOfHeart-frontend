@@ -120,12 +120,14 @@ The client retries transient failures and falls back to the existing mock/local 
 Before going live on the Stellar public network, ensure the following production-readiness items are complete:
 
 ### Smart Contract
+
 - [ ] `get_platform_fee` getter deployed on mainnet (remove the 3% hardcoded fallback)
 - [ ] Contract address and network passphrase updated to mainnet values in `.env.production`
 - [ ] Full audit of Soroban contract completed and findings addressed
 - [ ] Emergency pause / admin-transfer mechanisms tested on mainnet
 
 ### Frontend
+
 - [ ] `NEXT_PUBLIC_NETWORK_PASSPHRASE` set to `Public Global Stellar Network ; September 2015`
 - [ ] `NEXT_PUBLIC_RPC_URL` pointed at a production Horizon / Soroban RPC endpoint
 - [ ] `NEXT_PUBLIC_API_URL` pointed at the production off-chain service
@@ -134,6 +136,7 @@ Before going live on the Stellar public network, ensure the following production
 - [ ] Lighthouse / Core Web Vitals baseline captured
 
 ### Security & Operations
+
 - [ ] Content Security Policy (CSP) headers configured for production
 - [ ] Rate limiting enabled on off-chain API endpoints
 - [ ] Secrets rotated; no `.env.local` values committed to the repository
@@ -141,6 +144,7 @@ Before going live on the Stellar public network, ensure the following production
 - [ ] CI pipeline passes on `main` (lint → build → tests)
 
 ### Communications
+
 - [ ] Community announcement drafted
 - [ ] Docs/README updated with mainnet contract address and explorer links
 
@@ -209,7 +213,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
   }
 >
   {children}
-</ErrorBoundary>
+</ErrorBoundary>;
 ```
 
 Only `error.name`, `error.message`, and `error.stack` are forwarded — no user data or wallet addresses are included by default.

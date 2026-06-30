@@ -23,10 +23,7 @@ import {
 import { isSameAddress } from "../lib/stellar";
 import { parseContractError } from "../utils/contractErrors";
 import { getAsyncActionErrorMessage, withActionTimeout } from "../utils/asyncAction";
-import type {
-  TransactionLifecyclePhase,
-  TransactionLifecycleOptions,
-} from "../lib/contractClient";
+import type { TransactionLifecyclePhase, TransactionLifecycleOptions } from "../lib/contractClient";
 import { useWriteGuard } from "../hooks/useWriteGuard";
 
 interface CampaignActionsProps {
@@ -236,7 +233,11 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
             <div className="flex flex-col gap-3">
               <button
                 onClick={() =>
-                  handleAction("cancelCampaign", (options) => cancelCampaign(campaign.id, options), "Campaign cancelled.")
+                  handleAction(
+                    "cancelCampaign",
+                    (options) => cancelCampaign(campaign.id, options),
+                    "Campaign cancelled.",
+                  )
                 }
                 disabled={
                   isPending("cancelCampaign", campaign.id) ||
@@ -310,7 +311,13 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
           <h3 className="text-base font-semibold text-blue-600 mb-4">Admin Panel</h3>
           <button
-            onClick={() => handleAction("verifyCampaign", (options) => verifyCampaign(campaign.id, options), "Campaign verified!")}
+            onClick={() =>
+              handleAction(
+                "verifyCampaign",
+                (options) => verifyCampaign(campaign.id, options),
+                "Campaign verified!",
+              )
+            }
             disabled={isPending("verifyCampaign", campaign.id)}
             className="w-full py-3 min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
           >
@@ -328,11 +335,17 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
           <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50 mb-1">
             Your Contribution
           </h3>
-          <p className="text-2xl font-bold text-blue-600 mb-4">{formatAmount(contribution, locale, { maximumFractionDigits: 2 })} XLM</p>
+          <p className="text-2xl font-bold text-blue-600 mb-4">
+            {formatAmount(contribution, locale, { maximumFractionDigits: 2 })} XLM
+          </p>
           <div className="flex flex-col gap-3">
             <button
               onClick={() =>
-                handleAction("claimRefund", (options) => claimRefund(campaign.id, publicKey!, options), "Refund claimed!")
+                handleAction(
+                  "claimRefund",
+                  (options) => claimRefund(campaign.id, publicKey!, options),
+                  "Refund claimed!",
+                )
               }
               disabled={isPending("claimRefund", campaign.id) || (campaign.is_active && !isExpired)}
               title={campaign.is_active && !isExpired ? "Cannot refund while active" : ""}
@@ -347,7 +360,11 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
             {campaign.has_revenue_sharing && (
               <button
                 onClick={() =>
-                  handleAction("claimRevenue", (options) => claimRevenue(campaign.id, publicKey!, options), "Revenue claimed!")
+                  handleAction(
+                    "claimRevenue",
+                    (options) => claimRevenue(campaign.id, publicKey!, options),
+                    "Revenue claimed!",
+                  )
                 }
                 disabled={isPending("claimRevenue", campaign.id)}
                 className="w-full py-3 min-h-[44px] bg-indigo-600 hover:bg-indigo-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"

@@ -59,14 +59,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "campaignTitle is required" }, { status: 400 });
   }
   if (!reason || !VALID_REASONS.includes(reason as ReportReason)) {
-    return NextResponse.json({ message: `reason must be one of: ${VALID_REASONS.join(", ")}` }, { status: 400 });
+    return NextResponse.json(
+      { message: `reason must be one of: ${VALID_REASONS.join(", ")}` },
+      { status: 400 },
+    );
   }
 
   // Rate limit: keyed by reporter address or IP
   const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "anon";
   const rateLimitKey = reporterAddress ?? ip;
   if (!checkRateLimit(rateLimitKey)) {
-    return NextResponse.json({ message: "Too many reports. Please wait before reporting again." }, { status: 429 });
+    return NextResponse.json(
+      { message: "Too many reports. Please wait before reporting again." },
+      { status: 429 },
+    );
   }
 
   // Spam protection: prevent duplicate reports from the same address for the same campaign
@@ -75,7 +81,10 @@ export async function POST(req: NextRequest) {
       (r) => r.campaignId === campaignId && r.reporterAddress === reporterAddress,
     );
     if (alreadyReported) {
-      return NextResponse.json({ message: "You have already reported this campaign." }, { status: 409 });
+      return NextResponse.json(
+        { message: "You have already reported this campaign." },
+        { status: 409 },
+      );
     }
   }
 

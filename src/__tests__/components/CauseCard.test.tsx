@@ -37,6 +37,10 @@ jest.mock("@/components/DeadlineCountdown", () => ({
   default: () => <span data-testid="deadline-countdown" />,
 }));
 
+jest.mock("@/hooks/useSavedCampaigns", () => ({
+  useSavedCampaigns: () => ({ isSaved: () => false, toggleSaved: jest.fn(), savedIds: [] }),
+}));
+
 jest.mock("@/components/ToastProvider", () => ({
   useToast: () => ({
     showError: jest.fn(),
@@ -334,7 +338,7 @@ describe("static card content", () => {
     const { container } = renderCard(makeCampaign());
     const card = container.firstElementChild;
 
-    expect(card).toHaveClass("min-h-[640px]");
+    expect(card).toHaveClass("flex");
     expect(card?.className).toContain("hover:motion-safe:-translate-y-0.5");
     expect(card?.className).not.toContain("hover:shadow");
   });

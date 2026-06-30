@@ -33,14 +33,17 @@ class EventSubscriber {
   public off(topic: string, handler: EventHandler) {
     const topicHandlers = this.handlers.get(topic);
     if (topicHandlers) {
-      this.handlers.set(topic, topicHandlers.filter(h => h !== handler));
+      this.handlers.set(
+        topic,
+        topicHandlers.filter((h) => h !== handler),
+      );
     }
   }
 
   public start() {
     if (this.isPolling) return;
     this.isPolling = true;
-    
+
     // Attempt to load the cursor from local storage for persistence across reloads
     try {
       const savedCursor = localStorage.getItem(`soroban_cursor_${CONTRACT_ADDRESS}`);
@@ -71,9 +74,9 @@ class EventSubscriber {
         filters: [
           {
             type: "contract",
-            contractIds: [CONTRACT_ADDRESS]
-          }
-        ]
+            contractIds: [CONTRACT_ADDRESS],
+          },
+        ],
       };
 
       if (this.cursor) {
@@ -93,17 +96,17 @@ class EventSubscriber {
       if (response.events && response.events.length > 0) {
         for (const event of response.events) {
           if (event.type !== "contract") continue;
-          
+
           // Map each topic to handlers
           // The topics array contains xdr.ScVal, we extract the first string for matching
           if (event.topic && event.topic.length > 0) {
             try {
-              // Soroban sdk wraps topic as ScVal. 
+              // Soroban sdk wraps topic as ScVal.
               const topicStr = event.topic[0].value()?.toString() || "";
-              
+
               const handlers = this.handlers.get(topicStr);
               if (handlers) {
-                handlers.forEach(h => {
+                handlers.forEach((h) => {
                   try {
                     h(event);
                   } catch (e) {
@@ -115,7 +118,7 @@ class EventSubscriber {
               console.warn("Could not decode event topic", e);
             }
           }
-          
+
           this.cursor = (event as any).pagingToken || event.id;
           try {
             if (this.cursor) {

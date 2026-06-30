@@ -1,4 +1,4 @@
-jest.mock('@stellar/stellar-sdk', () => {
+jest.mock("@stellar/stellar-sdk", () => {
   const nativeToScVal = (value: unknown, opts: { type: string }) => ({
     __native: value,
     toXDR: () => Buffer.from(`${opts.type}:${String(value)}`),
@@ -11,22 +11,22 @@ jest.mock('@stellar/stellar-sdk', () => {
   };
 });
 
-import * as StellarSdk from '@stellar/stellar-sdk';
+import * as StellarSdk from "@stellar/stellar-sdk";
 import {
   scValToTopicSegment,
   voteCastTopicFilter,
   isContributionMadeEvent,
   parseContributionAmount,
   sumContributionAmounts,
-} from '@/lib/sorobanEvents';
+} from "@/lib/sorobanEvents";
 
-describe('sorobanEvents vote cast', () => {
-  it('builds campaign_vote_cast topic filter segments', () => {
+describe("sorobanEvents vote cast", () => {
+  it("builds campaign_vote_cast topic filter segments", () => {
     const topics = voteCastTopicFilter(7);
-    expect(topics[0][2]).toBe('*');
+    expect(topics[0][2]).toBe("*");
 
-    const symbol = StellarSdk.nativeToScVal('campaign_vote_cast', { type: 'symbol' });
-    const campaign = StellarSdk.nativeToScVal(7, { type: 'u32' });
+    const symbol = StellarSdk.nativeToScVal("campaign_vote_cast", { type: "symbol" });
+    const campaign = StellarSdk.nativeToScVal(7, { type: "u32" });
     expect(topics[0][0]).toBe(scValToTopicSegment(symbol as never));
     expect(topics[0][1]).toBe(scValToTopicSegment(campaign as never));
   });

@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import { getWalletTransactions, type WalletTransactionLogEntry } from './transactionLog';
-import { normalizeAddress } from './stellar';
+import { getWalletTransactions, type WalletTransactionLogEntry } from "./transactionLog";
+import { normalizeAddress } from "./stellar";
 
 export type NotificationEventType =
-  | 'contribution_confirmed'
-  | 'campaign_funded'
-  | 'campaign_cancelled'
-  | 'refund_available'
-  | 'revenue_deposited'
-  | 'revenue_claimed'
-  | 'new_update'
-  | 'campaign_verified';
+  | "contribution_confirmed"
+  | "campaign_funded"
+  | "campaign_cancelled"
+  | "refund_available"
+  | "revenue_deposited"
+  | "revenue_claimed"
+  | "new_update"
+  | "campaign_verified";
 
 export interface AppNotification {
   id: string;
@@ -28,11 +28,11 @@ export interface NotificationFeedResponse {
   notifications: AppNotification[];
 }
 
-const REMOTE_FEED_ENDPOINT = '/api/notifications';
-const READ_STATE_KEY_PREFIX = 'proof_of_heart_notifications_read_v1';
+const REMOTE_FEED_ENDPOINT = "/api/notifications";
+const READ_STATE_KEY_PREFIX = "proof_of_heart_notifications_read_v1";
 
 function canUseStorage(): boolean {
-  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
 
 function readNotificationIds(walletAddress: string): string[] {
@@ -42,7 +42,9 @@ function readNotificationIds(walletAddress: string): string[] {
     const raw = window.localStorage.getItem(key);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((value): value is string => typeof value === "string")
+      : [];
   } catch {
     return [];
   }
@@ -59,39 +61,39 @@ function writeNotificationIds(walletAddress: string, ids: string[]): void {
 }
 
 function walletActionToNotification(
-  action: WalletTransactionLogEntry['action'],
+  action: WalletTransactionLogEntry["action"],
   entry: WalletTransactionLogEntry,
-): Pick<AppNotification, 'type' | 'message' | 'href'> | null {
+): Pick<AppNotification, "type" | "message" | "href"> | null {
   const campaignHref = `/causes/${entry.campaignId}`;
 
   switch (action) {
-    case 'contribute':
+    case "contribute":
       return {
-        type: 'contribution_confirmed',
+        type: "contribution_confirmed",
         message: `Contribution confirmed on-chain for campaign #${entry.campaignId}.`,
         href: campaignHref,
       };
-    case 'deposit_revenue':
+    case "deposit_revenue":
       return {
-        type: 'revenue_deposited',
+        type: "revenue_deposited",
         message: `Revenue deposited on-chain for campaign #${entry.campaignId}.`,
         href: campaignHref,
       };
-    case 'claim_refund':
+    case "claim_refund":
       return {
-        type: 'refund_available',
+        type: "refund_available",
         message: `Refund transaction confirmed for campaign #${entry.campaignId}.`,
         href: campaignHref,
       };
-    case 'claim_revenue':
+    case "claim_revenue":
       return {
-        type: 'revenue_claimed',
+        type: "revenue_claimed",
         message: `Revenue claim confirmed for campaign #${entry.campaignId}.`,
         href: campaignHref,
       };
-    case 'vote':
+    case "vote":
       return {
-        type: 'new_update',
+        type: "new_update",
         message: `Vote recorded on-chain for campaign #${entry.campaignId}.`,
         href: campaignHref,
       };
@@ -103,13 +105,13 @@ function walletActionToNotification(
 async function fetchRemoteNotifications(walletAddress: string): Promise<AppNotification[] | null> {
   try {
     const url = new URL(REMOTE_FEED_ENDPOINT, window.location.origin);
-    url.searchParams.set('walletAddress', walletAddress);
+    url.searchParams.set("walletAddress", walletAddress);
 
     const response = await fetch(url.toString(), {
       headers: {
-        Accept: 'application/json',
+        Accept: "application/json",
       },
-      cache: 'no-store',
+      cache: "no-store",
     });
 
     if (!response.ok) {
@@ -165,7 +167,10 @@ export async function fetchNotifications(walletAddress: string): Promise<AppNoti
     .sort((a, b) => b.timestamp - a.timestamp);
 }
 
-export async function markNotificationRead(walletAddress: string, notificationId: string): Promise<void> {
+export async function markNotificationRead(
+  walletAddress: string,
+  notificationId: string,
+): Promise<void> {
   const normalizedWallet = normalizeAddress(walletAddress);
   if (!normalizedWallet) return;
 
@@ -175,9 +180,9 @@ export async function markNotificationRead(walletAddress: string, notificationId
 
   try {
     await fetch(REMOTE_FEED_ENDPOINT, {
-      method: 'PATCH',
+      method: "PATCH",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         walletAddress: normalizedWallet,
@@ -189,7 +194,10 @@ export async function markNotificationRead(walletAddress: string, notificationId
   }
 }
 
-export async function markAllNotificationsRead(walletAddress: string, notifications: AppNotification[]): Promise<void> {
+export async function markAllNotificationsRead(
+  walletAddress: string,
+  notifications: AppNotification[],
+): Promise<void> {
   const normalizedWallet = normalizeAddress(walletAddress);
   if (!normalizedWallet) return;
 
@@ -198,9 +206,9 @@ export async function markAllNotificationsRead(walletAddress: string, notificati
 
   try {
     await fetch(REMOTE_FEED_ENDPOINT, {
-      method: 'PATCH',
+      method: "PATCH",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         walletAddress: normalizedWallet,

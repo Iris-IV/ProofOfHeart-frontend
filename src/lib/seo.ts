@@ -31,7 +31,7 @@ interface CauseJsonLdStrings {
 export function buildCauseJsonLd(
   campaign: Campaign,
   locale: string,
-  strings: CauseJsonLdStrings
+  strings: CauseJsonLdStrings,
 ): object {
   const url = absoluteUrl(`/${locale}/causes/${campaign.id}`);
   const isAcceptingDonations = campaign.status === "active" || campaign.status === "verified";

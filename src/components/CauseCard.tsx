@@ -1,32 +1,27 @@
-'use client';
+"use client";
 
-import Image from 'next/image';
-import { memo, useState } from 'react';
-import { useLocale } from 'next-intl';
-import { formatAddress } from '@/lib/formatAddress';
-import { formatXlm, formatShortDate } from '@/lib/formatters';
-import { getAsyncActionErrorMessage, withActionTimeout } from '@/utils/asyncAction';
-import { parseContractError } from '@/utils/contractErrors';
-import {
-  Campaign,
-  Vote,
-  CATEGORY_LABELS,
-  calculateFundingPercentage,
-} from '../types';
-import Amount from './Amount';
-import AsyncButtonContent from './AsyncButtonContent';
-import CampaignStatusBadge from './CampaignStatusBadge';
-import CancelCampaignModal from './cancelCampaignModal';
-import DeadlineCountdown from './DeadlineCountdown';
-import FundingProgressBar from './FundingProgressBar';
-import { useToast } from './ToastProvider';
-import VotingComponent from './VotingComponent';
-import { useSavedCampaigns } from '@/hooks/useSavedCampaigns';
+import Image from "next/image";
+import { memo, useState } from "react";
+import { useLocale } from "next-intl";
+import { formatAddress } from "@/lib/formatAddress";
+import { formatShortDate } from "@/lib/formatters";
+import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncAction";
+import { parseContractError } from "@/utils/contractErrors";
+import { Campaign, Vote, CATEGORY_LABELS, calculateFundingPercentage } from "../types";
+import Amount from "./Amount";
+import AsyncButtonContent from "./AsyncButtonContent";
+import CampaignStatusBadge from "./CampaignStatusBadge";
+import CancelCampaignModal from "./cancelCampaignModal";
+import DeadlineCountdown from "./DeadlineCountdown";
+import FundingProgressBar from "./FundingProgressBar";
+import { useToast } from "./ToastProvider";
+import VotingComponent from "./VotingComponent";
+import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
 
 interface CauseCardProps {
   campaign: Campaign;
   userWalletAddress: string | null;
-  onVote: (campaignId: number, voteType: 'upvote' | 'downvote') => Promise<void>;
+  onVote: (campaignId: number, voteType: "upvote" | "downvote") => Promise<void>;
   onCancel: (campaignId: number) => Promise<void>;
   onClaimRefund: (campaignId: number) => Promise<void>;
   onTagClick?: (tag: string) => void;
@@ -37,15 +32,14 @@ interface CauseCardProps {
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
-  environment: '🌱',
-  education: '📚',
-  healthcare: '🏥',
+  environment: "🌱",
+  education: "📚",
+  healthcare: "🏥",
 };
 
 function formatDate(ts: number, locale: string) {
   return formatShortDate(ts, locale);
 }
-
 
 function CauseCard({
   campaign,
@@ -69,25 +63,21 @@ function CauseCard({
 
   const progressPct = calculateFundingPercentage(campaign.amount_raised, campaign.funding_goal);
 
-  const isCreator =
-    !!userWalletAddress && userWalletAddress === campaign.creator;
+  const isCreator = !!userWalletAddress && userWalletAddress === campaign.creator;
 
   const showCancelButton =
-    isCreator &&
-    campaign.status !== 'cancelled' &&
-    !campaign.funds_withdrawn;
+    isCreator && campaign.status !== "cancelled" && !campaign.funds_withdrawn;
 
   const showClaimRefund =
-    campaign.status === 'cancelled' &&
+    campaign.status === "cancelled" &&
     !!userWalletAddress &&
     userWalletAddress !== campaign.creator;
 
-  const categoryLabel =
-    CATEGORY_LABELS?.[campaign.category] ?? campaign.category;
+  const categoryLabel = CATEGORY_LABELS?.[campaign.category] ?? campaign.category;
 
-  const categoryIcon = CATEGORY_ICONS[campaign.category] ?? '';
+  const categoryIcon = CATEGORY_ICONS[campaign.category] ?? "";
 
-  const handleVote = async (_campaignId: number, voteType: 'upvote' | 'downvote') => {
+  const handleVote = async (_campaignId: number, voteType: "upvote" | "downvote") => {
     setIsVoting(true);
     try {
       await withActionTimeout(onVote(campaign.id, voteType));
@@ -123,7 +113,6 @@ function CauseCard({
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition-transform duration-200 hover:motion-safe:-translate-y-0.5 hover:border-blue-200 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-blue-800">
-
       {/* ── Cover image ── */}
       <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-700">
         {campaign.cover_image_url ? (
@@ -137,7 +126,7 @@ function CauseCard({
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-4xl select-none">
-            {categoryIcon || '💡'}
+            {categoryIcon || "💡"}
           </div>
         )}
         <button
@@ -145,7 +134,7 @@ function CauseCard({
             e.preventDefault();
             e.stopPropagation();
             if (!userWalletAddress) {
-              showWarning('Please connect your wallet to save campaigns.');
+              showWarning("Please connect your wallet to save campaigns.");
               return;
             }
             toggleSaved(campaign.id);
@@ -158,7 +147,7 @@ function CauseCard({
             viewBox="0 0 24 24"
             fill={isSaved(campaign.id) ? "currentColor" : "none"}
             stroke="currentColor"
-            className={`w-5 h-5 ${isSaved(campaign.id) ? 'text-blue-500' : ''}`}
+            className={`w-5 h-5 ${isSaved(campaign.id) ? "text-blue-500" : ""}`}
             strokeWidth={1.5}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -170,7 +159,6 @@ function CauseCard({
 
       {/* ── Card body ── */}
       <div className="p-5 flex-1 space-y-3">
-
         {/* Category + status */}
         <div className="flex items-start justify-between gap-3">
           <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
@@ -192,7 +180,9 @@ function CauseCard({
         {/* Funding progress */}
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400">
-            <span><Amount value={campaign.amount_raised} maximumFractionDigits={2} /> XLM raised</span>
+            <span>
+              <Amount value={campaign.amount_raised} maximumFractionDigits={2} /> XLM raised
+            </span>
             <span>{progressPct}%</span>
           </div>
           <div className="w-full bg-zinc-100 dark:bg-zinc-700 rounded-full h-1.5">
@@ -236,9 +226,8 @@ function CauseCard({
 
       {/* ── Actions ── */}
       <div className="px-5 pb-5 space-y-3">
-
         {/* Voting — hidden when cancelled */}
-        {campaign.status !== 'cancelled' && (
+        {campaign.status !== "cancelled" && (
           <VotingComponent
             campaign={campaign}
             userVote={userVote}
@@ -252,7 +241,7 @@ function CauseCard({
         )}
 
         {/* Cancelled banner */}
-        {campaign.status === 'cancelled' && (
+        {campaign.status === "cancelled" && (
           <div className="rounded-lg bg-zinc-50 dark:bg-zinc-700/50 border border-zinc-200 dark:border-zinc-600 px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400 text-center">
             This campaign has been cancelled.
           </div>

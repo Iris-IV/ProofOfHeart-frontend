@@ -165,4 +165,3 @@ export function parseContractError(error: unknown): string {
 
   return FALLBACK_KEY;
 }
-

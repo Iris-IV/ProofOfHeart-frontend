@@ -7,8 +7,7 @@ jest.mock("@/i18n/routing", () => ({
 }));
 
 jest.mock("@/lib/seo", () => ({
-  absoluteUrl: (path: string) =>
-    `https://example.test${path.startsWith("/") ? path : `/${path}`}`,
+  absoluteUrl: (path: string) => `https://example.test${path.startsWith("/") ? path : `/${path}`}`,
 }));
 
 import sitemap from "@/app/sitemap";

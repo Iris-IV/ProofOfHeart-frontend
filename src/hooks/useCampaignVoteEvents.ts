@@ -1,11 +1,14 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
-import { fetchVoteCastEvents, isEventStreamingAvailable, parseVoteCastApprove } from '@/lib/sorobanEvents';
-import { useWindowVisibility } from './useWindowVisibility';
+import { useEffect, useRef } from "react";
+import {
+  fetchVoteCastEvents,
+  isEventStreamingAvailable,
+  parseVoteCastApprove,
+} from "@/lib/sorobanEvents";
+import { useWindowVisibility } from "./useWindowVisibility";
 
-const EVENT_POLL_INTERVAL =
-  Number(process.env.NEXT_PUBLIC_VOTE_EVENTS_POLL_MS) || 5_000;
+const EVENT_POLL_INTERVAL = Number(process.env.NEXT_PUBLIC_VOTE_EVENTS_POLL_MS) || 5_000;
 
 export interface VoteCastDelta {
   approve: boolean;

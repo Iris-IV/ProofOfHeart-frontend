@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
-import { buildMarkdownSanitizeSchema } from '@/lib/markdownSanitizeSchema';
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import { buildMarkdownSanitizeSchema } from "@/lib/markdownSanitizeSchema";
 
 const markdownSanitizeSchema = buildMarkdownSanitizeSchema(defaultSchema);
 

@@ -1,14 +1,14 @@
-export type ObservabilityCategory = 'contract' | 'transaction' | 'rpc';
+export type ObservabilityCategory = "contract" | "transaction" | "rpc";
 
 export type ObservabilityKind =
-  | 'contract_error'
-  | 'simulation_failure'
-  | 'submission_failure'
-  | 'confirmation_timeout'
-  | 'confirmation_failed'
-  | 'rpc_error'
-  | 'rpc_timeout'
-  | 'transaction_success';
+  | "contract_error"
+  | "simulation_failure"
+  | "submission_failure"
+  | "confirmation_timeout"
+  | "confirmation_failed"
+  | "rpc_error"
+  | "rpc_timeout"
+  | "transaction_success";
 
 export interface ObservabilityEvent {
   id: string;
@@ -44,7 +44,7 @@ export interface ObservabilityRatesSnapshot {
 
 export interface ObservabilityAlert {
   id: string;
-  severity: 'warning' | 'critical';
+  severity: "warning" | "critical";
   message: string;
   metric: string;
   currentRate: number;

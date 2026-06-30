@@ -42,6 +42,7 @@ Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' '
 ### Freighter Compatibility
 
 The CSP is configured to work with the Freighter wallet extension:
+
 - `script-src 'unsafe-inline' 'unsafe-eval'` allows Freighter's inline signing logic
 - `connect-src https://*.freighter.app` allows communication with the Freighter extension
 - Testing has confirmed that wallet signing works correctly under this CSP
@@ -52,14 +53,14 @@ The CSP is configured to work with the Freighter wallet extension:
 
 The following security headers are applied to all routes:
 
-| Header | Value | Purpose |
-|--------|-------|---------|
-| `Content-Security-Policy` | See above | Prevents XSS and data injection |
-| `X-Frame-Options` | `DENY` | Prevents clickjacking |
-| `X-Content-Type-Options` | `nosniff` | Prevents MIME type sniffing |
-| `Referrer-Policy` | `strict-origin-when-cross-origin` | Controls referrer information leakage |
-| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` (production only) | Enforces HTTPS |
-| `X-XSS-Protection` | `1; mode=block` | Legacy XSS protection |
+| Header                      | Value                                                            | Purpose                               |
+| --------------------------- | ---------------------------------------------------------------- | ------------------------------------- |
+| `Content-Security-Policy`   | See above                                                        | Prevents XSS and data injection       |
+| `X-Frame-Options`           | `DENY`                                                           | Prevents clickjacking                 |
+| `X-Content-Type-Options`    | `nosniff`                                                        | Prevents MIME type sniffing           |
+| `Referrer-Policy`           | `strict-origin-when-cross-origin`                                | Controls referrer information leakage |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` (production only) | Enforces HTTPS                        |
+| `X-XSS-Protection`          | `1; mode=block`                                                  | Legacy XSS protection                 |
 
 ---
 
@@ -83,9 +84,9 @@ Instead of calling RPC directly from the client:
 
 ```ts
 // ❌ Don't do this (exposes API key to browser)
-const response = await fetch('https://mainnet.stellar.validationcloud.io/v1/SECRET_KEY', {
-  method: 'POST',
-  body: JSON.stringify({ jsonrpc: '2.0', method: 'getHealth' }),
+const response = await fetch("https://mainnet.stellar.validationcloud.io/v1/SECRET_KEY", {
+  method: "POST",
+  body: JSON.stringify({ jsonrpc: "2.0", method: "getHealth" }),
 });
 ```
 
@@ -93,9 +94,9 @@ Use the proxy:
 
 ```ts
 // ✅ Do this (API key stays server-side)
-const response = await fetch('/api/rpc', {
-  method: 'POST',
-  body: JSON.stringify({ jsonrpc: '2.0', method: 'getHealth' }),
+const response = await fetch("/api/rpc", {
+  method: "POST",
+  body: JSON.stringify({ jsonrpc: "2.0", method: "getHealth" }),
 });
 ```
 
@@ -134,7 +135,7 @@ Image validation is implemented in `src/lib/imageValidation.ts`:
 ### Usage
 
 ```ts
-import { validateImageUrl, isAllowedImageDomain } from '@/lib/imageValidation';
+import { validateImageUrl, isAllowedImageDomain } from "@/lib/imageValidation";
 
 // Validate a URL before using it
 const validation = validateImageUrl(userImageUrl);
@@ -145,7 +146,7 @@ if (!validation.valid) {
 
 // Quick check for client-side validation
 if (!isAllowedImageDomain(userImageUrl)) {
-  showError('Image domain not allowed');
+  showError("Image domain not allowed");
   return;
 }
 ```
@@ -153,6 +154,7 @@ if (!isAllowedImageDomain(userImageUrl)) {
 ### Next.js Image Configuration
 
 The `next.config.ts` has been updated to:
+
 - Remove wildcard patterns (`**.ipfs.io` → `ipfs.io`)
 - Constrain to specific hostnames only
 - Document why `unoptimized: true` is set (standalone output requirement)
@@ -203,12 +205,14 @@ TESTNET_RPC_URL=https://soroban-testnet.stellar.org
 ### CSP Compatibility
 
 The CSP is configured to allow Freighter to function:
+
 - `script-src 'unsafe-inline' 'unsafe-eval'` allows Freighter's signing logic
 - `connect-src https://*.freighter.app` allows communication with the extension
 
 ### Testing
 
 To verify Freighter works under CSP:
+
 1. Build the app with CSP enabled (default in production)
 2. Connect wallet
 3. Attempt to sign a transaction (e.g., contribute to a campaign)
@@ -221,6 +225,7 @@ To verify Freighter works under CSP:
 ### Error Tracking
 
 Error tracking (e.g., Sentry) is configured to:
+
 - Only send errors in production (`NODE_ENV === 'production'`)
 - Scrub PII (wallet addresses, emails, private keys) before sending
 - Capture transaction context (action, campaign id, error code) for debugging

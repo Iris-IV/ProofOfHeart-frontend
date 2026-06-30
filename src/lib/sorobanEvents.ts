@@ -1,21 +1,20 @@
-import * as StellarSdk from '@stellar/stellar-sdk';
+import * as StellarSdk from "@stellar/stellar-sdk";
 
 type ApiEventResponse = StellarSdk.rpc.Api.EventResponse;
 type ApiEventFilter = StellarSdk.rpc.Api.EventFilter;
 type ApiGetEventsRequest = StellarSdk.rpc.Api.GetEventsRequest;
 
-const USE_MOCKS =
-  typeof process !== 'undefined' && process.env.NEXT_PUBLIC_USE_MOCKS === 'true';
+const USE_MOCKS = typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
 const SOROBAN_RPC_URL =
   process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ??
   process.env.NEXT_PUBLIC_RPC_URL ??
-  'https://soroban-testnet.stellar.org';
+  "https://soroban-testnet.stellar.org";
 
 const CONTRACT_ADDRESS =
-  process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? process.env.NEXT_PUBLIC_CONTRACT_ID ?? '';
+  process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? process.env.NEXT_PUBLIC_CONTRACT_ID ?? "";
 
-const VOTE_CAST_TOPIC = 'campaign_vote_cast';
+const VOTE_CAST_TOPIC = "campaign_vote_cast";
 
 let _server: StellarSdk.rpc.Server | null = null;
 
@@ -32,14 +31,14 @@ export function isEventStreamingAvailable(): boolean {
 
 /** Base64 XDR segment for Soroban event topic filters. */
 export function scValToTopicSegment(value: StellarSdk.xdr.ScVal): string {
-  return value.toXDR().toString('base64');
+  return value.toXDR().toString("base64");
 }
 
 /** Topic filter for `("campaign_vote_cast", campaign_id, *)` contract events. */
 export function voteCastTopicFilter(campaignId: number): string[][] {
-  const eventSymbol = StellarSdk.nativeToScVal(VOTE_CAST_TOPIC, { type: 'symbol' });
-  const campaignTopic = StellarSdk.nativeToScVal(campaignId, { type: 'u32' });
-  return [[scValToTopicSegment(eventSymbol), scValToTopicSegment(campaignTopic), '*']];
+  const eventSymbol = StellarSdk.nativeToScVal(VOTE_CAST_TOPIC, { type: "symbol" });
+  const campaignTopic = StellarSdk.nativeToScVal(campaignId, { type: "u32" });
+  return [[scValToTopicSegment(eventSymbol), scValToTopicSegment(campaignTopic), "*"]];
 }
 
 export function isVoteCastEvent(event: ApiEventResponse, campaignId: number): boolean {
@@ -53,13 +52,13 @@ export function parseVoteCastApprove(event: ApiEventResponse): boolean {
   return Boolean(StellarSdk.scValToNative(event.value));
 }
 
-const CONTRIBUTION_MADE_TOPIC = 'contribution_made';
+const CONTRIBUTION_MADE_TOPIC = "contribution_made";
 
 /** Topic filter for `("contribution_made", campaign_id, *)` contract events. */
 export function contributionMadeTopicFilter(campaignId: number): string[][] {
-  const eventSymbol = StellarSdk.nativeToScVal(CONTRIBUTION_MADE_TOPIC, { type: 'symbol' });
-  const campaignTopic = StellarSdk.nativeToScVal(campaignId, { type: 'u32' });
-  return [[scValToTopicSegment(eventSymbol), scValToTopicSegment(campaignTopic), '*']];
+  const eventSymbol = StellarSdk.nativeToScVal(CONTRIBUTION_MADE_TOPIC, { type: "symbol" });
+  const campaignTopic = StellarSdk.nativeToScVal(campaignId, { type: "u32" });
+  return [[scValToTopicSegment(eventSymbol), scValToTopicSegment(campaignTopic), "*"]];
 }
 
 export function isContributionMadeEvent(event: ApiEventResponse, campaignId: number): boolean {
@@ -71,7 +70,7 @@ export function isContributionMadeEvent(event: ApiEventResponse, campaignId: num
 
 export function parseContributionAmount(event: ApiEventResponse): bigint {
   const val = event.value;
-  if (val && typeof val === 'object' && '__bigint' in val) {
+  if (val && typeof val === "object" && "__bigint" in val) {
     return (val as { __bigint: bigint }).__bigint;
   }
   try {
@@ -120,7 +119,7 @@ export async function fetchContributionMadeEvents(
 
   const filters: ApiEventFilter[] = [
     {
-      type: 'contract',
+      type: "contract",
       contractIds: [CONTRACT_ADDRESS],
       topics: contributionMadeTopicFilter(campaignId),
     },
@@ -158,7 +157,7 @@ export async function fetchVoteCastEvents(
 
   const filters: ApiEventFilter[] = [
     {
-      type: 'contract',
+      type: "contract",
       contractIds: [CONTRACT_ADDRESS],
       topics: voteCastTopicFilter(campaignId),
     },

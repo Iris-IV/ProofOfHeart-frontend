@@ -1,13 +1,13 @@
-import type { Schema } from 'hast-util-sanitize';
+import type { Schema } from "hast-util-sanitize";
 
 /** Protocol and tag restrictions applied on top of rehype-sanitize defaults. */
 export const MARKDOWN_SANITIZE_OVERRIDES: Partial<Schema> = {
   allowComments: false,
   protocols: {
-    cite: ['http', 'https'],
-    href: ['http', 'https', 'mailto'],
-    longDesc: ['http', 'https'],
-    src: ['http', 'https'],
+    cite: ["http", "https"],
+    href: ["http", "https", "mailto"],
+    longDesc: ["http", "https"],
+    src: ["http", "https"],
   },
 };
 
@@ -25,11 +25,11 @@ export function buildMarkdownSanitizeSchema(defaultSchema: Schema): Schema {
     },
     attributes: {
       ...defaultSchema.attributes,
-      a: (defaultSchema.attributes?.a ?? []).filter(
-        (attr) => (typeof attr === 'string' ? !attr.toLowerCase().startsWith('on') : true),
+      a: (defaultSchema.attributes?.a ?? []).filter((attr) =>
+        typeof attr === "string" ? !attr.toLowerCase().startsWith("on") : true,
       ),
-      img: (defaultSchema.attributes?.img ?? []).filter(
-        (attr) => (typeof attr === 'string' ? !attr.toLowerCase().startsWith('on') : true),
+      img: (defaultSchema.attributes?.img ?? []).filter((attr) =>
+        typeof attr === "string" ? !attr.toLowerCase().startsWith("on") : true,
       ),
     },
   };

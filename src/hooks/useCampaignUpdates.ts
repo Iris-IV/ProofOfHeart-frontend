@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getCampaignUpdates, createCampaignUpdate } from '../lib/campaignUpdates';
-import { CampaignUpdate } from '../types';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getCampaignUpdates, createCampaignUpdate } from "../lib/campaignUpdates";
+import { CampaignUpdate } from "../types";
 
 export interface UseCampaignUpdatesResult {
   updates: CampaignUpdate[];
@@ -15,12 +15,12 @@ export interface UseCampaignUpdatesResult {
 
 export function useCampaignUpdates(
   campaignId: number,
-  creatorAddress?: string | null
+  creatorAddress?: string | null,
 ): UseCampaignUpdatesResult {
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery<CampaignUpdate[], Error>({
-    queryKey: ['campaignUpdates', campaignId],
+    queryKey: ["campaignUpdates", campaignId],
     queryFn: () => getCampaignUpdates(campaignId),
     enabled: !!campaignId,
   });
@@ -28,13 +28,13 @@ export function useCampaignUpdates(
   const { mutateAsync: createUpdateMutation, isPending: isCreating } = useMutation({
     mutationFn: async ({ content, notify }: { content: string; notify: boolean }) => {
       if (!creatorAddress) {
-        throw new Error('Creator address not available');
+        throw new Error("Creator address not available");
       }
       return createCampaignUpdate(campaignId, content, creatorAddress, notify);
     },
     onSuccess: () => {
       // Invalidate and refetch updates after successful creation
-      queryClient.invalidateQueries({ queryKey: ['campaignUpdates', campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["campaignUpdates", campaignId] });
     },
   });
 
@@ -49,7 +49,7 @@ export function useCampaignUpdates(
     createUpdate,
     isCreating,
     refetch: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaignUpdates', campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["campaignUpdates", campaignId] });
     },
   };
 }

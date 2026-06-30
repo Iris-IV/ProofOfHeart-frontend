@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { Campaign } from '@/types';
-import { useWallet } from '@/components/WalletContext';
-import { useCampaignComments } from '@/hooks/useCampaignComments';
-import CommentsList from './CommentsList';
-import CommentComposer from './CommentComposer';
+import { Campaign } from "@/types";
+import { useWallet } from "@/components/WalletContext";
+import { useCampaignComments } from "@/hooks/useCampaignComments";
+import CommentsList from "./CommentsList";
+import CommentComposer from "./CommentComposer";
 
 interface CommentsSectionProps {
   campaign: Campaign;
@@ -24,12 +24,18 @@ export default function CommentsSection({ campaign }: CommentsSectionProps) {
     reportCommentMutation,
   } = useCampaignComments(campaign.id, userAddress);
 
-  const topLevelCommentsCount = comments.filter(c => !c.parentId).length;
+  const topLevelCommentsCount = comments.filter((c) => !c.parentId).length;
 
   return (
-    <section className="space-y-6 mt-12 pt-8 border-t border-zinc-200 dark:border-zinc-800" aria-labelledby="comments-heading">
+    <section
+      className="space-y-6 mt-12 pt-8 border-t border-zinc-200 dark:border-zinc-800"
+      aria-labelledby="comments-heading"
+    >
       <div className="flex items-center justify-between">
-        <h2 id="comments-heading" className="text-xl font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+        <h2
+          id="comments-heading"
+          className="text-xl font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2"
+        >
           Comments / Q&A
           {topLevelCommentsCount > 0 && (
             <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 py-0.5 px-2 rounded-full text-sm font-medium">

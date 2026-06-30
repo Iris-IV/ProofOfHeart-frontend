@@ -1,9 +1,44 @@
-'use client';
+"use client";
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getCampaign } from '../lib/contractClient';
-import { Campaign } from '../types';
-import { useWindowVisibility } from './useWindowVisibility';
+import { useState, useEffect, useReducer, useCallback } from "react";
+import { Campaign } from "../types";
+import { getCampaign } from "../lib/contractClient";
+
+interface CampaignState {
+  campaign: Campaign | null;
+  isLoading: boolean;
+  error: string | null;
+  notFound: boolean;
+}
+
+type CampaignAction =
+  | { type: "fetch_start" }
+  | { type: "fetch_success"; campaign: Campaign }
+  | { type: "fetch_not_found" }
+  | { type: "fetch_error"; error: string };
+
+function campaignReducer(state: CampaignState, action: CampaignAction): CampaignState {
+  switch (action.type) {
+    case "fetch_start":
+      return { campaign: null, isLoading: true, error: null, notFound: false };
+    case "fetch_success":
+      return {
+        campaign: action.campaign,
+        isLoading: false,
+        error: null,
+        notFound: false,
+      };
+    case "fetch_not_found":
+      return { campaign: null, isLoading: false, error: null, notFound: true };
+    case "fetch_error":
+      return {
+        campaign: null,
+        isLoading: false,
+        error: action.error,
+        notFound: false,
+      };
+  }
+}
 
 export interface UseCampaignResult {
   campaign: Campaign | null;
@@ -13,31 +48,45 @@ export interface UseCampaignResult {
   refetch: () => void;
 }
 
-/** Periodic `get_campaign` reconciliation to correct event-stream drift. */
-const RECONCILE_INTERVAL =
-  Number(process.env.NEXT_PUBLIC_POLL_INTERVAL_DETAIL_MS) || 30_000;
-
 export function useCampaign(id: number): UseCampaignResult {
-  const queryClient = useQueryClient();
-  const isVisible = useWindowVisibility();
-
-  const { data, isLoading, error } = useQuery<Campaign | null, Error>({
-    queryKey: ['campaign', id],
-    queryFn: () => getCampaign(id),
-    enabled: !!id,
-    staleTime: RECONCILE_INTERVAL,
-    refetchOnWindowFocus: true,
-    refetchInterval: isVisible ? RECONCILE_INTERVAL : false,
-    refetchIntervalInBackground: false,
+  const [state, dispatch] = useReducer(campaignReducer, {
+    campaign: null,
+    isLoading: true,
+    error: null,
+    notFound: false,
   });
+  const [tick, setTick] = useState(0);
 
-  return {
-    campaign: data ?? null,
-    isLoading,
-    error: error?.message ?? null,
-    notFound: !isLoading && !error && data === null && !!id,
-    refetch: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaign', id] });
-    },
-  };
+  const refetch = useCallback(() => {
+    setTick((t) => t + 1);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    dispatch({ type: "fetch_start" });
+
+    getCampaign(id)
+      .then((data) => {
+        if (!cancelled) {
+          if (data === null) {
+            dispatch({ type: "fetch_not_found" });
+          } else {
+            dispatch({ type: "fetch_success", campaign: data });
+          }
+        }
+      })
+      .catch((err) => {
+        if (!cancelled)
+          dispatch({
+            type: "fetch_error",
+            error: err instanceof Error ? err.message : "Failed to load campaign.",
+          });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, tick]);
+
+  return { ...state, refetch };
 }

@@ -30,7 +30,10 @@ export async function POST(
 
   const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "unknown";
   if (!checkReportRateLimit(ip)) {
-    return NextResponse.json({ message: "Too many report requests. Please wait." }, { status: 429 });
+    return NextResponse.json(
+      { message: "Too many report requests. Please wait." },
+      { status: 429 },
+    );
   }
 
   const comments = commentStore.get(campaignId) ?? [];

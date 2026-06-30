@@ -22,7 +22,8 @@ const MOCK_UPDATES: Record<number, CampaignUpdate[]> = {
     {
       id: "update-1-1",
       campaignId: 1,
-      content: "We've successfully completed the first phase of our clean water project! 200 families now have access to clean drinking water thanks to your support. The next phase will focus on extending the pipeline to the remaining 300 families.",
+      content:
+        "We've successfully completed the first phase of our clean water project! 200 families now have access to clean drinking water thanks to your support. The next phase will focus on extending the pipeline to the remaining 300 families.",
       authorAddress: "GABC123456789012345678901234567890123456789012345678901234567890",
       timestamp: Math.floor(Date.now() / 1000) - 86400 * 5,
       signature: "mock-signature-update-1-1",
@@ -30,7 +31,8 @@ const MOCK_UPDATES: Record<number, CampaignUpdate[]> = {
     {
       id: "update-1-2",
       campaignId: 1,
-      content: "Thank you all for the incredible support! We've reached 50% of our funding goal. The community response has been overwhelming, and we're excited to continue making progress.",
+      content:
+        "Thank you all for the incredible support! We've reached 50% of our funding goal. The community response has been overwhelming, and we're excited to continue making progress.",
       authorAddress: "GABC123456789012345678901234567890123456789012345678901234567890",
       timestamp: Math.floor(Date.now() / 1000) - 86400 * 10,
       signature: "mock-signature-update-1-2",
@@ -40,7 +42,8 @@ const MOCK_UPDATES: Record<number, CampaignUpdate[]> = {
     {
       id: "update-2-1",
       campaignId: 2,
-      content: "Great news! We've partnered with TechForGood Foundation to provide tablets for all students. The first batch of 50 tablets has arrived and will be distributed next week.",
+      content:
+        "Great news! We've partnered with TechForGood Foundation to provide tablets for all students. The first batch of 50 tablets has arrived and will be distributed next week.",
       authorAddress: "GDEF123456789012345678901234567890123456789012345678901234567890",
       timestamp: Math.floor(Date.now() / 1000) - 86400 * 3,
       signature: "mock-signature-update-2-1",
@@ -98,16 +101,16 @@ export async function createCampaignUpdate(
   campaignId: number,
   content: string,
   creatorAddress: string,
-  notify: boolean = false
+  notify: boolean = false,
 ): Promise<CampaignUpdate> {
   if (USE_MOCKS || !hasOffchainApiBaseUrl()) {
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 800));
-    
+
     const timestamp = Math.floor(Date.now() / 1000);
     const payload: UpdatePayload = { campaignId, content, timestamp };
     const signature = await signPayload(payload);
-    
+
     const newUpdate: CampaignUpdate = {
       id: `update-${campaignId}-${Date.now()}`,
       campaignId,
@@ -116,18 +119,18 @@ export async function createCampaignUpdate(
       timestamp,
       signature,
     };
-    
+
     // Log notify action (mock behavior)
     if (notify) {
       console.log(`[Mock] Notification sent to contributors for campaign ${campaignId}`);
     }
-    
+
     // Add to mock data
     if (!MOCK_UPDATES[campaignId]) {
       MOCK_UPDATES[campaignId] = [];
     }
     MOCK_UPDATES[campaignId].unshift(newUpdate);
-    
+
     return newUpdate;
   }
 
@@ -181,17 +184,13 @@ export async function verifyUpdateSignature(update: CampaignUpdate): Promise<boo
       content: update.content,
       timestamp: update.timestamp,
     });
-    
+
     const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
     const signature = Buffer.from(update.signature, "hex");
     const publicKey = StellarSdk.StrKey.decodeEd25519PublicKey(update.authorAddress);
-    
-    const verified = StellarSdk.verify(
-      payloadHash,
-      signature,
-      publicKey
-    );
-    
+
+    const verified = StellarSdk.verify(payloadHash, signature, publicKey);
+
     return verified;
   } catch {
     return false;

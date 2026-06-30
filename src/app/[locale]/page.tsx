@@ -3,7 +3,8 @@ import HomeClient from "./HomeClient";
 
 export function generateMetadata() {
   const title = "ProofOfHeart | Decentralized Community Launchpad";
-  const description = "Validating causes and managing on-chain contributions with full transparency and community trust.";
+  const description =
+    "Validating causes and managing on-chain contributions with full transparency and community trust.";
 
   return {
     title,

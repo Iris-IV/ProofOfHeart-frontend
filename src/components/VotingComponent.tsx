@@ -71,9 +71,7 @@ export default function VotingComponent({
       setLocalVote(voteType);
     } catch (error) {
       console.error("Voting failed:", error);
-      showError(
-        localizeContractError(getAsyncActionErrorMessage(error, parseContractError)),
-      );
+      showError(localizeContractError(getAsyncActionErrorMessage(error, parseContractError)));
     }
   };
 
@@ -208,7 +206,7 @@ export default function VotingComponent({
         <div className="w-full space-y-1">
           <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400">
             <span>{t("quorumProgress")}</span>
-            <span>{t("votesOfQuorum", { current: totalVotes, quorum: minVotesQuorum })}</span>
+            <span>{t("votesOfQuorum", { current: totalVotes, quorum: minVotesQuorum ?? 0 })}</span>
           </div>
           <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
             <div

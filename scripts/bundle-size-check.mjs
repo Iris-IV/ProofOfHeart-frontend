@@ -64,9 +64,7 @@ function extractPaths(obj) {
   if (!obj || typeof obj !== "object") return;
   for (const v of Object.values(obj)) {
     if (Array.isArray(v)) {
-      v.filter((s) => typeof s === "string" && s.endsWith(".js")).forEach((s) =>
-        chunkPaths.add(s)
-      );
+      v.filter((s) => typeof s === "string" && s.endsWith(".js")).forEach((s) => chunkPaths.add(s));
     } else if (typeof v === "object") {
       extractPaths(v);
     }
@@ -100,7 +98,9 @@ if (UPDATE_BASELINE) {
     chunks: chunkSizes,
   };
   writeFileSync(BASELINE_FILE, JSON.stringify(baseline, null, 2) + "\n");
-  console.log(`✅ Baseline updated: ${kb(totalBytes)} total across ${Object.keys(chunkSizes).length} chunks`);
+  console.log(
+    `✅ Baseline updated: ${kb(totalBytes)} total across ${Object.keys(chunkSizes).length} chunks`,
+  );
   process.exit(0);
 }
 
@@ -110,7 +110,7 @@ if (!existsSync(BASELINE_FILE)) {
   console.warn(
     "⚠️  No baseline file found at scripts/bundle-size-baseline.json.\n" +
       "   Run `node scripts/bundle-size-check.mjs --update-baseline` after a\n" +
-      "   successful build to create one, then commit it."
+      "   successful build to create one, then commit it.",
   );
   // Non-fatal on first run — let the build succeed so baseline can be created.
   process.exit(0);
@@ -150,7 +150,9 @@ console.log("\n📦 Bundle size report");
 console.log("=".repeat(60));
 console.log(`  Baseline : ${kb(baselineTotal)}`);
 console.log(`  Current  : ${kb(totalBytes)}`);
-console.log(`  Delta    : ${delta >= 0 ? "+" : ""}${kb(delta)} (${deltaPercent >= 0 ? "+" : ""}${deltaPercent.toFixed(1)}%)`);
+console.log(
+  `  Delta    : ${delta >= 0 ? "+" : ""}${kb(delta)} (${deltaPercent >= 0 ? "+" : ""}${deltaPercent.toFixed(1)}%)`,
+);
 console.log(`  Budget   : ±${kb(budget)}`);
 console.log(exceeded ? `  Status   : ❌ EXCEEDED` : `  Status   : ✅ OK`);
 
@@ -187,7 +189,7 @@ if (exceeded) {
     `\n❌ Bundle size exceeded the budget by ${kb(delta - budget)}.\n` +
       `   If this is intentional, run:\n` +
       `   node scripts/bundle-size-check.mjs --update-baseline\n` +
-      `   and commit the updated baseline.`
+      `   and commit the updated baseline.`,
   );
   process.exit(1);
 }

@@ -1,13 +1,13 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ToastProvider } from '@/components/ToastProvider';
-import { WalletProvider } from '@/components/WalletContext';
-import UpdatesSection from '@/components/UpdatesSection';
-import { Campaign, Category } from '@/types';
-import * as campaignUpdatesModule from '@/lib/campaignUpdates';
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ToastProvider } from "@/components/ToastProvider";
+import { WalletProvider } from "@/components/WalletContext";
+import UpdatesSection from "@/components/UpdatesSection";
+import { Campaign, Category } from "@/types";
+import * as campaignUpdatesModule from "@/lib/campaignUpdates";
 
 // Mock the campaign updates module
-jest.mock('@/lib/campaignUpdates', () => ({
+jest.mock("@/lib/campaignUpdates", () => ({
   getCampaignUpdates: jest.fn(),
   createCampaignUpdate: jest.fn(),
 }));
@@ -17,11 +17,11 @@ const mockCreateCampaignUpdate = campaignUpdatesModule.createCampaignUpdate as j
 
 const mockCampaign: Campaign = {
   id: 1,
-  creator: 'GCREATOR12345678901234567890123456789012345678901234567890',
-  title: 'Test Campaign',
-  description: 'Test Description',
+  creator: "GCREATOR12345678901234567890123456789012345678901234567890",
+  title: "Test Campaign",
+  description: "Test Description",
   created_at: Math.floor(Date.now() / 1000) - 86400,
-  status: 'active',
+  status: "active",
   funding_goal: BigInt(100000000000),
   deadline: Math.floor(Date.now() / 1000) + 86400 * 30,
   amount_raised: BigInt(50000000000),
@@ -44,10 +44,7 @@ const createTestQueryClient = () => {
   });
 };
 
-const renderUpdatesSection = (
-  campaign: Campaign,
-  walletPublicKey: string | null = null
-) => {
+const renderUpdatesSection = (campaign: Campaign, walletPublicKey: string | null = null) => {
   const queryClient = createTestQueryClient();
 
   return render(
@@ -57,34 +54,34 @@ const renderUpdatesSection = (
           <UpdatesSection campaign={campaign} />
         </WalletProvider>
       </ToastProvider>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 };
 
-describe('UpdatesSection Integration', () => {
+describe("UpdatesSection Integration", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
   });
 
-  describe('Viewing updates', () => {
-    it('renders updates in reverse chronological order', async () => {
+  describe("Viewing updates", () => {
+    it("renders updates in reverse chronological order", async () => {
       const mockUpdates = [
         {
-          id: 'update-2',
+          id: "update-2",
           campaignId: 1,
-          content: 'Newer update',
+          content: "Newer update",
           authorAddress: mockCampaign.creator,
           timestamp: Math.floor(Date.now() / 1000) - 3600,
-          signature: 'sig-2',
+          signature: "sig-2",
         },
         {
-          id: 'update-1',
+          id: "update-1",
           campaignId: 1,
-          content: 'Older update',
+          content: "Older update",
           authorAddress: mockCampaign.creator,
           timestamp: Math.floor(Date.now() / 1000) - 86400,
-          signature: 'sig-1',
+          signature: "sig-1",
         },
       ];
 
@@ -93,232 +90,230 @@ describe('UpdatesSection Integration', () => {
       renderUpdatesSection(mockCampaign);
 
       await waitFor(() => {
-        expect(screen.getByText('Newer update')).toBeInTheDocument();
-        expect(screen.getByText('Older update')).toBeInTheDocument();
+        expect(screen.getByText("Newer update")).toBeInTheDocument();
+        expect(screen.getByText("Older update")).toBeInTheDocument();
       });
 
       // Verify order - newer should appear first
-      const articles = screen.getAllByRole('article');
-      expect(articles[0]).toHaveTextContent('Newer update');
-      expect(articles[1]).toHaveTextContent('Older update');
+      const articles = screen.getAllByRole("article");
+      expect(articles[0]).toHaveTextContent("Newer update");
+      expect(articles[1]).toHaveTextContent("Older update");
     });
 
-    it('shows empty state when no updates exist', async () => {
+    it("shows empty state when no updates exist", async () => {
       mockGetCampaignUpdates.mockResolvedValue([]);
 
       renderUpdatesSection(mockCampaign);
 
       await waitFor(() => {
-        expect(screen.getByText('No updates yet')).toBeInTheDocument();
+        expect(screen.getByText("No updates yet")).toBeInTheDocument();
       });
     });
 
-    it('shows loading state initially', () => {
+    it("shows loading state initially", () => {
       mockGetCampaignUpdates.mockReturnValue(
-        new Promise(() => {}) // Never resolves
+        new Promise(() => {}), // Never resolves
       );
 
       renderUpdatesSection(mockCampaign);
 
-      expect(screen.getAllByTestId('skeleton')).toHaveLength(9);
+      expect(screen.getAllByTestId("skeleton")).toHaveLength(9);
     });
 
-    it('shows error state on fetch failure', async () => {
-      mockGetCampaignUpdates.mockRejectedValue(new Error('Failed to fetch'));
+    it("shows error state on fetch failure", async () => {
+      mockGetCampaignUpdates.mockRejectedValue(new Error("Failed to fetch"));
 
       renderUpdatesSection(mockCampaign);
 
       await waitFor(() => {
-        expect(
-          screen.getByText(/⚠️ Failed to load updates/i)
-        ).toBeInTheDocument();
+        expect(screen.getByText(/⚠️ Failed to load updates/i)).toBeInTheDocument();
       });
     });
   });
 
-  describe('Creator-only composer', () => {
-    it('shows composer when user is the campaign creator', async () => {
+  describe("Creator-only composer", () => {
+    it("shows composer when user is the campaign creator", async () => {
       // Set wallet to creator address
-      localStorage.setItem('stellar_wallet_public_key', mockCampaign.creator);
+      localStorage.setItem("stellar_wallet_public_key", mockCampaign.creator);
       mockGetCampaignUpdates.mockResolvedValue([]);
 
       renderUpdatesSection(mockCampaign, mockCampaign.creator);
 
       await waitFor(() => {
-        expect(screen.getByText('✏️ Write an update')).toBeInTheDocument();
+        expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
       });
     });
 
-    it('hides composer when user is not the campaign creator', async () => {
+    it("hides composer when user is not the campaign creator", async () => {
       // Set wallet to different address
-      const otherAddress = 'GOTHER12345678901234567890123456789012345678901234567890';
-      localStorage.setItem('stellar_wallet_public_key', otherAddress);
+      const otherAddress = "GOTHER12345678901234567890123456789012345678901234567890";
+      localStorage.setItem("stellar_wallet_public_key", otherAddress);
       mockGetCampaignUpdates.mockResolvedValue([]);
 
       renderUpdatesSection(mockCampaign, otherAddress);
 
       await waitFor(() => {
-        expect(screen.queryByText('✏️ Write an update')).not.toBeInTheDocument();
+        expect(screen.queryByText("✏️ Write an update")).not.toBeInTheDocument();
       });
     });
 
-    it('hides composer when wallet is not connected', async () => {
+    it("hides composer when wallet is not connected", async () => {
       mockGetCampaignUpdates.mockResolvedValue([]);
 
       renderUpdatesSection(mockCampaign, null);
 
       await waitFor(() => {
-        expect(screen.queryByText('✏️ Write an update')).not.toBeInTheDocument();
+        expect(screen.queryByText("✏️ Write an update")).not.toBeInTheDocument();
       });
     });
   });
 
-  describe('Creating updates', () => {
-    it('allows creator to post a new update', async () => {
-      localStorage.setItem('stellar_wallet_public_key', mockCampaign.creator);
+  describe("Creating updates", () => {
+    it("allows creator to post a new update", async () => {
+      localStorage.setItem("stellar_wallet_public_key", mockCampaign.creator);
       mockGetCampaignUpdates.mockResolvedValue([]);
       mockCreateCampaignUpdate.mockResolvedValue({
-        id: 'new-update',
+        id: "new-update",
         campaignId: 1,
-        content: 'New update content',
+        content: "New update content",
         authorAddress: mockCampaign.creator,
         timestamp: Math.floor(Date.now() / 1000),
-        signature: 'new-sig',
+        signature: "new-sig",
       });
 
       renderUpdatesSection(mockCampaign, mockCampaign.creator);
 
       // Open composer
       await waitFor(() => {
-        expect(screen.getByText('✏️ Write an update')).toBeInTheDocument();
+        expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText('✏️ Write an update'));
+      fireEvent.click(screen.getByText("✏️ Write an update"));
 
       // Type content
       const textarea = screen.getByPlaceholderText(
-        /Share progress, milestones, or news with your supporters/i
+        /Share progress, milestones, or news with your supporters/i,
       );
       fireEvent.change(textarea, {
-        target: { value: 'New update content' },
+        target: { value: "New update content" },
       });
 
       // Submit
-      fireEvent.click(screen.getByText('Post Update'));
+      fireEvent.click(screen.getByText("Post Update"));
 
       await waitFor(() => {
         expect(mockCreateCampaignUpdate).toHaveBeenCalledWith(
           1,
-          'New update content',
-          mockCampaign.creator
+          "New update content",
+          mockCampaign.creator,
         );
       });
     });
 
-    it('shows submitting state while creating update', async () => {
-      localStorage.setItem('stellar_wallet_public_key', mockCampaign.creator);
+    it("shows submitting state while creating update", async () => {
+      localStorage.setItem("stellar_wallet_public_key", mockCampaign.creator);
       mockGetCampaignUpdates.mockResolvedValue([]);
       mockCreateCampaignUpdate.mockImplementation(
-        () => new Promise((resolve) => setTimeout(resolve, 100))
+        () => new Promise((resolve) => setTimeout(resolve, 100)),
       );
 
       renderUpdatesSection(mockCampaign, mockCampaign.creator);
 
       await waitFor(() => {
-        expect(screen.getByText('✏️ Write an update')).toBeInTheDocument();
+        expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText('✏️ Write an update'));
+      fireEvent.click(screen.getByText("✏️ Write an update"));
 
       const textarea = screen.getByPlaceholderText(
-        /Share progress, milestones, or news with your supporters/i
+        /Share progress, milestones, or news with your supporters/i,
       );
       fireEvent.change(textarea, {
-        target: { value: 'Update content' },
+        target: { value: "Update content" },
       });
 
-      fireEvent.click(screen.getByText('Post Update'));
+      fireEvent.click(screen.getByText("Post Update"));
 
-      expect(screen.getByText('Posting...')).toBeInTheDocument();
+      expect(screen.getByText("Posting...")).toBeInTheDocument();
     });
 
-    it('shows error toast on submission failure', async () => {
-      localStorage.setItem('stellar_wallet_public_key', mockCampaign.creator);
+    it("shows error toast on submission failure", async () => {
+      localStorage.setItem("stellar_wallet_public_key", mockCampaign.creator);
       mockGetCampaignUpdates.mockResolvedValue([]);
-      mockCreateCampaignUpdate.mockRejectedValue(new Error('Submission failed'));
+      mockCreateCampaignUpdate.mockRejectedValue(new Error("Submission failed"));
 
       renderUpdatesSection(mockCampaign, mockCampaign.creator);
 
       await waitFor(() => {
-        expect(screen.getByText('✏️ Write an update')).toBeInTheDocument();
+        expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText('✏️ Write an update'));
+      fireEvent.click(screen.getByText("✏️ Write an update"));
 
       const textarea = screen.getByPlaceholderText(
-        /Share progress, milestones, or news with your supporters/i
+        /Share progress, milestones, or news with your supporters/i,
       );
       fireEvent.change(textarea, {
-        target: { value: 'Update content' },
+        target: { value: "Update content" },
       });
 
-      fireEvent.click(screen.getByText('Post Update'));
+      fireEvent.click(screen.getByText("Post Update"));
 
       await waitFor(() => {
         expect(screen.getByText(/Submission failed/i)).toBeInTheDocument();
       });
     });
 
-    it('clears composer after successful submission', async () => {
-      localStorage.setItem('stellar_wallet_public_key', mockCampaign.creator);
+    it("clears composer after successful submission", async () => {
+      localStorage.setItem("stellar_wallet_public_key", mockCampaign.creator);
       mockGetCampaignUpdates.mockResolvedValue([]);
       mockCreateCampaignUpdate.mockResolvedValue({
-        id: 'new-update',
+        id: "new-update",
         campaignId: 1,
-        content: 'Success!',
+        content: "Success!",
         authorAddress: mockCampaign.creator,
         timestamp: Math.floor(Date.now() / 1000),
-        signature: 'sig',
+        signature: "sig",
       });
 
       renderUpdatesSection(mockCampaign, mockCampaign.creator);
 
       await waitFor(() => {
-        expect(screen.getByText('✏️ Write an update')).toBeInTheDocument();
+        expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText('✏️ Write an update'));
+      fireEvent.click(screen.getByText("✏️ Write an update"));
 
       const textarea = screen.getByPlaceholderText(
-        /Share progress, milestones, or news with your supporters/i
+        /Share progress, milestones, or news with your supporters/i,
       );
       fireEvent.change(textarea, {
-        target: { value: 'Success update' },
+        target: { value: "Success update" },
       });
 
-      fireEvent.click(screen.getByText('Post Update'));
+      fireEvent.click(screen.getByText("Post Update"));
 
       // After success, composer should collapse
       await waitFor(() => {
-        expect(screen.getByText('✏️ Write an update')).toBeInTheDocument();
+        expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
       });
     });
   });
 
-  describe('UI/UX requirements', () => {
-    it('displays update count when updates exist', async () => {
+  describe("UI/UX requirements", () => {
+    it("displays update count when updates exist", async () => {
       const mockUpdates = [
         {
-          id: 'update-1',
+          id: "update-1",
           campaignId: 1,
-          content: 'Update 1',
+          content: "Update 1",
           authorAddress: mockCampaign.creator,
           timestamp: Math.floor(Date.now() / 1000),
-          signature: 'sig',
+          signature: "sig",
         },
         {
-          id: 'update-2',
+          id: "update-2",
           campaignId: 1,
-          content: 'Update 2',
+          content: "Update 2",
           authorAddress: mockCampaign.creator,
           timestamp: Math.floor(Date.now() / 1000),
-          signature: 'sig',
+          signature: "sig",
         },
       ];
 
@@ -327,19 +322,19 @@ describe('UpdatesSection Integration', () => {
       renderUpdatesSection(mockCampaign);
 
       await waitFor(() => {
-        expect(screen.getByText('2 updates')).toBeInTheDocument();
+        expect(screen.getByText("2 updates")).toBeInTheDocument();
       });
     });
 
     it('displays singular "update" when only one exists', async () => {
       const mockUpdates = [
         {
-          id: 'update-1',
+          id: "update-1",
           campaignId: 1,
-          content: 'Single update',
+          content: "Single update",
           authorAddress: mockCampaign.creator,
           timestamp: Math.floor(Date.now() / 1000),
-          signature: 'sig',
+          signature: "sig",
         },
       ];
 
@@ -348,17 +343,17 @@ describe('UpdatesSection Integration', () => {
       renderUpdatesSection(mockCampaign);
 
       await waitFor(() => {
-        expect(screen.getByText('1 update')).toBeInTheDocument();
+        expect(screen.getByText("1 update")).toBeInTheDocument();
       });
     });
 
-    it('has proper section heading', async () => {
+    it("has proper section heading", async () => {
       mockGetCampaignUpdates.mockResolvedValue([]);
 
       renderUpdatesSection(mockCampaign);
 
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: 'Updates' })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Updates" })).toBeInTheDocument();
       });
     });
   });

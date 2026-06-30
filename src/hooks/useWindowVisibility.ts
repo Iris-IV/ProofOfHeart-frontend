@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from "react";
 
 function subscribe(callback: () => void) {
-  window.addEventListener('visibilitychange', callback);
-  return () => window.removeEventListener('visibilitychange', callback);
+  window.addEventListener("visibilitychange", callback);
+  return () => window.removeEventListener("visibilitychange", callback);
 }
 
 function getSnapshot() {
-  return document.visibilityState === 'visible';
+  return document.visibilityState === "visible";
 }
 
 function getServerSnapshot() {

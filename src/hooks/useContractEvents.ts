@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { eventSubscriber, EventHandler } from '../lib/eventSubscriber';
+import { useEffect } from "react";
+import { eventSubscriber, EventHandler } from "../lib/eventSubscriber";
 
 /**
  * Hook to subscribe to a specific Soroban contract event topic.
@@ -12,10 +12,10 @@ export function useContractEvents(topic: string, handler: EventHandler) {
   useEffect(() => {
     // Ensure the global event subscriber is polling
     eventSubscriber.start();
-    
+
     // Register the component's handler
     eventSubscriber.on(topic, handler);
-    
+
     return () => {
       // Unregister on unmount
       eventSubscriber.off(topic, handler);

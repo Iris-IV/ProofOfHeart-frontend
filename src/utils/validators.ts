@@ -1,6 +1,9 @@
 import { ContractError, ContractErrorException } from "./contractErrors";
 
-export function validateStellarAddress(address: string, errorToThrow: ContractError = ContractError.ValidationFailed): void {
+export function validateStellarAddress(
+  address: string,
+  errorToThrow: ContractError = ContractError.ValidationFailed,
+): void {
   if (!address || address.length !== 56 || !address.startsWith("G")) {
     throw new ContractErrorException(errorToThrow);
   }

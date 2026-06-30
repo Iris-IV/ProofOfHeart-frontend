@@ -88,7 +88,7 @@ export default function TransferAdminModal({
       role="presentation"
       onClick={onClose}
       onKeyDown={(e) => {
-        if (e.key === 'Escape') {
+        if (e.key === "Escape") {
           onClose();
         }
       }}
@@ -100,10 +100,7 @@ export default function TransferAdminModal({
         aria-labelledby="transfer-admin-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2
-          id="transfer-admin-title"
-          className="text-xl font-bold text-zinc-900 dark:text-zinc-50"
-        >
+        <h2 id="transfer-admin-title" className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
           {title}
         </h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">{body}</p>

@@ -19,7 +19,9 @@ describe("useWriteGuard", () => {
     const { result } = renderHook(() => useWriteGuard());
 
     let resolve1!: (v: string) => void;
-    const p1 = new Promise<string>((r) => { resolve1 = r; });
+    const p1 = new Promise<string>((r) => {
+      resolve1 = r;
+    });
 
     // Start first call but don't await — it holds the key
     const firstCall = act(() => result.current.invoke("contribute", 1, () => p1));

@@ -1,11 +1,10 @@
 "use client";
 
-import dynamic from 'next/dynamic';
+import dynamic from "next/dynamic";
 
-const ObservabilityDashboard = dynamic(
-  () => import('@/components/admin/ObservabilityDashboard'),
-  { ssr: false },
-);
+const ObservabilityDashboard = dynamic(() => import("@/components/admin/ObservabilityDashboard"), {
+  ssr: false,
+});
 
 export default function AdminObservabilityPage() {
   return (

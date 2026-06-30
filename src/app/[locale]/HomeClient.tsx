@@ -58,32 +58,34 @@ export default function HomeClient() {
 
         {/* Features Section */}
         <section aria-labelledby="features-heading" className="mt-32">
-          <h2 id="features-heading" className="sr-only">Key features</h2>
+          <h2 id="features-heading" className="sr-only">
+            Key features
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          <FeatureCard
-            icon={<Globe className="text-blue-500" />}
-            title="Community First"
-            description="Causes are validated by the people, not by a corporate board."
-            delay="delay-100"
-          />
-          <FeatureCard
-            icon={<Shield className="text-green-500" />}
-            title="Radical Transparency"
-            description="Every decision and transaction lives on-chain for anyone to verify."
-            delay="delay-200"
-          />
-          <FeatureCard
-            icon={<ArrowRight className="text-orange-500" />}
-            title="Permissionless"
-            description="Anyone can propose, support, or challenge a cause."
-            delay="delay-300"
-          />
-          <FeatureCard
-            icon={<Code className="text-purple-500" />}
-            title="Trust Through Code"
-            description="Smart contracts enforce the rules, removing the need for intermediaries."
-            delay="delay-400"
-          />
+            <FeatureCard
+              icon={<Globe className="text-blue-500" />}
+              title="Community First"
+              description="Causes are validated by the people, not by a corporate board."
+              delay="delay-100"
+            />
+            <FeatureCard
+              icon={<Shield className="text-green-500" />}
+              title="Radical Transparency"
+              description="Every decision and transaction lives on-chain for anyone to verify."
+              delay="delay-200"
+            />
+            <FeatureCard
+              icon={<ArrowRight className="text-orange-500" />}
+              title="Permissionless"
+              description="Anyone can propose, support, or challenge a cause."
+              delay="delay-300"
+            />
+            <FeatureCard
+              icon={<Code className="text-purple-500" />}
+              title="Trust Through Code"
+              description="Smart contracts enforce the rules, removing the need for intermediaries."
+              delay="delay-400"
+            />
           </div>
         </section>
       </div>

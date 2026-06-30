@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getAllCampaigns } from '../lib/contractClient';
-import { Campaign } from '../types';
-import { useWindowVisibility } from './useWindowVisibility';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getAllCampaigns } from "../lib/contractClient";
+import { Campaign } from "../types";
+import { useWindowVisibility } from "./useWindowVisibility";
 
 export interface UseCampaignsResult {
   campaigns: Campaign[];
@@ -20,7 +20,7 @@ export function useCampaigns(): UseCampaignsResult {
   const isVisible = useWindowVisibility();
 
   const { data, isLoading, isFetching, error } = useQuery<Campaign[], Error>({
-    queryKey: ['campaigns'],
+    queryKey: ["campaigns"],
     queryFn: getAllCampaigns,
     staleTime: POLL_INTERVAL,
     refetchInterval: isVisible ? POLL_INTERVAL : false,
@@ -33,7 +33,7 @@ export function useCampaigns(): UseCampaignsResult {
     isRefreshing: isFetching && !isLoading,
     error: error?.message ?? null,
     refetch: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
     },
   };
 }

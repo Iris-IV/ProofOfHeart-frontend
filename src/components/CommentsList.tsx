@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
-import { Comment } from '@/types';
-import CommentItem from './CommentItem';
-import { Skeleton } from './Skeleton';
+import { useMemo } from "react";
+import { Comment } from "@/types";
+import CommentItem from "./CommentItem";
+import { Skeleton } from "./Skeleton";
 
 interface CommentsListProps {
   comments: Comment[];
@@ -22,13 +22,12 @@ export default function CommentsList({
   onPin,
   onReport,
 }: CommentsListProps) {
-  
   // Prepare threaded comments structure
   const { topLevelComments, repliesMap } = useMemo(() => {
     const topLevel: Comment[] = [];
     const repliesMap = new Map<string, Comment[]>();
 
-    comments.forEach(comment => {
+    comments.forEach((comment) => {
       if (!comment.parentId) {
         topLevel.push(comment);
       } else {
@@ -57,7 +56,10 @@ export default function CommentsList({
     return (
       <div className="space-y-4">
         {[1, 2].map((i) => (
-          <div key={i} className="bg-white dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-5">
+          <div
+            key={i}
+            className="bg-white dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-5"
+          >
             <div className="flex items-center gap-3 mb-3">
               <Skeleton className="w-10 h-10 rounded-full" />
               <div className="space-y-2">
@@ -87,16 +89,25 @@ export default function CommentsList({
     return (
       <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700 rounded-xl p-8 text-center mt-4">
         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-          <svg className="w-8 h-8 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          <svg
+            className="w-8 h-8 text-zinc-400 dark:text-zinc-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.5}
+              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+            />
           </svg>
         </div>
         <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
           No questions yet
         </h3>
-        <p className="text-zinc-500 dark:text-zinc-400 text-sm">
-          Be the first to ask!
-        </p>
+        <p className="text-zinc-500 dark:text-zinc-400 text-sm">Be the first to ask!</p>
       </div>
     );
   }

@@ -1,43 +1,39 @@
-import React from 'react';
-import { render, screen } from '@testing-library/react';
-import CommentsSection from '@/components/CommentsSection';
-import { useWallet } from '@/components/WalletContext';
-import { useCampaignComments } from '@/hooks/useCampaignComments';
-import { Campaign, Category } from '@/types';
+import React from "react";
+import { render, screen } from "@testing-library/react";
+import CommentsSection from "@/components/CommentsSection";
+import { useWallet } from "@/components/WalletContext";
+import { useCampaignComments } from "@/hooks/useCampaignComments";
+import { Campaign, Category } from "@/types";
 
-jest.mock('@/components/WalletContext', () => ({
+jest.mock("@/components/WalletContext", () => ({
   useWallet: jest.fn(),
   WalletProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-jest.mock('@/hooks/useCampaignComments', () => ({
+jest.mock("@/hooks/useCampaignComments", () => ({
   useCampaignComments: jest.fn(),
 }));
 
-jest.mock('@/components/CommentComposer', () => {
+jest.mock("@/components/CommentComposer", () => {
   return function MockCommentComposer() {
     return <div data-testid="mock-composer">Composer</div>;
   };
 });
 
-jest.mock('@/components/CommentsList', () => {
+jest.mock("@/components/CommentsList", () => {
   return function MockCommentsList({ comments }: any) {
-    return (
-      <div data-testid="mock-list">
-        List: {comments.length} comments
-      </div>
-    );
+    return <div data-testid="mock-list">List: {comments.length} comments</div>;
   };
 });
 
-describe('CommentsSection', () => {
+describe("CommentsSection", () => {
   const mockCampaign: Campaign = {
     id: 1,
-    creator: 'GABC',
-    title: 'Test',
-    description: 'Test',
+    creator: "GABC",
+    title: "Test",
+    description: "Test",
     created_at: 1000,
-    status: 'active',
+    status: "active",
     funding_goal: BigInt(100),
     deadline: 2000,
     amount_raised: BigInt(50),
@@ -52,9 +48,9 @@ describe('CommentsSection', () => {
 
   const defaultMockComments = {
     comments: [
-      { id: '1', parentId: null },
-      { id: '2', parentId: '1' },
-      { id: '3', parentId: null },
+      { id: "1", parentId: null },
+      { id: "2", parentId: "1" },
+      { id: "3", parentId: null },
     ],
     isLoading: false,
     error: null,
@@ -66,30 +62,30 @@ describe('CommentsSection', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useWallet as jest.Mock).mockReturnValue({ publicKey: 'GUSER' });
+    (useWallet as jest.Mock).mockReturnValue({ publicKey: "GUSER" });
     (useCampaignComments as jest.Mock).mockReturnValue(defaultMockComments);
   });
 
-  it('renders heading with count of top-level comments', () => {
+  it("renders heading with count of top-level comments", () => {
     render(<CommentsSection campaign={mockCampaign} />);
-    
+
     // There are 2 top-level comments and 1 reply in the mock
-    expect(screen.getByText('Comments / Q&A')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText("Comments / Q&A")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
   });
 
-  it('renders Composer and List components', () => {
+  it("renders Composer and List components", () => {
     render(<CommentsSection campaign={mockCampaign} />);
-    
-    expect(screen.getByTestId('mock-composer')).toBeInTheDocument();
-    expect(screen.getByTestId('mock-list')).toHaveTextContent('List: 3 comments');
+
+    expect(screen.getByTestId("mock-composer")).toBeInTheDocument();
+    expect(screen.getByTestId("mock-list")).toHaveTextContent("List: 3 comments");
   });
 
-  it('identifies if current user is creator', () => {
+  it("identifies if current user is creator", () => {
     // Current user is GABC, which matches campaign creator
-    (useWallet as jest.Mock).mockReturnValue({ publicKey: 'GABC' });
+    (useWallet as jest.Mock).mockReturnValue({ publicKey: "GABC" });
     render(<CommentsSection campaign={mockCampaign} />);
-    
-    expect(useCampaignComments).toHaveBeenCalledWith(1, 'GABC');
+
+    expect(useCampaignComments).toHaveBeenCalledWith(1, "GABC");
   });
 });

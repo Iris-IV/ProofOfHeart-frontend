@@ -1,10 +1,21 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type React from "react";
 import AdminClient from "@/app/[locale]/admin/AdminClient";
 import CauseDetailClient from "@/app/[locale]/causes/[id]/CauseDetailClient";
 import HomeClient from "@/app/[locale]/HomeClient";
 import { Category, type Campaign } from "@/types";
+
+function withQueryClient(element: React.ReactElement) {
+  return (
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      {element}
+    </QueryClientProvider>
+  );
+}
 
 const ADMIN = "GADMIN11111111111111111111111111111111111111111111111111";
 const CREATOR = "GCREATOR1111111111111111111111111111111111111111111111111";
@@ -14,8 +25,13 @@ const mockUseWallet = jest.fn();
 const mockUseCampaign = jest.fn();
 const mockUseCampaigns = jest.fn();
 
+jest.mock("next/navigation", () => ({
+  notFound: jest.fn(),
+}));
+
 jest.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
+  useLocale: () => "en",
 }));
 
 jest.mock("@stellar/stellar-sdk", () => ({
@@ -135,7 +151,7 @@ jest.mock("@/lib/adminLog", () => ({
 }));
 
 jest.mock("@/lib/campaignReports", () => ({
-  getAllReports: jest.fn(() => []),
+  getAllReports: jest.fn(() => Promise.resolve([])),
   markReportReviewed: jest.fn(),
   REPORT_REASON_LABELS: { spam: "Spam" },
 }));
@@ -195,7 +211,7 @@ describe("app page components", () => {
       isLoading: false,
     });
 
-    render(<HomeClient />);
+    render(withQueryClient(<HomeClient />));
     await userEvent.click(screen.getByRole("link", { name: /startCampaign/i }));
 
     expect(screen.getByRole("heading", { name: "heroTitle" })).toBeInTheDocument();
@@ -205,23 +221,24 @@ describe("app page components", () => {
   it("renders the cause detail page with campaign data, voting, actions, and refund state", async () => {
     mockUseCampaign.mockReturnValue({
       campaign: makeCampaign({ status: "cancelled", is_active: false, is_cancelled: true }),
-      amountRaised: makeCampaign({ status: "cancelled", is_active: false, is_cancelled: true }).amount_raised,
+      amountRaised: makeCampaign({ status: "cancelled", is_active: false, is_cancelled: true })
+        .amount_raised,
       isLoading: false,
       error: null,
       refetch: jest.fn(),
     });
 
-    render(<CauseDetailClient id="101" />);
+    render(withQueryClient(<CauseDetailClient id="101" />));
 
-    expect(screen.getByRole("heading", { name: "Solar Classroom" })).toBeInTheDocument();
-    expect(screen.getByText(/Fund solar-powered classroom kits/)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Solar Classroom" })).toBeInTheDocument();
+    expect(await screen.findByText(/Fund solar-powered classroom kits/)).toBeInTheDocument();
     expect(screen.getByTestId("voting-component")).toBeInTheDocument();
     expect(screen.getByTestId("campaign-actions")).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: /claim refund/i })).toBeInTheDocument();
   });
 
   it("renders the admin dashboard queue and aggregate campaign stats for the admin wallet", async () => {
-    render(<AdminClient />);
+    render(withQueryClient(<AdminClient />));
 
     expect(await screen.findByText("title")).toBeInTheDocument();
     expect(screen.getByText("Solar Classroom")).toBeInTheDocument();

@@ -146,7 +146,12 @@ export async function requestOffchainJson<T>(
   }
 
   if (options.auth) {
-    const authEnvelope = buildAuthEnvelope(path, method, options.auth.payload ?? options.body, Math.floor(Date.now() / 1000));
+    const authEnvelope = buildAuthEnvelope(
+      path,
+      method,
+      options.auth.payload ?? options.body,
+      Math.floor(Date.now() / 1000),
+    );
     const signed = await signOffchainPayload(authEnvelope, options.auth.purpose);
     headers.set("X-Wallet-Address", signed.walletAddress);
     headers.set("X-Request-Signature", signed.signature);
@@ -171,13 +176,15 @@ export async function requestOffchainJson<T>(
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => "");
-        const details = errorText ? (() => {
-          try {
-            return JSON.parse(errorText) as unknown;
-          } catch {
-            return errorText;
-          }
-        })() : undefined;
+        const details = errorText
+          ? (() => {
+              try {
+                return JSON.parse(errorText) as unknown;
+              } catch {
+                return errorText;
+              }
+            })()
+          : undefined;
         const errorMessage =
           details && typeof details === "object" && details !== null && "message" in details
             ? String((details as { message?: unknown }).message ?? response.statusText)

@@ -1,6 +1,6 @@
 # Turbopack Transition
 
-As of Next.js 16, Turbopack is the default bundler for both development and production builds. 
+As of Next.js 16, Turbopack is the default bundler for both development and production builds.
 
 ## Bundler Configuration
 

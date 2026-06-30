@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Comment } from '@/types';
-import { useWallet } from '@/components/WalletContext';
-import { verifyCommentSignature } from '@/lib/campaignComments';
-import CommentComposer from './CommentComposer';
+import { useState, useEffect } from "react";
+import { Comment } from "@/types";
+import { useWallet } from "@/components/WalletContext";
+import { verifyCommentSignature } from "@/lib/campaignComments";
+import CommentComposer from "./CommentComposer";
 
 interface CommentItemProps {
   comment: Comment;
@@ -16,20 +16,20 @@ interface CommentItemProps {
 function formatRelativeTime(timestamp: number): string {
   const now = Math.floor(Date.now() / 1000);
   const diff = now - timestamp;
-  if (diff < 60) return 'just now';
+  if (diff < 60) return "just now";
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-  return new Date(timestamp * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return new Date(timestamp * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function formatAbsoluteTime(timestamp: number): string {
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric',
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
     hour12: true,
   }).format(new Date(timestamp * 1000));
 }
@@ -76,17 +76,32 @@ export default function CommentItem({
   };
 
   return (
-    <div className={`mt-4 ${!isTopLevel ? 'ms-2 sm:ms-8 border-s border-zinc-200 dark:border-zinc-800 ps-4 sm:ps-6' : ''}`}>
+    <div
+      className={`mt-4 ${!isTopLevel ? "ms-2 sm:ms-8 border-s border-zinc-200 dark:border-zinc-800 ps-4 sm:ps-6" : ""}`}
+    >
       <article
         className={`group bg-white dark:bg-zinc-800/80 rounded-2xl border ${
-          comment.isPinned ? 'border-purple-300 dark:border-purple-500/50 shadow-xs' : 'border-zinc-200 dark:border-zinc-800'
+          comment.isPinned
+            ? "border-purple-300 dark:border-purple-500/50 shadow-xs"
+            : "border-zinc-200 dark:border-zinc-800"
         } p-4 sm:p-5 transition-all duration-300`}
         aria-label={`Comment from ${shortenedAuthor}`}
       >
         {comment.isPinned && (
           <div className="flex items-center gap-1.5 text-xs font-bold text-purple-600 dark:text-purple-400 mb-3">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            <svg
+              className="w-3.5 h-3.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+              />
             </svg>
             Pinned by Creator
           </div>
@@ -99,13 +114,28 @@ export default function CommentItem({
             </div>
             <div>
               <div className="flex items-center flex-wrap gap-2">
-                <span className="text-sm font-bold text-zinc-900 dark:text-zinc-50" title={comment.authorAddress}>
+                <span
+                  className="text-sm font-bold text-zinc-900 dark:text-zinc-50"
+                  title={comment.authorAddress}
+                >
                   {shortenedAuthor}
                 </span>
                 {isVerified && (
-                  <span className="inline-flex items-center text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 px-1.5 py-0.5 rounded-full font-bold" title="Verified Signature">
-                    <svg className="w-2.5 h-2.5 me-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  <span
+                    className="inline-flex items-center text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 px-1.5 py-0.5 rounded-full font-bold"
+                    title="Verified Signature"
+                  >
+                    <svg
+                      className="w-2.5 h-2.5 me-0.5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                      aria-hidden="true"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     Verified
                   </span>
@@ -116,12 +146,16 @@ export default function CommentItem({
                   </span>
                 )}
               </div>
-              <time dateTime={new Date(comment.timestamp * 1000).toISOString()} className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 block" title={absoluteTime}>
+              <time
+                dateTime={new Date(comment.timestamp * 1000).toISOString()}
+                className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 block"
+                title={absoluteTime}
+              >
                 {relativeTime}
               </time>
             </div>
           </div>
-          
+
           <div className="flex gap-2">
             {isTopLevel && isCreator && onPin && (
               <button
@@ -130,8 +164,19 @@ export default function CommentItem({
                 title={comment.isPinned ? "Unpin Comment" : "Pin Comment"}
                 aria-label={comment.isPinned ? "Unpin Comment" : "Pin Comment"}
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                  />
                 </svg>
               </button>
             )}
@@ -142,8 +187,19 @@ export default function CommentItem({
               title="Report Comment"
               aria-label="Report Comment"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"
+                />
               </svg>
             </button>
           </div>
@@ -151,9 +207,11 @@ export default function CommentItem({
 
         <div className="text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap break-words text-sm ms-0 sm:ms-13 mb-3">
           {comment.isReported ? (
-             <span className="italic text-zinc-500">This comment has been reported and is under review.</span>
+            <span className="italic text-zinc-500">
+              This comment has been reported and is under review.
+            </span>
           ) : (
-             comment.content
+            comment.content
           )}
         </div>
 
@@ -162,8 +220,19 @@ export default function CommentItem({
             onClick={() => setShowReplyForm(!showReplyForm)}
             className="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors flex items-center gap-1.5"
           >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+            <svg
+              className="w-3.5 h-3.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+              />
             </svg>
             Reply
           </button>
@@ -183,7 +252,7 @@ export default function CommentItem({
 
       {replies.length > 0 && (
         <div className="space-y-1">
-          {replies.map(reply => (
+          {replies.map((reply) => (
             <CommentItem
               key={reply.id}
               comment={reply}

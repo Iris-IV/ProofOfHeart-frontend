@@ -1,33 +1,30 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import Image from 'next/image';
-import { useState, useEffect } from 'react';
-import ShareButtons from '@/components/ShareButtons';
-import SafeMarkdown from '@/components/SafeMarkdown';
-import ReportModal from '@/components/ReportModal';
-import CampaignActions from '@/components/CampaignActions';
-import AsyncButtonContent from '@/components/AsyncButtonContent';
-import CampaignStatusBadge from '@/components/CampaignStatusBadge';
-import DeadlineCountdown from '@/components/DeadlineCountdown';
-import dynamic from 'next/dynamic';
-import FundingProgressBar from '@/components/FundingProgressBar';
-
-const DonationModal = dynamic(() => import('@/components/DonationModal'), {
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import Image from "next/image";
+import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+import UpdatesSection from "@/components/UpdatesSection";
+const RevenueSharingPanel = dynamic(() => import("@/components/RevenueSharingPanel"), {
   ssr: false,
 });
-
-const RevenueSharingPanel = dynamic(() => import('@/components/RevenueSharingPanel'), {
-  ssr: false,
-});
-import UpdatesSection from '@/components/UpdatesSection';
-import { useToast } from '@/components/ToastProvider';
-import VotingComponent from '@/components/VotingComponent';
-import { useWallet } from '@/components/WalletContext';
-import { useSavedCampaigns } from '@/hooks/useSavedCampaigns';
-import { useLiveCampaignFunding } from '@/hooks/useLiveCampaignFunding';
-import { useLiveVoteTallies } from '@/hooks/useLiveVoteTallies';
-import { usePlatformFee } from '@/hooks/usePlatformFee';
+const DonationModal = dynamic(() => import("@/components/DonationModal"), { ssr: false });
+import CampaignStatusBadge from "@/components/CampaignStatusBadge";
+import DeadlineCountdown from "@/components/DeadlineCountdown";
+import FundingProgressBar from "@/components/FundingProgressBar";
+import ShareButtons from "@/components/ShareButtons";
+import SafeMarkdown from "@/components/SafeMarkdown";
+import ReportModal from "@/components/ReportModal";
+import CampaignActions from "@/components/CampaignActions";
+import AsyncButtonContent from "@/components/AsyncButtonContent";
+import { useToast } from "@/components/ToastProvider";
+import VotingComponent from "@/components/VotingComponent";
+import { useWallet } from "@/components/WalletContext";
+import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
+import { useLiveCampaignFunding } from "@/hooks/useLiveCampaignFunding";
+import { useLiveVoteTallies } from "@/hooks/useLiveVoteTallies";
+import { usePlatformFee } from "@/hooks/usePlatformFee";
 import {
   voteOnCampaign,
   hasVoted,
@@ -61,7 +58,11 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [userVote, setUserVote] = useState<Vote | undefined>(undefined);
   const [isVoting, setIsVoting] = useState(false);
-  const { voteCounts, applyOptimisticVote, reconcile: reconcileVoteTallies } = useLiveVoteTallies({
+  const {
+    voteCounts,
+    applyOptimisticVote,
+    reconcile: reconcileVoteTallies,
+  } = useLiveVoteTallies({
     campaignId: Number(id),
     enabled: Number(id) > 0,
   });
@@ -157,10 +158,18 @@ export default function CauseDetailClient({ id }: { id: string }) {
     }
     setIsVoting(true);
     try {
-      const transactionHash = await withActionTimeout(voteOnCampaign(campaignId, userWalletAddress, voteType === 'upvote'));
-      setUserVote({ causeId: String(campaignId), voter: userWalletAddress, voteType, timestamp: new Date(), transactionHash });
+      const transactionHash = await withActionTimeout(
+        voteOnCampaign(campaignId, userWalletAddress, voteType === "upvote"),
+      );
+      setUserVote({
+        causeId: String(campaignId),
+        voter: userWalletAddress,
+        voteType,
+        timestamp: new Date(),
+        transactionHash,
+      });
       applyOptimisticVote(voteType);
-      showSuccess('Your vote has been cast successfully.');
+      showSuccess("Your vote has been cast successfully.");
       void reconcileVoteTallies();
       refetch();
     } catch (error) {
@@ -228,24 +237,8 @@ export default function CauseDetailClient({ id }: { id: string }) {
   }
 
   if (!campaign) {
-    return (
-      <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
-        <main className="container mx-auto px-4 py-24 text-center">
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">
-            Cause not found
-          </h1>
-          <p className="text-zinc-600 dark:text-zinc-400 mb-8">
-            This cause does not exist or has been removed.
-          </p>
-          <Link
-            href="/causes"
-            className="px-6 py-3 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors"
-          >
-            ← Back to Causes
-          </Link>
-        </main>
-      </div>
-    );
+    notFound();
+    return null;
   }
 
   const raised = stroopsToXlmNumber(campaign.amount_raised);
@@ -266,7 +259,6 @@ export default function CauseDetailClient({ id }: { id: string }) {
     (now > campaign.deadline && campaign.amount_raised < campaign.funding_goal);
 
   const refundableXlm = stroopsToXlmNumber(refundableAmount) || 0;
-
 
   return (
     <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
@@ -311,7 +303,9 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 {campaign.title}
               </h1>
               <div className="relative">
-                <div className={`overflow-hidden transition-all duration-300 ${!isDescriptionExpanded ? 'max-h-[250px] relative' : ''}`}>
+                <div
+                  className={`overflow-hidden transition-all duration-300 ${!isDescriptionExpanded ? "max-h-[250px] relative" : ""}`}
+                >
                   <SafeMarkdown className="prose prose-zinc dark:prose-invert max-w-none break-words">
                     {campaign.description}
                   </SafeMarkdown>
@@ -328,7 +322,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                       aria-expanded={isDescriptionExpanded}
                       aria-controls="campaign-description"
                     >
-                      {isDescriptionExpanded ? 'Show less' : 'Read more'}
+                      {isDescriptionExpanded ? "Show less" : "Read more"}
                     </button>
                   </div>
                 )}
@@ -348,15 +342,15 @@ export default function CauseDetailClient({ id }: { id: string }) {
                   <button
                     onClick={() => {
                       if (!userWalletAddress) {
-                        showWarning('Please connect your wallet to save campaigns.');
+                        showWarning("Please connect your wallet to save campaigns.");
                         return;
                       }
                       toggleSaved(campaign.id);
                     }}
                     className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
                       isSaved(campaign.id)
-                        ? 'text-blue-600 dark:text-blue-400'
-                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
                     }`}
                   >
                     <svg
@@ -371,7 +365,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                     >
                       <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
                     </svg>
-                    {isSaved(campaign.id) ? 'Saved' : 'Save'}
+                    {isSaved(campaign.id) ? "Saved" : "Save"}
                   </button>
                 </div>
                 <button
@@ -452,10 +446,8 @@ export default function CauseDetailClient({ id }: { id: string }) {
               <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
                 A platform fee of {platformFeePercent.toFixed(2)}% is deducted from funds when
                 withdrawn by the creator. Based on the current amount raised, that is{" "}
-                {formatXlm(estimatedFeeAmount, locale)} XLM in
-                fees and{" "}
-                {formatXlm(estimatedCreatorReceives, locale)}{" "}
-                XLM delivered to the creator.
+                {formatXlm(estimatedFeeAmount, locale)} XLM in fees and{" "}
+                {formatXlm(estimatedCreatorReceives, locale)} XLM delivered to the creator.
               </p>
               {isFallback && (
                 <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
@@ -495,9 +487,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                   <div className="space-y-3">
                     <p className="text-sm text-zinc-700 dark:text-zinc-300">
                       Your refundable contribution:{" "}
-                      <span className="font-semibold">
-                        {formatXlm(refundableXlm, locale)} XLM
-                      </span>
+                      <span className="font-semibold">{formatXlm(refundableXlm, locale)} XLM</span>
                     </p>
                     <button
                       onClick={handleClaimRefund}

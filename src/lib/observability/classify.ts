@@ -1,5 +1,5 @@
-import { getContractErrorCode, contractErrorKey } from '@/utils/contractErrors';
-import type { ObservabilityCategory, ObservabilityKind } from './types';
+import { getContractErrorCode, contractErrorKey } from "@/utils/contractErrors";
+import type { ObservabilityCategory, ObservabilityKind } from "./types";
 
 export interface ClassifiedFailure {
   category: ObservabilityCategory;
@@ -13,10 +13,10 @@ function isTimeoutError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   const message = error.message.toLowerCase();
   return (
-    message.includes('timeout') ||
-    message.includes('timed out') ||
-    message.includes('aborted') ||
-    message.includes('deadline')
+    message.includes("timeout") ||
+    message.includes("timed out") ||
+    message.includes("aborted") ||
+    message.includes("deadline")
   );
 }
 
@@ -24,17 +24,20 @@ export function classifySimulationFailure(error: unknown, operation?: string): C
   const code = getContractErrorCode(error);
   if (code !== null) {
     return {
-      category: 'contract',
-      kind: 'contract_error',
+      category: "contract",
+      kind: "contract_error",
       contractErrorCode: code,
       contractErrorKey: contractErrorKey(code),
       message: error instanceof Error ? error.message : String(error),
     };
   }
   return {
-    category: 'transaction',
-    kind: 'simulation_failure',
-    message: error instanceof Error ? error.message : `Simulation failed${operation ? ` (${operation})` : ''}`,
+    category: "transaction",
+    kind: "simulation_failure",
+    message:
+      error instanceof Error
+        ? error.message
+        : `Simulation failed${operation ? ` (${operation})` : ""}`,
   };
 }
 
@@ -42,8 +45,8 @@ export function classifyRpcFailure(error: unknown, operation: string): Classifie
   const code = getContractErrorCode(error);
   if (code !== null) {
     return {
-      category: 'contract',
-      kind: 'contract_error',
+      category: "contract",
+      kind: "contract_error",
       contractErrorCode: code,
       contractErrorKey: contractErrorKey(code),
       message: error instanceof Error ? error.message : String(error),
@@ -51,14 +54,14 @@ export function classifyRpcFailure(error: unknown, operation: string): Classifie
   }
   if (isTimeoutError(error)) {
     return {
-      category: 'rpc',
-      kind: 'rpc_timeout',
+      category: "rpc",
+      kind: "rpc_timeout",
       message: error instanceof Error ? error.message : `RPC timeout (${operation})`,
     };
   }
   return {
-    category: 'rpc',
-    kind: 'rpc_error',
+    category: "rpc",
+    kind: "rpc_error",
     message: error instanceof Error ? error.message : `RPC error (${operation})`,
   };
 }

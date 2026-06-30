@@ -41,6 +41,7 @@ type DonationValidationKey =
 
 export default function DonationModal({ campaign, onClose, onSuccess }: DonationModalProps) {
   const t = useTranslations("Donation");
+  const tContractErrors = useTranslations("ContractErrors");
   const { publicKey } = useWallet();
   const { showError } = useToast();
   const { platformFeeBps } = usePlatformFee();
@@ -59,7 +60,9 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
     message.startsWith("ContractErrors.") ? tContractErrors(message) : message;
 
   const formatError = (message: string) =>
-    message.startsWith("ContractErrors.") ? localizeContractError(message) : t(message as DonationValidationKey);
+    message.startsWith("ContractErrors.")
+      ? localizeContractError(message)
+      : t(message as DonationValidationKey);
 
   // Body scroll lock + focus restoration
   useEffect(() => {
@@ -153,7 +156,7 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
   const amountError =
     error ||
     (amount.trim() && !validation.valid
-      ? validation.error || "Please enter a valid amount."
+      ? validation.errorKey || "Please enter a valid amount."
       : null);
   const amountNum = validation.amount || 0;
   const newRaised = raised + amountNum;
@@ -262,7 +265,8 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
             <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
               <span>{t("percentFunded", { percent: currentPct })}</span>
               <span>
-                {formatAmount(campaign.amount_raised, locale, { maximumFractionDigits: 2 })} / {formatAmount(campaign.funding_goal, locale, { maximumFractionDigits: 2 })} XLM
+                {formatAmount(campaign.amount_raised, locale, { maximumFractionDigits: 2 })} /{" "}
+                {formatAmount(campaign.funding_goal, locale, { maximumFractionDigits: 2 })} XLM
               </span>
             </div>
             <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
@@ -337,7 +341,9 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
                     </dd>
                   </div>
                   <div className="flex justify-between gap-4 border-t border-zinc-200 dark:border-zinc-600 pt-2">
-                    <dt className="font-semibold text-zinc-900 dark:text-zinc-50">{t("totalLine")}</dt>
+                    <dt className="font-semibold text-zinc-900 dark:text-zinc-50">
+                      {t("totalLine")}
+                    </dt>
                     <dd className="font-semibold text-zinc-900 dark:text-zinc-50 tabular-nums">
                       {totalWalletCost.toLocaleString(undefined, { maximumFractionDigits: 7 })} XLM
                     </dd>

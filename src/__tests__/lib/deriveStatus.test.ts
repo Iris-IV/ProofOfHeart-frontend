@@ -19,7 +19,9 @@ function flags(overrides: Partial<RawCampaignFlags> = {}): RawCampaignFlags {
 
 describe("deriveStatus", () => {
   it("returns 'cancelled' when is_cancelled=true regardless of other flags", () => {
-    expect(deriveStatus(flags({ is_cancelled: true, is_verified: true, funds_withdrawn: true }))).toBe("cancelled");
+    expect(
+      deriveStatus(flags({ is_cancelled: true, is_verified: true, funds_withdrawn: true })),
+    ).toBe("cancelled");
     expect(deriveStatus(flags({ is_cancelled: true, is_active: false }))).toBe("cancelled");
   });
 
@@ -66,9 +68,7 @@ describe("deriveStatus", () => {
   });
 
   it("cancelled takes priority over funded", () => {
-    expect(
-      deriveStatus(flags({ is_cancelled: true, funds_withdrawn: true })),
-    ).toBe("cancelled");
+    expect(deriveStatus(flags({ is_cancelled: true, funds_withdrawn: true }))).toBe("cancelled");
   });
 
   it("funded takes priority over failed", () => {

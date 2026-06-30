@@ -3,7 +3,7 @@ import type {
   ObservabilityEvent,
   ObservabilityMetricsSnapshot,
   ObservabilityRatesSnapshot,
-} from './types';
+} from "./types";
 
 const MAX_EVENTS = 2_000;
 const DEFAULT_WINDOW_MS = 5 * 60_000;
@@ -29,22 +29,29 @@ function eventsInWindow(windowMs: number): ObservabilityEvent[] {
   return events.filter((event) => new Date(event.timestamp).getTime() >= cutoff);
 }
 
-function computeRates(windowEvents: ObservabilityEvent[], windowMs: number): ObservabilityRatesSnapshot {
+function computeRates(
+  windowEvents: ObservabilityEvent[],
+  windowMs: number,
+): ObservabilityRatesSnapshot {
   const attempts = windowEvents.filter(
     (event) =>
-      event.kind === 'transaction_success' ||
-      event.kind === 'simulation_failure' ||
-      event.kind === 'submission_failure' ||
-      event.kind === 'confirmation_timeout' ||
-      event.kind === 'confirmation_failed',
+      event.kind === "transaction_success" ||
+      event.kind === "simulation_failure" ||
+      event.kind === "submission_failure" ||
+      event.kind === "confirmation_timeout" ||
+      event.kind === "confirmation_failed",
   ).length;
 
-  const simulationFailures = windowEvents.filter((event) => event.kind === 'simulation_failure').length;
-  const submissionFailures = windowEvents.filter((event) => event.kind === 'submission_failure').length;
-  const rpcTimeouts = windowEvents.filter((event) => event.kind === 'rpc_timeout').length;
-  const contractErrors = windowEvents.filter((event) => event.kind === 'contract_error').length;
+  const simulationFailures = windowEvents.filter(
+    (event) => event.kind === "simulation_failure",
+  ).length;
+  const submissionFailures = windowEvents.filter(
+    (event) => event.kind === "submission_failure",
+  ).length;
+  const rpcTimeouts = windowEvents.filter((event) => event.kind === "rpc_timeout").length;
+  const contractErrors = windowEvents.filter((event) => event.kind === "contract_error").length;
   const rpcSamples = windowEvents.filter(
-    (event) => event.category === 'rpc' || event.kind.startsWith('rpc'),
+    (event) => event.category === "rpc" || event.kind.startsWith("rpc"),
   ).length;
 
   const denom = Math.max(attempts, 1);
@@ -72,10 +79,10 @@ export function evaluateAlerts(rates: ObservabilityRatesSnapshot): Observability
 
   if (rates.sampleSize >= 10 && rates.simulationFailureRate >= simulationThreshold) {
     alerts.push({
-      id: 'elevated-simulation-failures',
-      severity: rates.simulationFailureRate >= simulationThreshold * 2 ? 'critical' : 'warning',
-      message: 'Simulation failure rate is above the configured threshold.',
-      metric: 'simulationFailureRate',
+      id: "elevated-simulation-failures",
+      severity: rates.simulationFailureRate >= simulationThreshold * 2 ? "critical" : "warning",
+      message: "Simulation failure rate is above the configured threshold.",
+      metric: "simulationFailureRate",
       currentRate: rates.simulationFailureRate,
       threshold: simulationThreshold,
       triggeredAt: now,
@@ -84,10 +91,10 @@ export function evaluateAlerts(rates: ObservabilityRatesSnapshot): Observability
 
   if (rates.sampleSize >= 10 && rates.submissionFailureRate >= submissionThreshold) {
     alerts.push({
-      id: 'elevated-submission-failures',
-      severity: rates.submissionFailureRate >= submissionThreshold * 2 ? 'critical' : 'warning',
-      message: 'Transaction submission failure rate is above the configured threshold.',
-      metric: 'submissionFailureRate',
+      id: "elevated-submission-failures",
+      severity: rates.submissionFailureRate >= submissionThreshold * 2 ? "critical" : "warning",
+      message: "Transaction submission failure rate is above the configured threshold.",
+      metric: "submissionFailureRate",
       currentRate: rates.submissionFailureRate,
       threshold: submissionThreshold,
       triggeredAt: now,
@@ -96,10 +103,10 @@ export function evaluateAlerts(rates: ObservabilityRatesSnapshot): Observability
 
   if (rates.sampleSize >= 10 && rates.rpcTimeoutRate >= rpcTimeoutThreshold) {
     alerts.push({
-      id: 'elevated-rpc-timeouts',
-      severity: rates.rpcTimeoutRate >= rpcTimeoutThreshold * 2 ? 'critical' : 'warning',
-      message: 'RPC timeout rate is above the configured threshold.',
-      metric: 'rpcTimeoutRate',
+      id: "elevated-rpc-timeouts",
+      severity: rates.rpcTimeoutRate >= rpcTimeoutThreshold * 2 ? "critical" : "warning",
+      message: "RPC timeout rate is above the configured threshold.",
+      metric: "rpcTimeoutRate",
       currentRate: rates.rpcTimeoutRate,
       threshold: rpcTimeoutThreshold,
       triggeredAt: now,
@@ -126,9 +133,7 @@ export function getObservabilityMetricsSnapshot(
           .map((event) => String(event.contractErrorCode)),
       ),
       byOperation: countBy(
-        windowEvents
-          .filter((event) => event.operation)
-          .map((event) => event.operation as string),
+        windowEvents.filter((event) => event.operation).map((event) => event.operation as string),
       ),
     },
     rates,

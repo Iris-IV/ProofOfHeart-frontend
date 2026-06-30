@@ -34,7 +34,10 @@ export async function GET(
 
   const url = new URL(_req.url);
   const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10));
-  const pageSize = Math.min(100, Math.max(1, parseInt(url.searchParams.get("pageSize") ?? String(PAGE_SIZE), 10)));
+  const pageSize = Math.min(
+    100,
+    Math.max(1, parseInt(url.searchParams.get("pageSize") ?? String(PAGE_SIZE), 10)),
+  );
 
   const all = (commentStore.get(campaignId) ?? []).filter((c) => !c.isReported);
   const total = all.length;
@@ -73,7 +76,10 @@ export async function POST(
     return NextResponse.json({ message: "Content is required" }, { status: 400 });
   }
   if (content.length > MAX_CONTENT_LENGTH) {
-    return NextResponse.json({ message: `Content must be at most ${MAX_CONTENT_LENGTH} characters` }, { status: 400 });
+    return NextResponse.json(
+      { message: `Content must be at most ${MAX_CONTENT_LENGTH} characters` },
+      { status: 400 },
+    );
   }
   if (!authorAddress || typeof authorAddress !== "string") {
     return NextResponse.json({ message: "Author address is required" }, { status: 400 });
@@ -84,7 +90,10 @@ export async function POST(
 
   const rateLimitKey = `${authorAddress}:${campaignId}`;
   if (!checkRateLimit(rateLimitKey)) {
-    return NextResponse.json({ message: "Too many requests. Please wait before posting again." }, { status: 429 });
+    return NextResponse.json(
+      { message: "Too many requests. Please wait before posting again." },
+      { status: 429 },
+    );
   }
 
   const comment: Comment = {

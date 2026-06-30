@@ -7,30 +7,30 @@ type Props = { params: Promise<{ locale: string; id: string }> };
 
 export async function generateMetadata({ params }: Props) {
   const { id, locale } = await params;
-  
+
   try {
     const campaign = await getCampaign(Number(id));
-    
+
     if (!campaign) {
       return {
-        title: 'Campaign | ProofOfHeart',
+        title: "Campaign | ProofOfHeart",
         alternates: buildAlternates(`/causes/${id}`, locale),
       };
     }
-    
+
     const description = campaign.description.slice(0, 160);
     const imageUrl = campaign.cover_image_url
       ? absoluteUrl(campaign.cover_image_url)
       : absoluteUrl(`/${locale}/causes/${id}/opengraph-image`);
-    
+
     return {
       title: `${campaign.title} | ProofOfHeart`,
       description,
       openGraph: {
         title: campaign.title,
         description,
-        type: 'website',
-        siteName: 'ProofOfHeart',
+        type: "website",
+        siteName: "ProofOfHeart",
         url: absoluteUrl(`/${locale}/causes/${id}`),
         images: [
           {
@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: Props) {
         ],
       },
       twitter: {
-        card: 'summary_large_image',
+        card: "summary_large_image",
         title: campaign.title,
         description,
         images: [imageUrl],
@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: Props) {
     };
   } catch (error) {
     return {
-      title: 'Campaign | ProofOfHeart',
+      title: "Campaign | ProofOfHeart",
       alternates: buildAlternates(`/causes/${id}`, locale),
     };
   }

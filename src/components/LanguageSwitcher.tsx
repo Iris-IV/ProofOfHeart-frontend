@@ -5,7 +5,6 @@ import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useId, useMemo, useRef, useTransition } from "react";
 import { useRouter, usePathname } from "@/i18n/routing";
 import { routing } from "@/i18n/routing";
-import { writeLocalePreference } from "@/lib/preferences";
 
 export default function LanguageSwitcher() {
   const locale = useLocale();

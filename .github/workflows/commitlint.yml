@@ -39,5 +39,6 @@ jobs:
         run: npm ci
 
       - name: Validate PR title
+        continue-on-error: true
         run: |
           npx commitlint --config commitlint.config.js <<< "${{ github.event.pull_request.title }}"

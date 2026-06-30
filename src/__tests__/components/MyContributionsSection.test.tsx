@@ -147,7 +147,9 @@ describe("MyContributionsSection", () => {
     expect(
       within(activeCard!).queryByRole("button", { name: "claimRevenue" }),
     ).not.toBeInTheDocument();
-    expect(within(refundableCard!).getByRole("button", { name: "claimRefund" })).toBeInTheDocument();
+    expect(
+      within(refundableCard!).getByRole("button", { name: "claimRefund" }),
+    ).toBeInTheDocument();
     expect(
       within(refundableCard!).queryByRole("button", { name: "claimRevenue" }),
     ).not.toBeInTheDocument();

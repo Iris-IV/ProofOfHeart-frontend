@@ -3,11 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useLocale } from "next-intl";
 import { claimRevenue, depositRevenue } from "../lib/contractClient";
-import {
-  Campaign,
-  Category,
-  basisPointsToPercentage,
-} from "../types";
+import { Campaign, Category, basisPointsToPercentage } from "../types";
 import { xlmToStroops } from "@/lib/stellarAmount";
 import { formatAmount } from "@/lib/formatters";
 import { useToast } from "./ToastProvider";
@@ -67,8 +63,7 @@ export default function RevenueSharingPanel({
     if (campaign.amount_raised <= BigInt(0)) {
       return "0";
     }
-    const percentage =
-      (Number(contribution) / Number(campaign.amount_raised)) * 100;
+    const percentage = (Number(contribution) / Number(campaign.amount_raised)) * 100;
     return percentage.toFixed(2);
   }, [campaign.amount_raised, contribution]);
 
@@ -162,7 +157,9 @@ export default function RevenueSharingPanel({
             <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Your Share
             </p>
-            <Tooltip content={`Your proportional share of the revenue pool based on your ${contributorSharePercentage}% contribution to the campaign. Calculated as: (your contribution ÷ total raised) × total pool.`} />
+            <Tooltip
+              content={`Your proportional share of the revenue pool based on your ${contributorSharePercentage}% contribution to the campaign. Calculated as: (your contribution ÷ total raised) × total pool.`}
+            />
           </div>
           <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
             {formatXlm(contributorShare)} XLM

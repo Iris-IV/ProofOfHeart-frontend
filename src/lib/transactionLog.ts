@@ -14,10 +14,7 @@ export interface WalletTransactionLogEntry {
 }
 
 import { normalizeAddress } from "./stellar";
-import {
-  hasOffchainApiBaseUrl,
-  requestOffchainJson,
-} from "./offchainApiClient";
+import { hasOffchainApiBaseUrl, requestOffchainJson } from "./offchainApiClient";
 
 const STORAGE_KEY = "proof_of_heart_wallet_tx_log_v1";
 

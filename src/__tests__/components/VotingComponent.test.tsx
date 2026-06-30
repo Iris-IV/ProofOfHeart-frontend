@@ -48,7 +48,7 @@ describe("VotingComponent Accessibility & Interaction", () => {
         userWalletAddress="GUSER11111111111111111111111111111111111111111111111111"
         onVote={mockOnVote}
         isVoting={false}
-      />
+      />,
     );
 
     const approveBtn = screen.getByRole("button", { name: "approveCampaignAria" });
@@ -65,7 +65,7 @@ describe("VotingComponent Accessibility & Interaction", () => {
         userWalletAddress="GUSER11111111111111111111111111111111111111111111111111"
         onVote={mockOnVote}
         isVoting={false}
-      />
+      />,
     );
 
     const approveBtn = screen.getByRole("button", { name: "approveCampaignAria" });
@@ -87,7 +87,7 @@ describe("VotingComponent Accessibility & Interaction", () => {
         userWalletAddress="GUSER11111111111111111111111111111111111111111111111111"
         onVote={mockOnVote}
         isVoting={false}
-      />
+      />,
     );
 
     const approveBtn = screen.getByRole("button", { name: "approveCampaignAria" });
@@ -102,7 +102,7 @@ describe("VotingComponent Accessibility & Interaction", () => {
         userWalletAddress="GUSER11111111111111111111111111111111111111111111111111"
         onVote={mockOnVote}
         isVoting={false}
-      />
+      />,
     );
 
     const rejectBtn = screen.getByRole("button", { name: "rejectCampaignAria" });
@@ -126,7 +126,7 @@ describe("VotingComponent Accessibility & Interaction", () => {
         onVote={mockOnVote}
         isVoting={false}
         userVote={userVote}
-      />
+      />,
     );
 
     const approveBtn = screen.getByRole("button", { name: "approveCampaignAria" });
@@ -145,7 +145,7 @@ describe("VotingComponent Accessibility & Interaction", () => {
         onVote={mockOnVote}
         isVoting={false}
         isTokenHolder={false}
-      />
+      />,
     );
 
     const approveBtn = screen.getByRole("button", { name: "approveCampaignAria" });
@@ -163,7 +163,7 @@ describe("VotingComponent Accessibility & Interaction", () => {
         userWalletAddress="GUSER1"
         onVote={mockOnVote}
         isVoting={true}
-      />
+      />,
     );
 
     const approveBtn = screen.getByRole("button", { name: "approveCampaignAria" });
@@ -180,7 +180,7 @@ describe("VotingComponent Accessibility & Interaction", () => {
         userWalletAddress={null}
         onVote={mockOnVote}
         isVoting={false}
-      />
+      />,
     );
 
     const approveBtn = screen.getByRole("button", { name: "approveCampaignAria" });

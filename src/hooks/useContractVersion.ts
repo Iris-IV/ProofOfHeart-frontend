@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { getVersion, EXPECTED_CONTRACT_VERSION } from '../lib/contractClient';
+import { useQuery } from "@tanstack/react-query";
+import { getVersion, EXPECTED_CONTRACT_VERSION } from "../lib/contractClient";
 
 export interface UseContractVersionResult {
   version: number | null;
@@ -13,7 +13,7 @@ export interface UseContractVersionResult {
 
 export function useContractVersion(): UseContractVersionResult {
   const { data, isLoading, error } = useQuery<number, Error>({
-    queryKey: ['contractVersion'],
+    queryKey: ["contractVersion"],
     queryFn: () => getVersion(),
     staleTime: Infinity, // Version rarely changes
     retry: 2,

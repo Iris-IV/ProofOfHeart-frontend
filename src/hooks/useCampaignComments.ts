@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useCallback, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getCampaignComments,
   createCampaignComment,
   pinComment,
   reportComment,
-} from '../lib/campaignComments';
-import { Comment } from '../types';
+} from "../lib/campaignComments";
+import { Comment } from "../types";
 
 export interface CommentsPage {
   items: Comment[];
@@ -44,8 +44,8 @@ export function useCampaignComments(
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
 
-  const queryKey = ['campaignComments', campaignId, page];
-  const allQueryKey = ['campaignComments', campaignId];
+  const queryKey = ["campaignComments", campaignId, page];
+  const allQueryKey = ["campaignComments", campaignId];
 
   const { data, isLoading, error } = useQuery<CommentsPage, Error>({
     queryKey,
@@ -56,7 +56,7 @@ export function useCampaignComments(
 
   const { mutateAsync: createMutation, isPending: isCreating } = useMutation({
     mutationFn: async ({ content, parentId }: { content: string; parentId: string | null }) => {
-      if (!userAddress) throw new Error('User address not available');
+      if (!userAddress) throw new Error("User address not available");
       return createCampaignComment(campaignId, content, userAddress, parentId);
     },
     onMutate: async ({ content, parentId }) => {
@@ -68,10 +68,10 @@ export function useCampaignComments(
           id: `optimistic-${Date.now()}`,
           campaignId,
           content,
-          authorAddress: userAddress ?? '',
+          authorAddress: userAddress ?? "",
           timestamp: Math.floor(Date.now() / 1000),
           parentId: parentId ?? null,
-          signature: '',
+          signature: "",
           isPinned: false,
           isReported: false,
         };

@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useCampaign } from './useCampaign';
-import { useCampaignContributionEvents } from './useCampaignContributionEvents';
-import type { Campaign } from '../types';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCampaign } from "./useCampaign";
+import { useCampaignContributionEvents } from "./useCampaignContributionEvents";
+import type { Campaign } from "../types";
 
 export interface UseLiveCampaignFundingResult {
   campaign: Campaign | null;

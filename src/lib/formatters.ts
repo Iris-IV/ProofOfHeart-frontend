@@ -47,9 +47,7 @@ export function formatDate(
   locale: string,
   options: Intl.DateTimeFormatOptions = { year: "numeric", month: "long", day: "numeric" },
 ): string {
-  return new Intl.DateTimeFormat(locale, options).format(
-    new Date(timestampSeconds * 1000),
-  );
+  return new Intl.DateTimeFormat(locale, options).format(new Date(timestampSeconds * 1000));
 }
 
 /** Format a Unix timestamp (seconds) as a short date (e.g. "Jan 1, 2024"). */

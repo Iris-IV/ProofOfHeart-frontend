@@ -10,7 +10,7 @@ const withAnalyzer = withBundleAnalyzer({
 
 // Expose the package version to client components at build time.
 const pkg = JSON.parse(
-  require("node:fs").readFileSync(require("node:path").join(__dirname, "package.json"), "utf-8")
+  require("node:fs").readFileSync(require("node:path").join(__dirname, "package.json"), "utf-8"),
 ) as { version: string };
 
 const nextConfig: NextConfig = {

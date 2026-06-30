@@ -86,27 +86,30 @@ async function loadClient(options: LoadClientOptions) {
 
   const mockServer = {
     getAccount: jest.fn().mockResolvedValue({ accountId: TEST_ADMIN, sequence: "1" }),
-    simulateTransaction: jest.fn().mockImplementation((tx: { ops?: Array<{ method?: string }> }) => {
-      if (options.simulateThrow) {
-        throw options.simulateThrow;
-      }
+    simulateTransaction: jest
+      .fn()
+      .mockImplementation((tx: { ops?: Array<{ method?: string }> }) => {
+        if (options.simulateThrow) {
+          throw options.simulateThrow;
+        }
 
-      const method = tx.ops?.[0]?.method;
-      if (method === "get_campaign_count") return { result: { retval: scVal.u32(1) } };
-      if (method === "get_campaign") return { result: { retval: campaignFixture } };
-      if (method === "get_contribution") return { result: { retval: scVal.bigint(100_000_000) } };
-      if (method === "get_revenue_pool") return { result: { retval: scVal.bigint(500_000_000) } };
-      if (method === "get_revenue_claimed") return { result: { retval: scVal.bigint(25_000_000) } };
-      if (method === "get_admin") return { result: { retval: scVal.address(TEST_ADMIN) } };
-      if (method === "get_platform_fee") return { result: { retval: scVal.u32(250) } };
-      if (method === "get_approve_votes") return { result: { retval: scVal.u32(12) } };
-      if (method === "get_reject_votes") return { result: { retval: scVal.u32(3) } };
-      if (method === "has_voted") return { result: { retval: scVal.bool(true) } };
-      if (method === "get_min_votes_quorum") return { result: { retval: scVal.u32(10) } };
-      if (method === "get_approval_threshold_bps") return { result: { retval: scVal.u32(5000) } };
+        const method = tx.ops?.[0]?.method;
+        if (method === "get_campaign_count") return { result: { retval: scVal.u32(1) } };
+        if (method === "get_campaign") return { result: { retval: campaignFixture } };
+        if (method === "get_contribution") return { result: { retval: scVal.bigint(100_000_000) } };
+        if (method === "get_revenue_pool") return { result: { retval: scVal.bigint(500_000_000) } };
+        if (method === "get_revenue_claimed")
+          return { result: { retval: scVal.bigint(25_000_000) } };
+        if (method === "get_admin") return { result: { retval: scVal.address(TEST_ADMIN) } };
+        if (method === "get_platform_fee") return { result: { retval: scVal.u32(250) } };
+        if (method === "get_approve_votes") return { result: { retval: scVal.u32(12) } };
+        if (method === "get_reject_votes") return { result: { retval: scVal.u32(3) } };
+        if (method === "has_voted") return { result: { retval: scVal.bool(true) } };
+        if (method === "get_min_votes_quorum") return { result: { retval: scVal.u32(10) } };
+        if (method === "get_approval_threshold_bps") return { result: { retval: scVal.u32(5000) } };
 
-      return { result: { retval: null } };
-    }),
+        return { result: { retval: null } };
+      }),
     sendTransaction: jest.fn().mockImplementation(() => {
       txCounter += 1;
       return { status: "PENDING", hash: `hash-${txCounter}` };

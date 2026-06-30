@@ -1,4 +1,7 @@
-import { MARKDOWN_SANITIZE_OVERRIDES, buildMarkdownSanitizeSchema } from "@/lib/markdownSanitizeSchema";
+import {
+  MARKDOWN_SANITIZE_OVERRIDES,
+  buildMarkdownSanitizeSchema,
+} from "@/lib/markdownSanitizeSchema";
 
 /** Minimal stand-in for hast-util-sanitize defaults used in unit tests. */
 const testDefaultSchema = {

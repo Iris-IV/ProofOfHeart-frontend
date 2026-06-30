@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useToast } from '@/components/ToastProvider';
+import { useState } from "react";
+import { useToast } from "@/components/ToastProvider";
 
 interface UpdateComposerProps {
   campaignId: number;
@@ -23,7 +23,7 @@ export default function UpdateComposer({
   onSubmit,
   isSubmitting,
 }: UpdateComposerProps) {
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
   const [notify, setNotify] = useState(true);
   const { showError, showSuccess } = useToast();
@@ -39,18 +39,18 @@ export default function UpdateComposer({
 
     try {
       await onSubmit(trimmedContent, notify);
-      setContent('');
+      setContent("");
       setIsExpanded(false);
-      showSuccess('Update posted successfully!');
+      showSuccess("Update posted successfully!");
     } catch (error) {
       showError(
-        error instanceof Error ? error.message : 'Failed to post update. Please try again.'
+        error instanceof Error ? error.message : "Failed to post update. Please try again.",
       );
     }
   };
 
   const handleCancel = () => {
-    setContent('');
+    setContent("");
     setIsExpanded(false);
   };
 
@@ -69,9 +69,7 @@ export default function UpdateComposer({
           <div className="w-8 h-8 rounded-full bg-linear-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold">
             {creatorAddress.slice(1, 3).toUpperCase()}
           </div>
-          <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">
-            Post an Update
-          </h3>
+          <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Post an Update</h3>
         </div>
         {!isExpanded && (
           <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-md">
@@ -86,7 +84,10 @@ export default function UpdateComposer({
           onClick={() => setIsExpanded(true)}
           className="w-full py-4 px-6 bg-linear-to-r from-purple-600/10 to-blue-600/10 hover:from-purple-600/20 hover:to-blue-600/20 text-purple-700 dark:text-purple-300 font-bold rounded-2xl border-2 border-dashed border-purple-200 dark:border-purple-800 transition-all duration-300 group"
         >
-          <span className="group-hover:scale-110 inline-block transition-transform duration-200">✏️</span> Write an update to your supporters...
+          <span className="group-hover:scale-110 inline-block transition-transform duration-200">
+            ✏️
+          </span>{" "}
+          Write an update to your supporters...
         </button>
       ) : (
         <div className="space-y-5">
@@ -128,10 +129,10 @@ export default function UpdateComposer({
               <span
                 className={`text-[10px] font-mono tracking-tight ${
                   isOverLimit
-                    ? 'text-red-500'
+                    ? "text-red-500"
                     : isUnderMinLength
-                    ? 'text-amber-500'
-                    : 'text-zinc-500'
+                      ? "text-amber-500"
+                      : "text-zinc-500"
                 }`}
               >
                 {characterCount} / {MAX_CONTENT_LENGTH}
@@ -149,12 +150,26 @@ export default function UpdateComposer({
               {isSubmitting ? (
                 <span className="flex items-center justify-center gap-2">
                   <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
                   </svg>
                   Posting...
                 </span>
-              ) : 'Post Update'}
+              ) : (
+                "Post Update"
+              )}
             </button>
             <button
               type="button"

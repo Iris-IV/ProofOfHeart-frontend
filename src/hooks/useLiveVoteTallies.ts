@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { getApproveVotes, getRejectVotes } from '@/lib/contractClient';
-import { useCampaignVoteEvents } from './useCampaignVoteEvents';
-import { useWindowVisibility } from './useWindowVisibility';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getApproveVotes, getRejectVotes } from "@/lib/contractClient";
+import { useCampaignVoteEvents } from "./useCampaignVoteEvents";
+import { useWindowVisibility } from "./useWindowVisibility";
 
 export interface VoteTallies {
   upvotes: number;
@@ -16,8 +16,7 @@ export interface UseLiveVoteTalliesOptions {
   enabled?: boolean;
 }
 
-const POLL_FALLBACK_INTERVAL =
-  Number(process.env.NEXT_PUBLIC_VOTE_TALLIES_POLL_MS) || 30_000;
+const POLL_FALLBACK_INTERVAL = Number(process.env.NEXT_PUBLIC_VOTE_TALLIES_POLL_MS) || 30_000;
 
 async function fetchOnChainTallies(campaignId: number): Promise<VoteTallies> {
   const [approves, rejects] = await Promise.all([
@@ -93,10 +92,10 @@ export function useLiveVoteTallies({ campaignId, enabled = true }: UseLiveVoteTa
     return () => window.clearInterval(intervalId);
   }, [campaignId, enabled, isVisible, reconcile, streamingAvailable]);
 
-  const applyOptimisticVote = useCallback((voteType: 'upvote' | 'downvote') => {
+  const applyOptimisticVote = useCallback((voteType: "upvote" | "downvote") => {
     setVoteCounts((current) => ({
-      upvotes: current.upvotes + (voteType === 'upvote' ? 1 : 0),
-      downvotes: current.downvotes + (voteType === 'downvote' ? 1 : 0),
+      upvotes: current.upvotes + (voteType === "upvote" ? 1 : 0),
+      downvotes: current.downvotes + (voteType === "downvote" ? 1 : 0),
       totalVotes: current.totalVotes + 1,
     }));
   }, []);

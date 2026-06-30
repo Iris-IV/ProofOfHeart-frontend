@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 import {
   AppNotification,
   fetchNotifications,
   markAllNotificationsRead,
   markNotificationRead,
-} from '@/lib/notifications';
+} from "@/lib/notifications";
 
 const POLL_INTERVAL_MS = 30_000;
 

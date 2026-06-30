@@ -18,7 +18,7 @@ interface ErrorReport {
 }
 
 const DSN = process.env.NEXT_PUBLIC_ERROR_TRACKING_DSN;
-const IS_PROD = process.env.NODE_ENV === 'production';
+const IS_PROD = process.env.NODE_ENV === "production";
 
 // Regex patterns for PII scrubbing
 const WALLET_ADDRESS_PATTERN = /G[A-Z0-9]{55}/g;
@@ -30,16 +30,16 @@ const PRIVATE_KEY_PATTERN = /S[A-Z0-9]{55}/g;
  */
 function scrubPII(data: string): string {
   let scrubbed = data;
-  
+
   // Replace wallet addresses with placeholder
-  scrubbed = scrubbed.replace(WALLET_ADDRESS_PATTERN, '[WALLET_ADDRESS]');
-  
+  scrubbed = scrubbed.replace(WALLET_ADDRESS_PATTERN, "[WALLET_ADDRESS]");
+
   // Replace email addresses with placeholder
-  scrubbed = scrubbed.replace(EMAIL_PATTERN, '[EMAIL]');
-  
+  scrubbed = scrubbed.replace(EMAIL_PATTERN, "[EMAIL]");
+
   // Replace private keys with placeholder
-  scrubbed = scrubbed.replace(PRIVATE_KEY_PATTERN, '[PRIVATE_KEY]');
-  
+  scrubbed = scrubbed.replace(PRIVATE_KEY_PATTERN, "[PRIVATE_KEY]");
+
   return scrubbed;
 }
 
@@ -48,18 +48,18 @@ function scrubPII(data: string): string {
  */
 function scrubContext(context: ErrorContext): ErrorContext {
   const scrubbed: ErrorContext = {};
-  
+
   for (const [key, value] of Object.entries(context)) {
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       scrubbed[key] = scrubPII(value);
-    } else if (typeof value === 'object' && value !== null) {
+    } else if (typeof value === "object" && value !== null) {
       // Recursively scrub nested objects
       scrubbed[key] = JSON.parse(scrubPII(JSON.stringify(value)));
     } else {
       scrubbed[key] = value;
     }
   }
-  
+
   return scrubbed;
 }
 
@@ -70,29 +70,29 @@ function scrubContext(context: ErrorContext): ErrorContext {
 async function sendToTracker(report: ErrorReport): Promise<void> {
   if (!IS_PROD || !DSN) {
     // In development, just log to console
-    console.warn('[ErrorTracking] Would send to tracker in production:', report);
+    console.warn("[ErrorTracking] Would send to tracker in production:", report);
     return;
   }
 
   try {
     const response = await fetch(DSN, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         ...report,
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV,
-        url: typeof window !== 'undefined' ? window.location.href : undefined,
+        url: typeof window !== "undefined" ? window.location.href : undefined,
       }),
     });
 
     if (!response.ok) {
-      console.error('[ErrorTracking] Failed to send error report:', response.statusText);
+      console.error("[ErrorTracking] Failed to send error report:", response.statusText);
     }
   } catch (err) {
-    console.error('[ErrorTracking] Network error sending report:', err);
+    console.error("[ErrorTracking] Network error sending report:", err);
   }
 }
 
@@ -118,13 +118,13 @@ export function captureTransactionError(
   action: string,
   campaignId: number,
   error: Error,
-  errorCode?: string
+  errorCode?: string,
 ): void {
   captureError(error, {
     action,
     campaignId,
     errorCode,
-    type: 'transaction_failure',
+    type: "transaction_failure",
   });
 }
 
@@ -132,21 +132,21 @@ export function captureTransactionError(
  * Global error handler for unhandled errors.
  */
 export function setupGlobalErrorHandlers(): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
 
   // Handle unhandled promise rejections
-  window.addEventListener('unhandledrejection', (event) => {
-    console.error('[ErrorTracking] Unhandled promise rejection:', event.reason);
+  window.addEventListener("unhandledrejection", (event) => {
+    console.error("[ErrorTracking] Unhandled promise rejection:", event.reason);
     captureError(event.reason instanceof Error ? event.reason : new Error(String(event.reason)), {
-      type: 'unhandled_promise_rejection',
+      type: "unhandled_promise_rejection",
     });
   });
 
   // Handle global errors
-  window.addEventListener('error', (event) => {
-    console.error('[ErrorTracking] Global error:', event.error);
+  window.addEventListener("error", (event) => {
+    console.error("[ErrorTracking] Global error:", event.error);
     captureError(event.error || new Error(event.message), {
-      type: 'global_error',
+      type: "global_error",
       filename: event.filename,
       lineno: event.lineno,
       colno: event.colno,

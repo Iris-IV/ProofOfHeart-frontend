@@ -100,7 +100,7 @@ export async function createCampaignComment(
   campaignId: number,
   content: string,
   authorAddress: string,
-  parentId: string | null = null
+  parentId: string | null = null,
 ): Promise<Comment> {
   if (USE_MOCKS || !hasOffchainApiBaseUrl()) {
     await new Promise((resolve) => setTimeout(resolve, 800));
@@ -162,11 +162,15 @@ export async function createCampaignComment(
   }
 }
 
-export async function pinComment(campaignId: number, commentId: string, isPinned: boolean): Promise<Comment> {
+export async function pinComment(
+  campaignId: number,
+  commentId: string,
+  isPinned: boolean,
+): Promise<Comment> {
   if (USE_MOCKS || !hasOffchainApiBaseUrl()) {
     await new Promise((resolve) => setTimeout(resolve, 500));
     const comments = MOCK_COMMENTS[campaignId] || [];
-    const commentIndex = comments.findIndex(c => c.id === commentId);
+    const commentIndex = comments.findIndex((c) => c.id === commentId);
     if (commentIndex !== -1) {
       comments[commentIndex] = { ...comments[commentIndex], isPinned };
       return comments[commentIndex];
@@ -175,14 +179,17 @@ export async function pinComment(campaignId: number, commentId: string, isPinned
   }
 
   try {
-    return await requestOffchainJson<Comment>(`/campaigns/${campaignId}/comments/${commentId}/pin`, {
-      method: "POST",
-      auth: {
-        purpose: "pin_comment",
-        payload: { campaignId, commentId, isPinned },
+    return await requestOffchainJson<Comment>(
+      `/campaigns/${campaignId}/comments/${commentId}/pin`,
+      {
+        method: "POST",
+        auth: {
+          purpose: "pin_comment",
+          payload: { campaignId, commentId, isPinned },
+        },
+        body: { isPinned },
       },
-      body: { isPinned },
-    });
+    );
   } catch (error) {
     throw new Error(`Failed to pin comment: ${parseContractError(error)}`);
   }
@@ -192,7 +199,7 @@ export async function reportComment(campaignId: number, commentId: string): Prom
   if (USE_MOCKS || !hasOffchainApiBaseUrl()) {
     await new Promise((resolve) => setTimeout(resolve, 500));
     const comments = MOCK_COMMENTS[campaignId] || [];
-    const commentIndex = comments.findIndex(c => c.id === commentId);
+    const commentIndex = comments.findIndex((c) => c.id === commentId);
     if (commentIndex !== -1) {
       comments[commentIndex] = { ...comments[commentIndex], isReported: true };
       return comments[commentIndex];
@@ -201,13 +208,16 @@ export async function reportComment(campaignId: number, commentId: string): Prom
   }
 
   try {
-    return await requestOffchainJson<Comment>(`/campaigns/${campaignId}/comments/${commentId}/report`, {
-      method: "POST",
-      auth: {
-        purpose: "report_comment",
-        payload: { campaignId, commentId },
+    return await requestOffchainJson<Comment>(
+      `/campaigns/${campaignId}/comments/${commentId}/report`,
+      {
+        method: "POST",
+        auth: {
+          purpose: "report_comment",
+          payload: { campaignId, commentId },
+        },
       },
-    });
+    );
   } catch (error) {
     throw new Error(`Failed to report comment: ${parseContractError(error)}`);
   }
@@ -228,12 +238,8 @@ export async function verifyCommentSignature(comment: Comment): Promise<boolean>
     const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
     const signatureBuffer = Buffer.from(comment.signature, "hex");
     const publicKey = StellarSdk.StrKey.decodeEd25519PublicKey(comment.authorAddress);
-    
-    return StellarSdk.verify(
-      payloadHash,
-      signatureBuffer,
-      publicKey
-    );
+
+    return StellarSdk.verify(payloadHash, signatureBuffer, publicKey);
   } catch {
     return false;
   }

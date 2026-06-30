@@ -49,8 +49,9 @@ describe("useLiveCampaignFunding", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseCampaignContributionEvents.mockImplementation(({ onContributions }) => {
-      (globalThis as { __triggerContribution?: (delta: bigint) => void }).__triggerContribution =
-        (delta: bigint) => onContributions?.(delta, 1);
+      (globalThis as { __triggerContribution?: (delta: bigint) => void }).__triggerContribution = (
+        delta: bigint,
+      ) => onContributions?.(delta, 1);
     });
     mockUseCampaign.mockReturnValue({
       campaign: makeCampaign(),

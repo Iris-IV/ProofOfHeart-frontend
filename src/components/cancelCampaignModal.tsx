@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
 
 interface CancelCampaignModalProps {
   campaignTitle: string;
@@ -35,9 +35,9 @@ export default function CancelCampaignModal({
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
       // Focus trap: cycle Tab/Shift+Tab between the two buttons
-      if (e.key === 'Tab') {
+      if (e.key === "Tab") {
         const first = keepActiveRef.current;
         const last = cancelRef.current;
         if (!first || !last) return;
@@ -54,8 +54,8 @@ export default function CancelCampaignModal({
         }
       }
     };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
   // Auto-focus the safe "Keep Active" button when modal opens
@@ -70,14 +70,16 @@ export default function CancelCampaignModal({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
       role="presentation"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
       onKeyDown={(e) => {
-        if (e.key === 'Escape') {
+        if (e.key === "Escape") {
           onClose();
         }
       }}
     >
-      <div 
+      <div
         className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden"
         role="dialog"
         aria-modal="true"
@@ -136,7 +138,7 @@ export default function CancelCampaignModal({
                 {confirmLabel ? `${confirmLabel}…` : "Cancelling…"}
               </>
             ) : (
-              confirmLabel ?? "Cancel Campaign"
+              (confirmLabel ?? "Cancel Campaign")
             )}
           </button>
         </div>

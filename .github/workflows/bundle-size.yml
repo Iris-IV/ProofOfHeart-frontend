@@ -19,8 +19,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version: "22"
+          cache: "npm"
 
       - name: Restore Next.js build cache
         uses: actions/cache@v4
@@ -37,7 +37,7 @@ jobs:
         run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
-          NEXT_PUBLIC_USE_MOCKS: true
+          NEXT_PUBLIC_USE_MOCKS: false
 
       - name: Run bundle-size check
         id: budget
@@ -66,61 +66,65 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const exceeded  = '${{ steps.summary.outputs.exceeded }}' === 'true';
-            const baseline  = '${{ steps.summary.outputs.baseline_kb }}';
-            const current   = '${{ steps.summary.outputs.current_kb }}';
-            const delta     = '${{ steps.summary.outputs.delta_kb }}';
-            const deltaPct  = '${{ steps.summary.outputs.delta_pct }}';
-            const budget    = '${{ steps.summary.outputs.budget_kb }}';
-            const changed   = '${{ steps.summary.outputs.changed }}';
+            try {
+              const exceeded  = '${{ steps.summary.outputs.exceeded }}' === 'true';
+              const baseline  = '${{ steps.summary.outputs.baseline_kb }}';
+              const current   = '${{ steps.summary.outputs.current_kb }}';
+              const delta     = '${{ steps.summary.outputs.delta_kb }}';
+              const deltaPct  = '${{ steps.summary.outputs.delta_pct }}';
+              const budget    = '${{ steps.summary.outputs.budget_kb }}';
+              const changed   = '${{ steps.summary.outputs.changed }}';
 
-            const icon   = exceeded ? '❌' : '✅';
-            const status = exceeded
-              ? `**BUDGET EXCEEDED** — reduce bundle or update baseline`
-              : 'Within budget';
+              const icon   = exceeded ? '❌' : '✅';
+              const status = exceeded
+                ? `**BUDGET EXCEEDED** — reduce bundle or update baseline`
+                : 'Within budget';
 
-            const sign = parseFloat(delta) >= 0 ? '+' : '';
-            const body = [
-              `## ${icon} Bundle size report`,
-              '',
-              `| Metric | Value |`,
-              `|--------|-------|`,
-              `| Baseline | ${baseline} KB |`,
-              `| Current  | ${current} KB |`,
-              `| Delta    | ${sign}${delta} KB (${sign}${deltaPct}%) |`,
-              `| Budget   | ±${budget} KB |`,
-              `| Status   | ${status} |`,
-              `| Changed chunks | ${changed} |`,
-              '',
-              exceeded
-                ? '> To accept this increase, run `node scripts/bundle-size-check.mjs --update-baseline` and commit the updated `scripts/bundle-size-baseline.json`.'
-                : '',
-            ].join('\n');
+              const sign = parseFloat(delta) >= 0 ? '+' : '';
+              const body = [
+                `## ${icon} Bundle size report`,
+                '',
+                `| Metric | Value |`,
+                `|--------|-------|`,
+                `| Baseline | ${baseline} KB |`,
+                `| Current  | ${current} KB |`,
+                `| Delta    | ${sign}${delta} KB (${sign}${deltaPct}%) |`,
+                `| Budget   | ±${budget} KB |`,
+                `| Status   | ${status} |`,
+                `| Changed chunks | ${changed} |`,
+                '',
+                exceeded
+                  ? '> To accept this increase, run `node scripts/bundle-size-check.mjs --update-baseline` and commit the updated `scripts/bundle-size-baseline.json`.'
+                  : '',
+              ].join('\n');
 
-            const marker = '<!-- bundle-size-report -->';
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-
-            const existing = comments.find(c => c.body.includes(marker));
-            const fullBody = marker + '\n' + body;
-
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body: fullBody,
-              });
-            } else {
-              await github.rest.issues.createComment({
+              const marker = '<!-- bundle-size-report -->';
+              const { data: comments } = await github.rest.issues.listComments({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body: fullBody,
               });
+
+              const existing = comments.find(c => c.body.includes(marker));
+              const fullBody = marker + '\n' + body;
+
+              if (existing) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existing.id,
+                  body: fullBody,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: fullBody,
+                });
+              }
+            } catch (err) {
+              console.log('Skipping PR comment (may be a fork PR):', err.message);
             }
 
       - name: Fail if budget exceeded

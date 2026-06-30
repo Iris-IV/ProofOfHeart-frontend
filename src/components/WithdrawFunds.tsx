@@ -10,7 +10,10 @@ import { useToast } from "./ToastProvider";
 import { isSameAddress } from "../lib/stellar";
 import { parseContractError } from "../utils/contractErrors";
 import { explorerTxUrl } from "../utils/explorer";
-import { type TransactionLifecyclePhase, type TransactionLifecycleOptions } from "../lib/contractClient";
+import {
+  type TransactionLifecyclePhase,
+  type TransactionLifecycleOptions,
+} from "../lib/contractClient";
 import { useWriteGuard } from "../hooks/useWriteGuard";
 
 interface WithdrawFundsProps {
@@ -113,12 +116,11 @@ export default function WithdrawFunds({
         </div>
         <div className="space-y-1.5 text-sm text-green-700 dark:text-green-300">
           <p>
-            <span className="font-medium">{t("amountReceived")}</span>{" "}
-            {formatXlm(creatorAmount)} XLM
+            <span className="font-medium">{t("amountReceived")}</span> {formatXlm(creatorAmount)}{" "}
+            XLM
           </p>
           <p>
-            <span className="font-medium">{t("platformFeeLabel")}</span>{" "}
-            {formatXlm(feeAmount)} XLM
+            <span className="font-medium">{t("platformFeeLabel")}</span> {formatXlm(feeAmount)} XLM
           </p>
           <p className="break-all">
             <span className="font-medium">{t("transaction")}</span>{" "}

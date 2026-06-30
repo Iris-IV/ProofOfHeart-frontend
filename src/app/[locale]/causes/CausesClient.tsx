@@ -164,91 +164,100 @@ function CausesContent() {
   // Vote handler
   // -------------------------------------------------------------------------
 
-  const handleVote = useCallback(async (campaignId: number, voteType: "upvote" | "downvote") => {
-    if (!userWalletAddress) {
-      showWarning("Please connect your wallet first.");
-      return;
-    }
-    if (userVotes[campaignId]) {
-      showWarning("You have already voted on this cause.");
-      return;
-    }
-    setIsVotingFor(campaignId);
-    try {
-      const transactionHash = await withActionTimeout(
-        voteOnCampaign(campaignId, userWalletAddress, voteType === "upvote"),
-      );
-      const newVote: Vote = {
-        causeId: String(campaignId),
-        voter: userWalletAddress,
-        voteType,
-        timestamp: new Date(),
-        transactionHash,
-      };
-      setUserVotes((prev) => ({ ...prev, [campaignId]: newVote }));
-      setVoteCounts(
-        (prev: Record<number, { upvotes: number; downvotes: number; totalVotes: number }>) => {
-          const current = prev[campaignId] ?? { upvotes: 0, downvotes: 0, totalVotes: 0 };
-          return {
-            ...prev,
-            [campaignId]: {
-              upvotes: voteType === "upvote" ? current.upvotes + 1 : current.upvotes,
-              downvotes: voteType === "downvote" ? current.downvotes + 1 : current.downvotes,
-              totalVotes: current.totalVotes + 1,
-            },
-          };
-        },
-      );
-      showSuccess(
-        `Your vote has been cast successfully. <a href="${explorerTxUrl(transactionHash)}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;">View on Explorer</a>`,
-      );
-    } catch (error) {
-      showError(getAsyncActionErrorMessage(error, parseContractError));
-    } finally {
-      setIsVotingFor(null);
-    }
-  }, [userWalletAddress, userVotes, showWarning, showSuccess, showError]);
+  const handleVote = useCallback(
+    async (campaignId: number, voteType: "upvote" | "downvote") => {
+      if (!userWalletAddress) {
+        showWarning("Please connect your wallet first.");
+        return;
+      }
+      if (userVotes[campaignId]) {
+        showWarning("You have already voted on this cause.");
+        return;
+      }
+      setIsVotingFor(campaignId);
+      try {
+        const transactionHash = await withActionTimeout(
+          voteOnCampaign(campaignId, userWalletAddress, voteType === "upvote"),
+        );
+        const newVote: Vote = {
+          causeId: String(campaignId),
+          voter: userWalletAddress,
+          voteType,
+          timestamp: new Date(),
+          transactionHash,
+        };
+        setUserVotes((prev) => ({ ...prev, [campaignId]: newVote }));
+        setVoteCounts(
+          (prev: Record<number, { upvotes: number; downvotes: number; totalVotes: number }>) => {
+            const current = prev[campaignId] ?? { upvotes: 0, downvotes: 0, totalVotes: 0 };
+            return {
+              ...prev,
+              [campaignId]: {
+                upvotes: voteType === "upvote" ? current.upvotes + 1 : current.upvotes,
+                downvotes: voteType === "downvote" ? current.downvotes + 1 : current.downvotes,
+                totalVotes: current.totalVotes + 1,
+              },
+            };
+          },
+        );
+        showSuccess(
+          `Your vote has been cast successfully. <a href="${explorerTxUrl(transactionHash)}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;">View on Explorer</a>`,
+        );
+      } catch (error) {
+        showError(getAsyncActionErrorMessage(error, parseContractError));
+      } finally {
+        setIsVotingFor(null);
+      }
+    },
+    [userWalletAddress, userVotes, showWarning, showSuccess, showError],
+  );
 
   // -------------------------------------------------------------------------
   // Cancel handler
   // -------------------------------------------------------------------------
 
-  const handleCancel = useCallback(async (campaignId: number) => {
-    if (!userWalletAddress) {
-      showWarning("Please connect your wallet first.");
-      return;
-    }
-    try {
-      await withActionTimeout(cancelCampaign(campaignId));
+  const handleCancel = useCallback(
+    async (campaignId: number) => {
+      if (!userWalletAddress) {
+        showWarning("Please connect your wallet first.");
+        return;
+      }
+      try {
+        await withActionTimeout(cancelCampaign(campaignId));
 
-      // Optimistic update: mark campaign as cancelled immediately so the UI
-      // reflects the new state without waiting for a re-fetch.
-      setCampaigns((prev) =>
-        prev.map((c) => (c.id === campaignId ? { ...c, status: "cancelled" as const } : c)),
-      );
+        // Optimistic update: mark campaign as cancelled immediately so the UI
+        // reflects the new state without waiting for a re-fetch.
+        setCampaigns((prev) =>
+          prev.map((c) => (c.id === campaignId ? { ...c, status: "cancelled" as const } : c)),
+        );
 
-      showSuccess("Campaign cancelled. Contributors can now claim full refunds.");
-    } catch (error) {
-      showError(getAsyncActionErrorMessage(error, parseContractError));
-    }
-  }, [userWalletAddress, showWarning, showSuccess, showError]);
+        showSuccess("Campaign cancelled. Contributors can now claim full refunds.");
+      } catch (error) {
+        showError(getAsyncActionErrorMessage(error, parseContractError));
+      }
+    },
+    [userWalletAddress, showWarning, showSuccess, showError],
+  );
 
   // -------------------------------------------------------------------------
   // Claim refund handler
   // -------------------------------------------------------------------------
 
-  const handleClaimRefund = useCallback(async (campaignId: number) => {
-    if (!userWalletAddress) {
-      showWarning("Please connect your wallet first.");
-      return;
-    }
-    try {
-      await withActionTimeout(claimRefund(campaignId, userWalletAddress));
-      showSuccess("Refund claimed successfully. Funds will appear in your wallet shortly.");
-    } catch (error) {
-      showError(getAsyncActionErrorMessage(error, parseContractError));
-    }
-  }, [userWalletAddress, showWarning, showSuccess, showError]);
+  const handleClaimRefund = useCallback(
+    async (campaignId: number) => {
+      if (!userWalletAddress) {
+        showWarning("Please connect your wallet first.");
+        return;
+      }
+      try {
+        await withActionTimeout(claimRefund(campaignId, userWalletAddress));
+        showSuccess("Refund claimed successfully. Funds will appear in your wallet shortly.");
+      } catch (error) {
+        showError(getAsyncActionErrorMessage(error, parseContractError));
+      }
+    },
+    [userWalletAddress, showWarning, showSuccess, showError],
+  );
 
   const handleTagClick = useCallback((nextTag: string) => {
     setTag(nextTag);
@@ -275,9 +284,10 @@ function CausesContent() {
   }, [campaigns, debouncedSearch, status, tag]);
 
   const categoryCounts = useMemo(() => {
-    const perCategory = Object.fromEntries(
-      CATEGORY_VALUES.map((cat) => [cat, 0]),
-    ) as Record<Category, number>;
+    const perCategory = Object.fromEntries(CATEGORY_VALUES.map((cat) => [cat, 0])) as Record<
+      Category,
+      number
+    >;
 
     for (const campaign of campaignsMatchingNonCategoryFilters) {
       perCategory[campaign.category] += 1;
@@ -290,8 +300,7 @@ function CausesContent() {
   }, [campaignsMatchingNonCategoryFilters]);
 
   const isCategorySelected = useCallback(
-    (cat: CategoryFilter) =>
-      cat === "all" ? category === "all" : category === String(cat),
+    (cat: CategoryFilter) => (cat === "all" ? category === "all" : category === String(cat)),
     [category],
   );
 
@@ -441,15 +450,10 @@ function CausesContent() {
 
           {/* Category filter chips */}
           {!isLoading && !error && (
-            <div
-              role="group"
-              aria-label={t("labelCategory")}
-              className="flex flex-wrap gap-2"
-            >
+            <div role="group" aria-label={t("labelCategory")} className="flex flex-wrap gap-2">
               {(["all", ...CATEGORY_VALUES] as CategoryFilter[]).map((cat) => {
                 const selected = isCategorySelected(cat);
-                const count =
-                  cat === "all" ? categoryCounts.all : categoryCounts[cat as Category];
+                const count = cat === "all" ? categoryCounts.all : categoryCounts[cat as Category];
                 const label =
                   cat === "all"
                     ? t("allCategories")

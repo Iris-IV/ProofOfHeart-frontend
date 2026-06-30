@@ -2,10 +2,10 @@
 
 All XLM ↔ stroops conversion and display formatting lives in two modules:
 
-| Module | Purpose |
-|--------|---------|
+| Module                | Purpose                                                                    |
+| --------------------- | -------------------------------------------------------------------------- |
 | `@/lib/stellarAmount` | Bigint-safe conversion (`stroopsToXlm`, `xlmToStroops`, `STROOPS_PER_XLM`) |
-| `@/lib/formatters` | Locale-aware display (`formatAmount` for stroops → formatted XLM string) |
+| `@/lib/formatters`    | Locale-aware display (`formatAmount` for stroops → formatted XLM string)   |
 
 ## Conversion (contract / validation)
 

@@ -1,61 +1,65 @@
-'use client';
+"use client";
 
-import Image from 'next/image';
-import { Link } from '@/i18n/routing';
-import { useTranslations, useLocale } from 'next-intl';
-import { useMemo, useState } from 'react';
-import CampaignStatusBadge from '@/components/CampaignStatusBadge';
-import FundingProgressBar from '@/components/FundingProgressBar';
-import { CampaignRowSkeleton } from '@/components/Skeleton';
-import { useCampaigns } from '@/hooks/useCampaigns';
-import { formatAddress } from '@/lib/formatAddress';
-import { Category, CATEGORY_LABELS } from '@/types';
-import { formatAmount } from '@/lib/formatters';
+import Image from "next/image";
+import { Link } from "@/i18n/routing";
+import { useTranslations, useLocale } from "next-intl";
+import { useMemo, useState } from "react";
+import CampaignStatusBadge from "@/components/CampaignStatusBadge";
+import FundingProgressBar from "@/components/FundingProgressBar";
+import { CampaignRowSkeleton } from "@/components/Skeleton";
+import { useCampaigns } from "@/hooks/useCampaigns";
+import { formatAddress } from "@/lib/formatAddress";
+import { Category, CATEGORY_LABELS } from "@/types";
+import { formatAmount } from "@/lib/formatters";
 
 const CATEGORY_ICONS: Record<Category, string> = {
-  [Category.Learner]: '🎓',
-  [Category.EducationalStartup]: '🚀',
-  [Category.Educator]: '👩‍🏫',
-  [Category.Publisher]: '📚',
+  [Category.Learner]: "🎓",
+  [Category.EducationalStartup]: "🚀",
+  [Category.Educator]: "👩‍🏫",
+  [Category.Publisher]: "📚",
 };
 
 export default function ExplorePage() {
-  const t = useTranslations('Explore');
+  const t = useTranslations("Explore");
   const locale = useLocale();
   const { campaigns, isLoading, error, refetch } = useCampaigns();
-  const [activeCategory, setActiveCategory] = useState<'all' | Category>('all');
+  const [activeCategory, setActiveCategory] = useState<"all" | Category>("all");
 
   const categories = useMemo(() => {
     const seen = new Set(campaigns.map((c) => c.category));
-    return ['all' as const, ...Array.from(seen).sort((a, b) => a - b)];
+    return ["all" as const, ...Array.from(seen).sort((a, b) => a - b)];
   }, [campaigns]);
 
   const filtered = useMemo(
     () =>
-      activeCategory === 'all'
-        ? campaigns
-        : campaigns.filter((c) => c.category === activeCategory),
-    [campaigns, activeCategory]
+      activeCategory === "all" ? campaigns : campaigns.filter((c) => c.category === activeCategory),
+    [campaigns, activeCategory],
   );
 
   // Sort by funding progress descending for the explore view
   const sorted = useMemo(
     () =>
       [...filtered].sort((a, b) => {
-        const aProgress = a.funding_goal > BigInt(0) ? Number(a.amount_raised * BigInt(10000) / a.funding_goal) : 0;
-        const bProgress = b.funding_goal > BigInt(0) ? Number(b.amount_raised * BigInt(10000) / b.funding_goal) : 0;
+        const aProgress =
+          a.funding_goal > BigInt(0)
+            ? Number((a.amount_raised * BigInt(10000)) / a.funding_goal)
+            : 0;
+        const bProgress =
+          b.funding_goal > BigInt(0)
+            ? Number((b.amount_raised * BigInt(10000)) / b.funding_goal)
+            : 0;
         return bProgress - aProgress;
       }),
-    [filtered]
+    [filtered],
   );
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-14 sm:px-6">
       <h1 className="text-3xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
-        {t('title')}
+        {t("title")}
       </h1>
       <p className="mt-3 max-w-2xl text-base leading-7 text-zinc-600 dark:text-zinc-400">
-        {t('subtitle')}
+        {t("subtitle")}
       </p>
 
       {/* Category pills */}
@@ -65,12 +69,13 @@ export default function ExplorePage() {
             <button
               key={String(cat)}
               onClick={() => setActiveCategory(cat)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${activeCategory === cat
-                ? 'bg-blue-600 text-white'
-                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                }`}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                activeCategory === cat
+                  ? "bg-blue-600 text-white"
+                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+              }`}
             >
-              {cat === 'all' ? t('all') : `${CATEGORY_ICONS[cat] ?? ''} ${CATEGORY_LABELS[cat]}`}
+              {cat === "all" ? t("all") : `${CATEGORY_ICONS[cat] ?? ""} ${CATEGORY_LABELS[cat]}`}
             </button>
           ))}
         </div>
@@ -84,7 +89,7 @@ export default function ExplorePage() {
             onClick={refetch}
             className="px-5 py-2 bg-red-600 text-white rounded-full text-sm font-medium hover:bg-red-700 transition-colors"
           >
-            {t('tryAgain')}
+            {t("tryAgain")}
           </button>
         </div>
       )}
@@ -103,12 +108,10 @@ export default function ExplorePage() {
         <div className="mt-16 text-center">
           <div className="text-5xl mb-4">🌐</div>
           <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-            {campaigns.length === 0 ? t('noCausesYet') : t('noCausesInCategory')}
+            {campaigns.length === 0 ? t("noCausesYet") : t("noCausesInCategory")}
           </h2>
           <p className="text-zinc-600 dark:text-zinc-400">
-            {campaigns.length === 0
-              ? t('checkBackSoon')
-              : t('tryDifferentCategory')}
+            {campaigns.length === 0 ? t("checkBackSoon") : t("tryDifferentCategory")}
           </p>
         </div>
       )}
@@ -141,7 +144,7 @@ export default function ExplorePage() {
                     />
                   </span>
                 ) : (
-                  CATEGORY_ICONS[campaign.category] ?? '💡'
+                  (CATEGORY_ICONS[campaign.category] ?? "💡")
                 )}
               </span>
 
@@ -151,10 +154,15 @@ export default function ExplorePage() {
                   {campaign.title}
                 </p>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  By {formatAddress(campaign.creator)} · {formatAmount(campaign.amount_raised, locale, { maximumFractionDigits: 1 })} / {formatAmount(campaign.funding_goal, locale, { maximumFractionDigits: 1 })} XLM
+                  By {formatAddress(campaign.creator)} ·{" "}
+                  {formatAmount(campaign.amount_raised, locale, { maximumFractionDigits: 1 })} /{" "}
+                  {formatAmount(campaign.funding_goal, locale, { maximumFractionDigits: 1 })} XLM
                 </p>
                 <div className="mt-1.5">
-                  <FundingProgressBar amountRaised={campaign.amount_raised} fundingGoal={campaign.funding_goal} />
+                  <FundingProgressBar
+                    amountRaised={campaign.amount_raised}
+                    fundingGoal={campaign.funding_goal}
+                  />
                 </div>
               </div>
 

@@ -44,7 +44,7 @@ describe("WalletContext", () => {
     mockIsConnected.mockResolvedValue(false);
     mockIsAllowed.mockResolvedValue(false);
     mockGetAddress.mockResolvedValue({ address: "GB..." });
-    
+
     // Mock window.open
     global.window.open = jest.fn();
   });
@@ -58,7 +58,7 @@ describe("WalletContext", () => {
       render(
         <WalletProvider>
           <TestComponent />
-        </WalletProvider>
+        </WalletProvider>,
       );
     });
 
@@ -75,7 +75,7 @@ describe("WalletContext", () => {
       render(
         <WalletProvider>
           <TestComponent />
-        </WalletProvider>
+        </WalletProvider>,
       );
     });
 
@@ -91,7 +91,7 @@ describe("WalletContext", () => {
     render(
       <WalletProvider>
         <TestComponent />
-      </WalletProvider>
+      </WalletProvider>,
     );
 
     // Initial state check
@@ -113,14 +113,16 @@ describe("WalletContext", () => {
     render(
       <WalletProvider>
         <TestComponent />
-      </WalletProvider>
+      </WalletProvider>,
     );
 
     await act(async () => {
       fireEvent.click(screen.getByText("Connect"));
     });
 
-    expect(mockShowWarning).toHaveBeenCalledWith("Freighter wallet not found. Opening install page…");
+    expect(mockShowWarning).toHaveBeenCalledWith(
+      "Freighter wallet not found. Opening install page…",
+    );
     expect(global.window.open).toHaveBeenCalledWith("https://www.freighter.app/", "_blank");
     expect(screen.getByTestId("isLoading")).toHaveTextContent("false");
   });
@@ -132,7 +134,7 @@ describe("WalletContext", () => {
     render(
       <WalletProvider>
         <TestComponent />
-      </WalletProvider>
+      </WalletProvider>,
     );
 
     await act(async () => {
@@ -151,7 +153,7 @@ describe("WalletContext", () => {
     render(
       <WalletProvider>
         <TestComponent />
-      </WalletProvider>
+      </WalletProvider>,
     );
 
     await act(async () => {
@@ -171,7 +173,7 @@ describe("WalletContext", () => {
     render(
       <WalletProvider>
         <TestComponent />
-      </WalletProvider>
+      </WalletProvider>,
     );
 
     // Initial connected state
@@ -186,18 +188,18 @@ describe("WalletContext", () => {
     expect(screen.getByTestId("isConnected")).toHaveTextContent("false");
     expect(localStorage.getItem("stellar_wallet_public_key")).toBeNull();
     expect(mockShowWarning).toHaveBeenCalledWith(
-      "Disconnected. To fully revoke Freighter access, open the extension and remove this site from Connected Sites."
+      "Disconnected. To fully revoke Freighter access, open the extension and remove this site from Connected Sites.",
     );
   });
 
   it("throws error when used outside of Provider", () => {
     // Silence console.error for this test as we expect an error
     const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
-    
+
     expect(() => {
       render(<TestComponent />);
     }).toThrow("useWallet must be used within a WalletProvider");
-    
+
     consoleSpy.mockRestore();
   });
 });

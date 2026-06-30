@@ -58,7 +58,11 @@ import { useContractVersion } from "@/hooks/useContractVersion";
 export default function AdminDashboard() {
   const { campaigns, isLoading, refetch, isRefreshing } = useCampaigns();
   const { publicKey, isWalletConnected, connectWallet, isLoading: isWalletLoading } = useWallet();
-  const { version: contractVersion, isMismatch: isVersionMismatch, expectedVersion } = useContractVersion();
+  const {
+    version: contractVersion,
+    isMismatch: isVersionMismatch,
+    expectedVersion,
+  } = useContractVersion();
   const queryClient = useQueryClient();
 
   const { showSuccess, showError, showWarning } = useToast();
@@ -131,15 +135,19 @@ export default function AdminDashboard() {
 
   // Reconcile optimistic updates when raw data changes
   useEffect(() => {
-    if (optimisticRemovedIds.length === 0) return;
+    if (optimisticPendingIds.size === 0) return;
 
     // Remove IDs from optimistic list if they are no longer in the "actually pending" server data
-    setOptimisticRemovedIds(prev => prev.filter(id => {
-      const isStillInServerData = campaigns.some(c =>
-        c.id === id && !c.is_verified && c.is_active && !c.is_cancelled
-      );
-      return isStillInServerData;
-    }));
+    setOptimisticPendingIds((prev) => {
+      const next = new Set(prev);
+      for (const id of prev) {
+        const isStillInServerData = campaigns.some(
+          (c) => c.id === id && !c.is_verified && c.is_active && !c.is_cancelled,
+        );
+        if (!isStillInServerData) next.delete(id);
+      }
+      return next;
+    });
   }, [campaigns]);
 
   const isAdmin = useMemo(() => {
@@ -156,11 +164,7 @@ export default function AdminDashboard() {
 
   const pendingCampaigns = useMemo(() => {
     return campaigns.filter(
-      (c) =>
-        !c.is_verified &&
-        c.is_active &&
-        !c.is_cancelled &&
-        !optimisticPendingIds.has(c.id),
+      (c) => !c.is_verified && c.is_active && !c.is_cancelled && !optimisticPendingIds.has(c.id),
     );
   }, [campaigns, optimisticPendingIds]);
 
@@ -190,9 +194,9 @@ export default function AdminDashboard() {
         await refreshAuditLog(publicKey);
       }
       showSuccess(t("approveSuccess"));
-      setOptimisticRemovedIds((prev) => [...prev, id]);
+      setOptimisticPendingIds((prev) => new Set(prev).add(id));
       refetch();
-      queryClient.invalidateQueries({ queryKey: ['campaign', id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
     } catch (err) {
       showError(parseContractError(err));
     } finally {
@@ -225,10 +229,10 @@ export default function AdminDashboard() {
         await refreshAuditLog(publicKey);
       }
       showSuccess(t("rejectSuccess"));
-      setOptimisticRemovedIds((prev) => [...prev, campaignToReject.id]);
+      setOptimisticPendingIds((prev) => new Set(prev).add(campaignToReject.id));
       setIsRejectModalOpen(false);
       refetch();
-      queryClient.invalidateQueries({ queryKey: ['campaign', campaignToReject.id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign", campaignToReject.id] });
     } catch (err) {
       showError(parseContractError(err));
     } finally {
@@ -241,7 +245,7 @@ export default function AdminDashboard() {
     try {
       await markReportReviewed(reportId);
       setReports((prev) =>
-        prev.map((r) => (r.id === reportId ? { ...r, status: 'reviewed' as const } : r)),
+        prev.map((r) => (r.id === reportId ? { ...r, status: "reviewed" as const } : r)),
       );
       showSuccess(t("reportReviewedSuccess"));
     } catch (err) {
@@ -305,7 +309,8 @@ export default function AdminDashboard() {
     if (!isAdmin) return showWarning(t("adminOnlyTransfer"));
 
     const nextAdmin = newAdminInput.trim();
-    if (!StellarSdk.StrKey.isValidEd25519PublicKey(nextAdmin)) return showError(t("invalidAddress"));
+    if (!StellarSdk.StrKey.isValidEd25519PublicKey(nextAdmin))
+      return showError(t("invalidAddress"));
 
     setIsTransferModalOpen(true);
   };
@@ -352,9 +357,7 @@ export default function AdminDashboard() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
         <Smartphone size={64} className="text-zinc-300 mb-6 motion-safe:animate-pulse" />
         <h1 className="text-3xl font-bold mb-4 tracking-tight">{t("walletRequired")}</h1>
-        <p className="text-zinc-500 dark:text-zinc-400 max-w-md mb-8">
-          {t("walletRequiredDesc")}
-        </p>
+        <p className="text-zinc-500 dark:text-zinc-400 max-w-md mb-8">{t("walletRequiredDesc")}</p>
         <button
           onClick={connectWallet}
           disabled={isWalletLoading}
@@ -425,16 +428,19 @@ export default function AdminDashboard() {
             >
               {t("observabilityLink")}
             </Link>
-            <div className={`rounded-2xl border px-5 py-3 shadow-sm flex items-center gap-3 ${
-              isVersionMismatch 
-                ? "bg-red-50 border-red-200 text-red-900 dark:bg-red-950/20 dark:border-red-900/40 dark:text-red-200" 
-                : "bg-blue-50 border-blue-100 text-blue-900 dark:bg-blue-900/20 dark:border-blue-800/40 dark:text-blue-200"
-            }`}>
+            <div
+              className={`rounded-2xl border px-5 py-3 shadow-sm flex items-center gap-3 ${
+                isVersionMismatch
+                  ? "bg-red-50 border-red-200 text-red-900 dark:bg-red-950/20 dark:border-red-900/40 dark:text-red-200"
+                  : "bg-blue-50 border-blue-100 text-blue-900 dark:bg-blue-900/20 dark:border-blue-800/40 dark:text-blue-200"
+              }`}
+            >
               <div className="flex flex-col">
-                <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Contract Version</span>
+                <span className="text-[10px] font-black uppercase tracking-widest opacity-60">
+                  Contract Version
+                </span>
                 <span className="font-mono text-sm font-bold flex items-center gap-2">
-                  {isVersionMismatch && <AlertTriangle size={14} />}
-                  v{contractVersion ?? "..."}
+                  {isVersionMismatch && <AlertTriangle size={14} />}v{contractVersion ?? "..."}
                   {isVersionMismatch && (
                     <span className="text-[10px] font-normal opacity-70">
                       (Expected v{expectedVersion})
@@ -629,7 +635,7 @@ export default function AdminDashboard() {
                 disabled={isUpdatingFee || Number(feeInput) > 10000 || Number(feeInput) < 0}
                 className="w-full py-4 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 rounded-2xl font-black text-sm uppercase tracking-widest hover:opacity-90 active:scale-95 transition disabled:opacity-50"
               >
-                {isUpdatingFee ? txPhaseLabel ?? t("awaitingSignature") : t("updatePlatformFee")}
+                {isUpdatingFee ? (txPhaseLabel ?? t("awaitingSignature")) : t("updatePlatformFee")}
               </button>
             </form>
           </section>
@@ -660,7 +666,7 @@ export default function AdminDashboard() {
                 disabled={isUpdatingAdmin}
                 className="w-full py-4 bg-red-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-red-700 active:scale-95 transition shadow-lg shadow-red-500/25 disabled:opacity-50"
               >
-                {isUpdatingAdmin ? txPhaseLabel ?? t("awaitingSignature") : t("transferAdmin")}
+                {isUpdatingAdmin ? (txPhaseLabel ?? t("awaitingSignature")) : t("transferAdmin")}
               </button>
             </form>
           </section>
@@ -671,9 +677,7 @@ export default function AdminDashboard() {
               {t("recentActivityDesc")}
             </p>
             {auditLog.length === 0 ? (
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                {t("noActivity")}
-              </p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("noActivity")}</p>
             ) : (
               <ul className="space-y-3 max-h-80 overflow-y-auto pr-1">
                 {auditLog.map((entry) => (
@@ -722,7 +726,9 @@ export default function AdminDashboard() {
             <Flag size={22} className="text-red-500" />
             {t("abuseReports")}
             <span className="text-sm font-bold px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-300">
-              {t("pendingReports", { count: reports.filter((r: CampaignReport) => r.status === "pending").length })}
+              {t("pendingReports", {
+                count: reports.filter((r: CampaignReport) => r.status === "pending").length,
+              })}
             </span>
           </h2>
         </div>
@@ -736,8 +742,12 @@ export default function AdminDashboard() {
           ) : (
             <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {reports.map((report) => (
-                <div key={report.id} className={`p-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4 ${report.status === 'reviewed' ? 'opacity-50' : ''
-                  }`}>
+                <div
+                  key={report.id}
+                  className={`p-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4 ${
+                    report.status === "reviewed" ? "opacity-50" : ""
+                  }`}
+                >
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       {/* red-400 on red-900/30 is ~2.6:1; red-300 gives ~4.8:1 — meets WCAG AA */}
@@ -756,7 +766,9 @@ export default function AdminDashboard() {
                     )}
                     <p className="text-xs text-zinc-400">
                       {report.reporterAddress
-                        ? t("reportBy", { address: `${report.reporterAddress.slice(0, 8)}...${report.reporterAddress.slice(-6)}` })
+                        ? t("reportBy", {
+                            address: `${report.reporterAddress.slice(0, 8)}...${report.reporterAddress.slice(-6)}`,
+                          })
                         : t("anonymous")}
                       {" · "}
                       {new Date(report.timestamp).toLocaleString()}
@@ -769,7 +781,7 @@ export default function AdminDashboard() {
                     >
                       {t("view")} <ExternalLink size={12} />
                     </Link>
-                    {report.status === 'pending' && (
+                    {report.status === "pending" && (
                       <button
                         type="button"
                         onClick={() => handleMarkReportReviewed(report.id)}
@@ -838,7 +850,10 @@ function StatsCard({
 }) {
   return (
     <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2rem] border border-zinc-100 dark:border-zinc-700 shadow-sm hover:shadow-md transition-shadow group">
-      <div className="size-12 rounded-2xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform" aria-hidden="true">
+      <div
+        className="size-12 rounded-2xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
+        aria-hidden="true"
+      >
         {icon}
       </div>
       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 dark:text-zinc-200 mb-2 block">

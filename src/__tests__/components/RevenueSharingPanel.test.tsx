@@ -101,8 +101,9 @@ describe("RevenueSharingPanel", () => {
     expect(screen.getByText("Claimable Now")).toBeInTheDocument();
     expect(screen.getByText("0.75 XLM")).toBeInTheDocument();
     expect(
-      screen.getByText((_content, element) =>
-        element?.textContent === "2 XLM contribution × 10 XLM pool ÷ 20 XLM raised = 1 XLM",
+      screen.getByText(
+        (_content, element) =>
+          element?.textContent === "2 XLM contribution × 10 XLM pool ÷ 20 XLM raised = 1 XLM",
       ),
     ).toBeInTheDocument();
   });
@@ -150,7 +151,12 @@ describe("RevenueSharingPanel", () => {
     );
 
     expect(container).toBeEmptyDOMElement();
-    expect(mockUseRevenueSharing).toHaveBeenLastCalledWith(7, CONTRIBUTOR, BigInt(200_000_000), false);
+    expect(mockUseRevenueSharing).toHaveBeenLastCalledWith(
+      7,
+      CONTRIBUTOR,
+      BigInt(200_000_000),
+      false,
+    );
 
     rerender(
       <RevenueSharingPanel
@@ -162,11 +168,21 @@ describe("RevenueSharingPanel", () => {
     );
 
     expect(container).toBeEmptyDOMElement();
-    expect(mockUseRevenueSharing).toHaveBeenLastCalledWith(7, CONTRIBUTOR, BigInt(200_000_000), false);
+    expect(mockUseRevenueSharing).toHaveBeenLastCalledWith(
+      7,
+      CONTRIBUTOR,
+      BigInt(200_000_000),
+      false,
+    );
 
     rerender(<RevenueSharingPanel campaign={makeCampaign()} />);
 
     expect(screen.getByRole("heading", { name: "Revenue Sharing" })).toBeInTheDocument();
-    expect(mockUseRevenueSharing).toHaveBeenLastCalledWith(7, CONTRIBUTOR, BigInt(200_000_000), true);
+    expect(mockUseRevenueSharing).toHaveBeenLastCalledWith(
+      7,
+      CONTRIBUTOR,
+      BigInt(200_000_000),
+      true,
+    );
   });
 });
