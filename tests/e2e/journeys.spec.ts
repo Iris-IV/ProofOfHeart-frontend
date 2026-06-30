@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures";
+import { test, expect, localePath } from "./fixtures";
 
 /**
  * E2E tests for critical user journeys:
@@ -10,8 +10,7 @@ import { test, expect } from "./fixtures";
  */
 test.describe("Critical User Journeys", () => {
   test.beforeEach(async ({ page }) => {
-    // Ensure we are in mock mode
-    await page.goto("/");
+    await page.goto(localePath("/"));
   });
 
   test("should connect wallet successfully", async ({ page }) => {
@@ -32,26 +31,23 @@ test.describe("Critical User Journeys", () => {
       .first()
       .click();
 
-    // 2. Go to Causes page
-    await page.goto("/causes");
-
-    // 3. Find a verified campaign (ID 1 in mock is verified)
-    await page.locator('a[href*="/causes/1"]').first().click();
+    // 2. Open a verified campaign (ID 1 in mock data)
+    await page.goto(localePath("/causes/1"));
     await page.waitForURL(/\/causes\/1/);
 
-    // 4. Click "Donate"
-    const donateButton = page.getByRole("button", { name: /Donate/i }).first();
-    await expect(donateButton).toBeVisible();
-    await donateButton.click();
+    // 3. Open donation flow
+    const fundButton = page.getByRole("button", { name: /Fund This Cause|Donate/i }).first();
+    await expect(fundButton).toBeVisible();
+    await fundButton.click();
 
-    // 5. Enter amount
+    // 4. Enter amount
     const amountInput = page.getByPlaceholder(/e\.g\. 10/i);
     await amountInput.fill("50");
 
-    // 6. Submit donation
+    // 5. Submit donation
     await page.getByRole("button", { name: /Donate 50 XLM/i }).click();
 
-    // 7. Verify success message
+    // 6. Verify success message
     await expect(page.getByText(/donated successfully/i)).toBeVisible();
   });
 
@@ -62,11 +58,12 @@ test.describe("Critical User Journeys", () => {
       .first()
       .click();
 
-    // 2. Go to an active campaign (ID 2 is active)
-    await page.goto("/causes/2");
+    // 2. Go to an active campaign (ID 2 is active and unverified)
+    await page.goto(localePath("/causes/2"));
+    await page.waitForURL(/\/causes\/2/);
 
-    // 3. Find Vote buttons
-    const approveButton = page.getByRole("button", { name: /Approve/i }).first();
+    // 3. Cast an approval vote
+    const approveButton = page.getByRole("button", { name: /Approve campaign|Approve/i }).first();
     await expect(approveButton).toBeVisible();
 
     await approveButton.click();

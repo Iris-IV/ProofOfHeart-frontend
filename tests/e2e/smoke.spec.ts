@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures";
+import { test, expect, localePath } from "./fixtures";
 
 /**
  * Smoke test for the core user navigation flow:
@@ -22,7 +22,7 @@ test.describe("Core User Flow Smoke Test", () => {
       await page.waitForURL(/\/causes/);
     } else {
       // Fallback: direct navigation if nav link not found
-      await page.goto("/causes");
+      await page.goto(localePath("/causes"));
     }
     await expect(page).toHaveURL(/\/causes/);
     await expect(page.locator("body")).toBeVisible();
@@ -35,7 +35,7 @@ test.describe("Core User Flow Smoke Test", () => {
       await page.waitForURL(/\/causes\/[^/]+$/);
     } else {
       // Fallback: navigate to a known cause ID
-      await page.goto("/causes/1");
+      await page.goto(localePath("/causes/1"));
     }
     await expect(page).toHaveURL(/\/causes\/[^/]+$/);
     await expect(page.locator("body")).toBeVisible();
@@ -47,7 +47,7 @@ test.describe("Core User Flow Smoke Test", () => {
       await page.waitForURL(/\/dashboard/);
     } else {
       // Fallback: direct navigation
-      await page.goto("/dashboard");
+      await page.goto(localePath("/dashboard"));
     }
     await expect(page).toHaveURL(/\/dashboard/);
     await expect(page.locator("body")).toBeVisible();
