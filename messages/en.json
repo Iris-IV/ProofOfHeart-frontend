@@ -18,7 +18,9 @@
     "heroTitle": "Decentralized validation for heart-driven causes.",
     "heroSubtitle": "The community validates, you contribute, and impact is recorded on-chain.",
     "startCampaign": "Start a Campaign",
-    "exploreCauses": "Explore Causes"
+    "exploreCauses": "Explore Causes",
+    "statsRaised": "raised across all causes",
+    "statsCampaigns": "campaigns launched"
   },
   "Dashboard": {
     "title": "Your Dashboard",
@@ -255,7 +257,7 @@
     "pageSubtitle": "Fill in the details below to launch your campaign on-chain via Freighter.",
     "walletGuard": "Connect your Freighter wallet to create a campaign.",
     "connectWallet": "Connect Wallet",
-    "connecting": "Connecting\u2026",
+    "connecting": "Connecting…",
     "labelTitle": "Campaign Title",
     "placeholderTitle": "A clear, compelling title for your campaign",
     "labelDescription": "Description",
@@ -265,7 +267,7 @@
     "creatorEmailNote": "Optional, off-chain only. Used for campaign milestone and deadline notifications.",
     "labelFundingGoal": "Funding Goal (XLM)",
     "labelDuration": "Duration (days)",
-    "placeholderDuration": "1\u2013365",
+    "placeholderDuration": "1–365",
     "labelCategory": "Category",
     "startupRevenueHint": "Revenue sharing is available for Educational Startup campaigns.",
     "revenueSharingTitle": "Revenue Sharing",
@@ -290,7 +292,7 @@
     "reviewFieldTimestamp": "Estimated Deadline Timestamp",
     "editDetails": "Edit Details",
     "confirmAndSign": "Confirm & Sign",
-    "submitting": "Submitting\u2026",
+    "submitting": "Submitting…",
     "successMessage": "Campaign \"{title}\" created successfully!",
     "emailWebhookFailed": "Campaign created, but we could not save your optional email subscription.",
     "walletRequiredError": "Please connect your Freighter wallet before creating a campaign.",
@@ -312,7 +314,7 @@
     "about": "About",
     "github": "GitHub",
     "stellar": "Stellar",
-    "rights": "\u00a9 {year} ProofOfHeart. All rights reserved.",
+    "rights": "© {year} ProofOfHeart. All rights reserved.",
     "builtWith": "Built with Next.js + Stellar"
   },
   "Explore": {
