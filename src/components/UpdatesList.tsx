@@ -1,5 +1,6 @@
 "use client";
 
+import { PencilLine } from "lucide-react";
 import { CampaignUpdate } from "@/types";
 import UpdateItem from "@/components/UpdateItem";
 import { Skeleton } from "@/components/Skeleton";
@@ -52,20 +53,7 @@ export default function UpdatesList({ updates, isLoading, error }: UpdatesListPr
     return (
       <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700 rounded-xl p-8 text-center">
         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-          <svg
-            className="w-8 h-8 text-zinc-400 dark:text-zinc-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-            />
-          </svg>
+          <PencilLine className="w-8 h-8 text-zinc-400 dark:text-zinc-500" aria-hidden="true" />
         </div>
         <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
           No updates yet

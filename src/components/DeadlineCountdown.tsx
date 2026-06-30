@@ -66,20 +66,7 @@ export default function DeadlineCountdown({ deadline }: DeadlineCountdownProps) 
 
   return (
     <div className="flex items-center gap-1.5 text-sm text-zinc-700 dark:text-zinc-300">
-      <svg
-        className="w-4 h-4 text-blue-500"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-        />
-      </svg>
+      <Clock className="w-4 h-4 text-blue-500" aria-hidden="true" />
       <span>
         {timeLeft.days > 0 && (
           <>
