@@ -240,7 +240,9 @@
     "tryDifferentSearch": "Intenta con otros términos de búsqueda o borra los filtros para ver todas las causas.",
     "tryAgain": "Intentar de nuevo",
     "loadMore": "Cargar más causas",
-    "showingRange": "Mostrando {shown} de {total}"
+    "showingRange": "Mostrando {shown} de {total}",
+    "listView": "Lista",
+    "mapView": "Mapa"
   },
   "Status": {
     "active": "Activa",
