@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import React, { useMemo, useState } from "react";
 import MyContributionsSection from "@/components/MyContributionsSection";
+import MultiSigWithdrawalPanel from "@/components/MultiSigWithdrawalPanel";
 import { Spinner, DashboardSkeleton } from "@/components/Skeleton";
 import { useWallet } from "@/components/WalletContext";
 import { useCampaigns } from "@/hooks/useCampaigns";
