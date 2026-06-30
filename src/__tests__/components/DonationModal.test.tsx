@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { contribute, getCampaign } from "@/lib/contractClient";
+import { contribute } from "@/lib/contractClient";
 import DonationModal from "@/components/DonationModal";
 import { Category, type Campaign } from "@/types";
 
