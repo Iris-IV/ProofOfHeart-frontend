@@ -61,6 +61,16 @@ export interface TransactionLifecycleOptions {
   operation?: string;
 }
 
+export interface ClaimAllRefundsProgress {
+  current: number;
+  total: number;
+  campaignId: number;
+}
+
+export interface ClaimAllRefundsOptions extends TransactionLifecycleOptions {
+  onProgress?: (progress: ClaimAllRefundsProgress) => void;
+}
+
 // ---------------------------------------------------------------------------
 // Soroban RPC server (lazily initialised)
 // ---------------------------------------------------------------------------
@@ -821,6 +831,32 @@ export async function claimRefund(
     );
     throw new Error(parseContractError(err));
   }
+}
+
+/**
+ * Claim refunds from multiple cancelled or failed campaigns sequentially.
+ * Each refund requires a separate Freighter signature in the signing queue.
+ */
+export async function claimAllRefunds(
+  campaignIds: number[],
+  contributor: string,
+  options?: ClaimAllRefundsOptions,
+): Promise<string[]> {
+  validateStellarAddress(contributor);
+  if (campaignIds.length === 0) return [];
+
+  const { onProgress, ...claimOptions } = options ?? {};
+  const txHashes: string[] = [];
+  const total = campaignIds.length;
+
+  for (let index = 0; index < campaignIds.length; index++) {
+    const campaignId = campaignIds[index];
+    onProgress?.({ current: index + 1, total, campaignId });
+    const txHash = await claimRefund(campaignId, contributor, claimOptions);
+    txHashes.push(txHash);
+  }
+
+  return txHashes;
 }
 
 export async function depositRevenue(

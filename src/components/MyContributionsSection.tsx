@@ -4,7 +4,7 @@ import { Link } from "@/i18n/routing";
 import { useMemo, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useContributions } from "../hooks/useContributions";
-import { claimRefund, claimRevenue } from "../lib/contractClient";
+import { claimAllRefunds, claimRefund, claimRevenue } from "../lib/contractClient";
 import { explorerTxUrl } from "../utils/explorer";
 import { formatAmount } from "@/lib/formatters";
 import { useToast } from "./ToastProvider";
@@ -55,12 +55,24 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
   const { showError, showSuccess } = useToast();
   const [pendingCampaignId, setPendingCampaignId] = useState<number | null>(null);
   const [pendingAction, setPendingAction] = useState<"refund" | "revenue" | null>(null);
+  const [isClaimAllPending, setIsClaimAllPending] = useState(false);
+  const [claimAllProgress, setClaimAllProgress] = useState<{ current: number; total: number } | null>(
+    null,
+  );
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
   const { contributions, isLoading, isRefreshing, error, refetch } =
     useContributions(walletAddress);
 
   const totalContributed = useMemo(
     () => contributions.reduce((sum, item) => sum + item.contribution, BigInt(0)),
+    [contributions],
+  );
+
+  const refundableCampaignIds = useMemo(
+    () =>
+      contributions
+        .filter((item) => item.canClaimRefund)
+        .map((item) => item.campaign.id),
     [contributions],
   );
 
@@ -85,6 +97,43 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
     if (txPhase === "signing") return t("signing");
     if (txPhase === "confirming") return t("confirming");
     return action === "refund" ? t("claimingRefund") : t("claimingRevenue");
+  };
+
+  const getClaimAllLabel = () => {
+    if (!isClaimAllPending) {
+      return t("claimAll", { count: refundableCampaignIds.length });
+    }
+    if (txPhase === "signing") return t("signing");
+    if (txPhase === "confirming") return t("confirming");
+    if (claimAllProgress) {
+      return t("claimingAll", {
+        current: claimAllProgress.current,
+        total: claimAllProgress.total,
+      });
+    }
+    return t("claimAll", { count: refundableCampaignIds.length });
+  };
+
+  const handleClaimAllRefunds = async () => {
+    if (refundableCampaignIds.length === 0) return;
+
+    setIsClaimAllPending(true);
+    setClaimAllProgress(null);
+    setTxPhase(null);
+    try {
+      await claimAllRefunds(refundableCampaignIds, walletAddress, {
+        onStatus: ({ phase }) => setTxPhase(phase),
+        onProgress: ({ current, total }) => setClaimAllProgress({ current, total }),
+      });
+      showSuccess(t("claimAllSuccess", { count: refundableCampaignIds.length }));
+      refetch();
+    } catch (err) {
+      showError(parseContractError(err));
+    } finally {
+      setIsClaimAllPending(false);
+      setClaimAllProgress(null);
+      setTxPhase(null);
+    }
   };
 
   const handleClaimRefund = async (campaignId: number) => {
@@ -127,14 +176,26 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
 
   return (
     <section className="mb-8">
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl font-semibold">{t("title")}</h2>
-        <div className="text-sm text-zinc-500 dark:text-zinc-400">
-          {t("summary", {
-            count: contributions.length,
-            total: formatXlmAmount(totalContributed),
-          })}
+      <div className="mb-4 flex flex-col gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-xl font-semibold">{t("title")}</h2>
+          <div className="text-sm text-zinc-500 dark:text-zinc-400">
+            {t("summary", {
+              count: contributions.length,
+              total: formatXlmAmount(totalContributed),
+            })}
+          </div>
         </div>
+        {refundableCampaignIds.length >= 2 && (
+          <button
+            type="button"
+            onClick={handleClaimAllRefunds}
+            disabled={isClaimAllPending || pendingCampaignId !== null}
+            className="inline-flex w-full items-center justify-center rounded-full bg-amber-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:bg-zinc-400 sm:w-auto sm:self-start"
+          >
+            {getClaimAllLabel()}
+          </button>
+        )}
       </div>
 
       {isLoading ? (
@@ -151,6 +212,7 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
         <ul className="space-y-3">
           {contributions.map((item) => {
             const isPending = pendingCampaignId === item.campaign.id;
+            const isActionDisabled = isPending || isClaimAllPending;
             const displayStatus = getContributionDisplayStatus(item);
             const contributionTransactions = item.transactions.filter(
               (entry) => entry.action === "contribute",
@@ -186,7 +248,7 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                   {item.canClaimRefund && (
                     <button
                       onClick={() => handleClaimRefund(item.campaign.id)}
-                      disabled={isPending}
+                      disabled={isActionDisabled}
                       className="inline-flex items-center rounded-full bg-amber-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:bg-zinc-400"
                     >
                       {isPending && pendingAction === "refund"
@@ -197,7 +259,7 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                   {item.canClaimRevenue && (
                     <button
                       onClick={() => handleClaimRevenue(item.campaign.id)}
-                      disabled={isPending}
+                      disabled={isActionDisabled}
                       className="inline-flex items-center rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-400"
                     >
                       {isPending && pendingAction === "revenue"
