@@ -43,10 +43,14 @@ import { parseContractError } from "@/utils/contractErrors";
 import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncAction";
 import { trackViewCampaign } from "@/lib/analytics";
 import { formatXlm, formatDate } from "@/lib/formatters";
+<<<<<<< HEAD
 import { isSameAddress } from "@/lib/stellar";
 const EditCampaignMetadata = dynamic(() => import("@/components/EditCampaignMetadata"), {
   ssr: false,
 });
+=======
+import { getLocalizedDescription } from "@/utils/localizedDescription";
+>>>>>>> a758690 (fix: resolve issues #605 #606 #607 #611)
 
 export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
@@ -318,25 +322,26 @@ export default function CauseDetailClient({ id }: { id: string }) {
                   className={`overflow-hidden transition-all duration-300 ${!isDescriptionExpanded ? "max-h-[250px] relative" : ""}`}
                 >
                   <SafeMarkdown className="prose prose-zinc dark:prose-invert max-w-none break-words">
-                    {campaign.description}
+                    {getLocalizedDescription(campaign.description, locale)}
                   </SafeMarkdown>
                   {!isDescriptionExpanded && (
                     <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white dark:from-zinc-800 to-transparent pointer-events-none" />
                   )}
                 </div>
-                {campaign.description && campaign.description.length > 500 && (
-                  <div className="mt-2 text-center">
-                    <button
-                      type="button"
-                      onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                      className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-3 py-1 transition-colors"
-                      aria-expanded={isDescriptionExpanded}
-                      aria-controls="campaign-description"
-                    >
-                      {isDescriptionExpanded ? "Show less" : "Read more"}
-                    </button>
-                  </div>
-                )}
+                {campaign.description &&
+                  getLocalizedDescription(campaign.description, locale).length > 500 && (
+                    <div className="mt-2 text-center">
+                      <button
+                        type="button"
+                        onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-3 py-1 transition-colors"
+                        aria-expanded={isDescriptionExpanded}
+                        aria-controls="campaign-description"
+                      >
+                        {isDescriptionExpanded ? "Show less" : "Read more"}
+                      </button>
+                    </div>
+                  )}
               </div>
 
               {canEdit && (
@@ -648,6 +653,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
           campaign={campaign}
           onClose={() => setIsDonationModalOpen(false)}
           onSuccess={refetch}
+          onRefetch={refetch}
         />
       )}
 

@@ -27,6 +27,7 @@ interface DonationModalProps {
   campaign: Campaign;
   onClose: () => void;
   onSuccess: () => void;
+  onRefetch?: () => void;
 }
 
 type Step = "input" | "pending" | "confirmed";
@@ -39,7 +40,12 @@ type DonationValidationKey =
   | "invalidNumberFormat"
   | "maxDecimalPlaces";
 
-export default function DonationModal({ campaign, onClose, onSuccess }: DonationModalProps) {
+export default function DonationModal({
+  campaign,
+  onClose,
+  onSuccess,
+  onRefetch,
+}: DonationModalProps) {
   const t = useTranslations("Donation");
   const tContractErrors = useTranslations("ContractErrors");
   const { publicKey } = useWallet();
@@ -109,6 +115,14 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [step, onClose]);
+
+  // Poll live funding data while the user is filling in the amount so the
+  // progress bar reflects concurrent donations from other users.
+  useEffect(() => {
+    if (!onRefetch || step !== "input") return;
+    const id = setInterval(onRefetch, 10_000);
+    return () => clearInterval(id);
+  }, [onRefetch, step]);
 
   const locale = useLocale();
   const goal = stroopsToXlmNumber(campaign.funding_goal);
