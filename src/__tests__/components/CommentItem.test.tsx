@@ -30,7 +30,10 @@ describe("CommentItem", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useWallet as jest.Mock).mockReturnValue({ publicKey: "GUSER123" });
+    (useWallet as jest.Mock).mockReturnValue({
+      publicKey: "GUSER123",
+      checkWalletConnection: jest.fn(),
+    });
   });
 
   it("renders author and content correctly", async () => {

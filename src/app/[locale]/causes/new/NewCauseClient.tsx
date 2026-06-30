@@ -103,7 +103,13 @@ function validateForm(
 export default function CreateCampaignPage() {
   const t = useTranslations("CreateCampaign");
   const router = useRouter();
-  const { publicKey, isWalletConnected, connectWallet, isLoading: walletLoading, checkWalletConnection } = useWallet();
+  const {
+    publicKey,
+    isWalletConnected,
+    connectWallet,
+    isLoading: walletLoading,
+    checkWalletConnection,
+  } = useWallet();
   const { showError, showSuccess, showWarning } = useToast();
 
   const [title, setTitle] = useState("");
