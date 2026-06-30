@@ -24,11 +24,13 @@ jest.mock("@/components/ToastProvider", () => ({
 }));
 
 const mockConnectWallet = jest.fn();
+const mockCheckWalletConnection = jest.fn();
 let mockWalletState = {
   publicKey: null as string | null,
   isWalletConnected: false,
   connectWallet: mockConnectWallet,
   isLoading: false,
+  checkWalletConnection: mockCheckWalletConnection,
 };
 
 jest.mock("@/components/WalletContext", () => ({
@@ -55,6 +57,7 @@ function setWalletConnected(pubkey = TEST_PUBKEY) {
     isWalletConnected: true,
     connectWallet: mockConnectWallet,
     isLoading: false,
+    checkWalletConnection: mockCheckWalletConnection,
   };
 }
 
@@ -64,6 +67,7 @@ function setWalletDisconnected() {
     isWalletConnected: false,
     connectWallet: mockConnectWallet,
     isLoading: false,
+    checkWalletConnection: mockCheckWalletConnection,
   };
 }
 
@@ -153,6 +157,39 @@ describe("CreateCampaignPage — wallet guard", () => {
         expect.stringMatching(/connect your freighter wallet/i),
       );
     });
+  });
+
+  it("calls checkWalletConnection on submit to catch real-time disconnections", async () => {
+    setWalletConnected();
+    render(<CreateCampaignPage />);
+    await fillRequiredFields();
+
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+
+    expect(mockCheckWalletConnection).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows wallet error if checkWalletConnection detects disconnection during submit", async () => {
+    setWalletConnected();
+    render(<CreateCampaignPage />);
+    await fillRequiredFields();
+
+    // Simulate wallet disconnection detected by checkWalletConnection
+    mockCheckWalletConnection.mockImplementation(async () => {
+      setWalletDisconnected();
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+
+    await waitFor(() => {
+      expect(mockShowError).toHaveBeenCalledWith(
+        expect.stringMatching(/connect your freighter wallet/i),
+      );
+    });
+    // Should not proceed to review or contract call
+    expect(
+      screen.queryByRole("heading", { name: /review campaign before signing/i }),
+    ).not.toBeInTheDocument();
   });
 });
 

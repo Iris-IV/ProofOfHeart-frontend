@@ -62,7 +62,10 @@ describe("CommentsSection", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useWallet as jest.Mock).mockReturnValue({ publicKey: "GUSER" });
+    (useWallet as jest.Mock).mockReturnValue({
+      publicKey: "GUSER",
+      checkWalletConnection: jest.fn(),
+    });
     (useCampaignComments as jest.Mock).mockReturnValue(defaultMockComments);
   });
 
@@ -83,7 +86,10 @@ describe("CommentsSection", () => {
 
   it("identifies if current user is creator", () => {
     // Current user is GABC, which matches campaign creator
-    (useWallet as jest.Mock).mockReturnValue({ publicKey: "GABC" });
+    (useWallet as jest.Mock).mockReturnValue({
+      publicKey: "GABC",
+      checkWalletConnection: jest.fn(),
+    });
     render(<CommentsSection campaign={mockCampaign} />);
 
     expect(useCampaignComments).toHaveBeenCalledWith(1, "GABC");
