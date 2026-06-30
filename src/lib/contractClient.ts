@@ -9,7 +9,7 @@ import {
   recordObservabilitySuccess,
 } from "./observability";
 import { appendWalletTransaction } from "./transactionLog";
-import { Campaign, Category, deriveStatus, CampaignStatus, Milestone } from "../types";
+import { Campaign, Category, deriveStatus, CampaignStatus, Milestone, SocialLinks } from "../types";
 import { parseContractError, getContractErrorCode, ContractError } from "../utils/contractErrors";
 import { wrapFreighterError } from "../utils/freighterErrors";
 import {
@@ -280,6 +280,7 @@ function decodeCampaign(val: StellarSdk.xdr.ScVal): Campaign {
   let rawDescription = fields["description"].str().toString();
   let cover_image_url: string | undefined = undefined;
   let milestones: any[] | undefined = undefined;
+  let social_links: SocialLinks | undefined = undefined;
 
   const EXT_MARKER = "\n\n===POH_EXT===\n";
   const extIndex = rawDescription.indexOf(EXT_MARKER);
@@ -287,6 +288,9 @@ function decodeCampaign(val: StellarSdk.xdr.ScVal): Campaign {
     try {
       const extData = JSON.parse(rawDescription.substring(extIndex + EXT_MARKER.length));
       cover_image_url = extData.coverImageUrl;
+      if (extData.socialLinks) {
+        social_links = extData.socialLinks;
+      }
       if (extData.milestones && Array.isArray(extData.milestones)) {
         milestones = extData.milestones.map((m: any) => ({
           targetAmount: BigInt(m.targetAmount),
@@ -327,6 +331,7 @@ function decodeCampaign(val: StellarSdk.xdr.ScVal): Campaign {
     tags: fields["tags"] ? (fields["tags"] as any).vec().map((v: any) => v.str().toString()) : [],
     cover_image_url,
     milestones,
+    social_links,
   };
 }
 
@@ -622,7 +627,11 @@ export async function createCampaign(
   hasRevenueSharing: boolean,
   revenueSharePercentage: number,
   tags: string[],
-  options?: TransactionLifecycleOptions & { coverImageUrl?: string; milestones?: Milestone[] },
+  options?: TransactionLifecycleOptions & {
+    coverImageUrl?: string;
+    milestones?: Milestone[];
+    socialLinks?: SocialLinks;
+  },
 ): Promise<string> {
   validateStellarAddress(creator);
   validateFundingGoal(fundingGoal);
@@ -632,13 +641,21 @@ export async function createCampaign(
   }
 
   let finalDescription = description;
-  if (options?.coverImageUrl || (options?.milestones && options.milestones.length > 0)) {
+  const hasSocialLinks =
+    options?.socialLinks &&
+    (options.socialLinks.twitter || options.socialLinks.linkedin || options.socialLinks.farcaster);
+  if (
+    options?.coverImageUrl ||
+    (options?.milestones && options.milestones.length > 0) ||
+    hasSocialLinks
+  ) {
     const ext = {
       coverImageUrl: options.coverImageUrl,
       milestones: options.milestones?.map((m) => ({
         targetAmount: m.targetAmount.toString(),
         description: m.description,
       })),
+      socialLinks: hasSocialLinks ? options.socialLinks : undefined,
     };
     finalDescription = `${description}\n\n===POH_EXT===\n${JSON.stringify(ext)}`;
   }
@@ -665,6 +682,7 @@ export async function createCampaign(
         tags,
         cover_image_url: options?.coverImageUrl,
         milestones: options?.milestones,
+        social_links: hasSocialLinks ? options?.socialLinks : undefined,
       }),
     );
     return txHash;
