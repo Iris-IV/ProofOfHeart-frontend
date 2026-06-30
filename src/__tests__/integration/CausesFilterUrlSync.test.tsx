@@ -3,6 +3,21 @@ import userEvent from "@testing-library/user-event";
 import CausesClient from "@/app/[locale]/causes/CausesClient";
 import { Category, type Campaign } from "@/types";
 
+// Stub window.matchMedia for the useColumns breakpoint hook in JSDOM.
+beforeAll(() => {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: jest.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  });
+});
+
 const mockReplace = jest.fn();
 const mockUseSearchParams = jest.fn();
 const mockRouter = { replace: mockReplace };
@@ -52,6 +67,10 @@ jest.mock("@/hooks/useCampaigns", () => ({
   useCampaigns: () => ({
     campaigns: mockCampaigns,
     isLoading: false,
+    isFetchingNextPage: false,
+    fetchNextPage: jest.fn(),
+    hasNextPage: false,
+    isAllLoaded: true,
     error: null,
     refetch: jest.fn(),
   }),

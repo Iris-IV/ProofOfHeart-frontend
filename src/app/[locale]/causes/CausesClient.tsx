@@ -2,7 +2,8 @@
 
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
+import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import CauseCard from "@/components/CauseCard";
 import { CauseCardSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/ToastProvider";
@@ -17,7 +18,7 @@ import {
   getApproveVotes,
   getRejectVotes,
 } from "@/lib/contractClient";
-import { CAUSES_PAGE_SIZE } from "@/lib/causesList";
+import { CAMPAIGNS_CHUNK_SIZE } from "@/lib/causesList";
 import { SORT_OPTIONS } from "@/lib/mockCauses";
 import { Campaign, Vote, CATEGORY_LABELS, CampaignStatus, Category } from "@/types";
 import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncAction";
@@ -46,6 +47,28 @@ function useDebounce<T>(value: T, delay: number): T {
   return debounced;
 }
 
+/** Tracks the number of grid columns based on viewport breakpoints. */
+function useColumns(): number {
+  const [columns, setColumns] = useState(1);
+  useEffect(() => {
+    const mqLg = window.matchMedia("(min-width: 1024px)");
+    const mMd = window.matchMedia("(min-width: 768px)");
+    function update() {
+      if (mqLg.matches) setColumns(3);
+      else if (mMd.matches) setColumns(2);
+      else setColumns(1);
+    }
+    update();
+    mqLg.addEventListener("change", update);
+    mMd.addEventListener("change", update);
+    return () => {
+      mqLg.removeEventListener("change", update);
+      mMd.removeEventListener("change", update);
+    };
+  }, []);
+  return columns;
+}
+
 // ---------------------------------------------------------------------------
 // Main content (needs Suspense because it reads searchParams)
 // ---------------------------------------------------------------------------
@@ -71,7 +94,16 @@ function CausesContent() {
     "failed",
   ];
 
-  const { campaigns: rawCampaigns, isLoading, error, refetch } = useCampaigns();
+  const {
+    campaigns: rawCampaigns,
+    isLoading,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+    isAllLoaded,
+    error,
+    refetch,
+  } = useCampaigns();
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [userVotes, setUserVotes] = useState<Record<string, Vote>>({});
@@ -79,9 +111,16 @@ function CausesContent() {
     Record<number, { upvotes: number; downvotes: number; totalVotes: number }>
   >({});
   const [isVotingFor, setIsVotingFor] = useState<number | null>(null);
-  const [visibleCount, setVisibleCount] = useState(CAUSES_PAGE_SIZE);
   const { publicKey: userWalletAddress } = useWallet();
   const { showError, showSuccess, showWarning } = useToast();
+  const columns = useColumns();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [scrollMargin, setScrollMargin] = useState(0);
+  useEffect(() => {
+    if (scrollRef.current) {
+      setScrollMargin(scrollRef.current.offsetTop);
+    }
+  }, []);
 
   // Mirror contract data into local state so optimistic updates work
   useEffect(() => {
@@ -159,6 +198,13 @@ function CausesContent() {
     }
     setVoteCounts({});
   }, [campaigns, loadVoteCounts]);
+
+  // Auto-fetch remaining pages in background so filter/sort work on full set.
+  useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // -------------------------------------------------------------------------
   // Vote handler
@@ -358,16 +404,15 @@ function CausesContent() {
     return result;
   }, [campaigns, debouncedSearch, category, status, sort, tag, voteCounts]);
 
-  useEffect(() => {
-    setVisibleCount(CAUSES_PAGE_SIZE);
-  }, [debouncedSearch, category, status, sort, tag]);
-
-  const visibleCampaigns = useMemo(
-    () => filteredCampaigns.slice(0, visibleCount),
-    [filteredCampaigns, visibleCount],
-  );
-
-  const hasMoreCampaigns = visibleCount < filteredCampaigns.length;
+  // Group filtered campaigns into virtual rows according to the current
+  // breakpoint column count.
+  const rows = useMemo(() => {
+    const result: Campaign[][] = [];
+    for (let i = 0; i < filteredCampaigns.length; i += columns) {
+      result.push(filteredCampaigns.slice(i, i + columns));
+    }
+    return result;
+  }, [filteredCampaigns, columns]);
 
   const hasActiveFilters =
     debouncedSearch || category !== "all" || status !== "all" || sort !== "newest" || tag;
@@ -587,44 +632,36 @@ function CausesContent() {
 
             {filteredCampaigns.length > 0 ? (
               <>
-                {filteredCampaigns.length > CAUSES_PAGE_SIZE && (
+                {!isAllLoaded && (
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
-                    {t("showingRange", {
-                      shown: visibleCampaigns.length,
-                      total: filteredCampaigns.length,
+                    {t("loadingRange", {
+                      shown: campaigns.length,
+                      total: isAllLoaded
+                        ? filteredCampaigns.length
+                        : campaigns.length + CAMPAIGNS_CHUNK_SIZE,
                     })}
                   </p>
                 )}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {visibleCampaigns.map((campaign) => (
-                    <CauseCard
-                      key={campaign.id}
-                      campaign={campaign}
-                      userWalletAddress={userWalletAddress}
-                      onVote={handleVote}
-                      onCancel={handleCancel}
-                      onClaimRefund={handleClaimRefund}
-                      onTagClick={handleTagClick}
-                      userVote={userVotes[campaign.id]}
-                      upvotes={voteCounts[campaign.id]?.upvotes ?? 0}
-                      downvotes={voteCounts[campaign.id]?.downvotes ?? 0}
-                      totalVotes={voteCounts[campaign.id]?.totalVotes ?? 0}
-                    />
-                  ))}
+                <div ref={scrollRef}>
+                  <CampaignVirtualGrid
+                    rows={rows}
+                    columns={columns}
+                    userWalletAddress={userWalletAddress}
+                    handleVote={handleVote}
+                    handleCancel={handleCancel}
+                    handleClaimRefund={handleClaimRefund}
+                    handleTagClick={handleTagClick}
+                    userVotes={userVotes}
+                    voteCounts={voteCounts}
+                    scrollMargin={scrollMargin}
+                  />
                 </div>
-                {hasMoreCampaigns && (
+                {!isAllLoaded && (
                   <div className="mt-8 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setVisibleCount((count) =>
-                          Math.min(count + CAUSES_PAGE_SIZE, filteredCampaigns.length),
-                        )
-                      }
-                      className="px-6 py-2.5 rounded-full text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                    >
-                      {t("loadMore")}
-                    </button>
+                    <div className="inline-flex items-center gap-2 px-6 py-2.5 text-sm text-zinc-500 dark:text-zinc-400">
+                      <span className="inline-block motion-safe:animate-spin rounded-full h-4 w-4 border-2 border-zinc-300 border-t-blue-600" />
+                      {t("loadingMore")}
+                    </div>
                   </div>
                 )}
               </>
@@ -660,6 +697,76 @@ function CausesContent() {
           </>
         )}
       </main>
+    </div>
+  );
+}
+
+/** Renders the campaign grid using a window virtualizer for DOM efficiency. */
+function CampaignVirtualGrid({
+  rows,
+  columns,
+  userWalletAddress,
+  handleVote,
+  handleCancel,
+  handleClaimRefund,
+  handleTagClick,
+  userVotes,
+  voteCounts,
+  scrollMargin,
+}: {
+  rows: Campaign[][];
+  columns: number;
+  userWalletAddress: string | null;
+  handleVote: (campaignId: number, voteType: "upvote" | "downvote") => Promise<void>;
+  handleCancel: (campaignId: number) => Promise<void>;
+  handleClaimRefund: (campaignId: number) => Promise<void>;
+  handleTagClick: (tag: string) => void;
+  userVotes: Record<string, Vote>;
+  voteCounts: Record<number, { upvotes: number; downvotes: number; totalVotes: number }>;
+  scrollMargin: number;
+}) {
+  const virtualizer = useWindowVirtualizer({
+    count: rows.length,
+    estimateSize: () => 400,
+    overscan: 3,
+    scrollMargin,
+  });
+
+  return (
+    <div style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}>
+      {virtualizer.getVirtualItems().map((virtualRow) => {
+        const rowCampaigns = rows[virtualRow.index];
+        return (
+          <div
+            key={virtualRow.key}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: `${virtualRow.size}px`,
+              transform: `translateY(${virtualRow.start}px)`,
+            }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            {rowCampaigns.map((campaign) => (
+              <CauseCard
+                key={campaign.id}
+                campaign={campaign}
+                userWalletAddress={userWalletAddress}
+                onVote={handleVote}
+                onCancel={handleCancel}
+                onClaimRefund={handleClaimRefund}
+                onTagClick={handleTagClick}
+                userVote={userVotes[campaign.id]}
+                upvotes={voteCounts[campaign.id]?.upvotes ?? 0}
+                downvotes={voteCounts[campaign.id]?.downvotes ?? 0}
+                totalVotes={voteCounts[campaign.id]?.totalVotes ?? 0}
+              />
+            ))}
+          </div>
+        );
+      })}
     </div>
   );
 }
