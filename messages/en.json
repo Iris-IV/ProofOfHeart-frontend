@@ -356,7 +356,9 @@
     "invalidAmount": "Please enter a valid amount.",
     "amountMustBePositive": "Amount must be greater than zero.",
     "invalidNumberFormat": "Invalid number format.",
-    "maxDecimalPlaces": "Maximum 7 decimal places allowed."
+    "maxDecimalPlaces": "Maximum 7 decimal places allowed.",
+    "amountExceedsRemainingGoal": "Amount exceeds the remaining funding goal.",
+    "campaignAlreadyFunded": "This cause is already fully funded."
   },
   "WithdrawFunds": {
     "withdrawalSuccessToast": "Withdrawal successful! You received {amount} XLM.",
