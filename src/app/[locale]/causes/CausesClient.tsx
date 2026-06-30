@@ -649,7 +649,9 @@ function CausesContent() {
                     {t(filteredCampaigns.length === 1 ? "causesFound_one" : "causesFound_other", {
                       count: filteredCampaigns.length,
                     })}
-                    {debouncedSearch && <span>{t("causesFoundFor", { query: debouncedSearch })}</span>}
+                    {debouncedSearch && (
+                      <span>{t("causesFoundFor", { query: debouncedSearch })}</span>
+                    )}
                   </span>
                   {isVotingFor !== null && (
                     <span className="inline-flex items-center gap-1">
