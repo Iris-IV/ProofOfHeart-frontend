@@ -1,4 +1,4 @@
-import * as StellarSdk from "@stellar/stellar-sdk";
+import { hash, StrKey, verify } from "@stellar/stellar-sdk";
 import { Comment, CommentPayload } from "../types";
 import { parseContractError } from "../utils/contractErrors";
 import {
@@ -235,11 +235,11 @@ export async function verifyCommentSignature(comment: Comment): Promise<boolean>
       timestamp: comment.timestamp,
     });
 
-    const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
+    const payloadHash = hash(Buffer.from(payloadString));
     const signatureBuffer = Buffer.from(comment.signature, "hex");
-    const publicKey = StellarSdk.StrKey.decodeEd25519PublicKey(comment.authorAddress);
+    const publicKey = StrKey.decodeEd25519PublicKey(comment.authorAddress);
 
-    return StellarSdk.verify(payloadHash, signatureBuffer, publicKey);
+    return verify(payloadHash, signatureBuffer, publicKey);
   } catch {
     return false;
   }
