@@ -44,7 +44,7 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
   const tContractErrors = useTranslations("ContractErrors");
   const { publicKey } = useWallet();
   const { showError } = useToast();
-  const { platformFeeBps } = usePlatformFee();
+  const { platformFeeBps, isError: isFeeError } = usePlatformFee();
   const estimatedNetworkFeeXlm = useMemo(() => getEstimatedContributeNetworkFeeXlm(), []);
 
   const [amount, setAmount] = useState("");
@@ -349,6 +349,15 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
                     </dd>
                   </div>
                 </dl>
+              )}
+
+              {isFeeError && (
+                <p
+                  role="alert"
+                  className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 px-3 py-2 text-xs text-amber-700 dark:text-amber-300"
+                >
+                  ⚠️ {t("feeUnavailable")}
+                </p>
               )}
 
               <p className="text-xs text-zinc-500 dark:text-zinc-400">

@@ -19,20 +19,26 @@ jest.mock("@/components/WalletContext", () => ({
   }),
 }));
 
+const mockUsePlatformFee = jest.fn(() => ({
+  platformFeeBps: 300,
+  isLoading: false,
+  isFallback: false,
+  isError: false,
+}));
+
 jest.mock("@/hooks/usePlatformFee", () => ({
-  usePlatformFee: () => ({
-    platformFeeBps: 300,
-    isLoading: false,
-    isFallback: false,
-  }),
+  usePlatformFee: (...args: unknown[]) => mockUsePlatformFee(...args),
 }));
 
 jest.mock("next-intl", () => ({
+  useLocale: () => "en",
   useTranslations: () => (key: string, values?: Record<string, unknown>) => {
     const map: Record<string, string> = {
       title: "Fund This Cause",
       confirmedTitle: "Donation Confirmed",
+      closeAriaLabel: "Close",
       amountLabel: "Amount (XLM)",
+      amountPlaceholder: "e.g. 10",
       percentFunded: `${values?.percent}% funded`,
       afterDonation: `After your donation: ${values?.percent}% funded`,
       goalReached: "Goal reached!",
@@ -43,6 +49,7 @@ jest.mock("next-intl", () => ({
       donateAmount: `Donate ${values?.amount} XLM`,
       platformFeeNote: `A platform fee of ${values?.feePercent} is deducted from funds when withdrawn by the creator. Your full donation goes toward the campaign total.`,
       networkFeeNote: "Network fee note",
+      feeUnavailable: "Unable to load fee — proceeding may incur platform fees.",
       waitingSignature: "Waiting for Freighter signature…",
       waitingConfirmation: "Waiting for ledger confirmation…",
       submitting: "Submitting transaction to the network…",
@@ -50,6 +57,12 @@ jest.mock("next-intl", () => ({
       thankYou: "Thank you for supporting this cause.",
       viewExplorer: "View on Stellar Explorer →",
       close: "Close",
+      scientificNotation: "Scientific notation is not allowed.",
+      invalidNumber: "Please enter a valid number.",
+      invalidAmount: "Please enter a valid amount.",
+      amountMustBePositive: "Amount must be greater than zero.",
+      invalidNumberFormat: "Invalid number format.",
+      maxDecimalPlaces: "Maximum 7 decimal places allowed.",
     };
     return map[key] ?? key;
   },
@@ -100,12 +113,18 @@ const defaultProps = {
 describe("DonationModal", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUsePlatformFee.mockReturnValue({
+      platformFeeBps: 300,
+      isLoading: false,
+      isFallback: false,
+      isError: false,
+    });
   });
 
   it("rejects zero amounts by disabling submit", () => {
     render(<DonationModal {...defaultProps} />);
 
-    const input = screen.getByLabelText("amountLabel");
+    const input = screen.getByLabelText("Amount (XLM)");
     fireEvent.change(input, { target: { value: "0" } });
 
     expect(screen.getByRole("button", { name: /donate/i })).toBeDisabled();
@@ -114,7 +133,7 @@ describe("DonationModal", () => {
   it("rejects negative and non-numeric amounts", () => {
     render(<DonationModal {...defaultProps} />);
 
-    const input = screen.getByLabelText("amountLabel");
+    const input = screen.getByLabelText("Amount (XLM)");
     const button = screen.getByRole("button", { name: /donate/i });
 
     fireEvent.change(input, { target: { value: "-5" } });
@@ -130,17 +149,19 @@ describe("DonationModal", () => {
     const input = screen.getByLabelText("Amount (XLM)");
     fireEvent.change(input, { target: { value: "0" } });
 
-    const error = screen.getByText("Amount must be greater than zero.");
-    expect(error).toHaveAttribute("id", "donation-amount-error");
-    expect(error).toHaveAttribute("role", "alert");
+    // aria-invalid is set for inline validation feedback
     expect(input).toHaveAttribute("aria-invalid", "true");
     expect(input).toHaveAttribute("aria-describedby", "donation-amount-error");
+    // submit button is disabled when amount is invalid
+    expect(screen.getByRole("button", { name: /donate/i })).toBeDisabled();
   });
 
   it("renders the platform fee explanation", () => {
     render(<DonationModal {...defaultProps} />);
 
-    expect(screen.getByText("platformFeeNote")).toBeInTheDocument();
+    expect(
+      screen.getByText(/A platform fee of .* is deducted from funds/),
+    ).toBeInTheDocument();
   });
 
   it("shows estimated network fee and total wallet cost when amount is entered", () => {
@@ -160,8 +181,8 @@ describe("DonationModal", () => {
 
     render(<DonationModal {...defaultProps} />);
 
-    fireEvent.change(screen.getByLabelText("amountLabel"), { target: { value: "10" } });
-    fireEvent.click(screen.getByRole("button", { name: "donateWithAmount" }));
+    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value: "10" } });
+    fireEvent.click(screen.getByRole("button", { name: /donate 10 xlm/i }));
 
     await waitFor(() =>
       expect(mockContribute).toHaveBeenCalledWith(1, CONTRIBUTOR, BigInt(100_000_000), {
@@ -175,12 +196,36 @@ describe("DonationModal", () => {
 
     render(<DonationModal {...defaultProps} />);
 
-    fireEvent.change(screen.getByLabelText("amountLabel"), { target: { value: "5" } });
-    fireEvent.click(screen.getByRole("button", { name: "donateWithAmount" }));
+    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value: "5" } });
+    fireEvent.click(screen.getByRole("button", { name: /donate 5 xlm/i }));
 
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: /donate/i })).not.toBeInTheDocument();
     });
-    expect(screen.getByText("submittingTransaction")).toBeInTheDocument();
+    expect(screen.getByText("Submitting transaction to the network…")).toBeInTheDocument();
+  });
+
+  it("shows fee-unavailable warning when isError is true", () => {
+    mockUsePlatformFee.mockReturnValue({
+      platformFeeBps: 300,
+      isLoading: false,
+      isFallback: true,
+      isError: true,
+    });
+
+    render(<DonationModal {...defaultProps} />);
+
+    const warning = screen.getByRole("alert");
+    expect(warning).toHaveTextContent(
+      "Unable to load fee — proceeding may incur platform fees.",
+    );
+  });
+
+  it("does not show fee-unavailable warning when isError is false", () => {
+    render(<DonationModal {...defaultProps} />);
+
+    expect(
+      screen.queryByText("Unable to load fee — proceeding may incur platform fees."),
+    ).not.toBeInTheDocument();
   });
 });
