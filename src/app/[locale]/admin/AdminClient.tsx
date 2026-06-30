@@ -546,7 +546,7 @@ export default function AdminDashboard() {
                           <div className="flex items-center gap-2">
                             <span className="text-zinc-400">{t("goal")}:</span>
                             <span className="text-zinc-900 dark:text-zinc-100">
-                              {formatAmount(BigInt(c.funding_goal), locale)} XLM
+                              {formatAmount(c.funding_goal, locale)} XLM
                             </span>
                           </div>
                         </div>
