@@ -8,6 +8,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "node ./scripts/validate-production-build.mjs && next build",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
     "start": "next start",
     "lint": "eslint",
     "format": "prettier --write .",
@@ -69,7 +71,12 @@
     "prettier": "^3.8.3",
     "tailwindcss": "^4.3.0",
     "ts-node": "^10.9.2",
-    "typescript": "^6"
+    "typescript": "^6",
+    "@storybook/addon-essentials": "^8",
+    "@storybook/addon-interactions": "^8",
+    "@storybook/nextjs": "^8",
+    "@storybook/react": "^8",
+    "storybook": "^8"
   },
   "overrides": {
     "axios": "1.16.1",

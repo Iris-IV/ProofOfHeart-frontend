@@ -52,8 +52,11 @@ const CancelCampaignModal = dynamic(() => import("@/components/cancelCampaignMod
   ssr: false,
 });
 import { AdminSkeleton } from "@/components/Skeleton";
+import Pagination from "@/components/Pagination";
 import { Campaign } from "@/types";
 import { useContractVersion } from "@/hooks/useContractVersion";
+
+const ADMIN_CAMPAIGNS_PAGE_SIZE = 5;
 
 export default function AdminDashboard() {
   const { campaigns, isLoading, refetch, isRefreshing } = useCampaigns();
@@ -106,6 +109,9 @@ export default function AdminDashboard() {
   // Rejection Modal State
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [campaignToReject, setCampaignToReject] = useState<Campaign | null>(null);
+
+  // Pending campaigns pagination
+  const [campaignsPage, setCampaignsPage] = useState(1);
 
   // Optimistic UI State
   const [optimisticPendingIds, setOptimisticPendingIds] = useState<Set<number>>(new Set());
@@ -167,6 +173,15 @@ export default function AdminDashboard() {
       (c) => !c.is_verified && c.is_active && !c.is_cancelled && !optimisticPendingIds.has(c.id),
     );
   }, [campaigns, optimisticPendingIds]);
+
+  const campaignsTotalPages = Math.max(
+    1,
+    Math.ceil(pendingCampaigns.length / ADMIN_CAMPAIGNS_PAGE_SIZE),
+  );
+  const pagedCampaigns = pendingCampaigns.slice(
+    (campaignsPage - 1) * ADMIN_CAMPAIGNS_PAGE_SIZE,
+    campaignsPage * ADMIN_CAMPAIGNS_PAGE_SIZE,
+  );
 
   const totalRaised = useMemo(() => {
     return campaigns.reduce((sum, c) => sum + BigInt(c.amount_raised), BigInt(0));
@@ -514,8 +529,9 @@ export default function AdminDashboard() {
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("subtitle")}</p>
               </div>
             ) : (
+              <>
               <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {pendingCampaigns.map((c) => (
+                {pagedCampaigns.map((c) => (
                   <article
                     key={c.id}
                     className="p-8 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-colors group"
@@ -591,6 +607,14 @@ export default function AdminDashboard() {
                   </article>
                 ))}
               </div>
+              <Pagination
+                currentPage={campaignsPage}
+                totalPages={campaignsTotalPages}
+                onPrev={() => setCampaignsPage((p) => Math.max(1, p - 1))}
+                onNext={() => setCampaignsPage((p) => Math.min(campaignsTotalPages, p + 1))}
+                className="px-8 py-4 border-t border-zinc-100 dark:border-zinc-800"
+              />
+              </>
             )}
           </div>
         </div>
