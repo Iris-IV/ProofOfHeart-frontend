@@ -1,8 +1,7 @@
 "use client";
-
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import MyContributionsSection from "@/components/MyContributionsSection";
 import { Spinner, DashboardSkeleton } from "@/components/Skeleton";
 import { useWallet } from "@/components/WalletContext";
@@ -11,56 +10,63 @@ import { useStellarBalance } from "@/hooks/useStellarBalance";
 import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
 import { isSameAddress } from "@/lib/stellar";
 import { explorerTxUrl } from "@/utils/explorer";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import toast from "react-hot-toast";
 
 export default function DashboardPage() {
   const t = useTranslations("Dashboard");
-  const { publicKey, isWalletConnected } = useWallet();
+  const { publicKey, isWalletConnected, signAndSubmit } = useWallet();
   const { campaigns, isLoading: campaignsLoading } = useCampaigns();
   const {
     balance,
     isLoading: balanceLoading,
     error: balanceQueryError,
   } = useStellarBalance(publicKey);
+
+  const [claimableRevenue, setClaimableRevenue] = useState(0);
+  const [isClaiming, setIsClaiming] = useState(false);
+
   const balanceError = balanceQueryError ? t("balanceFetchError") : null;
   const { savedIds } = useSavedCampaigns();
 
   const savedCampaigns = useMemo(
     () => campaigns.filter((c) => savedIds.includes(c.id)),
-    [campaigns, savedIds],
-  );
-
-  const mockVotes = useMemo(
-    () => [
-      {
-        campaignId: 1,
-        voter: publicKey,
-        voteType: "upvote",
-        timestamp: new Date("2024-02-01"),
-        transactionHash: "tx1",
-      },
-      {
-        campaignId: 2,
-        voter: publicKey,
-        voteType: "downvote",
-        timestamp: new Date("2024-02-10"),
-        transactionHash: "tx2",
-      },
-    ],
-    [publicKey],
-  );
-
-  const mockFunding = useMemo(
-    () => [
-      { campaignId: 3, amount: 100, timestamp: new Date("2024-02-15"), tx: "fund1" },
-      { campaignId: 1, amount: 50, timestamp: new Date("2024-02-20"), tx: "fund2" },
-    ],
-    [],
+    [campaigns, savedIds]
   );
 
   const submittedCampaigns = useMemo(
     () => campaigns.filter((c) => isSameAddress(c.creator, publicKey)),
-    [campaigns, publicKey],
+    [campaigns, publicKey]
   );
+
+  // Fetch claimable revenue (replace with real API later)
+  React.useEffect(() => {
+    if (!publicKey) return;
+    setClaimableRevenue(42.5); // Mock data - replace with real fetch
+  }, [publicKey]);
+
+  const handleClaimRevenue = async () => {
+    if (claimableRevenue <= 0 || !publicKey) return;
+
+    setIsClaiming(true);
+    try {
+      const tx = await signAndSubmit({
+        contractId: "YOUR_CONTRACT_ID_HERE", // ← Update this
+        method: "claim_creator_revenue",
+        params: { contributor: publicKey },
+      });
+
+      if (tx) {
+        toast.success(`Successfully claimed ${claimableRevenue} XLM!`);
+        setClaimableRevenue(0);
+      }
+    } catch (err) {
+      toast.error("Failed to claim revenue. Please try again.");
+    } finally {
+      setIsClaiming(false);
+    }
+  };
 
   if (!isWalletConnected || !publicKey) {
     return (
@@ -86,6 +92,7 @@ export default function DashboardPage() {
     <div className="max-w-4xl mx-auto py-10 px-4">
       <h1 className="text-3xl font-bold mb-8">{t("title")}</h1>
 
+      {/* Wallet Balance */}
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-2">{t("walletBalance")}</h2>
         {balanceLoading ? (
@@ -99,11 +106,41 @@ export default function DashboardPage() {
         )}
       </section>
 
+      {/* Revenue Claiming Section */}
+      <Card className="mb-8 border-emerald-500/30 bg-emerald-950/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-emerald-400">
+            💰 Creator Revenue Sharing
+          </CardTitle>
+          <CardDescription>
+            Claim your portion of revenue from EducationalStartup campaigns you supported
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-baseline gap-3">
+            <span className="text-5xl font-bold text-emerald-400">
+              {claimableRevenue.toFixed(2)}
+            </span>
+            <span className="text-2xl text-emerald-400/70">XLM</span>
+          </div>
+
+          <Button
+            onClick={handleClaimRevenue}
+            disabled={claimableRevenue <= 0 || isClaiming}
+            size="lg"
+            className="w-full bg-emerald-600 hover:bg-emerald-700"
+          >
+            {isClaiming ? "Claiming..." : "Claim Revenue Now"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Saved Campaigns */}
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-2">Saved Campaigns</h2>
         {savedCampaigns.length === 0 ? (
           <span className="text-zinc-500 dark:text-zinc-400">
-            You haven&apos;t saved any campaigns yet.
+            You haven't saved any campaigns yet.
           </span>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -123,6 +160,7 @@ export default function DashboardPage() {
         )}
       </section>
 
+      {/* Submitted Campaigns */}
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-2">{t("submittedCampaigns")}</h2>
         {submittedCampaigns.length === 0 ? (
@@ -132,88 +170,4 @@ export default function DashboardPage() {
             {submittedCampaigns.map((campaign) => (
               <li
                 key={campaign.id}
-                className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 min-h-[60px]"
-              >
-                <div className="font-medium text-zinc-900 dark:text-zinc-50">{campaign.title}</div>
-                <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
-                  {campaign.description}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <MyContributionsSection walletAddress={publicKey} />
-
-      <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-2">{t("votingHistory")}</h2>
-        {mockVotes.length === 0 ? (
-          <span className="text-zinc-500 dark:text-zinc-400">{t("noVotingHistory")}</span>
-        ) : (
-          <ul className="space-y-2">
-            {mockVotes.map((vote, idx) => {
-              const campaign = campaigns.find((c) => c.id === vote.campaignId);
-              return (
-                <li key={idx} className="border rounded p-3 bg-zinc-50 dark:bg-zinc-900">
-                  <div className="font-medium">
-                    {campaign ? campaign.title : t("campaignFallback", { id: vote.campaignId })}
-                  </div>
-                  <div className="text-sm text-zinc-500 dark:text-zinc-400">
-                    {vote.voteType === "upvote"
-                      ? t("upvotedOn", { date: vote.timestamp.toLocaleDateString() })
-                      : t("downvotedOn", { date: vote.timestamp.toLocaleDateString() })}
-                    <br />
-                    <a
-                      href={explorerTxUrl(vote.transactionHash)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      {t("viewOnExplorer")}
-                    </a>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
-      <section>
-        <h2 className="text-xl font-semibold mb-2">{t("fundingHistory")}</h2>
-        {mockFunding.length === 0 ? (
-          <span className="text-zinc-500 dark:text-zinc-400">{t("noFundingHistory")}</span>
-        ) : (
-          <ul className="space-y-2">
-            {mockFunding.map((fund, idx) => {
-              const campaign = campaigns.find((c) => c.id === fund.campaignId);
-              return (
-                <li key={idx} className="border rounded p-3 bg-zinc-50 dark:bg-zinc-900">
-                  <div className="font-medium">
-                    {campaign ? campaign.title : t("campaignFallback", { id: fund.campaignId })}
-                  </div>
-                  <div className="text-sm text-zinc-500 dark:text-zinc-400">
-                    {t("donated", {
-                      amount: fund.amount,
-                      date: fund.timestamp.toLocaleDateString(),
-                    })}
-                    <br />
-                    <a
-                      href={explorerTxUrl(fund.tx)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      {t("viewOnExplorer")}
-                    </a>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-    </div>
-  );
-}
+                className="
