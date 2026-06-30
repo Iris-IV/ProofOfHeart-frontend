@@ -5,7 +5,8 @@ import { useLocale } from "next-intl";
 import { subscribeToCountdownTick } from "@/hooks/useCountdownTick";
 
 interface DeadlineCountdownProps {
-  deadline: number; // Unix timestamp in seconds
+  /** Soroban ledger timestamp (seconds since Unix epoch). */
+  deadline: number;
 }
 
 interface TimeLeft {
@@ -14,14 +15,15 @@ interface TimeLeft {
   minutes: number;
 }
 
-function getTimeLeft(deadline: number): TimeLeft | null {
-  const diff = deadline - Math.floor(Date.now() / 1000);
+function getTimeLeft(deadlineSec: number): TimeLeft | null {
+  const deadlineMs = deadlineSec * 1000; // Convert to milliseconds for Date
+  const diff = deadlineMs - Date.now();
   if (diff <= 0) return null;
 
   return {
-    days: Math.floor(diff / 86400),
-    hours: Math.floor((diff % 86400) / 3600),
-    minutes: Math.floor((diff % 3600) / 60),
+    days: Math.floor(diff / 86_400_000),
+    hours: Math.floor((diff % 86_400_000) / 3_600_000),
+    minutes: Math.floor((diff % 3_600_000) / 60_000),
   };
 }
 
