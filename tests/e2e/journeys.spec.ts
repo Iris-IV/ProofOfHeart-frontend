@@ -25,50 +25,50 @@ test.describe("Critical User Journeys", () => {
   });
 
   test("should contribute to a verified campaign", async ({ page }) => {
-    // 1. Connect wallet
+    test.setTimeout(60_000);
+
+    await page.goto(localePath("/causes/1"));
+    await expect(
+      page.getByRole("heading", { name: /Clean Water for Rural Communities/i }),
+    ).toBeVisible({ timeout: 30_000 });
+
     await page
       .getByRole("button", { name: /Connect Wallet/i })
       .first()
       .click();
+    await expect(page.getByRole("button", { name: /Disconnect/i })).toBeVisible();
 
-    // 2. Open a verified campaign (ID 1 in mock data)
-    await page.goto(localePath("/causes/1"));
-    await page.waitForURL(/\/causes\/1/);
-
-    // 3. Open donation flow
-    const fundButton = page.getByRole("button", { name: /Fund This Cause|Donate/i }).first();
+    const fundButton = page.getByRole("button", { name: /Fund This Cause/i });
     await expect(fundButton).toBeVisible();
     await fundButton.click();
 
-    // 4. Enter amount
     const amountInput = page.getByPlaceholder(/e\.g\. 10/i);
     await amountInput.fill("50");
 
-    // 5. Submit donation
     await page.getByRole("button", { name: /Donate 50 XLM/i }).click();
 
-    // 6. Verify success message
     await expect(page.getByText(/donated successfully/i)).toBeVisible();
   });
 
   test("should vote on an active campaign", async ({ page }) => {
-    // 1. Connect wallet
+    test.setTimeout(60_000);
+
+    await page.goto(localePath("/causes/2"));
+    await expect(
+      page.getByRole("heading", { name: /Education Technology for Underprivileged Children/i }),
+    ).toBeVisible({ timeout: 30_000 });
+
     await page
       .getByRole("button", { name: /Connect Wallet/i })
       .first()
       .click();
+    await expect(page.getByRole("button", { name: /Disconnect/i })).toBeVisible();
 
-    // 2. Go to an active campaign (ID 2 is active and unverified)
-    await page.goto(localePath("/causes/2"));
-    await page.waitForURL(/\/causes\/2/);
-
-    // 3. Cast an approval vote
-    const approveButton = page.getByRole("button", { name: /Approve campaign|Approve/i }).first();
+    const approveButton = page.getByRole("button", { name: /Approve campaign/i });
     await expect(approveButton).toBeVisible();
 
     await approveButton.click();
 
-    // 4. Verify vote processed
     await expect(page.getByText(/You voted to approve/i)).toBeVisible();
   });
 });
