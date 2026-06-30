@@ -20,6 +20,7 @@ interface WalletContextType {
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
   isLoading: boolean;
+  checkWalletConnection: () => Promise<void>;
 }
 
 const MOCK_PUBLIC_KEY = IS_MOCK_MODE ? StellarSdk.Keypair.random().publicKey() : null;
@@ -246,6 +247,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         connectWallet,
         disconnectWallet,
         isLoading,
+        checkWalletConnection,
       }}
     >
       {children}
