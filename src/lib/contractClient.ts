@@ -390,7 +390,7 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     revenue_share_percentage: 500,
     tags: ["education", "tech", "children"],
     latitude: 28.6139,
-    longitude: 77.2090,
+    longitude: 77.209,
   }),
   makeMockCampaign({
     id: 3,

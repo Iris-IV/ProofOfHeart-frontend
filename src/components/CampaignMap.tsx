@@ -62,8 +62,8 @@ export default function CampaignMap({ campaigns }: CampaignMapProps) {
           No campaigns with location data
         </h3>
         <p className="text-zinc-600 dark:text-zinc-400 max-w-md">
-          Campaigns with coordinates will appear on this map. Switch to list
-          view to browse all campaigns.
+          Campaigns with coordinates will appear on this map. Switch to list view to browse all
+          campaigns.
         </p>
       </div>
     );
@@ -71,12 +71,7 @@ export default function CampaignMap({ campaigns }: CampaignMapProps) {
 
   return (
     <div className="rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700">
-      <MapContainer
-        center={center}
-        zoom={2}
-        className="h-[500px] w-full"
-        scrollWheelZoom={true}
-      >
+      <MapContainer center={center} zoom={2} className="h-[500px] w-full" scrollWheelZoom={true}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

@@ -16,15 +16,21 @@ jest.mock("leaflet", () => ({
 }));
 
 jest.mock("react-leaflet", () => ({
-  MapContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="map">{children}</div>,
+  MapContainer: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="map">{children}</div>
+  ),
   TileLayer: () => null,
-  Marker: ({ children }: { children: React.ReactNode }) => <div data-testid="marker">{children}</div>,
+  Marker: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="marker">{children}</div>
+  ),
   Popup: ({ children }: { children: React.ReactNode }) => <div data-testid="popup">{children}</div>,
 }));
 
 jest.mock("next/link", () => {
   const MockLink = ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a data-testid="link" href={href}>{children}</a>
+    <a data-testid="link" href={href}>
+      {children}
+    </a>
   );
   MockLink.displayName = "MockLink";
   return MockLink;
@@ -32,7 +38,9 @@ jest.mock("next/link", () => {
 
 jest.mock("@/i18n/routing", () => ({
   Link: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a data-testid="link" href={href}>{children}</a>
+    <a data-testid="link" href={href}>
+      {children}
+    </a>
   ),
 }));
 
