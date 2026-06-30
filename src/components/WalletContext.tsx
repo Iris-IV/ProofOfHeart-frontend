@@ -1,11 +1,6 @@
 "use client";
 import * as StellarSdk from "@stellar/stellar-sdk";
-import {
-  getAddress,
-  getNetwork,
-  isConnected,
-  isAllowed,
-} from "@stellar/freighter-api";
+import { getAddress, getNetwork, isConnected, isAllowed } from "@stellar/freighter-api";
 import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from "react";
 import { useToast } from "./ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
@@ -77,6 +72,10 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       clearInterval(intervalId);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
+    // checkWalletConnection is intentionally omitted from deps -- all its
+    // transitive deps (state setters, refs, env constant) are stable across
+    // renders, so the function identity is effectively stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkWalletConnection = async () => {
