@@ -1,14 +1,26 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
+import { MapIcon, ListIcon } from "lucide-react";
 import CauseCard from "@/components/CauseCard";
 import { CauseCardSkeleton } from "@/components/Skeleton";
+import MapErrorBoundary from "@/components/MapErrorBoundary";
 import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { useRouter } from "@/i18n/routing";
+
+const CampaignMap = dynamic(() => import("@/components/CampaignMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center min-h-[400px] rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700">
+      <div className="motion-safe:animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+    </div>
+  ),
+});
 import {
   cancelCampaign,
   claimRefund,
@@ -90,6 +102,7 @@ function CausesContent() {
   const [status, setStatus] = useState(searchParams.get("status") ?? "all");
   const [sort, setSort] = useState(searchParams.get("sort") ?? "newest");
   const [tag, setTag] = useState(searchParams.get("tag") ?? "");
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
 
   const debouncedSearch = useDebounce(rawSearch, 300);
 
@@ -569,6 +582,36 @@ function CausesContent() {
           </div>
         </div>
 
+        {/* View toggle */}
+        <div className="flex items-center justify-end mb-4 gap-1">
+          <button
+            type="button"
+            onClick={() => setViewMode("list")}
+            aria-pressed={viewMode === "list"}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              viewMode === "list"
+                ? "bg-blue-600 text-white"
+                : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600"
+            }`}
+          >
+            <ListIcon size={16} />
+            {t("listView")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("map")}
+            aria-pressed={viewMode === "map"}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              viewMode === "map"
+                ? "bg-blue-600 text-white"
+                : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600"
+            }`}
+          >
+            <MapIcon size={16} />
+            {t("mapView")}
+          </button>
+        </div>
+
         {/* Error state */}
         {error && (
           <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-6 mb-6 text-center">
@@ -594,96 +637,108 @@ function CausesContent() {
         {/* Results */}
         {!isLoading && !error && (
           <>
-            <div
-              aria-live="polite"
-              aria-atomic="true"
-              className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 flex items-center gap-3"
-            >
-              <span>
-                {t(filteredCampaigns.length === 1 ? "causesFound_one" : "causesFound_other", {
-                  count: filteredCampaigns.length,
-                })}
-                {debouncedSearch && <span>{t("causesFoundFor", { query: debouncedSearch })}</span>}
-              </span>
-              {isVotingFor !== null && (
-                <span className="inline-flex items-center gap-1">
-                  <span className="inline-block motion-safe:animate-spin rounded-full h-3 w-3 border-b border-zinc-500" />
-                  {t("processingVote")}
-                </span>
-              )}
-            </div>
-
-            {filteredCampaigns.length > 0 ? (
+            {/* List view */}
+            {viewMode === "list" && (
               <>
-                {filteredCampaigns.length > CAUSES_PAGE_SIZE && (
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
-                    {t("showingRange", {
-                      shown: visibleCampaigns.length,
-                      total: filteredCampaigns.length,
+                <div
+                  aria-live="polite"
+                  aria-atomic="true"
+                  className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 flex items-center gap-3"
+                >
+                  <span>
+                    {t(filteredCampaigns.length === 1 ? "causesFound_one" : "causesFound_other", {
+                      count: filteredCampaigns.length,
                     })}
-                  </p>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {visibleCampaigns.map((campaign) => (
-                    <CauseCard
-                      key={campaign.id}
-                      campaign={campaign}
-                      userWalletAddress={userWalletAddress}
-                      onVote={handleVote}
-                      onCancel={handleCancel}
-                      onClaimRefund={handleClaimRefund}
-                      onTagClick={handleTagClick}
-                      userVote={userVotes[campaign.id]}
-                      upvotes={voteCounts[campaign.id]?.upvotes ?? 0}
-                      downvotes={voteCounts[campaign.id]?.downvotes ?? 0}
-                      totalVotes={voteCounts[campaign.id]?.totalVotes ?? 0}
-                    />
-                  ))}
+                    {debouncedSearch && <span>{t("causesFoundFor", { query: debouncedSearch })}</span>}
+                  </span>
+                  {isVotingFor !== null && (
+                    <span className="inline-flex items-center gap-1">
+                      <span className="inline-block motion-safe:animate-spin rounded-full h-3 w-3 border-b border-zinc-500" />
+                      {t("processingVote")}
+                    </span>
+                  )}
                 </div>
-                {hasMoreCampaigns && (
-                  <div className="mt-8 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setVisibleCount((count) =>
-                          Math.min(count + CAUSES_PAGE_SIZE, filteredCampaigns.length),
-                        )
-                      }
-                      className="px-6 py-2.5 rounded-full text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                    >
-                      {t("loadMore")}
-                    </button>
+
+                {filteredCampaigns.length > 0 ? (
+                  <>
+                    {filteredCampaigns.length > CAUSES_PAGE_SIZE && (
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                        {t("showingRange", {
+                          shown: visibleCampaigns.length,
+                          total: filteredCampaigns.length,
+                        })}
+                      </p>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {visibleCampaigns.map((campaign) => (
+                        <CauseCard
+                          key={campaign.id}
+                          campaign={campaign}
+                          userWalletAddress={userWalletAddress}
+                          onVote={handleVote}
+                          onCancel={handleCancel}
+                          onClaimRefund={handleClaimRefund}
+                          onTagClick={handleTagClick}
+                          userVote={userVotes[campaign.id]}
+                          upvotes={voteCounts[campaign.id]?.upvotes ?? 0}
+                          downvotes={voteCounts[campaign.id]?.downvotes ?? 0}
+                          totalVotes={voteCounts[campaign.id]?.totalVotes ?? 0}
+                        />
+                      ))}
+                    </div>
+                    {hasMoreCampaigns && (
+                      <div className="mt-8 flex justify-center">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setVisibleCount((count) =>
+                              Math.min(count + CAUSES_PAGE_SIZE, filteredCampaigns.length),
+                            )
+                          }
+                          className="px-6 py-2.5 rounded-full text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                        >
+                          {t("loadMore")}
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-20">
+                    <div className="text-5xl mb-4">
+                      {campaigns.length === 0 ? "📭" : debouncedSearch ? "🔍" : "🔎"}
+                    </div>
+                    <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
+                      {campaigns.length === 0
+                        ? t("noCausesYet")
+                        : debouncedSearch
+                          ? t("noSearchResults")
+                          : t("noCausesFound")}
+                    </h2>
+                    <p className="text-zinc-600 dark:text-zinc-400 mb-6">
+                      {campaigns.length === 0
+                        ? t("beFirstToSubmit")
+                        : debouncedSearch
+                          ? t("tryDifferentSearch")
+                          : t("tryDifferentKeyword")}
+                    </p>
+                    {campaigns.length > 0 && (
+                      <button
+                        onClick={clearFilters}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
+                      >
+                        {t("clearAllFilters")}
+                      </button>
+                    )}
                   </div>
                 )}
               </>
-            ) : (
-              <div className="text-center py-20">
-                <div className="text-5xl mb-4">
-                  {campaigns.length === 0 ? "📭" : debouncedSearch ? "🔍" : "🔎"}
-                </div>
-                <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-                  {campaigns.length === 0
-                    ? t("noCausesYet")
-                    : debouncedSearch
-                      ? t("noSearchResults")
-                      : t("noCausesFound")}
-                </h2>
-                <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-                  {campaigns.length === 0
-                    ? t("beFirstToSubmit")
-                    : debouncedSearch
-                      ? t("tryDifferentSearch")
-                      : t("tryDifferentKeyword")}
-                </p>
-                {campaigns.length > 0 && (
-                  <button
-                    onClick={clearFilters}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
-                  >
-                    {t("clearAllFilters")}
-                  </button>
-                )}
-              </div>
+            )}
+
+            {/* Map view */}
+            {viewMode === "map" && (
+              <MapErrorBoundary>
+                <CampaignMap campaigns={filteredCampaigns} />
+              </MapErrorBoundary>
             )}
           </>
         )}

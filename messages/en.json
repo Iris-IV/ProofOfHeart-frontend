@@ -249,7 +249,9 @@
     "tryDifferentSearch": "Try different search terms or clear the filters to see all causes.",
     "tryAgain": "Try again",
     "loadMore": "Load more causes",
-    "showingRange": "Showing {shown} of {total}"
+    "showingRange": "Showing {shown} of {total}",
+    "listView": "List",
+    "mapView": "Map"
   },
   "Status": {
     "active": "Active",
