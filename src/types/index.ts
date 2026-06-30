@@ -61,6 +61,13 @@ export interface Milestone {
   description: string;
 }
 
+/** Optional creator social profile links, shown as icons on the campaign detail page. */
+export interface SocialLinks {
+  twitter?: string;
+  linkedin?: string;
+  farcaster?: string;
+}
+
 export interface Campaign {
   id: number;
   creator: string;
@@ -81,6 +88,7 @@ export interface Campaign {
   tags?: string[];
   cover_image_url?: string;
   milestones?: Milestone[];
+  social_links?: SocialLinks;
 }
 
 // ---------------------------------------------------------------------------
