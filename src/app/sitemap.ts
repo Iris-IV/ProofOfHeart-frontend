@@ -16,14 +16,21 @@ async function getCampaignSitemapEntries(): Promise<
 > {
   try {
     const campaigns = await getAllCampaigns();
-    const capped = campaigns.slice(0, MAX_CAMPAIGN_SITEMAP_URLS);
+
+    // Only index campaigns that are publicly visible (active, funded, or verified).
+    // Cancelled campaigns are excluded to avoid indexing dead pages.
+    const indexable = campaigns.filter((c) => !c.is_cancelled);
+    const capped = indexable.slice(0, MAX_CAMPAIGN_SITEMAP_URLS);
 
     return capped.flatMap((campaign) =>
       routing.locales.map((locale) => ({
         url: absoluteUrl(`/${locale}/causes/${campaign.id}`),
         lastModified: new Date(campaign.created_at * 1000),
-        changeFrequency: "hourly" as const,
-        priority: 0.9,
+        // Active campaigns may receive contributions — crawl them more often.
+        changeFrequency: (campaign.is_active ? "hourly" : "weekly") as
+          | "hourly"
+          | "weekly",
+        priority: campaign.is_active ? 0.9 : 0.7,
       })),
     );
   } catch {
