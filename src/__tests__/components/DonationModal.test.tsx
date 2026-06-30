@@ -1,10 +1,13 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { contribute } from "@/lib/contractClient";
+import { contribute, getCampaign } from "@/lib/contractClient";
 import DonationModal from "@/components/DonationModal";
 import { Category, type Campaign } from "@/types";
 
+const mockGetCampaign = jest.fn();
+
 jest.mock("@/lib/contractClient", () => ({
   contribute: jest.fn(),
+  getCampaign: (...args: any[]) => mockGetCampaign(...args),
 }));
 
 jest.mock("@/components/ToastProvider", () => ({
@@ -28,6 +31,7 @@ jest.mock("@/hooks/usePlatformFee", () => ({
 }));
 
 jest.mock("next-intl", () => ({
+  useLocale: () => "en",
   useTranslations: () => (key: string, values?: Record<string, unknown>) => {
     const map: Record<string, string> = {
       title: "Fund This Cause",
@@ -50,6 +54,14 @@ jest.mock("next-intl", () => ({
       thankYou: "Thank you for supporting this cause.",
       viewExplorer: "View on Stellar Explorer →",
       close: "Close",
+      scientificNotation: "Scientific notation is not allowed.",
+      invalidNumber: "Please enter a valid number.",
+      invalidAmount: "Please enter a valid amount.",
+      amountMustBePositive: "Amount must be greater than zero.",
+      invalidNumberFormat: "Invalid number format.",
+      maxDecimalPlaces: "Maximum 7 decimal places allowed.",
+      amountExceedsRemainingGoal: "Amount exceeds the remaining funding goal.",
+      campaignAlreadyFunded: "This cause is already fully funded.",
     };
     return map[key] ?? key;
   },
@@ -77,7 +89,7 @@ function makeCampaign(overrides: Partial<Campaign> = {}): Campaign {
     description: "Desc",
     created_at: 1,
     status: "active",
-    funding_goal: BigInt(100_000_000),
+    funding_goal: BigInt(1_000_000_000),
     deadline: 9_999_999_999,
     amount_raised: BigInt(10_000_000),
     is_active: true,
@@ -100,12 +112,13 @@ const defaultProps = {
 describe("DonationModal", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetCampaign.mockImplementation((id) => Promise.resolve(makeCampaign({ id })));
   });
 
   it("rejects zero amounts by disabling submit", () => {
     render(<DonationModal {...defaultProps} />);
 
-    const input = screen.getByLabelText("amountLabel");
+    const input = screen.getByLabelText("Amount (XLM)");
     fireEvent.change(input, { target: { value: "0" } });
 
     expect(screen.getByRole("button", { name: /donate/i })).toBeDisabled();
@@ -114,7 +127,7 @@ describe("DonationModal", () => {
   it("rejects negative and non-numeric amounts", () => {
     render(<DonationModal {...defaultProps} />);
 
-    const input = screen.getByLabelText("amountLabel");
+    const input = screen.getByLabelText("Amount (XLM)");
     const button = screen.getByRole("button", { name: /donate/i });
 
     fireEvent.change(input, { target: { value: "-5" } });
@@ -140,7 +153,7 @@ describe("DonationModal", () => {
   it("renders the platform fee explanation", () => {
     render(<DonationModal {...defaultProps} />);
 
-    expect(screen.getByText("platformFeeNote")).toBeInTheDocument();
+    expect(screen.getByText(/platform fee of 3%/i)).toBeInTheDocument();
   });
 
   it("shows estimated network fee and total wallet cost when amount is entered", () => {
@@ -160,8 +173,8 @@ describe("DonationModal", () => {
 
     render(<DonationModal {...defaultProps} />);
 
-    fireEvent.change(screen.getByLabelText("amountLabel"), { target: { value: "10" } });
-    fireEvent.click(screen.getByRole("button", { name: "donateWithAmount" }));
+    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value: "10" } });
+    fireEvent.click(screen.getByRole("button", { name: "Donate 10 XLM" }));
 
     await waitFor(() =>
       expect(mockContribute).toHaveBeenCalledWith(1, CONTRIBUTOR, BigInt(100_000_000), {
@@ -175,12 +188,54 @@ describe("DonationModal", () => {
 
     render(<DonationModal {...defaultProps} />);
 
-    fireEvent.change(screen.getByLabelText("amountLabel"), { target: { value: "5" } });
-    fireEvent.click(screen.getByRole("button", { name: "donateWithAmount" }));
+    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value: "5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Donate 5 XLM" }));
 
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: /donate/i })).not.toBeInTheDocument();
     });
-    expect(screen.getByText("submittingTransaction")).toBeInTheDocument();
+    expect(screen.getByText("Submitting transaction to the network…")).toBeInTheDocument();
+  });
+
+  it("rejects amounts exceeding the remaining goal", () => {
+    const campaign = makeCampaign({
+      funding_goal: BigInt(1_000_000_000),
+      amount_raised: BigInt(900_000_000),
+    });
+    render(<DonationModal {...defaultProps} campaign={campaign} />);
+
+    const input = screen.getByLabelText("Amount (XLM)");
+    fireEvent.change(input, { target: { value: "15" } });
+
+    expect(screen.getByText("Amount exceeds the remaining funding goal.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /donate/i })).toBeDisabled();
+  });
+
+  it("rejects donations if campaign is already fully funded", () => {
+    const campaign = makeCampaign({
+      funding_goal: BigInt(1_000_000_000),
+      amount_raised: BigInt(1_000_000_000),
+    });
+    render(<DonationModal {...defaultProps} campaign={campaign} />);
+
+    const input = screen.getByLabelText("Amount (XLM)");
+    expect(input).toBeDisabled();
+    expect(screen.getByText("This cause is already fully funded.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /donate/i })).toBeDisabled();
+  });
+
+  it("polls getCampaign on mount and every 2 seconds", async () => {
+    jest.useFakeTimers();
+    render(<DonationModal {...defaultProps} />);
+
+    expect(mockGetCampaign).toHaveBeenCalledTimes(1);
+
+    jest.advanceTimersByTime(2000);
+    expect(mockGetCampaign).toHaveBeenCalledTimes(2);
+
+    jest.advanceTimersByTime(2000);
+    expect(mockGetCampaign).toHaveBeenCalledTimes(3);
+
+    jest.useRealTimers();
   });
 });
