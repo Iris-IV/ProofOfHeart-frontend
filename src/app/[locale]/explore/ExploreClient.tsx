@@ -24,6 +24,7 @@ export default function ExplorePage() {
   const locale = useLocale();
   const { campaigns, isLoading, error, refetch } = useCampaigns();
   const [activeCategory, setActiveCategory] = useState<'all' | Category>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const categories = useMemo(() => {
     const seen = new Set(campaigns.map((c) => c.category));
@@ -31,11 +32,19 @@ export default function ExplorePage() {
   }, [campaigns]);
 
   const filtered = useMemo(
-    () =>
-      activeCategory === 'all'
+    () => {
+      let result = activeCategory === 'all'
         ? campaigns
-        : campaigns.filter((c) => c.category === activeCategory),
-    [campaigns, activeCategory]
+        : campaigns.filter((c) => c.category === activeCategory);
+
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        result = result.filter((c) => c.title.toLowerCase().includes(query));
+      }
+
+      return result;
+    },
+    [campaigns, activeCategory, searchQuery]
   );
 
   // Sort by funding progress descending for the explore view
@@ -57,6 +66,40 @@ export default function ExplorePage() {
       <p className="mt-3 max-w-2xl text-base leading-7 text-zinc-600 dark:text-zinc-400">
         {t('subtitle')}
       </p>
+
+      {/* Search input */}
+      <div className="mt-6 relative">
+        <svg
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search campaigns..."
+          className="w-full pl-9 pr-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+            aria-label="Clear search"
+          >
+            ✕
+          </button>
+        )}
+      </div>
 
       {/* Category pills */}
       {!isLoading && !error && categories.length > 1 && (
