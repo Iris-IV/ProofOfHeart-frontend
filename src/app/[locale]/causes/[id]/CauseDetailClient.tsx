@@ -18,6 +18,8 @@ import SafeMarkdown from "@/components/SafeMarkdown";
 import ReportModal from "@/components/ReportModal";
 import CampaignActions from "@/components/CampaignActions";
 import AsyncButtonContent from "@/components/AsyncButtonContent";
+import ContributorLeaderboard from "@/components/ContributorLeaderboard";
+import RelatedCampaigns from "@/components/RelatedCampaigns";
 import { useToast } from "@/components/ToastProvider";
 import VotingComponent from "@/components/VotingComponent";
 import { useWallet } from "@/components/WalletContext";
@@ -565,6 +567,8 @@ export default function CauseDetailClient({ id }: { id: string }) {
               </div>
             </div>
 
+            <ContributorLeaderboard campaignId={campaign.id} />
+
             <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">
                 Vote Breakdown
@@ -599,6 +603,8 @@ export default function CauseDetailClient({ id }: { id: string }) {
             </Link>
           </div>
         </div>
+
+        <RelatedCampaigns currentCampaignId={campaign.id} category={campaign.category} />
       </main>
 
       {isDonationModalOpen && (

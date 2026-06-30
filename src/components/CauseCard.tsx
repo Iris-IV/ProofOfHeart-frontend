@@ -20,10 +20,10 @@ import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
 
 interface CauseCardProps {
   campaign: Campaign;
-  userWalletAddress: string | null;
-  onVote: (campaignId: number, voteType: "upvote" | "downvote") => Promise<void>;
-  onCancel: (campaignId: number) => Promise<void>;
-  onClaimRefund: (campaignId: number) => Promise<void>;
+  userWalletAddress?: string | null;
+  onVote?: (campaignId: number, voteType: "upvote" | "downvote") => Promise<void>;
+  onCancel?: (campaignId: number) => Promise<void>;
+  onClaimRefund?: (campaignId: number) => Promise<void>;
   onTagClick?: (tag: string) => void;
   userVote?: Vote;
   upvotes?: number;
@@ -80,7 +80,9 @@ function CauseCard({
   const handleVote = async (_campaignId: number, voteType: "upvote" | "downvote") => {
     setIsVoting(true);
     try {
-      await withActionTimeout(onVote(campaign.id, voteType));
+      if (onVote) {
+        await withActionTimeout(onVote(campaign.id, voteType));
+      }
     } catch (error) {
       showError(getAsyncActionErrorMessage(error, parseContractError));
     } finally {
@@ -91,7 +93,9 @@ function CauseCard({
   const handleCancelConfirm = async () => {
     setIsCancelling(true);
     try {
-      await withActionTimeout(onCancel(campaign.id));
+      if (onCancel) {
+        await withActionTimeout(onCancel(campaign.id));
+      }
       setIsCancelModalOpen(false);
     } catch (error) {
       showError(getAsyncActionErrorMessage(error, parseContractError));
@@ -103,7 +107,9 @@ function CauseCard({
   const handleClaimRefund = async () => {
     setIsClaimingRefund(true);
     try {
-      await withActionTimeout(onClaimRefund(campaign.id));
+      if (onClaimRefund) {
+        await withActionTimeout(onClaimRefund(campaign.id));
+      }
     } catch (error) {
       showError(getAsyncActionErrorMessage(error, parseContractError));
     } finally {

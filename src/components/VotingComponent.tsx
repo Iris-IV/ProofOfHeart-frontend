@@ -10,7 +10,7 @@ import { getAsyncActionErrorMessage, withActionTimeout } from "../utils/asyncAct
 
 interface VotingComponentProps {
   campaign: Campaign;
-  userWalletAddress: string | null;
+  userWalletAddress?: string | null;
   onVote: (campaignId: number, voteType: "upvote" | "downvote") => Promise<void>;
   userVote?: Vote;
   isVoting: boolean;
