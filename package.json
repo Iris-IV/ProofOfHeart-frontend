@@ -75,7 +75,14 @@
     "axios": "1.16.1",
     "follow-redirects": "1.16.0",
     "@swc/helpers": "0.5.21",
-    "postcss": "^8.5.10"
+    "postcss": "^8.5.10",
+    "form-data": "^4.0.6",
+    "js-yaml": "^3.15.0",
+    "@babel/core": "^7.29.1",
+    "ws": "^8.21.0",
+    "webpack-bundle-analyzer": {
+      "ws": "^7.5.11"
+    }
   },
   "_overridesRationale": "axios and follow-redirects overrides are pinned to mitigate high-severity CVEs in transitive dependencies."
 }
