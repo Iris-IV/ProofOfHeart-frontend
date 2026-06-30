@@ -37,7 +37,12 @@
     "fundingHistory": "Funding/Donation History",
     "noFundingHistory": "No funding/donation activity yet.",
     "donated": "Donated {amount} XLM on {date}",
-    "campaignFallback": "Campaign #{id}"
+    "campaignFallback": "Campaign #{id}",
+    "tabOverview": "Overview",
+    "tabTransactionHistory": "Transaction History",
+    "noTransactionHistory": "No transactions recorded on this device yet.",
+    "txHash": "Tx hash",
+    "viewOnStellarExpert": "View on Stellar Expert"
   },
   "MyContributions": {
     "title": "My Contributions",
