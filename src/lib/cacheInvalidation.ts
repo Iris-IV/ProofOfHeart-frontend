@@ -4,9 +4,9 @@
  */
 
 import type { QueryClient } from "@tanstack/react-query";
-import * as StellarSdk from "@stellar/stellar-sdk";
+import { rpc, scValToNative } from "@stellar/stellar-sdk";
 
-type Api = StellarSdk.rpc.Api.EventResponse;
+type Api = rpc.Api.EventResponse;
 
 // Event topic names from the contract
 const CONTRIBUTION_MADE_TOPIC = "contribution_made";
@@ -24,7 +24,7 @@ const VERIFY_CAMPAIGN_TOPIC = "verify_campaign";
 function extractCampaignId(event: Api): number | null {
   if (event.topic.length < 2) return null;
   try {
-    return StellarSdk.scValToNative(event.topic[1]) as number;
+    return scValToNative(event.topic[1]) as number;
   } catch {
     return null;
   }
@@ -37,7 +37,7 @@ function extractCampaignId(event: Api): number | null {
 function extractContributorAddress(event: Api): string | null {
   if (event.topic.length < 3) return null;
   try {
-    const address = StellarSdk.scValToNative(event.topic[2]);
+    const address = scValToNative(event.topic[2]);
     return typeof address === "string" ? address : null;
   } catch {
     return null;
@@ -105,7 +105,7 @@ export function invalidateQueriesForEvent(
   const campaignId = extractCampaignId(event);
   if (!campaignId) return;
 
-  const topicName = StellarSdk.scValToNative(event.topic[0]) as string;
+  const topicName = scValToNative(event.topic[0]) as string;
 
   switch (topicName) {
     case CONTRIBUTION_MADE_TOPIC: {
