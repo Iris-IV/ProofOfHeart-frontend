@@ -29,6 +29,8 @@
     "balanceFetchError": "Failed to fetch balance.",
     "submittedCampaigns": "Your Submitted Campaigns",
     "noSubmittedCampaigns": "You haven't submitted any campaigns yet.",
+    "loadMore": "Load more campaigns",
+    "showingRange": "Showing {shown} of {total}",
     "votingHistory": "Voting History",
     "noVotingHistory": "No voting activity yet.",
     "upvotedOn": "Upvoted on {date}",
