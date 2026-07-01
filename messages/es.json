@@ -301,7 +301,15 @@
     "validationCreatorEmailInvalid": "Ingresa un email v\u00e1lido o deja este campo vac\u00edo.",
     "validationFundingGoalInvalid": "La meta de financiaci\u00f3n debe ser mayor que 0 XLM.",
     "validationDurationInvalid": "La duraci\u00f3n debe estar entre 1 y 365 d\u00edas.",
-    "validationRevenueShareInvalid": "La participaci\u00f3n en ingresos debe estar entre 0.01% y 50%."
+    "validationRevenueShareInvalid": "La participaci\u00f3n en ingresos debe estar entre 0.01% y 50%.",
+    "labelCoverImage": "Imagen de Portada",
+    "optional": "opcional",
+    "placeholderCoverImage": "https://ipfs.io/ipfs/... o pega una URL externa",
+    "coverImageUpload": "Subir",
+    "coverImageUploading": "Subiendo\u2026",
+    "coverImageUploadSuccess": "Imagen de portada subida a IPFS.",
+    "coverImageUploadFailed": "No se pudo subir la imagen de portada. Int\u00e9ntalo de nuevo.",
+    "coverImageHelpText": "Sube una imagen a IPFS o pega una URL de un host permitido."
   },
   "Footer": {
     "tagline": "Una plataforma de lanzamiento descentralizada donde la comunidad valida causas y las contribuciones se registran en la cadena.",

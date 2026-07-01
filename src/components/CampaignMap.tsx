@@ -68,17 +68,41 @@ export default function CampaignMap({ campaigns }: Props) {
           strokeWidth="0.8"
         >
           {/* North America */}
-          <path d="M120,80 L240,60 L280,100 L300,140 L260,180 L220,200 L180,240 L150,260 L130,220 L110,180 L90,140 Z" className="text-zinc-400 dark:text-zinc-600" fill="currentColor" />
+          <path
+            d="M120,80 L240,60 L280,100 L300,140 L260,180 L220,200 L180,240 L150,260 L130,220 L110,180 L90,140 Z"
+            className="text-zinc-400 dark:text-zinc-600"
+            fill="currentColor"
+          />
           {/* South America */}
-          <path d="M200,280 L250,260 L280,300 L270,360 L250,420 L220,440 L200,400 L190,360 L185,320 Z" className="text-zinc-400 dark:text-zinc-600" fill="currentColor" />
+          <path
+            d="M200,280 L250,260 L280,300 L270,360 L250,420 L220,440 L200,400 L190,360 L185,320 Z"
+            className="text-zinc-400 dark:text-zinc-600"
+            fill="currentColor"
+          />
           {/* Europe */}
-          <path d="M440,60 L500,50 L520,80 L510,120 L480,140 L450,130 L430,110 L420,80 Z" className="text-zinc-400 dark:text-zinc-600" fill="currentColor" />
+          <path
+            d="M440,60 L500,50 L520,80 L510,120 L480,140 L450,130 L430,110 L420,80 Z"
+            className="text-zinc-400 dark:text-zinc-600"
+            fill="currentColor"
+          />
           {/* Africa */}
-          <path d="M450,160 L510,150 L540,180 L550,240 L540,300 L520,340 L490,360 L460,340 L440,300 L430,240 L440,200 Z" className="text-zinc-400 dark:text-zinc-600" fill="currentColor" />
+          <path
+            d="M450,160 L510,150 L540,180 L550,240 L540,300 L520,340 L490,360 L460,340 L440,300 L430,240 L440,200 Z"
+            className="text-zinc-400 dark:text-zinc-600"
+            fill="currentColor"
+          />
           {/* Asia */}
-          <path d="M540,60 L720,40 L780,80 L800,130 L780,170 L740,180 L700,160 L660,170 L620,150 L580,160 L550,140 L530,110 Z" className="text-zinc-400 dark:text-zinc-600" fill="currentColor" />
+          <path
+            d="M540,60 L720,40 L780,80 L800,130 L780,170 L740,180 L700,160 L660,170 L620,150 L580,160 L550,140 L530,110 Z"
+            className="text-zinc-400 dark:text-zinc-600"
+            fill="currentColor"
+          />
           {/* Australia */}
-          <path d="M760,300 L840,290 L880,310 L870,370 L830,390 L780,380 L750,350 Z" className="text-zinc-400 dark:text-zinc-600" fill="currentColor" />
+          <path
+            d="M760,300 L840,290 L880,310 L870,370 L830,390 L780,380 L750,350 Z"
+            className="text-zinc-400 dark:text-zinc-600"
+            fill="currentColor"
+          />
         </svg>
 
         {/* Campaign pins */}
@@ -119,7 +143,8 @@ export default function CampaignMap({ campaigns }: Props) {
                     <p className="text-xs text-zinc-500">
                       {CATEGORY_LABELS[campaign.category]} ·{" "}
                       <span className="font-medium text-blue-500">
-                        {formatAmount(campaign.amount_raised)} raised
+                        {formatAmount(campaign.amount_raised, locale, { maximumFractionDigits: 2 })}{" "}
+                        raised
                       </span>
                     </p>
                   </div>
@@ -164,9 +189,7 @@ export default function CampaignMap({ campaigns }: Props) {
       )}
 
       {active.length === 0 && (
-        <div className="p-8 text-center text-sm text-zinc-400">
-          No active campaigns to display.
-        </div>
+        <div className="p-8 text-center text-sm text-zinc-400">No active campaigns to display.</div>
       )}
     </div>
   );

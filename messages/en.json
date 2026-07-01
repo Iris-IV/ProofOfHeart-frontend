@@ -301,7 +301,15 @@
     "validationCreatorEmailInvalid": "Enter a valid email address or leave this field empty.",
     "validationFundingGoalInvalid": "Funding goal must be greater than 0 XLM.",
     "validationDurationInvalid": "Duration must be between 1 and 365 days.",
-    "validationRevenueShareInvalid": "Revenue share must be between 0.01% and 50%."
+    "validationRevenueShareInvalid": "Revenue share must be between 0.01% and 50%.",
+    "labelCoverImage": "Cover Image",
+    "optional": "optional",
+    "placeholderCoverImage": "https://ipfs.io/ipfs/... or paste an external URL",
+    "coverImageUpload": "Upload",
+    "coverImageUploading": "Uploading…",
+    "coverImageUploadSuccess": "Cover image uploaded to IPFS.",
+    "coverImageUploadFailed": "Failed to upload cover image. Please try again.",
+    "coverImageHelpText": "Upload an image to IPFS or paste a URL from an allowed host."
   },
   "Footer": {
     "tagline": "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
