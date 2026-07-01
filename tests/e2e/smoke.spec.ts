@@ -11,7 +11,8 @@ test.describe("Core User Flow Smoke Test", () => {
   test("should navigate from home to causes to cause detail to dashboard", async ({ page }) => {
     // Step 1: Navigate to Home page
     await page.goto("/");
-    await expect(page).toHaveURL(/\/$/);
+    await page.waitForLoadState("networkidle");
+    await expect(page).toHaveURL(/\/(en|es)?\/?$/);
     await expect(page.locator("body")).toBeVisible();
 
     // Step 2: Navigate to Causes page

@@ -10,8 +10,9 @@ import { test, expect } from "@playwright/test";
  */
 test.describe("Critical User Journeys", () => {
   test.beforeEach(async ({ page }) => {
-    // Ensure we are in mock mode
+    // Ensure we are in mock mode; wait for the locale redirect to settle
     await page.goto("/");
+    await page.waitForLoadState("networkidle");
   });
 
   test("should connect wallet successfully", async ({ page }) => {
