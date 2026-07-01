@@ -58,9 +58,27 @@ jest.mock("@/lib/walletAdapters", () => ({
     },
   ],
   WALLET_DESCRIPTORS: {
-    freighter: { id: "freighter", name: "Freighter", description: "SDF wallet", installUrl: "https://www.freighter.app/", icon: "🚀" },
-    lobstr: { id: "lobstr", name: "LOBSTR", description: "LOBSTR wallet", installUrl: "https://lobstr.co/signer-extension/", icon: "🦞" },
-    xbull: { id: "xbull", name: "xBull", description: "xBull wallet", installUrl: "https://xbull.app/", icon: "🐂" },
+    freighter: {
+      id: "freighter",
+      name: "Freighter",
+      description: "SDF wallet",
+      installUrl: "https://www.freighter.app/",
+      icon: "🚀",
+    },
+    lobstr: {
+      id: "lobstr",
+      name: "LOBSTR",
+      description: "LOBSTR wallet",
+      installUrl: "https://lobstr.co/signer-extension/",
+      icon: "🦞",
+    },
+    xbull: {
+      id: "xbull",
+      name: "xBull",
+      description: "xBull wallet",
+      installUrl: "https://xbull.app/",
+      icon: "🐂",
+    },
   },
   getAdapter: (id: string) => {
     const adapters: Record<string, object> = {
@@ -249,9 +267,7 @@ describe("WalletContext", () => {
       fireEvent.click(screen.getByText("Select Freighter"));
     });
 
-    expect(mockShowError).toHaveBeenCalledWith(
-      expect.stringContaining("Failed to connect wallet"),
-    );
+    expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("Failed to connect wallet"));
     expect(screen.getByTestId("isLoading")).toHaveTextContent("false");
   });
 

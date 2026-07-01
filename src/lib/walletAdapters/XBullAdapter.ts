@@ -13,10 +13,7 @@ interface XBullSDK {
   }>;
   getPublicKey(): Promise<string>;
   /** Signs a transaction XDR and returns the signed XDR string. */
-  signXDR(
-    xdr: string,
-    options?: { network?: string; publicKey?: string },
-  ): Promise<string>;
+  signXDR(xdr: string, options?: { network?: string; publicKey?: string }): Promise<string>;
 }
 
 declare global {

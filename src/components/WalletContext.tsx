@@ -118,9 +118,8 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (IS_MOCK_MODE) {
-      const storedKey = typeof window !== "undefined"
-        ? localStorage.getItem(PUBLIC_KEY_STORAGE_KEY)
-        : null;
+      const storedKey =
+        typeof window !== "undefined" ? localStorage.getItem(PUBLIC_KEY_STORAGE_KEY) : null;
       if (storedKey) {
         setPublicKey(storedKey);
         setIsWalletConnected(true);
@@ -244,10 +243,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem(PUBLIC_KEY_STORAGE_KEY, key);
       localStorage.setItem(WALLET_ID_STORAGE_KEY, id);
 
-      if (
-        previousPublicKeyRef.current !== null &&
-        previousPublicKeyRef.current !== key
-      ) {
+      if (previousPublicKeyRef.current !== null && previousPublicKeyRef.current !== key) {
         invalidateWalletQueries();
       }
       previousPublicKeyRef.current = key;
