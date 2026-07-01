@@ -1,0 +1,15 @@
+allowBuilds:
+  '@parcel/watcher': set this to true or false
+  '@swc/core': set this to true or false
+  sharp: set this to true or false
+  unrs-resolver: set this to true or false
+overrides:
+  axios: "1.16.1"
+  follow-redirects: "1.16.0"
+  "@swc/helpers": "0.5.21"
+  postcss: "^8.5.10"
+  form-data: "^4.0.6"
+  js-yaml: "^3.15.0"
+  "@babel/core": "^7.29.1"
+  ws: "^8.21.0"
+  "webpack-bundle-analyzer>ws": "^7.5.11"
