@@ -29,6 +29,8 @@
     "balanceFetchError": "Error al obtener el saldo.",
     "submittedCampaigns": "Tus Campañas Enviadas",
     "noSubmittedCampaigns": "Aún no has enviado ninguna campaña.",
+    "loadMore": "Cargar más campañas",
+    "showingRange": "Mostrando {shown} de {total}",
     "votingHistory": "Historial de Votos",
     "noVotingHistory": "Aún no hay actividad de votación.",
     "upvotedOn": "Votó a favor el {date}",

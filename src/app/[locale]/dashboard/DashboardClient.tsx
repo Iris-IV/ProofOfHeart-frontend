@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import MyContributionsSection from "@/components/MyContributionsSection";
 import { Spinner, DashboardSkeleton } from "@/components/Skeleton";
 import { useWallet } from "@/components/WalletContext";
@@ -12,10 +12,13 @@ import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
 import { isSameAddress } from "@/lib/stellar";
 import { explorerTxUrl } from "@/utils/explorer";
 
+const DASHBOARD_PAGE_SIZE = 6;
+
 export default function DashboardPage() {
   const t = useTranslations("Dashboard");
   const { publicKey, isWalletConnected } = useWallet();
   const { campaigns, isLoading: campaignsLoading } = useCampaigns();
+  const [visibleSubmittedCount, setVisibleSubmittedCount] = useState(DASHBOARD_PAGE_SIZE);
   const {
     balance,
     isLoading: balanceLoading,
@@ -61,6 +64,17 @@ export default function DashboardPage() {
     () => campaigns.filter((c) => isSameAddress(c.creator, publicKey)),
     [campaigns, publicKey],
   );
+
+  useEffect(() => {
+    setVisibleSubmittedCount(DASHBOARD_PAGE_SIZE);
+  }, [publicKey, campaigns]);
+
+  const visibleSubmittedCampaigns = useMemo(
+    () => submittedCampaigns.slice(0, visibleSubmittedCount),
+    [submittedCampaigns, visibleSubmittedCount],
+  );
+
+  const hasMoreSubmittedCampaigns = visibleSubmittedCount < submittedCampaigns.length;
 
   if (!isWalletConnected || !publicKey) {
     return (
@@ -128,19 +142,41 @@ export default function DashboardPage() {
         {submittedCampaigns.length === 0 ? (
           <span className="text-zinc-500 dark:text-zinc-400">{t("noSubmittedCampaigns")}</span>
         ) : (
-          <ul className="space-y-2">
-            {submittedCampaigns.map((campaign) => (
-              <li
-                key={campaign.id}
-                className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 min-h-[60px]"
-              >
-                <div className="font-medium text-zinc-900 dark:text-zinc-50">{campaign.title}</div>
-                <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
-                  {campaign.description}
-                </div>
-              </li>
-            ))}
-          </ul>
+          <>
+            {submittedCampaigns.length > DASHBOARD_PAGE_SIZE && (
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-3">
+                {t("showingRange", { shown: visibleSubmittedCampaigns.length, total: submittedCampaigns.length })}
+              </p>
+            )}
+            <ul className="space-y-2">
+              {visibleSubmittedCampaigns.map((campaign) => (
+                <li
+                  key={campaign.id}
+                  className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 min-h-[60px]"
+                >
+                  <div className="font-medium text-zinc-900 dark:text-zinc-50">{campaign.title}</div>
+                  <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
+                    {campaign.description}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {hasMoreSubmittedCampaigns && (
+              <div className="mt-4 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setVisibleSubmittedCount((count) =>
+                      Math.min(count + DASHBOARD_PAGE_SIZE, submittedCampaigns.length),
+                    )
+                  }
+                  className="px-6 py-2.5 rounded-full text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                >
+                  {t("loadMore")}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </section>
 

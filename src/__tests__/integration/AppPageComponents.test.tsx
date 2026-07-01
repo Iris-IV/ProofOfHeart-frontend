@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type React from "react";
 import AdminClient from "@/app/[locale]/admin/AdminClient";
+import DashboardClient from "@/app/[locale]/dashboard/DashboardClient";
 import CauseDetailClient from "@/app/[locale]/causes/[id]/CauseDetailClient";
 import HomeClient from "@/app/[locale]/HomeClient";
 import { Category, type Campaign } from "@/types";
@@ -24,6 +25,8 @@ const mockConnectWallet = jest.fn();
 const mockUseWallet = jest.fn();
 const mockUseCampaign = jest.fn();
 const mockUseCampaigns = jest.fn();
+const mockUseSavedCampaigns = jest.fn();
+const mockUseStellarBalance = jest.fn();
 
 jest.mock("next/navigation", () => ({
   notFound: jest.fn(),
@@ -65,6 +68,14 @@ jest.mock("@/hooks/useCampaigns", () => ({
   useCampaigns: () => mockUseCampaigns(),
 }));
 
+jest.mock("@/hooks/useSavedCampaigns", () => ({
+  useSavedCampaigns: () => mockUseSavedCampaigns(),
+}));
+
+jest.mock("@/hooks/useStellarBalance", () => ({
+  useStellarBalance: () => mockUseStellarBalance(),
+}));
+
 jest.mock("@/hooks/usePlatformFee", () => ({
   usePlatformFee: () => ({ platformFeeBps: 300, isLoading: false, isFallback: false }),
 }));
@@ -75,6 +86,11 @@ jest.mock("@/components/ToastProvider", () => ({
     showSuccess: jest.fn(),
     showWarning: jest.fn(),
   }),
+}));
+
+jest.mock("@/components/MyContributionsSection", () => ({
+  __esModule: true,
+  default: () => <div data-testid="my-contributions" />,
 }));
 
 jest.mock("@/components/CampaignActions", () => ({
@@ -201,6 +217,12 @@ describe("app page components", () => {
       error: null,
       refetch: jest.fn(),
     });
+    mockUseSavedCampaigns.mockReturnValue({ savedIds: [] });
+    mockUseStellarBalance.mockReturnValue({
+      balance: "10",
+      isLoading: false,
+      error: null,
+    });
   });
 
   it("renders the home page campaign CTA and connects wallet before starting a campaign", async () => {
@@ -245,4 +267,27 @@ describe("app page components", () => {
     expect(screen.getByText("totalCampaigns")).toBeInTheDocument();
     expect(screen.getByText("verificationQueue")).toBeInTheDocument();
   });
+
+  it("loads additional submitted campaigns when requested on the dashboard", async () => {
+    const campaigns = Array.from({ length: 7 }, (_, index) =>
+      makeCampaign({ id: 200 + index, title: `Campaign ${index + 1}` }),
+    );
+    mockUseCampaigns.mockReturnValue({
+      campaigns,
+      isLoading: false,
+      isRefreshing: false,
+      error: null,
+      refetch: jest.fn(),
+    });
+
+    render(withQueryClient(<DashboardClient />));
+
+    expect(screen.getByText("Campaign 1")).toBeInTheDocument();
+    expect(screen.queryByText("Campaign 7")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /loadMore/i }));
+
+    expect(screen.getByText("Campaign 7")).toBeInTheDocument();
+  });
+});
 });
