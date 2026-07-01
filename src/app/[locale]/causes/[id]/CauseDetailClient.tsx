@@ -241,6 +241,8 @@ export default function CauseDetailClient({ id }: { id: string }) {
   }
 
   if (!campaign) {
+    // fetchedCampaign loaded but local state not yet synced via useEffect — show skeleton one more cycle
+    if (fetchedCampaign) return <CauseDetailSkeleton />;
     notFound();
     return null;
   }
