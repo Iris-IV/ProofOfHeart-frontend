@@ -217,7 +217,10 @@ export default function CreateCampaignPage() {
         body: formData,
       });
 
-      const payload = (await response.json().catch(() => null)) as { url?: string; message?: string } | null;
+      const payload = (await response.json().catch(() => null)) as {
+        url?: string;
+        message?: string;
+      } | null;
 
       if (!response.ok || !payload?.url) {
         throw new Error(payload?.message ?? t("coverImageUploadFailed"));
@@ -872,7 +875,9 @@ export default function CreateCampaignPage() {
                 {isUploadingCover ? t("coverImageUploading") : t("coverImageUpload")}
               </button>
             </div>
-            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1">{t("coverImageHelpText")}</p>
+            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1">
+              {t("coverImageHelpText")}
+            </p>
             {errorKeys.coverImageUrl && (
               <p id="cover-image-error" className="text-xs text-red-500 mt-1">
                 Please enter a valid URL (must start with http:// or https://).

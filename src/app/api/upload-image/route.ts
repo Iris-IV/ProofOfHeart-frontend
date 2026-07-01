@@ -33,7 +33,10 @@ export async function POST(req: NextRequest) {
 
   const validation = validateImageFile(file);
   if (!validation.valid) {
-    return NextResponse.json({ message: validation.error ?? "Invalid image file" }, { status: 400 });
+    return NextResponse.json(
+      { message: validation.error ?? "Invalid image file" },
+      { status: 400 },
+    );
   }
 
   const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "anon";

@@ -552,7 +552,9 @@ describe("CreateCampaignPage — cover image upload", () => {
       );
     });
 
-    expect(await screen.findByDisplayValue("https://ipfs.io/ipfs/QmUploadedHash")).toBeInTheDocument();
+    expect(
+      await screen.findByDisplayValue("https://ipfs.io/ipfs/QmUploadedHash"),
+    ).toBeInTheDocument();
     expect(mockShowSuccess).toHaveBeenCalledWith("coverImageUploadSuccess");
   });
 });
