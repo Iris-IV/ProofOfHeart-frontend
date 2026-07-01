@@ -76,8 +76,8 @@ test.describe("Critical User Journeys", () => {
     await approveButton.click();
 
     // 5. Verify vote confirmation message appears
-    await expect(
-      page.getByText(/You voted to approve this cause/i),
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/You voted to approve this cause/i)).toBeVisible({
+      timeout: 10000,
+    });
   });
 });
