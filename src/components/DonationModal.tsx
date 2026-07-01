@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { contribute } from "../lib/contractClient";
+import { contribute, getCampaign } from "../lib/contractClient";
 import { getEstimatedContributeNetworkFeeXlm } from "../lib/networkFee";
 import { Campaign, basisPointsToPercentage } from "../types";
 import { xlmToStroops, stroopsToXlmNumber } from "@/lib/stellarAmount";
@@ -37,10 +37,13 @@ type DonationValidationKey =
   | "invalidAmount"
   | "amountMustBePositive"
   | "invalidNumberFormat"
-  | "maxDecimalPlaces";
+  | "maxDecimalPlaces"
+  | "amountExceedsRemainingGoal"
+  | "campaignAlreadyFunded";
 
 export default function DonationModal({ campaign, onClose, onSuccess }: DonationModalProps) {
   const t = useTranslations("Donation");
+  const tModal = useTranslations("DonationModal");
   const tContractErrors = useTranslations("ContractErrors");
   const { publicKey } = useWallet();
   const { showError } = useToast();
@@ -56,13 +59,40 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
+  const [liveCampaign, setLiveCampaign] = useState<Campaign>(campaign);
+
+  useEffect(() => {
+    setLiveCampaign(campaign);
+  }, [campaign]);
+
+  useEffect(() => {
+    let active = true;
+    const poll = async () => {
+      try {
+        const updated = await getCampaign(campaign.id);
+        if (active && updated) {
+          setLiveCampaign(updated);
+        }
+      } catch {
+        // ignore polling errors
+      }
+    };
+
+    poll();
+    const interval = setInterval(poll, 2000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [campaign.id]);
+
   const localizeContractError = (message: string) =>
     message.startsWith("ContractErrors.") ? tContractErrors(message) : message;
 
   const formatError = (message: string) =>
     message.startsWith("ContractErrors.")
       ? localizeContractError(message)
-      : t(message as DonationValidationKey);
+      : tModal(message as DonationValidationKey);
 
   // Body scroll lock + focus restoration
   useEffect(() => {
@@ -111,8 +141,8 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
   }, [step, onClose]);
 
   const locale = useLocale();
-  const goal = stroopsToXlmNumber(campaign.funding_goal);
-  const raised = stroopsToXlmNumber(campaign.amount_raised);
+  const goal = stroopsToXlmNumber(liveCampaign.funding_goal);
+  const raised = stroopsToXlmNumber(liveCampaign.amount_raised);
 
   const validateAmount = (
     value: string,
@@ -149,15 +179,27 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
       return { valid: false, errorKey: "maxDecimalPlaces" };
     }
 
+    const remainingGoal = Math.max(0, goal - raised);
+    if (remainingGoal === 0) {
+      return { valid: false, errorKey: "campaignAlreadyFunded" };
+    }
+
+    if (parsed > remainingGoal) {
+      return { valid: false, errorKey: "amountExceedsRemainingGoal" };
+    }
+
     return { valid: true, amount: parsed };
   };
 
   const validation = validateAmount(amount);
+  const isFullyFunded = raised >= goal;
   const amountError =
     error ||
-    (amount.trim() && !validation.valid
-      ? validation.errorKey || "Please enter a valid amount."
-      : null);
+    (isFullyFunded
+      ? "campaignAlreadyFunded"
+      : amount.trim() && !validation.valid
+        ? validation.errorKey || "Please enter a valid amount."
+        : null);
   const amountNum = validation.amount || 0;
   const newRaised = raised + amountNum;
   const newPct = goal > 0 ? Math.min(100, Math.round((newRaised / goal) * 100)) : 0;
@@ -265,8 +307,8 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
             <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
               <span>{t("percentFunded", { percent: currentPct })}</span>
               <span>
-                {formatAmount(campaign.amount_raised, locale, { maximumFractionDigits: 2 })} /{" "}
-                {formatAmount(campaign.funding_goal, locale, { maximumFractionDigits: 2 })} XLM
+                {formatAmount(liveCampaign.amount_raised, locale, { maximumFractionDigits: 2 })} /{" "}
+                {formatAmount(liveCampaign.funding_goal, locale, { maximumFractionDigits: 2 })} XLM
               </span>
             </div>
             <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
@@ -295,6 +337,7 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
                     value={amount}
                     aria-describedby={amountError ? "donation-amount-error" : undefined}
                     aria-invalid={amountError ? "true" : "false"}
+                    disabled={isFullyFunded}
                     onChange={(e) => {
                       setAmount(e.target.value);
                       setError(null);
@@ -303,13 +346,17 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
                       }
                     }}
                     placeholder={t("amountPlaceholder")}
-                    className="w-full px-4 py-3 pr-16 rounded-xl border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    className="w-full px-4 py-3 pr-16 rounded-xl border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-zinc-400">
                     XLM
                   </span>
                 </div>
-                {error && <p className="mt-1 text-xs text-red-500">{formatError(error)}</p>}
+                {amountError && (
+                  <p id="donation-amount-error" role="alert" className="mt-1 text-xs text-red-500">
+                    {formatError(amountError)}
+                  </p>
+                )}
               </div>
 
               {amountNum > 0 && (
