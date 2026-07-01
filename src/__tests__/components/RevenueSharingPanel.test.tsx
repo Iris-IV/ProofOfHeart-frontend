@@ -61,6 +61,8 @@ function mockWallet(publicKey: string | null) {
     publicKey,
     connectWallet: jest.fn(),
     disconnectWallet: jest.fn(),
+    signTransaction: jest.fn(),
+    activeWalletId: null,
     isWalletConnected: !!publicKey,
     isLoading: false,
     walletNetworkWarning: null,
