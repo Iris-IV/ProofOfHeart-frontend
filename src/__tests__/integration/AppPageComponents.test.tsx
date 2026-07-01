@@ -290,4 +290,3 @@ describe("app page components", () => {
     expect(screen.getByText("Campaign 7")).toBeInTheDocument();
   });
 });
-});
