@@ -59,7 +59,7 @@ const WalletSelectModal: React.FC<WalletSelectModalProps> = ({
         </div>
 
         {/* Wallet options */}
-        <ul className="space-y-3" role="list">
+        <ul className="space-y-3">
           {ALL_ADAPTERS.map((adapter) => {
             const descriptor = WALLET_DESCRIPTORS[adapter.id];
             const available = adapter.isAvailable();
