@@ -42,6 +42,10 @@ import { parseContractError } from "@/utils/contractErrors";
 import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncAction";
 import { trackViewCampaign } from "@/lib/analytics";
 import { formatXlm, formatDate } from "@/lib/formatters";
+import { isSameAddress } from "@/lib/stellar";
+const EditCampaignMetadata = dynamic(() => import("@/components/EditCampaignMetadata"), {
+  ssr: false,
+});
 
 export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
@@ -237,9 +241,14 @@ export default function CauseDetailClient({ id }: { id: string }) {
   }
 
   if (!campaign) {
+    // fetchedCampaign loaded but local state not yet synced via useEffect — show skeleton one more cycle
+    if (fetchedCampaign) return <CauseDetailSkeleton />;
     notFound();
     return null;
   }
+
+  const isCreator = userWalletAddress ? isSameAddress(campaign.creator, userWalletAddress) : false;
+  const canEdit = isCreator && !campaign.is_verified && !campaign.is_cancelled;
 
   const raised = stroopsToXlmNumber(campaign.amount_raised);
   const goal = stroopsToXlmNumber(campaign.funding_goal);
@@ -328,6 +337,15 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 )}
               </div>
 
+              {canEdit && (
+                <EditCampaignMetadata
+                  campaignId={campaign.id}
+                  initialTitle={campaign.title}
+                  initialDescription={campaign.description}
+                  initialCoverImageUrl={campaign.cover_image_url ?? ""}
+                />
+              )}
+
               {/* Share + Report toolbar */}
               <div className="flex items-center justify-between flex-wrap gap-3 pt-4 mt-4 border-t border-zinc-100 dark:border-zinc-700">
                 <div className="flex items-center gap-4">
@@ -338,6 +356,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                         : `https://proofofheart.org/causes/${campaign.id}`
                     }
                     title={campaign.title}
+                    walletAddress={campaign.creator}
                   />
                   <button
                     onClick={() => {
