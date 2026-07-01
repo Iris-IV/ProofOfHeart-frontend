@@ -1,6 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import MyContributionsSection from "@/components/MyContributionsSection";
 import { useContributions, type ContributionHistoryItem } from "@/hooks/useContributions";
+import { claimAllRefunds } from "@/lib/contractClient";
 import { Category, type Campaign } from "@/types";
 
 jest.mock("@/hooks/useContributions", () => ({
@@ -9,6 +11,7 @@ jest.mock("@/hooks/useContributions", () => ({
 
 jest.mock("@/lib/contractClient", () => ({
   claimRefund: jest.fn(),
+  claimAllRefunds: jest.fn(),
   claimRevenue: jest.fn(),
 }));
 
@@ -20,6 +23,7 @@ jest.mock("@/components/ToastProvider", () => ({
 }));
 
 const mockUseContributions = useContributions as jest.MockedFunction<typeof useContributions>;
+const mockClaimAllRefunds = claimAllRefunds as jest.MockedFunction<typeof claimAllRefunds>;
 
 const WALLET = "GCONTRIBUTOR";
 
@@ -153,6 +157,59 @@ describe("MyContributionsSection", () => {
       within(revenueCard!).queryByRole("button", { name: "claimRefund" }),
     ).not.toBeInTheDocument();
     expect(within(revenueCard!).getByRole("button", { name: "claimRevenue" })).toBeInTheDocument();
+  });
+
+  it("does not show claim all when only one refund is available", () => {
+    renderSection([
+      makeContribution({
+        campaign: makeCampaign({ id: 2, title: "Refundable campaign", status: "cancelled" }),
+        canClaimRefund: true,
+      }),
+    ]);
+
+    expect(screen.queryByRole("button", { name: "claimAll" })).not.toBeInTheDocument();
+  });
+
+  it("shows claim all when multiple refunds are available", () => {
+    renderSection([
+      makeContribution({
+        campaign: makeCampaign({ id: 2, title: "Refundable campaign A", status: "cancelled" }),
+        canClaimRefund: true,
+      }),
+      makeContribution({
+        campaign: makeCampaign({ id: 4, title: "Refundable campaign B", status: "failed" }),
+        canClaimRefund: true,
+      }),
+    ]);
+
+    expect(screen.getByRole("button", { name: "claimAll" })).toBeInTheDocument();
+  });
+
+  it("batches claim refunds through claimAllRefunds", async () => {
+    mockClaimAllRefunds.mockResolvedValue(["tx-1", "tx-2"]);
+    const user = userEvent.setup();
+
+    renderSection([
+      makeContribution({
+        campaign: makeCampaign({ id: 2, title: "Refundable campaign A", status: "cancelled" }),
+        canClaimRefund: true,
+      }),
+      makeContribution({
+        campaign: makeCampaign({ id: 4, title: "Refundable campaign B", status: "failed" }),
+        canClaimRefund: true,
+      }),
+    ]);
+
+    await user.click(screen.getByRole("button", { name: "claimAll" }));
+
+    expect(mockClaimAllRefunds).toHaveBeenCalledWith(
+      [2, 4],
+      WALLET,
+      expect.objectContaining({
+        onStatus: expect.any(Function),
+        onProgress: expect.any(Function),
+      }),
+    );
   });
 
   it("renders Stellar explorer transaction links for contribution history", () => {

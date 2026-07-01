@@ -9,6 +9,8 @@
     "dev": "next dev",
     "build": "node ./scripts/validate-production-build.mjs && next build",
     "start": "next start",
+    "prepare:standalone": "cp -r public .next/standalone/ && cp -r .next/static .next/standalone/.next/static",
+    "start:e2e": "node .next/standalone/server.js",
     "lint": "eslint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

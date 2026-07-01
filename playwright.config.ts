@@ -44,7 +44,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: "npm run start",
+    command: process.env.CI ? "npm run start:e2e" : "npm run start",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
@@ -52,6 +52,8 @@ export default defineConfig({
     stderr: "pipe",
     env: {
       NEXT_PUBLIC_USE_MOCKS: "true",
+      PORT: "3000",
+      HOSTNAME: "0.0.0.0",
     },
   },
 });

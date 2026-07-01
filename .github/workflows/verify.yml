@@ -32,6 +32,9 @@ jobs:
           NEXT_PUBLIC_USE_MOCKS: "true"
           SKIP_MOCK_CHECK: "true"
 
+      - name: Prepare standalone server for E2E
+        run: npm run prepare:standalone
+
       - name: Run Playwright tests
         run: npm run test:e2e
         env:

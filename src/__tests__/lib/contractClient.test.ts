@@ -285,6 +285,10 @@ describe("contractClient", () => {
     expect(await module.withdrawFunds(1)).toBe("mock_tx_withdraw_funds");
     expect(await module.cancelCampaign(1)).toBe("mock_tx_cancel_campaign");
     expect(await module.claimRefund(1, TEST_USER)).toBe("mock_tx_claim_refund");
+    expect(await module.claimAllRefunds([1, 2], TEST_USER)).toEqual([
+      "mock_tx_claim_refund",
+      "mock_tx_claim_refund",
+    ]);
     expect(await module.depositRevenue(1, BigInt(50))).toBe("mock_tx_deposit_revenue");
     expect(await module.claimRevenue(1, TEST_USER)).toBe("mock_tx_claim_revenue");
     expect(await module.verifyCampaign(1)).toBe("mock_tx_verify_campaign");
@@ -377,6 +381,10 @@ describe("contractClient", () => {
     expect(await module.withdrawFunds(1)).toMatch(/^hash-/);
     expect(await module.cancelCampaign(1)).toMatch(/^hash-/);
     expect(await module.claimRefund(1, TEST_USER)).toMatch(/^hash-/);
+    expect(await module.claimAllRefunds([1, 2], TEST_USER)).toEqual([
+      expect.stringMatching(/^hash-/),
+      expect.stringMatching(/^hash-/),
+    ]);
     expect(await module.depositRevenue(1, BigInt(80_000_000))).toMatch(/^hash-/);
     expect(await module.claimRevenue(1, TEST_USER)).toMatch(/^hash-/);
     expect(await module.verifyCampaign(1)).toMatch(/^hash-/);
