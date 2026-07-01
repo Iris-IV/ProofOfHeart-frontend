@@ -83,9 +83,7 @@ export default function AdminTwoFactorSetup({ adminAddress }: Props) {
       <div className="rounded-[2rem] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-8 shadow-sm">
         <div className="flex items-center gap-3 mb-6">
           <ShieldCheck className="text-emerald-500" size={24} />
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-            Scan QR Code
-          </h2>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Scan QR Code</h2>
         </div>
 
         {/* QR placeholder — rendered as a grid pattern until a real QR library is wired */}
@@ -96,34 +94,123 @@ export default function AdminTwoFactorSetup({ adminAddress }: Props) {
           >
             <svg viewBox="0 0 9 9" className="w-32 h-32" aria-hidden="true">
               {/* Finder pattern top-left */}
-              <rect x="0" y="0" width="3" height="3" fill="currentColor" className="text-zinc-900 dark:text-zinc-100" />
+              <rect
+                x="0"
+                y="0"
+                width="3"
+                height="3"
+                fill="currentColor"
+                className="text-zinc-900 dark:text-zinc-100"
+              />
               <rect x="1" y="1" width="1" height="1" fill="white" />
               {/* Finder pattern top-right */}
-              <rect x="6" y="0" width="3" height="3" fill="currentColor" className="text-zinc-900 dark:text-zinc-100" />
+              <rect
+                x="6"
+                y="0"
+                width="3"
+                height="3"
+                fill="currentColor"
+                className="text-zinc-900 dark:text-zinc-100"
+              />
               <rect x="7" y="1" width="1" height="1" fill="white" />
               {/* Finder pattern bottom-left */}
-              <rect x="0" y="6" width="3" height="3" fill="currentColor" className="text-zinc-900 dark:text-zinc-100" />
+              <rect
+                x="0"
+                y="6"
+                width="3"
+                height="3"
+                fill="currentColor"
+                className="text-zinc-900 dark:text-zinc-100"
+              />
               <rect x="1" y="7" width="1" height="1" fill="white" />
               {/* Data modules */}
-              <rect x="4" y="1" width="1" height="1" fill="currentColor" className="text-zinc-900 dark:text-zinc-100" />
-              <rect x="4" y="3" width="1" height="1" fill="currentColor" className="text-zinc-900 dark:text-zinc-100" />
-              <rect x="3" y="4" width="1" height="1" fill="currentColor" className="text-zinc-900 dark:text-zinc-100" />
-              <rect x="5" y="4" width="1" height="1" fill="currentColor" className="text-zinc-900 dark:text-zinc-100" />
-              <rect x="4" y="5" width="1" height="1" fill="currentColor" className="text-zinc-900 dark:text-zinc-100" />
-              <rect x="4" y="7" width="1" height="1" fill="currentColor" className="text-zinc-900 dark:text-zinc-100" />
-              <rect x="6" y="5" width="1" height="1" fill="currentColor" className="text-zinc-900 dark:text-zinc-100" />
-              <rect x="7" y="6" width="1" height="1" fill="currentColor" className="text-zinc-900 dark:text-zinc-100" />
-              <rect x="6" y="7" width="1" height="1" fill="currentColor" className="text-zinc-900 dark:text-zinc-100" />
-              <rect x="8" y="7" width="1" height="1" fill="currentColor" className="text-zinc-900 dark:text-zinc-100" />
+              <rect
+                x="4"
+                y="1"
+                width="1"
+                height="1"
+                fill="currentColor"
+                className="text-zinc-900 dark:text-zinc-100"
+              />
+              <rect
+                x="4"
+                y="3"
+                width="1"
+                height="1"
+                fill="currentColor"
+                className="text-zinc-900 dark:text-zinc-100"
+              />
+              <rect
+                x="3"
+                y="4"
+                width="1"
+                height="1"
+                fill="currentColor"
+                className="text-zinc-900 dark:text-zinc-100"
+              />
+              <rect
+                x="5"
+                y="4"
+                width="1"
+                height="1"
+                fill="currentColor"
+                className="text-zinc-900 dark:text-zinc-100"
+              />
+              <rect
+                x="4"
+                y="5"
+                width="1"
+                height="1"
+                fill="currentColor"
+                className="text-zinc-900 dark:text-zinc-100"
+              />
+              <rect
+                x="4"
+                y="7"
+                width="1"
+                height="1"
+                fill="currentColor"
+                className="text-zinc-900 dark:text-zinc-100"
+              />
+              <rect
+                x="6"
+                y="5"
+                width="1"
+                height="1"
+                fill="currentColor"
+                className="text-zinc-900 dark:text-zinc-100"
+              />
+              <rect
+                x="7"
+                y="6"
+                width="1"
+                height="1"
+                fill="currentColor"
+                className="text-zinc-900 dark:text-zinc-100"
+              />
+              <rect
+                x="6"
+                y="7"
+                width="1"
+                height="1"
+                fill="currentColor"
+                className="text-zinc-900 dark:text-zinc-100"
+              />
+              <rect
+                x="8"
+                y="7"
+                width="1"
+                height="1"
+                fill="currentColor"
+                className="text-zinc-900 dark:text-zinc-100"
+              />
             </svg>
             <span className="text-[10px] text-zinc-400 text-center leading-tight">
               Scan with your authenticator app
             </span>
           </div>
 
-          <p className="text-xs text-zinc-400">
-            Can&apos;t scan? Enter this secret manually:
-          </p>
+          <p className="text-xs text-zinc-400">Can&apos;t scan? Enter this secret manually:</p>
           <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg px-3 py-2">
             <code className="text-sm font-mono text-zinc-800 dark:text-zinc-200 tracking-widest">
               {secret}
@@ -133,7 +220,11 @@ export default function AdminTwoFactorSetup({ adminAddress }: Props) {
               className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
               aria-label="Copy secret"
             >
-              {copied ? <CheckCircle2 size={14} className="text-emerald-500" /> : <Copy size={14} />}
+              {copied ? (
+                <CheckCircle2 size={14} className="text-emerald-500" />
+              ) : (
+                <Copy size={14} />
+              )}
             </button>
           </div>
 
@@ -166,9 +257,7 @@ export default function AdminTwoFactorSetup({ adminAddress }: Props) {
       <div className="rounded-[2rem] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-8 shadow-sm">
         <div className="flex items-center gap-3 mb-6">
           <ShieldCheck className="text-emerald-500" size={24} />
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-            Verify Code
-          </h2>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Verify Code</h2>
         </div>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
           Enter the 6-digit code your authenticator app shows for ProofOfHeart.
@@ -213,9 +302,7 @@ export default function AdminTwoFactorSetup({ adminAddress }: Props) {
     <div className="rounded-[2rem] border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-900/10 p-8 shadow-sm">
       <div className="flex items-center gap-3 mb-3">
         <CheckCircle2 className="text-emerald-500" size={24} />
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-          2FA Enabled
-        </h2>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">2FA Enabled</h2>
       </div>
       <p className="text-sm text-zinc-500 dark:text-zinc-400">
         Two-factor authentication is active for this admin account. You will be prompted for a TOTP
