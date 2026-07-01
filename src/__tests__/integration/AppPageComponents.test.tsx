@@ -217,7 +217,11 @@ describe("app page components", () => {
       error: null,
       refetch: jest.fn(),
     });
-    mockUseSavedCampaigns.mockReturnValue({ savedIds: [] });
+    mockUseSavedCampaigns.mockReturnValue({
+      savedIds: [],
+      isSaved: jest.fn(() => false),
+      toggleSaved: jest.fn(),
+    });
     mockUseStellarBalance.mockReturnValue({
       balance: "10",
       isLoading: false,
@@ -269,6 +273,13 @@ describe("app page components", () => {
   });
 
   it("loads additional submitted campaigns when requested on the dashboard", async () => {
+    mockUseWallet.mockReturnValue({
+      publicKey: CREATOR,
+      isWalletConnected: true,
+      connectWallet: mockConnectWallet,
+      isLoading: false,
+    });
+
     const campaigns = Array.from({ length: 7 }, (_, index) =>
       makeCampaign({ id: 200 + index, title: `Campaign ${index + 1}` }),
     );

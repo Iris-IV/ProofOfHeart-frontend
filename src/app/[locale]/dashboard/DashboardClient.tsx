@@ -145,7 +145,10 @@ export default function DashboardPage() {
           <>
             {submittedCampaigns.length > DASHBOARD_PAGE_SIZE && (
               <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-3">
-                {t("showingRange", { shown: visibleSubmittedCampaigns.length, total: submittedCampaigns.length })}
+                {t("showingRange", {
+                  shown: visibleSubmittedCampaigns.length,
+                  total: submittedCampaigns.length,
+                })}
               </p>
             )}
             <ul className="space-y-2">
@@ -154,7 +157,9 @@ export default function DashboardPage() {
                   key={campaign.id}
                   className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 min-h-[60px]"
                 >
-                  <div className="font-medium text-zinc-900 dark:text-zinc-50">{campaign.title}</div>
+                  <div className="font-medium text-zinc-900 dark:text-zinc-50">
+                    {campaign.title}
+                  </div>
                   <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
                     {campaign.description}
                   </div>
