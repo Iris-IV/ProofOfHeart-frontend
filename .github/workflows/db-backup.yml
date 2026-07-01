@@ -1,0 +1,47 @@
+name: Database Backup
+
+on:
+  schedule:
+    # Daily at 02:00 UTC
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    name: Export off-chain data to cloud storage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Export admin audit log
+        run: |
+          curl -fsSL \
+            -H "Authorization: Bearer ${{ secrets.BACKUP_AUTH_TOKEN }}" \
+            "${{ secrets.APP_API_BASE_URL }}/api/admin-audit-log" \
+            -o admin-audit-log.json
+
+      - name: Export campaign reports
+        run: |
+          curl -fsSL \
+            -H "Authorization: Bearer ${{ secrets.BACKUP_AUTH_TOKEN }}" \
+            "${{ secrets.APP_API_BASE_URL }}/api/reports" \
+            -o campaign-reports.json
+
+      - name: Upload to cloud storage
+        env:
+          BACKUP_STORAGE_URL: ${{ secrets.BACKUP_STORAGE_URL }}
+          BACKUP_STORAGE_KEY: ${{ secrets.BACKUP_STORAGE_KEY }}
+        run: |
+          TIMESTAMP=$(date -u +"%Y%m%d-%H%M%S")
+          DEST="${BACKUP_STORAGE_URL}/daily/${TIMESTAMP}"
+          # Replace with your cloud CLI (aws s3 cp, gsutil cp, rclone, etc.)
+          echo "Would upload admin-audit-log.json and campaign-reports.json to ${DEST}"
+          echo "Configure BACKUP_STORAGE_URL and BACKUP_STORAGE_KEY secrets to enable."
+
+      - name: Prune backups older than 30 days
+        env:
+          BACKUP_STORAGE_URL: ${{ secrets.BACKUP_STORAGE_URL }}
+          BACKUP_STORAGE_KEY: ${{ secrets.BACKUP_STORAGE_KEY }}
+        run: |
+          echo "Pruning backups older than 30 days from ${BACKUP_STORAGE_URL}/daily/"
+          # Add your cloud CLI prune/lifecycle command here.
