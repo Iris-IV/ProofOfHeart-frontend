@@ -40,8 +40,8 @@ test.describe("Core User Flow Smoke Test", () => {
       await causeCard.click();
       await page.waitForURL(/\/causes\/[^/]+$/);
     } else {
-      // Fallback: navigate to a known cause ID
-      await page.goto("/causes/1");
+      // Fallback: use locale-prefixed path to avoid redirect interruption
+      await page.goto("/en/causes/1");
     }
     await expect(page).toHaveURL(/\/causes\/[^/]+$/);
     await expect(page.locator("body")).toBeVisible();
