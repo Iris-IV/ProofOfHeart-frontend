@@ -109,7 +109,7 @@ export default function Footer() {
 
         <div className="mt-10 flex flex-col gap-2 border-t border-black/5 pt-6 text-sm text-zinc-500 dark:border-white/10 dark:text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
           <p>{t("rights", { year })}</p>
-          <p className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
             <span>{t("builtWith")}</span>
             <div className="flex items-center gap-1.5">
               {process.env.NEXT_PUBLIC_APP_VERSION && (
@@ -122,11 +122,10 @@ export default function Footer() {
               )}
               {!isLoading && version !== null && (
                 <span
-                  className={`flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] uppercase font-bold ${
-                    isMismatch
+                  className={`flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] uppercase font-bold ${isMismatch
                       ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800"
                       : "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-100/50 dark:border-blue-800/50"
-                  }`}
+                    }`}
                   title={
                     isMismatch
                       ? "Contract version mismatch! Unexpected behavior may occur."
@@ -137,7 +136,7 @@ export default function Footer() {
                 </span>
               )}
             </div>
-          </p>
+          </div>
         </div>
       </div>
     </footer>
