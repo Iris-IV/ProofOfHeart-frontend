@@ -310,11 +310,7 @@ export default function DonationModal({ campaign, onClose, onSuccess }: Donation
                   </span>
                 </div>
                 {amountError && (
-                  <p
-                    id="donation-amount-error"
-                    role="alert"
-                    className="mt-1 text-xs text-red-500"
-                  >
+                  <p id="donation-amount-error" role="alert" className="mt-1 text-xs text-red-500">
                     {formatError(amountError)}
                   </p>
                 )}
