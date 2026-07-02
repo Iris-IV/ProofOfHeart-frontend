@@ -34,16 +34,16 @@ export default meta;
 type Story = StoryObj<typeof DonationModal>;
 
 function ModalWrapper(props: React.ComponentProps<typeof DonationModal>) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [open, setOpen] = useState(true);
   return (
     <>
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={() => setOpen(true)}
         className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium"
       >
         Open Donation Modal
       </button>
-      <DonationModal {...props} isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      {open && <DonationModal {...props} onClose={() => setOpen(false)} />}
     </>
   );
 }
@@ -52,9 +52,8 @@ export const Default: Story = {
   render: (args) => <ModalWrapper {...args} />,
   args: {
     campaign: activeCampaign,
-    isOpen: true,
     onClose: () => {},
-    onDonationSuccess: () => {},
+    onSuccess: () => {},
   },
 };
 
@@ -67,8 +66,7 @@ export const WithRevenueSharing: Story = {
       revenue_share_percentage: 300,
       category: Category.EducationalStartup,
     },
-    isOpen: true,
     onClose: () => {},
-    onDonationSuccess: () => {},
+    onSuccess: () => {},
   },
 };

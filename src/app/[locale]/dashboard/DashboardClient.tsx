@@ -131,18 +131,12 @@ export default function DashboardPage() {
         ) : (
           <ul className="space-y-4">
             {submittedCampaigns.map((campaign) => (
-              <li
-                key={campaign.id}
-                className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900"
-              >
+              <li key={campaign.id} className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900">
                 <div className="font-medium text-zinc-900 dark:text-zinc-50">{campaign.title}</div>
                 <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
                   {campaign.description}
                 </div>
-                <MultiSigWithdrawalPanel
-                  campaign={campaign}
-                  walletAddress={publicKey}
-                />
+                <MultiSigWithdrawalPanel campaign={campaign} walletAddress={publicKey} />
               </li>
             ))}
           </ul>
