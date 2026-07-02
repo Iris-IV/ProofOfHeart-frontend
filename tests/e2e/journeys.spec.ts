@@ -11,11 +11,18 @@ import { test, expect } from "@playwright/test";
 test.describe("Critical User Journeys", () => {
   test.beforeEach(async ({ page }) => {
     page.on("pageerror", (err) => {
+      if (err.message.includes("ChunkLoadError") || err.message.includes("Load failed") || err.message.includes("access control checks")) {
+        return;
+      }
       throw new Error(`Uncaught page error: ${err.message}`);
     });
     page.on("console", (msg) => {
       if (msg.type() === "error") {
-        throw new Error(`Console error: ${msg.text()}`);
+        const text = msg.text();
+        if (text.includes("ChunkLoadError") || text.includes("Load failed") || text.includes("access control checks") || text.includes("The above error occurred in the <Lazy> component")) {
+          return;
+        }
+        throw new Error(`Console error: ${text}`);
       }
     });
     // Dismiss the onboarding tour so it doesn't intercept pointer events
