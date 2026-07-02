@@ -15,6 +15,9 @@ test.describe("Core User Flow Smoke Test", () => {
     });
 
     // Step 1: Navigate to Home page
+    await page.goto("/", { waitUntil: "networkidle" });
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page).toHaveURL(/\/$/);
     await page.goto("/");
     await page.waitForLoadState("networkidle");
     await expect(page).toHaveURL(/\/(en|es)?\/?$/);
@@ -23,17 +26,32 @@ test.describe("Core User Flow Smoke Test", () => {
     // Step 2: Navigate to Causes page
     // Look for navigation link or directly navigate
     const causesLink = page.locator('a[href*="causes"]').first();
-    if (await causesLink.isVisible()) {
+    const isVisible = await causesLink.isVisible({ timeout: 5000 }).catch(() => false);
+    if (isVisible) {
       await causesLink.click();
       await page.waitForURL(/\/causes/);
+      await page.waitForLoadState("domcontentloaded");
     } else {
       // Fallback: direct navigation if nav link not found
-      await page.goto("/causes");
+      await page.goto("/causes", { waitUntil: "networkidle" });
+      await page.waitForLoadState("domcontentloaded");
     }
     await expect(page).toHaveURL(/\/causes/);
     await expect(page.locator("body")).toBeVisible();
 
     // Step 3: Navigate to a specific Cause Detail page
+    // Find the first cause card/link and click it
+    const causeCard = page.locator('[data-testid="cause-card"], a[href*="/causes/"]').first();
+    const cardVisible = await causeCard.isVisible({ timeout: 5000 }).catch(() => false);
+    if (cardVisible) {
+      await causeCard.click();
+      await page.waitForURL(/\/causes\/[^/]+$/);
+      await page.waitForLoadState("domcontentloaded");
+    } else {
+      // Fallback: navigate to a known cause ID
+      await page.goto("/causes/1", { waitUntil: "networkidle" });
+      await page.waitForLoadState("domcontentloaded");
+    }
     // CauseCard renders no anchor links to detail pages, so navigate directly.
     // Wait for networkidle first so CausesClient's router.replace URL-sync
     // doesn't interrupt the next navigation (especially on webkit/firefox).
@@ -45,12 +63,15 @@ test.describe("Core User Flow Smoke Test", () => {
 
     // Step 4: Navigate to Dashboard
     const dashboardLink = page.locator('a[href*="dashboard"]').first();
-    if (await dashboardLink.isVisible()) {
+    const dashboardVisible = await dashboardLink.isVisible({ timeout: 5000 }).catch(() => false);
+    if (dashboardVisible) {
       await dashboardLink.click();
       await page.waitForURL(/\/dashboard/);
+      await page.waitForLoadState("domcontentloaded");
     } else {
       // Fallback: direct navigation
-      await page.goto("/dashboard");
+      await page.goto("/dashboard", { waitUntil: "networkidle" });
+      await page.waitForLoadState("domcontentloaded");
     }
     await expect(page).toHaveURL(/\/dashboard/);
     await expect(page.locator("body")).toBeVisible();
