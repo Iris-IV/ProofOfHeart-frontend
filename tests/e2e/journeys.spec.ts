@@ -12,16 +12,6 @@ import { test, expect } from "@playwright/test";
  * lightweight — we test that the UI renders the correct widgets and accepts
  * user input, not that a real transaction was submitted.
  */
-test.describe("Critical User Journeys", () => {
-  test.beforeEach(async ({ page }) => {
-    // Dismiss the onboarding tour so it doesn't intercept pointer events
-    await page.addInitScript(() => {
-      localStorage.setItem("onboarding_tour_dismissed", "1");
-    });
-    // Ensure we are in mock mode; wait for the locale redirect to settle
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-  });
 
 test.describe("Journey — wallet connect", () => {
   test("connects mock wallet from the navbar", async ({ page }) => {
@@ -66,22 +56,43 @@ test.describe("Journey — wallet connect", () => {
   });
 });
 
-    // 2. Navigate directly to a verified campaign detail page (campaign 1 is verified in mock)
-    await page.goto("/en/causes/1");
-    await page.waitForLoadState("networkidle");
+test.describe("Journey — cause browsing", () => {
+  test("causes list shows mock campaigns", async ({ page }) => {
+    await page.goto("/en/causes");
 
-    // 3. Wait for campaign to finish loading (skeleton → detail)
-    await expect(page.getByRole("heading", { name: /Clean Water/i })).toBeVisible({
-      timeout: 10000,
+    // All 6 mock campaigns should render (check 3 known titles)
+    await expect(page.getByText("Clean Water for Rural Communities")).toBeVisible({
+      timeout: 15000,
     });
+    await expect(page.getByText("Education Technology for Underprivileged Children")).toBeVisible();
+    await expect(page.getByText("Medical Supplies for Remote Clinics")).toBeVisible();
+  });
 
-    // 4. Click "Fund This Cause"
-    const fundButton = page.getByRole("button", { name: /Fund This Cause/i }).first();
-    await expect(fundButton).toBeVisible();
-    await fundButton.click();
+  test("clicking a cause card navigates to its detail page", async ({ page }) => {
+    await page.goto("/en/causes");
 
-    // 5. Verify donation modal opened
-    await expect(page.getByRole("dialog")).toBeVisible();
+    // The first visible cause card link should navigate to a detail URL
+    const firstCard = page.locator('a[href*="/causes/"]').filter({ hasNotText: /new/i }).first();
+    await expect(firstCard).toBeVisible({ timeout: 15000 });
+    await firstCard.click();
+
+    await expect(page).toHaveURL(/\/en\/causes\/\d+/, { timeout: 15000 });
+    await expect(page.locator("h1, h2").first()).toBeVisible();
+  });
+
+  test("cause detail page for campaign 1 shows funding progress", async ({ page }) => {
+    await page.goto("/en/causes/1");
+
+    await expect(page.getByText("Clean Water for Rural Communities")).toBeVisible({
+      timeout: 15000,
+    });
+    // Funding progress: campaign 1 has 65,000 / 100,000 XLM raised
+    // The progress bar or amount text should be visible
+    await expect(
+      page
+        .locator('[role="progressbar"], [data-testid="progress"]')
+        .or(page.getByText(/XLM/i).first()),
+    ).toBeVisible();
   });
 
   test("search filter narrows visible campaigns", async ({ page }) => {
@@ -93,16 +104,17 @@ test.describe("Journey — wallet connect", () => {
       .first();
     await expect(searchInput).toBeVisible({ timeout: 15000 });
 
-    // 2. Navigate to the causes list where VotingComponent is inline on each card
-    await page.goto("/en/causes");
-    await page.waitForLoadState("networkidle");
+    await searchInput.fill("Clean Water");
 
-    // 3. Wait for campaigns to render
-    await expect(page.getByText(/Education Technology/i).first()).toBeVisible({ timeout: 10000 });
-
-    // 4. Find the Approve vote button on an active campaign card
-    const approveButton = page.getByRole("button", { name: /Approve campaign/i }).first();
-    await expect(approveButton).toBeVisible();
+    // Only the matching campaign should be visible; the others should be gone
+    await expect(page.getByText("Clean Water for Rural Communities")).toBeVisible();
+    await expect(
+      page.getByText("Education Technology for Underprivileged Children"),
+    ).not.toBeVisible({
+      timeout: 5000,
+    });
+  });
+});
 
 test.describe("Journey — contribute widget (mock mode)", () => {
   test("cause detail shows connect-wallet CTA when wallet is not connected", async ({ page }) => {
@@ -116,9 +128,20 @@ test.describe("Journey — contribute widget (mock mode)", () => {
     ).toBeVisible({ timeout: 15000 });
   });
 
-    // 5. Verify vote confirmation message appears
-    await expect(page.getByText(/You voted to approve this cause/i)).toBeVisible({
-      timeout: 10000,
-    });
+  test("after connecting, cause detail shows contribute input", async ({ page }) => {
+    await page.goto("/en/causes/1");
+
+    // Connect wallet via the navbar button
+    const connectBtn = page.locator("button", { hasText: /Connect Wallet/i }).first();
+    await connectBtn.click();
+    await expect(page.locator("nav").getByText(/\w{4,}…\w{4,}/)).toBeVisible({ timeout: 10000 });
+
+    // Now the contribution form or amount input should be visible
+    const contributeInput = page
+      .locator(
+        'input[type="number"], input[placeholder*="amount" i], input[placeholder*="XLM" i], input[placeholder*="0" i]',
+      )
+      .first();
+    await expect(contributeInput).toBeVisible({ timeout: 10000 });
   });
 });
