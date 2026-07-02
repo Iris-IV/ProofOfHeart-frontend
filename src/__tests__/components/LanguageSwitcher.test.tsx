@@ -4,15 +4,20 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const mockReplace = jest.fn();
 
-jest.mock("next-intl", () => ({
-  useLocale: () => "en",
-  useTranslations: () => (key: string, values?: Record<string, string>) => {
+// Use a stable t function reference so React's useEffect dep comparison doesn't
+// see a new function on every render (which would overwrite the live-region text).
+jest.mock("next-intl", () => {
+  const t = (key: string, values?: Record<string, string>) => {
     if (key === "selectLanguage") return "Select language";
     if (key === "currentLanguage") return `Current language: ${values?.language}`;
     if (key === "languageChanged") return `Language changed to ${values?.language}`;
     return key;
-  },
-}));
+  };
+  return {
+    useLocale: () => "en",
+    useTranslations: () => t,
+  };
+});
 
 jest.mock("@/i18n/routing", () => ({
   useRouter: () => ({ replace: mockReplace }),

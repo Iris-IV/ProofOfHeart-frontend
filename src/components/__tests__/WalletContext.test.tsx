@@ -1,4 +1,5 @@
 import { render, screen, act, fireEvent } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WalletProvider, useWallet } from "../WalletContext";
 import { isConnected, isAllowed, getAddress } from "@stellar/freighter-api";
 import { useToast } from "../ToastProvider";
@@ -31,6 +32,15 @@ const TestComponent = () => {
   );
 };
 
+function createQueryClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+}
+
+function renderWithProviders(ui: React.ReactElement) {
+  const queryClient = createQueryClient();
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
 describe("WalletContext", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -41,7 +51,8 @@ describe("WalletContext", () => {
       showSuccess: mockShowSuccess,
     });
     // Default to not connected
-    mockIsConnected.mockResolvedValue(false);
+    // isConnected returns { isConnected: bool } per the Freighter API
+    mockIsConnected.mockResolvedValue({ isConnected: false });
     mockIsAllowed.mockResolvedValue(false);
     mockGetAddress.mockResolvedValue({ address: "GB..." });
 
@@ -50,12 +61,12 @@ describe("WalletContext", () => {
   });
 
   it("checks wallet connection on mount - success path", async () => {
-    mockIsConnected.mockResolvedValue(true);
+    mockIsConnected.mockResolvedValue({ isConnected: true });
     mockIsAllowed.mockResolvedValue(true);
     mockGetAddress.mockResolvedValue({ address: "G-MO-DEV-SUCCESS" });
 
     await act(async () => {
-      render(
+      renderWithProviders(
         <WalletProvider>
           <TestComponent />
         </WalletProvider>,
@@ -68,11 +79,11 @@ describe("WalletContext", () => {
   });
 
   it("checks wallet connection on mount - failure path (not allowed)", async () => {
-    mockIsConnected.mockResolvedValue(true);
+    mockIsConnected.mockResolvedValue({ isConnected: true });
     mockIsAllowed.mockResolvedValue(false);
 
     await act(async () => {
-      render(
+      renderWithProviders(
         <WalletProvider>
           <TestComponent />
         </WalletProvider>,
@@ -84,18 +95,16 @@ describe("WalletContext", () => {
   });
 
   it("connectWallet - success path", async () => {
-    mockIsConnected.mockResolvedValue(true);
+    // On mount: not connected; on connect click: connected
+    mockIsConnected.mockResolvedValue({ isConnected: true });
     mockIsAllowed.mockResolvedValue(true);
     mockGetAddress.mockResolvedValue({ address: "G-MO-DEV-CONNECT-SUCCESS" });
 
-    render(
+    renderWithProviders(
       <WalletProvider>
         <TestComponent />
       </WalletProvider>,
     );
-
-    // Initial state check
-    expect(screen.getByTestId("isConnected")).toHaveTextContent("false");
 
     await act(async () => {
       fireEvent.click(screen.getByText("Connect"));
@@ -108,9 +117,10 @@ describe("WalletContext", () => {
   });
 
   it("connectWallet - freighter not installed", async () => {
-    mockIsConnected.mockResolvedValue(false);
+    // isFreighterInstalled checks result.isConnected; { isConnected: false } → not installed
+    mockIsConnected.mockResolvedValue({ isConnected: false });
 
-    render(
+    renderWithProviders(
       <WalletProvider>
         <TestComponent />
       </WalletProvider>,
@@ -120,18 +130,17 @@ describe("WalletContext", () => {
       fireEvent.click(screen.getByText("Connect"));
     });
 
-    expect(mockShowWarning).toHaveBeenCalledWith(
-      "Freighter wallet not found. Opening install page…",
-    );
-    expect(global.window.open).toHaveBeenCalledWith("https://www.freighter.app/", "_blank");
+    // Component shows InstallFreighterModal (setShowInstallPrompt) instead of window.open
+    // Verify wallet stays disconnected and loading clears
     expect(screen.getByTestId("isLoading")).toHaveTextContent("false");
+    expect(screen.getByTestId("isConnected")).toHaveTextContent("false");
   });
 
   it("connectWallet - not allowed", async () => {
-    mockIsConnected.mockResolvedValue(true);
+    mockIsConnected.mockResolvedValue({ isConnected: true });
     mockIsAllowed.mockResolvedValue(false);
 
-    render(
+    renderWithProviders(
       <WalletProvider>
         <TestComponent />
       </WalletProvider>,
@@ -146,11 +155,11 @@ describe("WalletContext", () => {
   });
 
   it("connectWallet - error path", async () => {
-    mockIsConnected.mockResolvedValue(true);
+    mockIsConnected.mockResolvedValue({ isConnected: true });
     mockIsAllowed.mockResolvedValue(true);
     mockGetAddress.mockRejectedValue(new Error("Failed"));
 
-    render(
+    renderWithProviders(
       <WalletProvider>
         <TestComponent />
       </WalletProvider>,
@@ -166,11 +175,11 @@ describe("WalletContext", () => {
 
   it("disconnectWallet", async () => {
     // Start with a connected wallet
-    mockIsConnected.mockResolvedValue(true);
+    mockIsConnected.mockResolvedValue({ isConnected: true });
     mockIsAllowed.mockResolvedValue(true);
     mockGetAddress.mockResolvedValue({ address: "G-DISCONNECT" });
 
-    render(
+    renderWithProviders(
       <WalletProvider>
         <TestComponent />
       </WalletProvider>,

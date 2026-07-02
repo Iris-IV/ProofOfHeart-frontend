@@ -1,6 +1,23 @@
 import { render, screen } from "@testing-library/react";
 import FundingProgressBar from "@/components/FundingProgressBar";
 
+// useReducedMotion uses window.matchMedia which is not available in jsdom
+beforeAll(() => {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: jest.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  });
+});
+
 describe("FundingProgressBar", () => {
   it("renders 0% when nothing has been raised", () => {
     render(<FundingProgressBar amountRaised={BigInt(0)} fundingGoal={BigInt(100_000_000)} />);

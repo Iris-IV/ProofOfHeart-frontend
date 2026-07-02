@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { claimRefund, claimRevenue } from "../lib/contractClient";
 import { getStellarExplorerTxUrl } from "../lib/stellarExplorer";
 import { useContributions } from "../hooks/useContributions";
@@ -24,17 +25,21 @@ function formatXlmAmount(value: bigint): string {
 function getStatusLabelKey(status: string): string {
   switch (status) {
     case "active":
-      return "Active";
+      return "statusActive";
+    case "refundable":
+      return "statusRefundable";
+    case "revenue-claimable":
+      return "statusRevenueClaimable";
     case "funded":
-      return "Funded";
+      return "statusFunded";
     case "failed":
-      return "Failed";
+      return "statusFailed";
     case "cancelled":
-      return "Cancelled";
+      return "statusCancelled";
     case "verified":
-      return "Verified";
+      return "statusVerified";
     default:
-      return "Unknown";
+      return "statusUnknown";
   }
 }
 
@@ -73,6 +78,7 @@ function claimKey(campaignId: number, type: "refund" | "revenue"): ClaimKey {
 }
 
 export default function MyContributionsSection({ walletAddress }: MyContributionsSectionProps) {
+  const t = useTranslations("MyContributions");
   const { showError, showSuccess, showWarning } = useToast();
   const [pendingCampaignId, setPendingCampaignId] = useState<number | null>(null);
   const [claimStatuses, setClaimStatuses] = useState<Map<ClaimKey, ClaimStatus>>(new Map());
@@ -253,7 +259,7 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                   <span
                     className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(displayStatus)}`}
                   >
-                    {getStatusLabelKey(displayStatus)}
+                    {t(getStatusLabelKey(displayStatus))}
                   </span>
                 </div>
 
@@ -266,6 +272,7 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                   </Link>
                   {item.canClaimRefund && (
                     <button
+                      aria-label={t("claimRefund")}
                       onClick={() => handleClaimRefund(item.campaign.id)}
                       disabled={isPending || isBatchClaiming}
                       className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium text-white transition disabled:cursor-not-allowed ${
@@ -284,11 +291,12 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                           ? "Failed ✗"
                           : refundStatus === "pending"
                             ? "Claiming..."
-                            : "Claim Refund"}
+                            : t("claimRefund")}
                     </button>
                   )}
                   {item.canClaimRevenue && (
                     <button
+                      aria-label={t("claimRevenue")}
                       onClick={() => handleClaimRevenue(item.campaign.id)}
                       disabled={isPending || isBatchClaiming}
                       className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium text-white transition disabled:cursor-not-allowed ${
@@ -307,7 +315,7 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                           ? "Failed ✗"
                           : revenueStatus === "pending"
                             ? "Claiming..."
-                            : `Claim Revenue (${formatXlmAmount(item.claimableRevenue)} XLM)`}
+                            : `${t("claimRevenue")} (${formatXlmAmount(item.claimableRevenue)} XLM)`}
                     </button>
                   )}
                 </div>

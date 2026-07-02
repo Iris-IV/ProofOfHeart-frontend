@@ -113,8 +113,8 @@ describe("UpdatesList", () => {
   it("displays timestamps for each update", () => {
     render(<UpdatesList updates={mockUpdates} isLoading={false} error={null} />);
 
-    // Check that relative times are displayed
-    expect(screen.getByText(/hour ago/)).toBeInTheDocument();
-    expect(screen.getByText(/day ago/)).toBeInTheDocument();
+    // Check that relative times are displayed (abbreviated format: "1 h ago", "1 d ago")
+    expect(screen.getByText(/h ago/)).toBeInTheDocument();
+    expect(screen.getByText(/d ago/)).toBeInTheDocument();
   });
 });
