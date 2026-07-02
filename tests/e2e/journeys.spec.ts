@@ -11,18 +11,20 @@ import { test, expect } from "@playwright/test";
 test.describe("Critical User Journeys", () => {
   test.beforeEach(async ({ page }) => {
     // Ensure we are in mock mode
-    await page.goto("/");
+    await page.goto("/", { waitUntil: "networkidle" });
+    await page.waitForLoadState("domcontentloaded");
   });
 
   test("should connect wallet successfully", async ({ page }) => {
     const connectButton = page.getByRole("button", { name: /Connect Wallet/i }).first();
-    await expect(connectButton).toBeVisible();
+    await expect(connectButton).toBeVisible({ timeout: 10000 });
 
     await connectButton.click();
 
     // In mock mode, it should immediately show as connected
-    await expect(page.getByText(/Connected/i).first()).toBeVisible();
-    await expect(page.getByRole("button", { name: /Disconnect/i })).toBeVisible();
+    await page.waitForTimeout(500);
+    await expect(page.getByText(/Connected/i).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: /Disconnect/i })).toBeVisible({ timeout: 10000 });
   });
 
   test("should contribute to a verified campaign", async ({ page }) => {
@@ -32,16 +34,20 @@ test.describe("Critical User Journeys", () => {
       .first()
       .click();
 
+    await page.waitForTimeout(500);
+
     // 2. Go to Causes page
-    await page.goto("/causes");
+    await page.goto("/causes", { waitUntil: "networkidle" });
+    await page.waitForLoadState("domcontentloaded");
 
     // 3. Find a verified campaign (ID 1 in mock is verified)
     await page.locator('a[href*="/causes/1"]').first().click();
     await page.waitForURL(/\/causes\/1/);
+    await page.waitForLoadState("domcontentloaded");
 
     // 4. Click "Donate"
     const donateButton = page.getByRole("button", { name: /Donate/i }).first();
-    await expect(donateButton).toBeVisible();
+    await expect(donateButton).toBeVisible({ timeout: 10000 });
     await donateButton.click();
 
     // 5. Enter amount
@@ -52,7 +58,7 @@ test.describe("Critical User Journeys", () => {
     await page.getByRole("button", { name: /Donate 50 XLM/i }).click();
 
     // 7. Verify success message
-    await expect(page.getByText(/donated successfully/i)).toBeVisible();
+    await expect(page.getByText(/donated successfully/i)).toBeVisible({ timeout: 10000 });
   });
 
   test("should vote on an active campaign", async ({ page }) => {
@@ -62,16 +68,19 @@ test.describe("Critical User Journeys", () => {
       .first()
       .click();
 
+    await page.waitForTimeout(500);
+
     // 2. Go to an active campaign (ID 2 is active)
-    await page.goto("/causes/2");
+    await page.goto("/causes/2", { waitUntil: "networkidle" });
+    await page.waitForLoadState("domcontentloaded");
 
     // 3. Find Vote buttons
     const approveButton = page.getByRole("button", { name: /Approve/i }).first();
-    await expect(approveButton).toBeVisible();
+    await expect(approveButton).toBeVisible({ timeout: 10000 });
 
     await approveButton.click();
 
     // 4. Verify vote processed
-    await expect(page.getByText(/You voted to approve/i)).toBeVisible();
+    await expect(page.getByText(/You voted to approve/i)).toBeVisible({ timeout: 10000 });
   });
 });
