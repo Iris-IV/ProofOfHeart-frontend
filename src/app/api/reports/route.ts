@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  let reportCounter = reportStore.length + 1;
+  const reportCounter = reportStore.length + 1;
   const report: CampaignReport = {
     id: `report-${campaignId}-${reportCounter}`,
     campaignId,
