@@ -137,9 +137,20 @@ function CausesContent() {
     if (status !== "all") params.set("status", status);
     if (sort !== "newest") params.set("sort", sort);
     if (tag) params.set("tag", tag);
+    
     const qs = params.toString();
-    router.replace(qs ? `/causes?${qs}` : "/causes", { scroll: false });
-  }, [debouncedSearch, category, status, sort, tag, router, mounted]);
+    const currentQs = searchParams.toString();
+    
+    // Check if the semantic query string changed to avoid infinite loops and aborted navigations
+    const newParams = new URLSearchParams(qs);
+    const currParams = new URLSearchParams(currentQs);
+    newParams.sort();
+    currParams.sort();
+    
+    if (newParams.toString() !== currParams.toString()) {
+      router.replace(qs ? `/causes?${qs}` : "/causes", { scroll: false });
+    }
+  }, [debouncedSearch, category, status, sort, tag, router, mounted, searchParams]);
 
   // Load user votes whenever wallet or campaigns change
   const loadUserVotes = useCallback(async () => {
