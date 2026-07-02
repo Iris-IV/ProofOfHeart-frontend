@@ -85,11 +85,21 @@ function CausesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [rawSearch, setRawSearch] = useState(searchParams.get("q") ?? "");
-  const [category, setCategory] = useState(searchParams.get("category") ?? "all");
-  const [status, setStatus] = useState(searchParams.get("status") ?? "all");
-  const [sort, setSort] = useState(searchParams.get("sort") ?? "newest");
-  const [tag, setTag] = useState(searchParams.get("tag") ?? "");
+  const [rawSearch, setRawSearch] = useState("");
+  const [category, setCategory] = useState("all");
+  const [status, setStatus] = useState("all");
+  const [sort, setSort] = useState("newest");
+  const [tag, setTag] = useState("");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setRawSearch(searchParams.get("q") ?? "");
+    setCategory(searchParams.get("category") ?? "all");
+    setStatus(searchParams.get("status") ?? "all");
+    setSort(searchParams.get("sort") ?? "newest");
+    setTag(searchParams.get("tag") ?? "");
+    setMounted(true);
+  }, [searchParams]);
 
   const debouncedSearch = useDebounce(rawSearch, 300);
 
@@ -120,15 +130,27 @@ function CausesContent() {
 
   // Sync URL query params whenever filters change
   useEffect(() => {
+    if (!mounted) return;
     const params = new URLSearchParams();
     if (debouncedSearch) params.set("q", debouncedSearch);
     if (category !== "all") params.set("category", category);
     if (status !== "all") params.set("status", status);
     if (sort !== "newest") params.set("sort", sort);
     if (tag) params.set("tag", tag);
+
     const qs = params.toString();
-    router.replace(qs ? `/causes?${qs}` : "/causes", { scroll: false });
-  }, [debouncedSearch, category, status, sort, tag, router]);
+    const currentQs = searchParams.toString();
+
+    // Check if the semantic query string changed to avoid infinite loops and aborted navigations
+    const newParams = new URLSearchParams(qs);
+    const currParams = new URLSearchParams(currentQs);
+    newParams.sort();
+    currParams.sort();
+
+    if (newParams.toString() !== currParams.toString()) {
+      router.replace(qs ? `/causes?${qs}` : "/causes", { scroll: false });
+    }
+  }, [debouncedSearch, category, status, sort, tag, router, mounted, searchParams]);
 
   // Load user votes whenever wallet or campaigns change
   const loadUserVotes = useCallback(async () => {
@@ -479,7 +501,7 @@ function CausesContent() {
           </div>
 
           {/* Category filter chips */}
-          {!isLoading && !error && (
+          {!isLoading && !error && mounted && (
             <div role="group" aria-label={t("labelCategory")} className="flex flex-wrap gap-2">
               {(["all", ...CATEGORY_VALUES] as CategoryFilter[]).map((cat) => {
                 const selected = isCategorySelected(cat);
@@ -585,7 +607,7 @@ function CausesContent() {
         )}
 
         {/* Loading state */}
-        {isLoading && (
+        {(!mounted || isLoading) && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <CauseCardSkeleton key={i} />
@@ -594,7 +616,7 @@ function CausesContent() {
         )}
 
         {/* Results */}
-        {!isLoading && !error && (
+        {!isLoading && !error && mounted && (
           <>
             <div
               aria-live="polite"

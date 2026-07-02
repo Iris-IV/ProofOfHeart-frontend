@@ -49,5 +49,5 @@ export default function middleware(req: NextRequest) {
 export { MAINTENANCE_COOKIE, BYPASS_COOKIE_MAX_AGE };
 
 export const config = {
-  matcher: ["/", "/(es|en)/:path*", "/causes/:path+"],
+  matcher: ["/((?!api|_next|_vercel|.*\\..*).*)"],
 };

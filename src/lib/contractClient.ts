@@ -38,12 +38,7 @@ const NETWORK_PASSPHRASE =
   process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
 
 export type TransactionLifecyclePhase =
-  | "building"
-  | "signing"
-  | "submitting"
-  | "confirming"
-  | "confirmed"
-  | "failed";
+  "building" | "signing" | "submitting" | "confirming" | "confirmed" | "failed";
 
 export interface TransactionLifecycleUpdate {
   phase: TransactionLifecyclePhase;
@@ -346,6 +341,8 @@ function makeMockCampaign(partial: Omit<Campaign, "status">): Campaign {
   };
 }
 
+const MOCK_TIMESTAMP_SEC = 1700000000;
+
 const MOCK_CAMPAIGNS: Campaign[] = [
   makeMockCampaign({
     id: 1,
@@ -353,7 +350,7 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     description: "Providing clean water access to 500 families in rural areas affected by drought.",
     creator: "GABC123456789012345678901234567890123456789012345678901234567890",
     funding_goal: BigInt(100_000_000_000),
-    deadline: Math.floor(Date.now() / 1000) + 86400 * 30,
+    deadline: MOCK_TIMESTAMP_SEC + 86400 * 30,
     amount_raised: BigInt(65_000_000_000),
     is_active: true,
     funds_withdrawn: false,
@@ -361,7 +358,7 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     is_verified: true,
     category: Category.Learner,
     has_revenue_sharing: false,
-    created_at: Math.floor(Date.now() / 1000),
+    created_at: MOCK_TIMESTAMP_SEC,
     revenue_share_percentage: 0,
     tags: ["water", "rural", "health"],
     milestones: [
@@ -376,13 +373,13 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     description: "Equipping schools in low-income areas with tablets and educational software.",
     creator: "GDEF123456789012345678901234567890123456789012345678901234567890",
     funding_goal: BigInt(50_000_000_000),
-    deadline: Math.floor(Date.now() / 1000) + 86400 * 60,
+    deadline: MOCK_TIMESTAMP_SEC + 86400 * 60,
     amount_raised: BigInt(12_000_000_000),
     is_active: true,
     funds_withdrawn: false,
     is_cancelled: false,
     is_verified: false,
-    created_at: Math.floor(Date.now() / 1000),
+    created_at: MOCK_TIMESTAMP_SEC,
     category: Category.EducationalStartup,
     has_revenue_sharing: true,
     revenue_share_percentage: 500,
@@ -394,10 +391,10 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     description: "Delivering essential medical supplies to clinics in remote areas.",
     creator: "GHIJ123456789012345678901234567890123456789012345678901234567890",
     funding_goal: BigInt(150_000_000_000),
-    deadline: Math.floor(Date.now() / 1000) + 86400 * 15,
+    deadline: MOCK_TIMESTAMP_SEC + 86400 * 15,
     amount_raised: BigInt(89_000_000_000),
     is_active: true,
-    created_at: Math.floor(Date.now() / 1000),
+    created_at: MOCK_TIMESTAMP_SEC,
     funds_withdrawn: false,
     is_cancelled: false,
     is_verified: true,
@@ -412,12 +409,12 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     description: "Planting 100,000 trees across deforested regions.",
     creator: "GKLM123456789012345678901234567890123456789012345678901234567890",
     funding_goal: BigInt(80_000_000_000),
-    deadline: Math.floor(Date.now() / 1000) - 86400 * 5,
+    deadline: MOCK_TIMESTAMP_SEC - 86400 * 5,
     amount_raised: BigInt(32_000_000_000),
     is_active: false,
     funds_withdrawn: false,
     is_cancelled: false,
-    created_at: Math.floor(Date.now() / 1000),
+    created_at: MOCK_TIMESTAMP_SEC,
     is_verified: true,
     category: Category.Learner,
     has_revenue_sharing: false,
@@ -429,10 +426,10 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     description: "Building free counselling centres for teenagers in underserved areas.",
     creator: "GNOP123456789012345678901234567890123456789012345678901234567890",
     funding_goal: BigInt(60_000_000_000),
-    deadline: Math.floor(Date.now() / 1000) + 86400 * 45,
+    deadline: MOCK_TIMESTAMP_SEC + 86400 * 45,
     amount_raised: BigInt(9_000_000_000),
     is_active: true,
-    created_at: Math.floor(Date.now() / 1000),
+    created_at: MOCK_TIMESTAMP_SEC,
     funds_withdrawn: false,
     is_cancelled: true,
     is_verified: false,
@@ -446,10 +443,10 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     description: "Installing solar panels in 20 villages without electricity.",
     creator: "GQRS123456789012345678901234567890123456789012345678901234567890",
     funding_goal: BigInt(200_000_000_000),
-    deadline: Math.floor(Date.now() / 1000) - 86400 * 2,
+    deadline: MOCK_TIMESTAMP_SEC - 86400 * 2,
     amount_raised: BigInt(200_000_000_000),
     is_active: false,
-    created_at: Math.floor(Date.now() / 1000),
+    created_at: MOCK_TIMESTAMP_SEC,
     funds_withdrawn: true,
     is_cancelled: false,
     is_verified: true,
@@ -652,10 +649,10 @@ export async function createCampaign(
         title,
         description: finalDescription,
         funding_goal: fundingGoal,
-        deadline: Math.floor(Date.now() / 1000) + durationDays * 86400,
+        deadline: MOCK_TIMESTAMP_SEC + durationDays * 86400,
         amount_raised: BigInt(0),
         is_active: true,
-        created_at: Math.floor(Date.now() / 1000),
+        created_at: MOCK_TIMESTAMP_SEC,
         funds_withdrawn: false,
         is_cancelled: false,
         is_verified: false,

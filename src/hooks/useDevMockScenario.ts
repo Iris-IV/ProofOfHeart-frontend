@@ -2,14 +2,7 @@ import { useEffect, useState } from "react";
 import { IS_MOCK_MODE } from "@/lib/runtimeEnv";
 
 export type MockScenario =
-  | "default"
-  | "active"
-  | "verified"
-  | "funded"
-  | "cancelled"
-  | "failed"
-  | "empty"
-  | "error";
+  "default" | "active" | "verified" | "funded" | "cancelled" | "failed" | "empty" | "error";
 
 /**
  * Hook to get the current mock scenario for a campaign.
