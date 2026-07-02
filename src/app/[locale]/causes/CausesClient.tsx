@@ -47,6 +47,28 @@ function useDebounce<T>(value: T, delay: number): T {
   return debounced;
 }
 
+function useColumns(): number {
+  const [columns, setColumns] = useState(3);
+
+  useEffect(() => {
+    const updateColumns = () => {
+      if (window.innerWidth < 768) {
+        setColumns(1); // Mobile: 1 column
+      } else if (window.innerWidth < 1024) {
+        setColumns(2); // Tablet: 2 columns (md breakpoint)
+      } else {
+        setColumns(3); // Desktop: 3 columns (lg breakpoint)
+      }
+    };
+
+    updateColumns();
+    window.addEventListener("resize", updateColumns);
+    return () => window.removeEventListener("resize", updateColumns);
+  }, []);
+
+  return columns;
+}
+
 // Levenshtein distance for fuzzy matching — allows 1 typo per 4 chars of word length
 function levenshtein(a: string, b: string): number {
   const m = a.length;
@@ -488,7 +510,7 @@ function CausesContent() {
               placeholder={t("searchPlaceholder")}
               aria-label={t("searchPlaceholder")}
               autoComplete="off"
-              className="w-full pl-9 pr-9 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full pl-9 pr-9 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {rawSearch && (
               <button
@@ -524,7 +546,7 @@ function CausesContent() {
                       { label: accessibleName, count },
                     )}
                     onClick={() => setCategory(cat === "all" ? "all" : String(cat))}
-                    className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800 ${
+                    className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                       selected
                         ? "bg-blue-600 text-white"
                         : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600"
