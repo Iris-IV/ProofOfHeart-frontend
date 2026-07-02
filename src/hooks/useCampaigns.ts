@@ -19,7 +19,8 @@ export interface UseCampaignsResult {
   refetch: () => void;
 }
 
-const POLL_INTERVAL = Number(process.env.NEXT_PUBLIC_POLL_INTERVAL_LISTING_MS) || 60_000;
+const POLL_INTERVAL =
+  Number(process.env.NEXT_PUBLIC_POLL_INTERVAL_LISTING_MS) || 60_000;
 
 export function useCampaigns(): UseCampaignsResult {
   const queryClient = useQueryClient();
@@ -35,7 +36,8 @@ export function useCampaigns(): UseCampaignsResult {
     error,
   } = useInfiniteQuery({
     queryKey: ["campaigns"],
-    queryFn: ({ pageParam }) => getCampaignsChunk(pageParam, CAMPAIGNS_CHUNK_SIZE),
+    queryFn: ({ pageParam }) =>
+      getCampaignsChunk(pageParam, CAMPAIGNS_CHUNK_SIZE),
     initialPageParam: 0,
     getNextPageParam: (lastPage, _allPages, lastPageParam) => {
       const nextStart = lastPageParam + CAMPAIGNS_CHUNK_SIZE;
@@ -48,7 +50,7 @@ export function useCampaigns(): UseCampaignsResult {
 
   const campaigns = useMemo(
     () => data?.pages.flatMap((page) => page.campaigns) ?? [],
-    [data],
+    [data]
   );
 
   return {
