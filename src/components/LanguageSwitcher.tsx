@@ -41,6 +41,8 @@ export default function LanguageSwitcher() {
 
     const nextLabel = getLocaleLabel(nextLocale);
 
+    document.cookie = `NEXT_LOCALE=${nextLocale}; path=/; max-age=31536000`;
+
     startTransition(() => {
       router.replace(pathname, { locale: nextLocale });
     });
