@@ -10,7 +10,11 @@ import { test, expect } from "@playwright/test";
 test.describe("Core User Flow Smoke Test", () => {
   test.beforeEach(async ({ page }) => {
     page.on("pageerror", (err) => {
-      if (err.message.includes("ChunkLoadError") || err.message.includes("Load failed") || err.message.includes("access control checks")) {
+      if (
+        err.message.includes("ChunkLoadError") ||
+        err.message.includes("Load failed") ||
+        err.message.includes("access control checks")
+      ) {
         return;
       }
       throw new Error(`Uncaught page error: ${err.message}`);
@@ -38,11 +42,12 @@ test.describe("Core User Flow Smoke Test", () => {
   });
 
   test("should navigate from home to causes to cause detail to dashboard", async ({ page }) => {
-
     // Step 1: Navigate to Home page
     await page.goto("/");
     await expect(page).toHaveURL(/\/(en|es)?\/?$/);
-    await expect(page.getByRole("heading", { name: /ProofOfHeart/i, level: 1 }).or(page.locator("body"))).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /ProofOfHeart/i, level: 1 }).or(page.locator("body")),
+    ).toBeVisible();
 
     // Step 2: Navigate to Causes page
     // Look for navigation link or directly navigate
@@ -61,7 +66,9 @@ test.describe("Core User Flow Smoke Test", () => {
     // Navigate directly and wait for content to appear instead of networkidle
     await page.goto("/en/causes/1");
     await expect(page).toHaveURL(/\/causes\/1$/);
-    await expect(page.getByRole("heading", { name: /Clean Water/i }).or(page.locator("body"))).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole("heading", { name: /Clean Water/i }).or(page.locator("body")),
+    ).toBeVisible({ timeout: 10000 });
 
     // Step 4: Navigate to Dashboard
     const dashboardLink = page.locator('a[href*="dashboard"]').first();

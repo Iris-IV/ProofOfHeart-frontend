@@ -11,7 +11,11 @@ import { test, expect } from "@playwright/test";
 test.describe("Critical User Journeys", () => {
   test.beforeEach(async ({ page }) => {
     page.on("pageerror", (err) => {
-      if (err.message.includes("ChunkLoadError") || err.message.includes("Load failed") || err.message.includes("access control checks")) {
+      if (
+        err.message.includes("ChunkLoadError") ||
+        err.message.includes("Load failed") ||
+        err.message.includes("access control checks")
+      ) {
         return;
       }
       throw new Error(`Uncaught page error: ${err.message}`);

@@ -137,16 +137,16 @@ function CausesContent() {
     if (status !== "all") params.set("status", status);
     if (sort !== "newest") params.set("sort", sort);
     if (tag) params.set("tag", tag);
-    
+
     const qs = params.toString();
     const currentQs = searchParams.toString();
-    
+
     // Check if the semantic query string changed to avoid infinite loops and aborted navigations
     const newParams = new URLSearchParams(qs);
     const currParams = new URLSearchParams(currentQs);
     newParams.sort();
     currParams.sort();
-    
+
     if (newParams.toString() !== currParams.toString()) {
       router.replace(qs ? `/causes?${qs}` : "/causes", { scroll: false });
     }
