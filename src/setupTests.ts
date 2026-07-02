@@ -45,10 +45,11 @@ jest.mock("next-intl", () => {
 
   return {
     NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => children,
-    useTranslations: (namespace?: string) => (key: string, values?: Record<string, string | number>) => {
-      const fullKey = namespace ? `${namespace}.${key}` : key;
-      return resolve(fullKey, values) ?? resolve(key, values);
-    },
+    useTranslations:
+      (namespace?: string) => (key: string, values?: Record<string, string | number>) => {
+        const fullKey = namespace ? `${namespace}.${key}` : key;
+        return resolve(fullKey, values) ?? resolve(key, values);
+      },
     useLocale: () => "en",
   };
 });

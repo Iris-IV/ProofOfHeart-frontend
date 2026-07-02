@@ -153,7 +153,9 @@ describe("VotingComponent Accessibility & Interaction", () => {
 
     expect(approveBtn).toBeDisabled();
     expect(rejectBtn).toBeDisabled();
-    expect(screen.getByText("Only governance token holders can vote on causes")).toBeInTheDocument();
+    expect(
+      screen.getByText("Only governance token holders can vote on causes"),
+    ).toBeInTheDocument();
   });
 
   it("disables voting when voting is in progress", () => {
