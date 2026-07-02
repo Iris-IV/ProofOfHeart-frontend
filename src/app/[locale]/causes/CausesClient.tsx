@@ -47,26 +47,34 @@ function useDebounce<T>(value: T, delay: number): T {
   return debounced;
 }
 
-/** Tracks the number of grid columns based on viewport breakpoints. */
-function useColumns(): number {
-  const [columns, setColumns] = useState(1);
-  useEffect(() => {
-    const mqLg = window.matchMedia("(min-width: 1024px)");
-    const mMd = window.matchMedia("(min-width: 768px)");
-    function update() {
-      if (mqLg.matches) setColumns(3);
-      else if (mMd.matches) setColumns(2);
-      else setColumns(1);
+// Levenshtein distance for fuzzy matching — allows 1 typo per 4 chars of word length
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)),
+  );
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] =
+        a[i - 1] === b[j - 1]
+          ? dp[i - 1][j - 1]
+          : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
     }
-    update();
-    mqLg.addEventListener("change", update);
-    mMd.addEventListener("change", update);
-    return () => {
-      mqLg.removeEventListener("change", update);
-      mMd.removeEventListener("change", update);
-    };
-  }, []);
-  return columns;
+  }
+  return dp[m][n];
+}
+
+function fuzzyMatch(text: string, query: string): boolean {
+  if (text.includes(query)) return true;
+  const words = text.split(/\s+/);
+  const queryWords = query.split(/\s+/);
+  return queryWords.every((qw) =>
+    words.some((w) => {
+      const maxDist = Math.floor(w.length / 4);
+      return levenshtein(w, qw) <= maxDist;
+    }),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -316,10 +324,10 @@ function CausesContent() {
       const q = debouncedSearch.toLowerCase();
       result = result.filter(
         (c) =>
-          c.title.toLowerCase().includes(q) ||
-          c.description.toLowerCase().includes(q) ||
-          (CATEGORY_LABELS[c.category] ?? "").toLowerCase().includes(q) ||
-          c.tags?.some((t) => t.toLowerCase().includes(q)),
+          fuzzyMatch(c.title.toLowerCase(), q) ||
+          fuzzyMatch(c.description.toLowerCase(), q) ||
+          fuzzyMatch((CATEGORY_LABELS[c.category] ?? "").toLowerCase(), q) ||
+          c.tags?.some((t) => fuzzyMatch(t.toLowerCase(), q)),
       );
     }
 
@@ -361,10 +369,10 @@ function CausesContent() {
       const q = debouncedSearch.toLowerCase();
       result = result.filter(
         (c) =>
-          c.title.toLowerCase().includes(q) ||
-          c.description.toLowerCase().includes(q) ||
-          (CATEGORY_LABELS[c.category] ?? "").toLowerCase().includes(q) ||
-          c.tags?.some((t) => t.toLowerCase().includes(q)),
+          fuzzyMatch(c.title.toLowerCase(), q) ||
+          fuzzyMatch(c.description.toLowerCase(), q) ||
+          fuzzyMatch((CATEGORY_LABELS[c.category] ?? "").toLowerCase(), q) ||
+          c.tags?.some((t) => fuzzyMatch(t.toLowerCase(), q)),
       );
     }
 
