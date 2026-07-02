@@ -143,8 +143,7 @@ export default function CampaignMap({ campaigns }: Props) {
                     <p className="text-xs text-zinc-500">
                       {CATEGORY_LABELS[campaign.category]} ·{" "}
                       <span className="font-medium text-blue-500">
-                        {formatAmount(campaign.amount_raised, locale, { maximumFractionDigits: 2 })}{" "}
-                        raised
+                        {formatAmount(campaign.amount_raised, locale)} raised
                       </span>
                     </p>
                   </div>
