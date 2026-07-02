@@ -53,7 +53,16 @@ describe("POST /api/upload-image", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ url: "https://ipfs.io/ipfs/QmTestHash" });
-    expect(mockPinImageToIpfs).toHaveBeenCalledWith(file, "cover.png");
+    // Assert the call args without comparing the File object directly —
+    // File.lastModified is set to Date.now() at construction time and is
+    // non-deterministic across the call and the assertion.
+    expect(mockPinImageToIpfs).toHaveBeenCalledTimes(1);
+    const [calledFile, calledName] = mockPinImageToIpfs.mock.calls[0];
+    expect(calledFile).toBeInstanceOf(File);
+    expect((calledFile as File).name).toBe("cover.png");
+    expect((calledFile as File).type).toBe("image/png");
+    expect((calledFile as File).size).toBe(512);
+    expect(calledName).toBe("cover.png");
   });
 
   it("returns 503 when upload service is not configured", async () => {

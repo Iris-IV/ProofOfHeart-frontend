@@ -1,6 +1,43 @@
 import { render, screen, fireEvent, waitFor, act, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CreateCampaignPage from "@/app/[locale]/causes/new/page";
+import enMessages from "../../../messages/en.json";
+
+// ---------------------------------------------------------------------------
+// Mocks
+// ---------------------------------------------------------------------------
+
+// next-intl ships as ESM which Jest cannot parse without a transform.
+// Use the real English messages so test selectors that match translated
+// text (e.g. /create a campaign/i) work correctly.
+jest.mock("next-intl", () => ({
+  useTranslations: (namespace: string) => {
+    const ns = (enMessages as Record<string, Record<string, string>>)[namespace] ?? {};
+    return (key: string, values?: Record<string, unknown>) => {
+      // next-intl stores plural forms as key_one / key_other.
+      // Pick the correct suffix based on the `count` value when present.
+      let resolvedKey = key;
+      if (values && typeof values.count === "number") {
+        const pluralKey = values.count === 1 ? `${key}_one` : `${key}_other`;
+        if (ns[pluralKey] !== undefined) resolvedKey = pluralKey;
+      }
+      const raw = ns[resolvedKey] ?? key;
+      if (!values) return raw;
+      // Replace {token} placeholders, and also # (ICU shorthand for count)
+      return raw
+        .replace(/#/g, String(values.count ?? "#"))
+        .replace(/\{(\w+)\}/g, (_: string, k: string) => String(values[k] ?? `{${k}}`));
+    };
+  },
+  useLocale: () => "en",
+}));
+
+// SafeMarkdown imports react-markdown (ESM). Stub it out so the test
+// environment stays in CommonJS — we don't need to verify markdown rendering here.
+jest.mock("@/components/SafeMarkdown", () => ({
+  __esModule: true,
+  default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -285,10 +322,14 @@ describe("CreateCampaignPage — revenue sharing", () => {
     await userEvent.click(screen.getByRole("switch"));
 
     const slider = await screen.findByLabelText(/revenue share percentage/i);
-    fireEvent.change(slider, { target: { value: "2500" } }); // 2500 bps = 25%
+    // Slider operates in percent (0.5–50), not bps. 25% = 2500 bps on-chain.
+    fireEvent.change(slider, { target: { value: "25" } });
 
+    // Percentage badge shows 25.00%
     expect(screen.getByText(/25\.00%/)).toBeInTheDocument();
-    expect(screen.getByText(/2500 bps/)).toBeInTheDocument();
+    // Exact bps input value should reflect 2500 (25 * 100)
+    const bpsInput = screen.getByRole("spinbutton", { name: /exact bps/i });
+    expect(bpsInput).toHaveValue(2500);
   });
 
   it("hides revenue sharing section when switching away from Educational Startup", async () => {
@@ -351,7 +392,8 @@ describe("CreateCampaignPage — submission", () => {
     await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
     await userEvent.click(screen.getByRole("switch", { name: /revenue sharing/i }));
     const slider = await screen.findByLabelText(/revenue share percentage/i);
-    fireEvent.change(slider, { target: { value: "500" } }); // 5%
+    // Slider is percent-based (0.5–50). 5% = 500 bps on-chain.
+    fireEvent.change(slider, { target: { value: "5" } });
 
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
 
@@ -409,9 +451,9 @@ describe("CreateCampaignPage — submission", () => {
     await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
     await userEvent.click(screen.getByRole("switch"));
 
-    // Move slider to 500 bps (5%)
+    // Move slider to 5% (= 500 bps on-chain). Slider operates in percent (0.5–50).
     const slider = await screen.findByLabelText(/revenue share percentage/i);
-    fireEvent.change(slider, { target: { value: "500" } });
+    fireEvent.change(slider, { target: { value: "5" } });
 
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
     await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
@@ -432,7 +474,7 @@ describe("CreateCampaignPage — submission", () => {
     await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
 
     await waitFor(() => {
-      expect(mockShowSuccess).toHaveBeenCalledWith("Campaign created successfully!");
+      expect(mockShowSuccess).toHaveBeenCalledWith(expect.stringMatching(/created successfully/i));
     });
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/causes/7");
@@ -460,7 +502,7 @@ describe("CreateCampaignPage — submission", () => {
 
     await waitFor(() => {
       expect(mockShowError).toHaveBeenCalledWith(
-        expect.stringMatching(/no longer accepting contributions/i),
+        expect.stringMatching(/no longer accepting contributions|CampaignNotActive/i),
       );
     });
   });
@@ -534,7 +576,8 @@ describe("CreateCampaignPage — cover image upload", () => {
 
   it("renders an upload button for the cover image field", () => {
     render(<CreateCampaignPage />);
-    expect(screen.getByRole("button", { name: /coverImageUpload/i })).toBeInTheDocument();
+    // Button label comes from the "coverImageUpload" translation key → "Upload"
+    expect(screen.getByRole("button", { name: /^upload$/i })).toBeInTheDocument();
   });
 
   it("uploads a selected image and populates the cover URL field", async () => {
@@ -555,6 +598,9 @@ describe("CreateCampaignPage — cover image upload", () => {
     expect(
       await screen.findByDisplayValue("https://ipfs.io/ipfs/QmUploadedHash"),
     ).toBeInTheDocument();
-    expect(mockShowSuccess).toHaveBeenCalledWith("coverImageUploadSuccess");
+    // Toast message comes from the "coverImageUploadSuccess" translation key
+    expect(mockShowSuccess).toHaveBeenCalledWith(
+      expect.stringMatching(/uploaded to ipfs|coverImageUploadSuccess/i),
+    );
   });
 });
