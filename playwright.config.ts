@@ -44,10 +44,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    // In CI the build step has already produced .next output, so `next start` works.
-    // Locally, skip the webServer entirely when a dev server is already running
-    // (reuseExistingServer=true), and fall back to `next dev` if nothing is listening.
-    command: process.env.CI ? "npm run start" : "npm run dev",
+    command: "npm run dev",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
