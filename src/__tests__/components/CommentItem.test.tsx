@@ -11,6 +11,14 @@ jest.mock("@/lib/campaignComments", () => ({
   verifyCommentSignature: jest.fn().mockResolvedValue(true),
 }));
 
+jest.mock("@/components/ToastProvider", () => ({
+  useToast: () => ({
+    showError: jest.fn(),
+    showSuccess: jest.fn(),
+    showWarning: jest.fn(),
+  }),
+}));
+
 describe("CommentItem", () => {
   const mockComment = {
     id: "c1",

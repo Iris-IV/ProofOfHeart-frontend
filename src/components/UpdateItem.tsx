@@ -16,15 +16,15 @@ function formatRelativeTime(timestamp: number): string {
   if (diff < 60) return "just now";
   if (diff < 3600) {
     const mins = Math.floor(diff / 60);
-    return `${mins} ${mins === 1 ? "m" : "m"} ago`;
+    return `${mins} m ago`;
   }
   if (diff < 86400) {
     const hours = Math.floor(diff / 3600);
-    return `${hours} ${hours === 1 ? "h" : "h"} ago`;
+    return `${hours} h ago`;
   }
   if (diff < 604800) {
     const days = Math.floor(diff / 86400);
-    return `${days} ${days === 1 ? "d" : "d"} ago`;
+    return `${days} d ago`;
   }
   const date = new Date(timestamp * 1000);
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });

@@ -32,7 +32,7 @@ jest.mock("next-intl", () => ({
     const map: Record<string, string> = {
       title: "Fund This Cause",
       confirmedTitle: "Donation Confirmed",
-      amountLabel: "Amount (XLM)",
+      // amountLabel returns the key ("amountLabel") so getByLabelText("amountLabel") works
       percentFunded: `${values?.percent}% funded`,
       afterDonation: `After your donation: ${values?.percent}% funded`,
       goalReached: "Goal reached!",
@@ -41,11 +41,14 @@ jest.mock("next-intl", () => ({
       totalLine: "Total from your wallet",
       donate: "Donate",
       donateAmount: `Donate ${values?.amount} XLM`,
-      platformFeeNote: `A platform fee of ${values?.feePercent} is deducted from funds when withdrawn by the creator. Your full donation goes toward the campaign total.`,
+      // platformFeeNote returns the key so getByText("platformFeeNote") works
       networkFeeNote: "Network fee note",
       waitingSignature: "Waiting for Freighter signature…",
       waitingConfirmation: "Waiting for ledger confirmation…",
-      submitting: "Submitting transaction to the network…",
+      submitting: "submittingTransaction",
+      submittingTransaction: "submittingTransaction",
+      amountMustBePositive: "Amount must be greater than zero.",
+      invalidAmount: "Please enter a valid amount.",
       donatedSuccess: `${values?.amount} XLM donated successfully`,
       thankYou: "Thank you for supporting this cause.",
       viewExplorer: "View on Stellar Explorer →",
@@ -53,6 +56,7 @@ jest.mock("next-intl", () => ({
     };
     return map[key] ?? key;
   },
+  useLocale: () => "en",
 }));
 
 jest.mock("@/lib/analytics", () => ({
@@ -127,7 +131,7 @@ describe("DonationModal", () => {
   it("associates amount validation errors with the input", () => {
     render(<DonationModal {...defaultProps} />);
 
-    const input = screen.getByLabelText("Amount (XLM)");
+    const input = screen.getByLabelText("amountLabel");
     fireEvent.change(input, { target: { value: "0" } });
 
     const error = screen.getByText("Amount must be greater than zero.");
@@ -146,7 +150,7 @@ describe("DonationModal", () => {
   it("shows estimated network fee and total wallet cost when amount is entered", () => {
     render(<DonationModal {...defaultProps} />);
 
-    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("amountLabel"), { target: { value: "10" } });
 
     expect(screen.getByText("Est. network fee")).toBeInTheDocument();
     expect(screen.getByText("Total from your wallet")).toBeInTheDocument();
@@ -161,7 +165,7 @@ describe("DonationModal", () => {
     render(<DonationModal {...defaultProps} />);
 
     fireEvent.change(screen.getByLabelText("amountLabel"), { target: { value: "10" } });
-    fireEvent.click(screen.getByRole("button", { name: "donateWithAmount" }));
+    fireEvent.click(screen.getByRole("button", { name: "Donate 10 XLM" }));
 
     await waitFor(() =>
       expect(mockContribute).toHaveBeenCalledWith(1, CONTRIBUTOR, BigInt(100_000_000), {
@@ -176,7 +180,7 @@ describe("DonationModal", () => {
     render(<DonationModal {...defaultProps} />);
 
     fireEvent.change(screen.getByLabelText("amountLabel"), { target: { value: "5" } });
-    fireEvent.click(screen.getByRole("button", { name: "donateWithAmount" }));
+    fireEvent.click(screen.getByRole("button", { name: "Donate 5 XLM" }));
 
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: /donate/i })).not.toBeInTheDocument();
