@@ -64,6 +64,7 @@ function mockWallet(publicKey: string | null) {
     isWalletConnected: !!publicKey,
     isLoading: false,
     walletNetworkWarning: null,
+    activeWalletId: null,
   });
 }
 

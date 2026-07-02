@@ -1,77 +1,111 @@
 "use client";
 import * as StellarSdk from "@stellar/stellar-sdk";
-import {
-  getAddress,
-  getNetwork,
-  isConnected,
-  isAllowed,
-  WatchWalletChanges,
-} from "@stellar/freighter-api";
 import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from "react";
 import { useToast } from "./ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
 import { IS_MOCK_MODE } from "@/lib/runtimeEnv";
-import InstallFreighterModal from "./InstallFreighterModal";
+import {
+  type WalletAdapter,
+  type WalletId,
+  WALLET_ADAPTERS,
+  MockAdapter,
+} from "@/lib/walletAdapters";
+import { setActiveWalletAdapter } from "@/lib/contractClient";
+import WalletSelectionModal from "./WalletSelectionModal";
+
+// ---------------------------------------------------------------------------
+// Context type
+// ---------------------------------------------------------------------------
 
 interface WalletContextType {
   publicKey: string | null;
   isWalletConnected: boolean;
   walletNetworkWarning: string | null;
+  /** The id of the currently active wallet adapter, or null if not connected. */
+  activeWalletId: WalletId | null;
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
   isLoading: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
 const MOCK_PUBLIC_KEY = IS_MOCK_MODE ? StellarSdk.Keypair.random().publicKey() : null;
+const ACTIVE_WALLET_KEY = "stellar_active_wallet";
+const WALLET_PUBLIC_KEY = "stellar_wallet_public_key";
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
+
+// ---------------------------------------------------------------------------
+// Provider
+// ---------------------------------------------------------------------------
 
 export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [walletNetworkWarning, setWalletNetworkWarning] = useState<string | null>(null);
+  const [activeWalletId, setActiveWalletId] = useState<WalletId | null>(null);
+  const [showSelectionModal, setShowSelectionModal] = useState(false);
+
   const { showError, showWarning, showSuccess } = useToast();
   const queryClient = useQueryClient();
   const previousPublicKeyRef = useRef<string | null>(null);
-  const appNetworkPassphrase = process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE || "";
+
+  const appNetworkPassphrase = process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ?? "";
   const appNetworkLabel = appNetworkPassphrase.includes("Public Global")
     ? "Mainnet"
     : appNetworkPassphrase.includes("Test SDF")
       ? "Testnet"
       : "the app network";
 
-  useEffect(() => {
-    if (IS_MOCK_MODE) {
-      const storedKey =
-        typeof window !== "undefined" ? localStorage.getItem("stellar_wallet_public_key") : null;
-      if (storedKey) {
-        setPublicKey(storedKey);
-        setIsWalletConnected(true);
-        previousPublicKeyRef.current = storedKey;
+  // ── helpers ────────────────────────────────────────────────────────────────
+
+  const getActiveAdapter = (): WalletAdapter | null => {
+    if (activeWalletId === "mock") return MOCK_PUBLIC_KEY ? new MockAdapter(MOCK_PUBLIC_KEY) : null;
+    return WALLET_ADAPTERS.find((a) => a.id === activeWalletId) ?? null;
+  };
+
+  const invalidateWalletQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ["admin"] });
+    queryClient.invalidateQueries({ queryKey: ["contributions"] });
+    queryClient.invalidateQueries({ queryKey: ["revenue"] });
+    queryClient.invalidateQueries({ queryKey: ["stellarBalance"] });
+  };
+
+  // ── network-check helper (Freighter only, other wallets don't expose getNetwork) ──
+
+  const verifyNetwork = async (adapter: WalletAdapter): Promise<boolean> => {
+    // Only Freighter exposes a getNetwork API we can call independently
+    if (adapter.id !== "freighter") return true;
+    try {
+      const { getNetwork } = await import("@stellar/freighter-api");
+      const network = await getNetwork();
+      const walletPassphrase = network.networkPassphrase ?? "";
+      if (walletPassphrase !== appNetworkPassphrase) {
+        setPublicKey(null);
+        setIsWalletConnected(false);
+        setWalletNetworkWarning(
+          `Switch Freighter to ${appNetworkLabel} to continue. Current wallet network does not match the app network.`,
+        );
+        localStorage.removeItem(WALLET_PUBLIC_KEY);
+        invalidateWalletQueries();
+        return false;
       }
-      setWalletNetworkWarning(null);
-      return;
+    } catch {
+      // If we can't check the network, proceed anyway
     }
+    return true;
+  };
 
-    // Always re-verify with Freighter rather than blindly trusting localStorage (#97)
-    void checkWalletConnection();
+  // ── check / restore existing connection on mount ───────────────────────────
 
-    const watcher = new WatchWalletChanges(1000);
-    watcher.watch(() => {
-      void checkWalletConnection();
-    });
-
-    return () => {
-      watcher.stop();
-    };
-  }, []);
-
-  const checkWalletConnection = async () => {
+  const checkWalletConnection = async (adapter: WalletAdapter) => {
     if (IS_MOCK_MODE) {
       const storedKey =
-        typeof window !== "undefined" ? localStorage.getItem("stellar_wallet_public_key") : null;
+        typeof window !== "undefined" ? localStorage.getItem(WALLET_PUBLIC_KEY) : null;
       if (storedKey) {
         setPublicKey(storedKey);
         setIsWalletConnected(true);
@@ -85,56 +119,37 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const connected = await isConnected();
-      const allowed = await isAllowed();
-      if (connected && allowed) {
-        const key = await getAddress();
-        const network = await getNetwork();
-        const walletNetworkPassphrase = network.networkPassphrase || "";
-
-        if (walletNetworkPassphrase !== appNetworkPassphrase) {
-          setPublicKey(null);
-          setIsWalletConnected(false);
-          setWalletNetworkWarning(
-            `Switch Freighter to ${appNetworkLabel} to continue. Current wallet network does not match the app network.`,
-          );
-          localStorage.removeItem("stellar_wallet_public_key");
-          // Invalidate queries on network mismatch
-          invalidateWalletQueries();
-          return;
-        }
-
-        setWalletNetworkWarning(null);
-        const newPublicKey = key.address;
-        setPublicKey(newPublicKey);
-        setIsWalletConnected(true);
-        localStorage.setItem("stellar_wallet_public_key", newPublicKey);
-
-        // Detect account change and invalidate wallet-scoped queries
-        if (
-          previousPublicKeyRef.current !== null &&
-          previousPublicKeyRef.current !== newPublicKey
-        ) {
-          invalidateWalletQueries();
-        }
-        previousPublicKeyRef.current = newPublicKey;
-      } else {
-        setWalletNetworkWarning(null);
+      const available = await adapter.isAvailable();
+      if (!available) {
         setPublicKey(null);
         setIsWalletConnected(false);
-        localStorage.removeItem("stellar_wallet_public_key");
-        // Invalidate queries when disconnected
+        localStorage.removeItem(WALLET_PUBLIC_KEY);
         if (previousPublicKeyRef.current !== null) {
           invalidateWalletQueries();
           previousPublicKeyRef.current = null;
         }
+        return;
       }
+
+      const networkOk = await verifyNetwork(adapter);
+      if (!networkOk) return;
+
+      setWalletNetworkWarning(null);
+      const newPublicKey = await adapter.getAddress();
+
+      setPublicKey(newPublicKey);
+      setIsWalletConnected(true);
+      localStorage.setItem(WALLET_PUBLIC_KEY, newPublicKey);
+
+      if (previousPublicKeyRef.current !== null && previousPublicKeyRef.current !== newPublicKey) {
+        invalidateWalletQueries();
+      }
+      previousPublicKeyRef.current = newPublicKey;
     } catch {
       setWalletNetworkWarning(null);
       setPublicKey(null);
       setIsWalletConnected(false);
-      localStorage.removeItem("stellar_wallet_public_key");
-      // Invalidate queries on error
+      localStorage.removeItem(WALLET_PUBLIC_KEY);
       if (previousPublicKeyRef.current !== null) {
         invalidateWalletQueries();
         previousPublicKeyRef.current = null;
@@ -142,69 +157,123 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Invalidate all wallet-scoped queries when account/network changes
-  const invalidateWalletQueries = () => {
-    queryClient.invalidateQueries({ queryKey: ["admin"] });
-    queryClient.invalidateQueries({ queryKey: ["contributions"] });
-    queryClient.invalidateQueries({ queryKey: ["revenue"] });
-    queryClient.invalidateQueries({ queryKey: ["stellarBalance"] });
-    // Note: campaigns query is not wallet-scoped, so we don't invalidate it
-  };
+  // ── on mount: restore the previously used wallet ───────────────────────────
 
-  const isFreighterInstalled = async (): Promise<boolean> => {
-    try {
-      const result = await isConnected();
-      return result.isConnected;
-    } catch {
-      return false;
-    }
-  };
-
-  const connectWallet = async () => {
-    setIsLoading(true);
-    try {
-      if (IS_MOCK_MODE) {
-        const mockAddress = MOCK_PUBLIC_KEY;
-        if (!mockAddress) {
-          throw new Error("Mock wallet initialization failed.");
-        }
-        setPublicKey(mockAddress);
+  useEffect(() => {
+    if (IS_MOCK_MODE) {
+      const storedKey =
+        typeof window !== "undefined" ? localStorage.getItem(WALLET_PUBLIC_KEY) : null;
+      if (storedKey) {
+        setPublicKey(storedKey);
         setIsWalletConnected(true);
-        setWalletNetworkWarning(null);
-        localStorage.setItem("stellar_wallet_public_key", mockAddress);
-        previousPublicKeyRef.current = mockAddress;
-        showSuccess("Mock wallet connected successfully.");
-        return;
-      }
-
-      const installed = await isFreighterInstalled();
-      if (!installed) {
-        setShowInstallPrompt(true);
-        setIsLoading(false);
-        return;
-      }
-      const allowed = await isAllowed();
-      if (!allowed) {
-        showWarning("Please allow Freighter to connect to this site.");
-        setIsLoading(false);
-        return;
-      }
-      const key = await getAddress();
-      const network = await getNetwork();
-      if ((network.networkPassphrase || "") !== appNetworkPassphrase) {
-        const warning = `Switch Freighter to ${appNetworkLabel} to continue. Current wallet network does not match the app network.`;
-        setPublicKey(null);
-        setIsWalletConnected(false);
-        setWalletNetworkWarning(warning);
-        showWarning(warning);
-        setIsLoading(false);
-        return;
+        setActiveWalletId("mock");
+        previousPublicKeyRef.current = storedKey;
       }
       setWalletNetworkWarning(null);
-      setPublicKey(key.address);
+      return;
+    }
+
+    const storedWalletId =
+      typeof window !== "undefined"
+        ? (localStorage.getItem(ACTIVE_WALLET_KEY) as WalletId | null)
+        : null;
+
+    if (!storedWalletId) return;
+
+    const adapter = WALLET_ADAPTERS.find((a) => a.id === storedWalletId);
+    if (!adapter) return;
+
+    setActiveWalletId(storedWalletId);
+    void checkWalletConnection(adapter);
+
+    adapter.watchChanges(() => void checkWalletConnection(adapter));
+
+    return () => {
+      adapter.stopWatching();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── connect: show wallet selection modal ──────────────────────────────────
+
+  const connectWallet = async () => {
+    if (IS_MOCK_MODE) {
+      setIsLoading(true);
+      try {
+        const mockAddress = MOCK_PUBLIC_KEY;
+        if (!mockAddress) throw new Error("Mock wallet initialization failed.");
+        setPublicKey(mockAddress);
+        setIsWalletConnected(true);
+        setActiveWalletId("mock");
+        setWalletNetworkWarning(null);
+        localStorage.setItem(WALLET_PUBLIC_KEY, mockAddress);
+        localStorage.setItem(ACTIVE_WALLET_KEY, "mock");
+        previousPublicKeyRef.current = mockAddress;
+        setActiveWalletAdapter(new MockAdapter(mockAddress));
+        showSuccess("Mock wallet connected successfully.");
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // Show the wallet picker — actual connection happens in handleAdapterSelected
+    setShowSelectionModal(true);
+  };
+
+  // ── called when the user picks a wallet in the modal ──────────────────────
+
+  const handleAdapterSelected = async (walletId: WalletId) => {
+    setShowSelectionModal(false);
+    const adapter = WALLET_ADAPTERS.find((a) => a.id === walletId);
+    if (!adapter) return;
+
+    setIsLoading(true);
+    try {
+      const available = await adapter.isAvailable();
+      if (!available) {
+        // Shouldn't reach here (modal opens install page), but guard anyway
+        showWarning(`${adapter.name} extension not found. Please install it and try again.`);
+        return;
+      }
+
+      // Freighter-specific: check if allowed before fetching address
+      if (adapter.id === "freighter") {
+        const { isAllowed } = await import("@stellar/freighter-api");
+        const allowed = await isAllowed();
+        if (!allowed) {
+          showWarning("Please allow Freighter to connect to this site.");
+          return;
+        }
+      }
+
+      const networkOk = await verifyNetwork(adapter);
+      if (!networkOk) {
+        showWarning(
+          `Switch ${adapter.name} to ${appNetworkLabel} to continue. Current wallet network does not match the app network.`,
+        );
+        return;
+      }
+
+      const address = await adapter.getAddress();
+      if (!address) {
+        showWarning(`${adapter.name} did not return a public key.`);
+        return;
+      }
+
+      setPublicKey(address);
       setIsWalletConnected(true);
-      localStorage.setItem("stellar_wallet_public_key", key.address);
-      showSuccess("Wallet connected successfully.");
+      setActiveWalletId(walletId);
+      setWalletNetworkWarning(null);
+      localStorage.setItem(WALLET_PUBLIC_KEY, address);
+      localStorage.setItem(ACTIVE_WALLET_KEY, walletId);
+      previousPublicKeyRef.current = address;
+      setActiveWalletAdapter(adapter);
+
+      // Start watching for account changes
+      adapter.watchChanges(() => void checkWalletConnection(adapter));
+
+      showSuccess(`${adapter.name} connected successfully.`);
     } catch {
       setPublicKey(null);
       setIsWalletConnected(false);
@@ -215,27 +284,28 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const handleRetryInstall = async () => {
-    const installed = await isFreighterInstalled();
-    if (installed) {
-      setShowInstallPrompt(false);
-      connectWallet();
-    }
-  };
+  // ── disconnect ─────────────────────────────────────────────────────────────
 
   const disconnectWallet = () => {
+    const adapter = getActiveAdapter();
+    adapter?.stopWatching();
+
     setPublicKey(null);
     setIsWalletConnected(false);
+    setActiveWalletId(null);
     setWalletNetworkWarning(null);
-    localStorage.removeItem("stellar_wallet_public_key");
-    // Invalidate wallet-scoped queries on disconnect
+    localStorage.removeItem(WALLET_PUBLIC_KEY);
+    localStorage.removeItem(ACTIVE_WALLET_KEY);
+    setActiveWalletAdapter(null);
     invalidateWalletQueries();
     previousPublicKeyRef.current = null;
-    // Freighter has no programmatic revoke API. Inform the user how to fully sever access.
+
     showWarning(
-      "Disconnected. To fully revoke Freighter access, open the extension and remove this site from Connected Sites.",
+      "Disconnected. To fully revoke extension access, open the wallet and remove this site from Connected Sites.",
     );
   };
+
+  // ── render ─────────────────────────────────────────────────────────────────
 
   return (
     <WalletContext.Provider
@@ -243,16 +313,17 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         publicKey,
         isWalletConnected,
         walletNetworkWarning,
+        activeWalletId,
         connectWallet,
         disconnectWallet,
         isLoading,
       }}
     >
       {children}
-      <InstallFreighterModal
-        isOpen={showInstallPrompt}
-        onClose={() => setShowInstallPrompt(false)}
-        onRetry={handleRetryInstall}
+      <WalletSelectionModal
+        isOpen={showSelectionModal}
+        onSelect={handleAdapterSelected}
+        onClose={() => setShowSelectionModal(false)}
       />
     </WalletContext.Provider>
   );
