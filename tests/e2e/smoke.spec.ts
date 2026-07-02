@@ -9,10 +9,18 @@ import { test, expect } from "@playwright/test";
  */
 test.describe("Core User Flow Smoke Test", () => {
   test("should navigate from home to causes to cause detail to dashboard", async ({ page }) => {
+    // Dismiss the onboarding tour so it doesn't intercept pointer events
+    await page.addInitScript(() => {
+      localStorage.setItem("onboarding_tour_dismissed", "1");
+    });
+
     // Step 1: Navigate to Home page
     await page.goto("/", { waitUntil: "networkidle" });
     await page.waitForLoadState("domcontentloaded");
     await expect(page).toHaveURL(/\/$/);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    await expect(page).toHaveURL(/\/(en|es)?\/?$/);
     await expect(page.locator("body")).toBeVisible();
 
     // Step 2: Navigate to Causes page
@@ -44,6 +52,12 @@ test.describe("Core User Flow Smoke Test", () => {
       await page.goto("/causes/1", { waitUntil: "networkidle" });
       await page.waitForLoadState("domcontentloaded");
     }
+    // CauseCard renders no anchor links to detail pages, so navigate directly.
+    // Wait for networkidle first so CausesClient's router.replace URL-sync
+    // doesn't interrupt the next navigation (especially on webkit/firefox).
+    await page.waitForLoadState("networkidle");
+    await page.goto("/en/causes/1");
+    await page.waitForLoadState("networkidle");
     await expect(page).toHaveURL(/\/causes\/[^/]+$/);
     await expect(page.locator("body")).toBeVisible();
 

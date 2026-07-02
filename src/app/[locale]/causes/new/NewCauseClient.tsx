@@ -126,12 +126,16 @@ export default function CreateCampaignPage() {
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
 
-  const DRAFT_KEY = "proof_of_heart_next_draft";
+  const draftKey = publicKey
+    ? `proof_of_heart_draft_${publicKey}`
+    : "proof_of_heart_draft_anonymous";
+  const [hasDraft, setHasDraft] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const CREATOR_EMAIL_WEBHOOK_URL = process.env.NEXT_PUBLIC_CREATOR_EMAIL_WEBHOOK_URL?.trim() ?? "";
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(DRAFT_KEY);
+      const saved = localStorage.getItem(draftKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.title) setTitle(parsed.title);
@@ -146,6 +150,7 @@ export default function CreateCampaignPage() {
         if (parsed.tags) setTags(parsed.tags);
         if (parsed.coverImageUrl) setCoverImageUrl(parsed.coverImageUrl);
         if (parsed.milestones) setMilestones(parsed.milestones);
+        setHasDraft(true);
       }
     } catch (e) {
       console.warn("Failed to load draft from localStorage:", e);
@@ -155,7 +160,7 @@ export default function CreateCampaignPage() {
   useEffect(() => {
     try {
       localStorage.setItem(
-        DRAFT_KEY,
+        draftKey,
         JSON.stringify({
           title,
           description,
@@ -170,6 +175,8 @@ export default function CreateCampaignPage() {
           milestones,
         }),
       );
+      setLastSavedAt(Date.now());
+      setHasDraft(true);
     } catch (e) {
       console.warn("Failed to save draft to localStorage:", e);
     }
@@ -186,6 +193,27 @@ export default function CreateCampaignPage() {
     coverImageUrl,
     milestones,
   ]);
+
+  const handleDiscardDraft = () => {
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {
+      // ignore
+    }
+    setTitle("");
+    setDescription("");
+    setCreatorEmail("");
+    setFundingGoal("");
+    setDurationDays("");
+    setCategory(Category.Learner);
+    setHasRevenueSharing(false);
+    setRevenueSharePercentage(5);
+    setTags([]);
+    setCoverImageUrl("");
+    setMilestones([]);
+    setHasDraft(false);
+    setLastSavedAt(null);
+  };
 
   const isStartup = category === Category.EducationalStartup;
 
@@ -281,7 +309,7 @@ export default function CreateCampaignPage() {
       setReviewData(null);
 
       try {
-        localStorage.removeItem(DRAFT_KEY);
+        localStorage.removeItem(draftKey);
       } catch {
         // ignore
       }
@@ -372,6 +400,27 @@ export default function CreateCampaignPage() {
           </h1>
           <p className="text-zinc-600 dark:text-zinc-400 text-sm">{t("pageSubtitle")}</p>
         </div>
+
+        {/* Draft indicator */}
+        {hasDraft && (
+          <div className="mb-4 flex items-center justify-between rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-2.5 text-xs text-zinc-600 dark:text-zinc-400">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-2 w-2 rounded-full bg-green-500" aria-hidden="true" />
+              {lastSavedAt
+                ? Date.now() - lastSavedAt < 60_000
+                  ? "Draft saved · Saved a moment ago"
+                  : `Draft saved · ${new Date(lastSavedAt).toLocaleString()}`
+                : "Draft restored"}
+            </span>
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              className="ml-4 font-medium text-red-500 hover:text-red-600 transition-colors"
+            >
+              Discard draft
+            </button>
+          </div>
+        )}
 
         {/* Wallet guard banner */}
         {!isWalletConnected && (
