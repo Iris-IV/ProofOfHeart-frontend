@@ -25,13 +25,9 @@ export default function UpdatesList({ updates, isLoading, error }: UpdatesListPr
           >
             <div className="flex items-center gap-3 mb-3">
               <Skeleton className="w-10 h-10 rounded-full" />
-              <div className="space-y-2">
-                <Skeleton className="w-32 h-4" />
-                <Skeleton className="w-20 h-3" />
-              </div>
+              <Skeleton className="w-32 h-4" />
             </div>
             <Skeleton className="w-full h-4" />
-            <Skeleton className="w-5/6 h-4" />
           </div>
         ))}
       </div>
@@ -78,7 +74,7 @@ export default function UpdatesList({ updates, isLoading, error }: UpdatesListPr
   }
 
   return (
-    <div className="space-y-4" role="feed" aria-label="Campaign updates">
+    <div className="space-y-4">
       {updates.map((update) => (
         <UpdateItem key={update.id} update={update} />
       ))}
