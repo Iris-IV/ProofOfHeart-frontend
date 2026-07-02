@@ -65,13 +65,13 @@ describe("WithdrawFunds", () => {
       />,
     );
 
-    expect(screen.getByText("totalRaised")).toBeInTheDocument();
+    expect(screen.getByText("Total raised")).toBeInTheDocument();
     expect(
       screen.getByText((_content, element) =>
-        element?.tagName === "SPAN" ? element.textContent === "platformFeeWithPercent" : false,
+        element?.tagName === "SPAN" ? element.textContent === "Platform fee (3%%)" : false,
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText("youWillReceive")).toBeInTheDocument();
+    expect(screen.getByText("You will receive")).toBeInTheDocument();
     expect(screen.getByText("-0.3 XLM")).toBeInTheDocument();
     expect(screen.getByText("9.7 XLM")).toBeInTheDocument();
   });
@@ -87,8 +87,8 @@ describe("WithdrawFunds", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "withdrawFunds" })).toBeDisabled();
-    expect(screen.getByText("disabledGoalNotReached")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Withdraw Funds" })).toBeDisabled();
+    expect(screen.getByText("Funding goal has not been reached")).toBeInTheDocument();
   });
 
   it("handles already-withdrawn state", () => {
@@ -99,8 +99,8 @@ describe("WithdrawFunds", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "withdrawFunds" })).toBeDisabled();
-    expect(screen.getByText("disabledAlreadyWithdrawn")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Withdraw Funds" })).toBeDisabled();
+    expect(screen.getByText("Funds have already been withdrawn")).toBeInTheDocument();
   });
 
   it("defaults to 300 bps platform fee when prop is omitted", () => {
@@ -113,7 +113,7 @@ describe("WithdrawFunds", () => {
 
     expect(
       screen.getByText((_content, element) =>
-        element?.tagName === "SPAN" ? element.textContent === "platformFeeWithPercent" : false,
+        element?.tagName === "SPAN" ? element.textContent === "Platform fee (3%%)" : false,
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("-0.3 XLM")).toBeInTheDocument();

@@ -108,9 +108,9 @@ describe("MyContributionsSection", () => {
       }),
     ]);
 
-    expect(screen.getByText("statusActive")).toBeInTheDocument();
-    expect(screen.getByText("statusRefundable")).toBeInTheDocument();
-    expect(screen.getByText("statusRevenueClaimable")).toBeInTheDocument();
+    expect(screen.getByText("Active")).toBeInTheDocument();
+    expect(screen.getByText("Refundable")).toBeInTheDocument();
+    expect(screen.getByText("Revenue claimable")).toBeInTheDocument();
   });
 
   it("shows claim buttons only for eligible contributions", () => {
@@ -138,21 +138,21 @@ describe("MyContributionsSection", () => {
     expect(revenueCard).not.toBeNull();
 
     expect(
-      within(activeCard!).queryByRole("button", { name: "claimRefund" }),
+      within(activeCard!).queryByRole("button", { name: "Claim Refund" }),
     ).not.toBeInTheDocument();
     expect(
-      within(activeCard!).queryByRole("button", { name: "claimRevenue" }),
+      within(activeCard!).queryByRole("button", { name: /Claim Revenue/ }),
     ).not.toBeInTheDocument();
     expect(
-      within(refundableCard!).getByRole("button", { name: "claimRefund" }),
+      within(refundableCard!).getByRole("button", { name: "Claim Refund" }),
     ).toBeInTheDocument();
     expect(
-      within(refundableCard!).queryByRole("button", { name: "claimRevenue" }),
+      within(refundableCard!).queryByRole("button", { name: /Claim Revenue/ }),
     ).not.toBeInTheDocument();
     expect(
-      within(revenueCard!).queryByRole("button", { name: "claimRefund" }),
+      within(revenueCard!).queryByRole("button", { name: "Claim Refund" }),
     ).not.toBeInTheDocument();
-    expect(within(revenueCard!).getByRole("button", { name: "claimRevenue" })).toBeInTheDocument();
+    expect(within(revenueCard!).getByRole("button", { name: /Claim Revenue/ })).toBeInTheDocument();
   });
 
   it("renders Stellar explorer transaction links for contribution history", () => {
