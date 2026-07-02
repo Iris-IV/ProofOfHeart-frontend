@@ -14,6 +14,8 @@ const USE_MOCKS = typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_
 // Mock data for campaign comments
 // ---------------------------------------------------------------------------
 
+const MOCK_TIMESTAMP_SEC = 1700000000;
+
 const MOCK_COMMENTS: Record<number, Comment[]> = {
   1: [
     {
@@ -21,7 +23,7 @@ const MOCK_COMMENTS: Record<number, Comment[]> = {
       campaignId: 1,
       content: "Is this water project going to use solar or grid power?",
       authorAddress: "GBVABC12345678901234567890123456789012345678901234567890",
-      timestamp: Math.floor(Date.now() / 1000) - 86400 * 2,
+      timestamp: MOCK_TIMESTAMP_SEC - 86400 * 2,
       parentId: null,
       signature: "mock-sig",
       isPinned: false,
@@ -32,7 +34,7 @@ const MOCK_COMMENTS: Record<number, Comment[]> = {
       campaignId: 1,
       content: "Great question! We will be using solar power to ensure sustainability.",
       authorAddress: "GABC123456789012345678901234567890123456789012345678901234567890",
-      timestamp: Math.floor(Date.now() / 1000) - 86400 * 1,
+      timestamp: MOCK_TIMESTAMP_SEC - 86400 * 1,
       parentId: "comment-1-1",
       signature: "mock-sig",
       isPinned: true,
@@ -43,7 +45,7 @@ const MOCK_COMMENTS: Record<number, Comment[]> = {
       campaignId: 1,
       content: "This is really inspiring!",
       authorAddress: "GDDEF12345678901234567890123456789012345678901234567890",
-      timestamp: Math.floor(Date.now() / 1000) - 3600 * 5,
+      timestamp: MOCK_TIMESTAMP_SEC - 3600 * 5,
       parentId: null,
       signature: "mock-sig",
       isPinned: false,
@@ -105,12 +107,13 @@ export async function createCampaignComment(
   if (USE_MOCKS || !hasOffchainApiBaseUrl()) {
     await new Promise((resolve) => setTimeout(resolve, 800));
 
-    const timestamp = Math.floor(Date.now() / 1000);
+    const timestamp = MOCK_TIMESTAMP_SEC;
     const payload: CommentPayload = { campaignId, content, timestamp };
     const signature = await signPayload(payload);
 
+    const existingCount = MOCK_COMMENTS[campaignId]?.length || 0;
     const newComment: Comment = {
-      id: `comment-${campaignId}-${Date.now()}`,
+      id: `comment-${campaignId}-${existingCount + 1}`,
       campaignId,
       content,
       authorAddress,

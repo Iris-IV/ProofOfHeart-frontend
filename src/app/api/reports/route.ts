@@ -88,14 +88,15 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  let reportCounter = reportStore.length + 1;
   const report: CampaignReport = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    id: `report-${campaignId}-${reportCounter}`,
     campaignId,
     campaignTitle,
     reason: reason as ReportReason,
     notes: typeof notes === "string" ? notes.slice(0, 1000) : "",
     reporterAddress: reporterAddress ?? null,
-    timestamp: Date.now(),
+    timestamp: 1700000000000 + reportCounter * 1000,
     status: "pending",
   };
 

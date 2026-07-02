@@ -85,11 +85,21 @@ function CausesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [rawSearch, setRawSearch] = useState(searchParams.get("q") ?? "");
-  const [category, setCategory] = useState(searchParams.get("category") ?? "all");
-  const [status, setStatus] = useState(searchParams.get("status") ?? "all");
-  const [sort, setSort] = useState(searchParams.get("sort") ?? "newest");
-  const [tag, setTag] = useState(searchParams.get("tag") ?? "");
+  const [rawSearch, setRawSearch] = useState("");
+  const [category, setCategory] = useState("all");
+  const [status, setStatus] = useState("all");
+  const [sort, setSort] = useState("newest");
+  const [tag, setTag] = useState("");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setRawSearch(searchParams.get("q") ?? "");
+    setCategory(searchParams.get("category") ?? "all");
+    setStatus(searchParams.get("status") ?? "all");
+    setSort(searchParams.get("sort") ?? "newest");
+    setTag(searchParams.get("tag") ?? "");
+    setMounted(true);
+  }, [searchParams]);
 
   const debouncedSearch = useDebounce(rawSearch, 300);
 
@@ -120,6 +130,7 @@ function CausesContent() {
 
   // Sync URL query params whenever filters change
   useEffect(() => {
+    if (!mounted) return;
     const params = new URLSearchParams();
     if (debouncedSearch) params.set("q", debouncedSearch);
     if (category !== "all") params.set("category", category);
@@ -128,7 +139,7 @@ function CausesContent() {
     if (tag) params.set("tag", tag);
     const qs = params.toString();
     router.replace(qs ? `/causes?${qs}` : "/causes", { scroll: false });
-  }, [debouncedSearch, category, status, sort, tag, router]);
+  }, [debouncedSearch, category, status, sort, tag, router, mounted]);
 
   // Load user votes whenever wallet or campaigns change
   const loadUserVotes = useCallback(async () => {
@@ -479,7 +490,7 @@ function CausesContent() {
           </div>
 
           {/* Category filter chips */}
-          {!isLoading && !error && (
+          {!isLoading && !error && mounted && (
             <div role="group" aria-label={t("labelCategory")} className="flex flex-wrap gap-2">
               {(["all", ...CATEGORY_VALUES] as CategoryFilter[]).map((cat) => {
                 const selected = isCategorySelected(cat);
@@ -594,7 +605,7 @@ function CausesContent() {
         )}
 
         {/* Results */}
-        {!isLoading && !error && (
+        {!isLoading && !error && mounted && (
           <>
             <div
               aria-live="polite"

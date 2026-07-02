@@ -10,13 +10,22 @@ import { test, expect } from "@playwright/test";
  */
 test.describe("Critical User Journeys", () => {
   test.beforeEach(async ({ page }) => {
+    page.on("pageerror", (err) => {
+      throw new Error(`Uncaught page error: ${err.message}`);
+    });
+    page.on("console", (msg) => {
+      if (msg.type() === "error") {
+        throw new Error(`Console error: ${msg.text()}`);
+      }
+    });
     // Dismiss the onboarding tour so it doesn't intercept pointer events
     await page.addInitScript(() => {
       localStorage.setItem("onboarding_tour_dismissed", "1");
     });
     // Ensure we are in mock mode; wait for the locale redirect to settle
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await expect(page).toHaveURL(/\/(en|es)?\/?$/);
+    await expect(page.locator("body")).toBeVisible();
   });
 
   test("should connect wallet successfully", async ({ page }) => {
@@ -39,7 +48,7 @@ test.describe("Critical User Journeys", () => {
 
     // 2. Navigate directly to a verified campaign detail page (campaign 1 is verified in mock)
     await page.goto("/en/causes/1");
-    await page.waitForLoadState("networkidle");
+    await expect(page).toHaveURL(/\/causes\/1$/);
 
     // 3. Wait for campaign to finish loading (skeleton → detail)
     await expect(page.getByRole("heading", { name: /Clean Water/i })).toBeVisible({
@@ -64,7 +73,7 @@ test.describe("Critical User Journeys", () => {
 
     // 2. Navigate to the causes list where VotingComponent is inline on each card
     await page.goto("/en/causes");
-    await page.waitForLoadState("networkidle");
+    await expect(page).toHaveURL(/\/causes$/);
 
     // 3. Wait for campaigns to render
     await expect(page.getByText(/Education Technology/i).first()).toBeVisible({ timeout: 10000 });
