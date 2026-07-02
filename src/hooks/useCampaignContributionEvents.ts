@@ -9,7 +9,7 @@ import { invalidateQueriesForEvents } from "@/lib/cacheInvalidation";
 
 const EVENT_POLL_INTERVAL = Number(process.env.NEXT_PUBLIC_CONTRIBUTION_EVENTS_POLL_MS) || 5_000;
 
-const USE_MOCKS = typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_MOCKS === "true";
+const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
 export interface UseCampaignContributionEventsOptions {
   campaignId: number;

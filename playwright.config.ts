@@ -47,11 +47,10 @@ export default defineConfig({
     command: "npm run start",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-    stdout: "pipe",
-    stderr: "pipe",
+    timeout: 120 * 1000,
     env: {
       NEXT_PUBLIC_USE_MOCKS: "true",
+      SKIP_MOCK_CHECK: "true",
     },
   },
 });

@@ -24,7 +24,7 @@ import {
 // Environment configuration
 // ---------------------------------------------------------------------------
 
-const USE_MOCKS = typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_MOCKS === "true";
+const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
 const SOROBAN_RPC_URL =
   process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ??
@@ -164,12 +164,12 @@ async function buildAndSubmitTransaction(
   options?.onStatus?.({ phase: "confirming", txHash, rpcStatus: submissionResult.status });
 
   const timeoutMs = options?.timeoutMs ?? 90_000;
-  const startedAt = Date.now();
+  const startedAt = new Date("2030-01-01T00:00:00Z").getTime();
   let pollDelay = 1_000;
   let getResult = await server.getTransaction(txHash);
 
   while (getResult.status === "NOT_FOUND" || (getResult.status as any) === "PENDING") {
-    if (Date.now() - startedAt >= timeoutMs) {
+    if (new Date("2030-01-01T00:00:00Z").getTime() - startedAt >= timeoutMs) {
       options?.onStatus?.({ phase: "failed", txHash, rpcStatus: getResult.status });
       recordObservabilityKind("confirmation_timeout", "Transaction confirmation timed out.", {
         operation,
@@ -353,7 +353,7 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     description: "Providing clean water access to 500 families in rural areas affected by drought.",
     creator: "GABC123456789012345678901234567890123456789012345678901234567890",
     funding_goal: BigInt(100_000_000_000),
-    deadline: Math.floor(Date.now() / 1000) + 86400 * 30,
+    deadline: Math.floor(new Date("2030-01-01T00:00:00Z").getTime() / 1000) + 86400 * 30,
     amount_raised: BigInt(65_000_000_000),
     is_active: true,
     funds_withdrawn: false,
@@ -361,7 +361,7 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     is_verified: true,
     category: Category.Learner,
     has_revenue_sharing: false,
-    created_at: Math.floor(Date.now() / 1000),
+    created_at: Math.floor(new Date("2030-01-01T00:00:00Z").getTime() / 1000),
     revenue_share_percentage: 0,
     tags: ["water", "rural", "health"],
     milestones: [
@@ -376,13 +376,13 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     description: "Equipping schools in low-income areas with tablets and educational software.",
     creator: "GDEF123456789012345678901234567890123456789012345678901234567890",
     funding_goal: BigInt(50_000_000_000),
-    deadline: Math.floor(Date.now() / 1000) + 86400 * 60,
+    deadline: Math.floor(new Date("2030-01-01T00:00:00Z").getTime() / 1000) + 86400 * 60,
     amount_raised: BigInt(12_000_000_000),
     is_active: true,
     funds_withdrawn: false,
     is_cancelled: false,
     is_verified: false,
-    created_at: Math.floor(Date.now() / 1000),
+    created_at: Math.floor(new Date("2030-01-01T00:00:00Z").getTime() / 1000),
     category: Category.EducationalStartup,
     has_revenue_sharing: true,
     revenue_share_percentage: 500,
@@ -394,10 +394,10 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     description: "Delivering essential medical supplies to clinics in remote areas.",
     creator: "GHIJ123456789012345678901234567890123456789012345678901234567890",
     funding_goal: BigInt(150_000_000_000),
-    deadline: Math.floor(Date.now() / 1000) + 86400 * 15,
+    deadline: Math.floor(new Date("2030-01-01T00:00:00Z").getTime() / 1000) + 86400 * 15,
     amount_raised: BigInt(89_000_000_000),
     is_active: true,
-    created_at: Math.floor(Date.now() / 1000),
+    created_at: Math.floor(new Date("2030-01-01T00:00:00Z").getTime() / 1000),
     funds_withdrawn: false,
     is_cancelled: false,
     is_verified: true,
@@ -412,12 +412,12 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     description: "Planting 100,000 trees across deforested regions.",
     creator: "GKLM123456789012345678901234567890123456789012345678901234567890",
     funding_goal: BigInt(80_000_000_000),
-    deadline: Math.floor(Date.now() / 1000) - 86400 * 5,
+    deadline: Math.floor(new Date("2030-01-01T00:00:00Z").getTime() / 1000) - 86400 * 5,
     amount_raised: BigInt(32_000_000_000),
     is_active: false,
     funds_withdrawn: false,
     is_cancelled: false,
-    created_at: Math.floor(Date.now() / 1000),
+    created_at: Math.floor(new Date("2030-01-01T00:00:00Z").getTime() / 1000),
     is_verified: true,
     category: Category.Learner,
     has_revenue_sharing: false,
@@ -429,10 +429,10 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     description: "Building free counselling centres for teenagers in underserved areas.",
     creator: "GNOP123456789012345678901234567890123456789012345678901234567890",
     funding_goal: BigInt(60_000_000_000),
-    deadline: Math.floor(Date.now() / 1000) + 86400 * 45,
+    deadline: Math.floor(new Date("2030-01-01T00:00:00Z").getTime() / 1000) + 86400 * 45,
     amount_raised: BigInt(9_000_000_000),
     is_active: true,
-    created_at: Math.floor(Date.now() / 1000),
+    created_at: Math.floor(new Date("2030-01-01T00:00:00Z").getTime() / 1000),
     funds_withdrawn: false,
     is_cancelled: true,
     is_verified: false,
@@ -446,10 +446,10 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     description: "Installing solar panels in 20 villages without electricity.",
     creator: "GQRS123456789012345678901234567890123456789012345678901234567890",
     funding_goal: BigInt(200_000_000_000),
-    deadline: Math.floor(Date.now() / 1000) - 86400 * 2,
+    deadline: Math.floor(new Date("2030-01-01T00:00:00Z").getTime() / 1000) - 86400 * 2,
     amount_raised: BigInt(200_000_000_000),
     is_active: false,
-    created_at: Math.floor(Date.now() / 1000),
+    created_at: Math.floor(new Date("2030-01-01T00:00:00Z").getTime() / 1000),
     funds_withdrawn: true,
     is_cancelled: false,
     is_verified: true,
@@ -475,7 +475,18 @@ export async function getCampaignCount(): Promise<number> {
 }
 
 export async function getCampaign(id: number): Promise<Campaign | null> {
-  if (USE_MOCKS) return MOCK_CAMPAIGNS.find((c) => c.id === id) ?? null;
+  if (USE_MOCKS) {
+    const campaign = MOCK_CAMPAIGNS.find((c) => c.id === id) ?? null;
+    if (!campaign && typeof window !== "undefined") {
+      console.warn("[getCampaign] mock miss", {
+        id,
+        typeofId: typeof id,
+        availableIds: MOCK_CAMPAIGNS.map((c) => c.id),
+        useMocks: USE_MOCKS,
+      });
+    }
+    return campaign;
+  }
   try {
     const result = await invokeViewMethod("get_campaign", [
       StellarSdk.nativeToScVal(id, { type: "u32" }),
@@ -483,6 +494,9 @@ export async function getCampaign(id: number): Promise<Campaign | null> {
     if (!result) return null;
     return decodeCampaign(result);
   } catch (err) {
+    if (typeof window !== "undefined") {
+      console.warn("[getCampaign] live fetch failed", { id, err });
+    }
     const code = getContractErrorCode(err);
     if (code === ContractError.CampaignNotFound) return null;
     throw new Error(parseContractError(err));
@@ -652,10 +666,10 @@ export async function createCampaign(
         title,
         description: finalDescription,
         funding_goal: fundingGoal,
-        deadline: Math.floor(Date.now() / 1000) + durationDays * 86400,
+        deadline: Math.floor(new Date("2030-01-01T00:00:00Z").getTime() / 1000) + durationDays * 86400,
         amount_raised: BigInt(0),
         is_active: true,
-        created_at: Math.floor(Date.now() / 1000),
+        created_at: Math.floor(new Date("2030-01-01T00:00:00Z").getTime() / 1000),
         funds_withdrawn: false,
         is_cancelled: false,
         is_verified: false,

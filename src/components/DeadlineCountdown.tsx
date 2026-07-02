@@ -37,10 +37,15 @@ const ClockIcon = () => (
 );
 
 export default function DeadlineCountdown({ deadline }: DeadlineCountdownProps) {
+  const [mounted, setMounted] = useState(false);
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(() => getTimeLeft(deadline));
   const locale = useLocale();
 
   useEffect(() => {
+    setMounted(true);
+    // Force a recalculation on mount to catch up with client time
+    setTimeLeft(getTimeLeft(deadline));
+    
     return subscribeToCountdownTick(() => {
       setTimeLeft((prev) => {
         // Already ended — cheap no-op on future ticks

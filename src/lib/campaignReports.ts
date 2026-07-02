@@ -23,7 +23,7 @@ export interface CampaignReport {
   status: "pending" | "reviewed";
 }
 
-const USE_MOCKS = typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_MOCKS === "true";
+const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
 // ---------------------------------------------------------------------------
 // Backend API functions

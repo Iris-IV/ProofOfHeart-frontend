@@ -4,7 +4,7 @@ type ApiEventResponse = StellarSdk.rpc.Api.EventResponse;
 type ApiEventFilter = StellarSdk.rpc.Api.EventFilter;
 type ApiGetEventsRequest = StellarSdk.rpc.Api.GetEventsRequest;
 
-const USE_MOCKS = typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_MOCKS === "true";
+const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
 const SOROBAN_RPC_URL =
   process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ??

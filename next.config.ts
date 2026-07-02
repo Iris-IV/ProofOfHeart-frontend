@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: pkg.version,
   },
-  output: "standalone",
+  // output: "standalone",
   reactCompiler: true,
   outputFileTracingRoot: path.join(__dirname),
   images: {

@@ -8,7 +8,7 @@ import {
 } from "./offchainApiClient";
 import type { CommentsPage } from "../hooks/useCampaignComments";
 
-const USE_MOCKS = typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_MOCKS === "true";
+const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
 // ---------------------------------------------------------------------------
 // Mock data for campaign comments

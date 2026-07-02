@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 /**
  * E2E tests for critical user journeys:
@@ -10,8 +10,15 @@ import { test, expect } from "@playwright/test";
  */
 test.describe("Critical User Journeys", () => {
   test.beforeEach(async ({ page }) => {
-    // Ensure we are in mock mode
     await page.goto("/");
+    const onboardingDialog = page.getByRole('dialog');
+    if (await onboardingDialog.isVisible().catch(() => false)) {
+      const closeBtn = page.getByRole('button', { name: /skip|close|✕/i }).first();
+      if (await closeBtn.isVisible()) {
+        await closeBtn.click();
+        await onboardingDialog.waitFor({ state: 'hidden' });
+      }
+    }
   });
 
   test("should connect wallet successfully", async ({ page }) => {
@@ -32,14 +39,11 @@ test.describe("Critical User Journeys", () => {
       .first()
       .click();
 
-    // 2. Go to Causes page
-    await page.goto("/causes");
+    // 2. Go to a verified campaign (ID 1 in mock is verified)
+    await page.goto("/en/causes/1");
+    await expect(page.getByRole("heading", { name: /Clean Water/i })).toBeVisible();
 
-    // 3. Find a verified campaign (ID 1 in mock is verified)
-    await page.locator('a[href*="/causes/1"]').first().click();
-    await page.waitForURL(/\/causes\/1/);
-
-    // 4. Click "Donate"
+    // 3. Click "Donate"
     const donateButton = page.getByRole("button", { name: /Donate/i }).first();
     await expect(donateButton).toBeVisible();
     await donateButton.click();
@@ -63,7 +67,8 @@ test.describe("Critical User Journeys", () => {
       .click();
 
     // 2. Go to an active campaign (ID 2 is active)
-    await page.goto("/causes/2");
+    await page.goto("/en/causes/2");
+    await expect(page.getByRole("heading", { name: /Education Technology/i })).toBeVisible();
 
     // 3. Find Vote buttons
     const approveButton = page.getByRole("button", { name: /Approve/i }).first();

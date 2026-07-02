@@ -253,10 +253,15 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const estimatedFeeAmount = raised * (platformFeeBps / 10000);
   const estimatedCreatorReceives = raised - estimatedFeeAmount;
 
-  const now = Math.floor(Date.now() / 1000);
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+  
+  const now = isClient ? Math.floor(Date.now() / 1000) : 0;
   const isRefundEligible =
     campaign.is_cancelled ||
-    (now > campaign.deadline && campaign.amount_raised < campaign.funding_goal);
+    (now > 0 && now > campaign.deadline && campaign.amount_raised < campaign.funding_goal);
 
   const refundableXlm = stroopsToXlmNumber(refundableAmount) || 0;
 

@@ -1,5 +1,5 @@
 export const IS_MOCK_MODE =
-  typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_MOCKS === "true";
+  process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
 let asserted = false;
 
