@@ -48,7 +48,9 @@ function createWrapper() {
     defaultOptions: { queries: { retry: false } },
   });
   return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
   };
 }
 
@@ -58,9 +60,13 @@ describe("useCampaigns", () => {
   });
 
   it("transitions from loading to success with campaign list", async () => {
-    mockGetCampaignsChunk.mockResolvedValue(chunkResult(makeCampaign(1), makeCampaign(2)));
+    mockGetCampaignsChunk.mockResolvedValue(
+      chunkResult(makeCampaign(1), makeCampaign(2))
+    );
 
-    const { result } = renderHook(() => useCampaigns(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useCampaigns(), {
+      wrapper: createWrapper(),
+    });
 
     expect(result.current.isLoading).toBe(true);
     expect(result.current.campaigns).toEqual([]);
@@ -74,7 +80,9 @@ describe("useCampaigns", () => {
   it("transitions from loading to error when getCampaignsChunk throws", async () => {
     mockGetCampaignsChunk.mockRejectedValue(new Error("network failure"));
 
-    const { result } = renderHook(() => useCampaigns(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useCampaigns(), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -83,13 +91,17 @@ describe("useCampaigns", () => {
   });
 
   it("exposes pagination controls", async () => {
-    const campaigns = Array.from({ length: 25 }, (_, i) => makeCampaign(i + 1));
+    const campaigns = Array.from({ length: 25 }, (_, i) =>
+      makeCampaign(i + 1)
+    );
     mockGetCampaignsChunk.mockImplementation(async (startIndex: number) => {
       const chunk = campaigns.slice(startIndex, startIndex + 20);
       return { campaigns: chunk, totalCount: campaigns.length };
     });
 
-    const { result } = renderHook(() => useCampaigns(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useCampaigns(), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -103,7 +115,9 @@ describe("useCampaigns", () => {
       .mockResolvedValueOnce(chunkResult(makeCampaign(1)))
       .mockResolvedValueOnce(chunkResult(makeCampaign(1), makeCampaign(2)));
 
-    const { result } = renderHook(() => useCampaigns(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useCampaigns(), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => expect(result.current.campaigns).toHaveLength(1));
 
