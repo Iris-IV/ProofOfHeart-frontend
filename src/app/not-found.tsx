@@ -40,11 +40,16 @@ export default async function GlobalNotFound() {
                   <WalletProvider>
                     <div className="flex min-h-screen flex-col">
                       <Navbar />
-                      <main id="main" className="flex-1 flex items-center justify-center bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+                      <main
+                        id="main"
+                        className="flex-1 flex items-center justify-center bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800"
+                      >
                         <div className="container mx-auto px-4 py-24 text-center">
                           <div className="max-w-md mx-auto space-y-6">
                             <div className="text-6xl">🔍</div>
-                            <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">Page not found</h1>
+                            <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+                              Page not found
+                            </h1>
                             <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
                               This page does not exist or may have been removed.
                             </p>
