@@ -11,7 +11,10 @@ import { parseContractError } from "../utils/contractErrors";
 import { stroopsToXlmNumber } from "@/lib/stellarAmount";
 import { formatNumber } from "@/lib/formatters";
 import { explorerTxUrl } from "@/utils/explorer";
-import { type TransactionLifecyclePhase, type TransactionLifecycleOptions } from "../lib/contractClient";
+import {
+  type TransactionLifecyclePhase,
+  type TransactionLifecycleOptions,
+} from "../lib/contractClient";
 import { useWriteGuard } from "../hooks/useWriteGuard";
 
 interface MultiSigWithdrawalPanelProps {
@@ -77,8 +80,7 @@ export default function MultiSigWithdrawalPanel({
   if (!canWithdraw) return null;
 
   const isSignerOfActive =
-    activeProposal &&
-    activeProposal.signers.some((s) => isSameAddress(s.address, walletAddress));
+    activeProposal && activeProposal.signers.some((s) => isSameAddress(s.address, walletAddress));
 
   const mySignature =
     activeProposal?.signers.find((s) => isSameAddress(s.address, walletAddress)) ?? null;
@@ -207,8 +209,18 @@ export default function MultiSigWithdrawalPanel({
                           className="p-1.5 text-zinc-400 hover:text-red-500 transition-colors"
                           aria-label={t("removeSigner")}
                         >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M6 18L18 6M6 6l12 12"
+                            />
                           </svg>
                         </button>
                       )}
@@ -290,12 +302,28 @@ export default function MultiSigWithdrawalPanel({
             {activeProposal.signers.map((signer) => (
               <li key={signer.address} className="flex items-center gap-2 text-xs">
                 {signer.signedAt ? (
-                  <svg className="w-3.5 h-3.5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  <svg
+                    className="w-3.5 h-3.5 text-green-500 shrink-0"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 ) : (
-                  <svg className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16z" clipRule="evenodd" />
+                  <svg
+                    className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-600 shrink-0"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 )}
                 <span className="font-mono text-zinc-600 dark:text-zinc-400 break-all">
