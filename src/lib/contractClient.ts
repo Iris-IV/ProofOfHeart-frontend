@@ -38,7 +38,12 @@ const NETWORK_PASSPHRASE =
   process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
 
 export type TransactionLifecyclePhase =
-  "building" | "signing" | "submitting" | "confirming" | "confirmed" | "failed";
+  | "building"
+  | "signing"
+  | "submitting"
+  | "confirming"
+  | "confirmed"
+  | "failed";
 
 export interface TransactionLifecycleUpdate {
   phase: TransactionLifecyclePhase;
