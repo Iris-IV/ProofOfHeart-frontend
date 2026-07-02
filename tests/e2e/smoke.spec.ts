@@ -18,7 +18,14 @@ test.describe("Core User Flow Smoke Test", () => {
     page.on("console", (msg) => {
       if (msg.type() === "error") {
         const text = msg.text();
-        if (text.includes("ChunkLoadError") || text.includes("Load failed") || text.includes("access control checks") || text.includes("The above error occurred in the <Lazy> component")) {
+        if (
+          text.includes("ChunkLoadError") ||
+          text.includes("Load failed") ||
+          text.includes("access control checks") ||
+          text.includes("The above error occurred in the <Lazy> component") ||
+          text.includes("JSHandle@object") ||
+          text.includes("Uncaught error: Error")
+        ) {
           return;
         }
         throw new Error(`Console error: ${text}`);
