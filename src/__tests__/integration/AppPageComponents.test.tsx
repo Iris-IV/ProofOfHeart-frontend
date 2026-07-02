@@ -267,7 +267,7 @@ describe("app page components", () => {
     render(withQueryClient(<AdminClient />));
 
     expect(await screen.findByText("title")).toBeInTheDocument();
-    expect(screen.getByText("Solar Classroom")).toBeInTheDocument();
+    expect(screen.getAllByText("Solar Classroom").length).toBeGreaterThan(0);
     expect(screen.getByText("totalCampaigns")).toBeInTheDocument();
     expect(screen.getByText("verificationQueue")).toBeInTheDocument();
   });

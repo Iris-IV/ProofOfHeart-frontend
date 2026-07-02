@@ -22,6 +22,7 @@ import { useToast } from "@/components/ToastProvider";
 import VotingComponent from "@/components/VotingComponent";
 import { useWallet } from "@/components/WalletContext";
 import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
+import { useFollowedCreators } from "@/hooks/useFollowedCreators";
 import { useLiveCampaignFunding } from "@/hooks/useLiveCampaignFunding";
 import { useLiveVoteTallies } from "@/hooks/useLiveVoteTallies";
 import { usePlatformFee } from "@/hooks/usePlatformFee";
@@ -42,6 +43,10 @@ import { parseContractError } from "@/utils/contractErrors";
 import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncAction";
 import { trackViewCampaign } from "@/lib/analytics";
 import { formatXlm, formatDate } from "@/lib/formatters";
+import { isSameAddress } from "@/lib/stellar";
+const EditCampaignMetadata = dynamic(() => import("@/components/EditCampaignMetadata"), {
+  ssr: false,
+});
 
 export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
@@ -71,6 +76,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const { showError, showSuccess, showWarning } = useToast();
   const { isSaved, toggleSaved } = useSavedCampaigns();
+  const { isFollowing, toggleFollow } = useFollowedCreators();
 
   // Quorum / threshold state
   const [minVotesQuorum, setMinVotesQuorum] = useState<number | undefined>(undefined);
@@ -237,9 +243,14 @@ export default function CauseDetailClient({ id }: { id: string }) {
   }
 
   if (!campaign) {
+    // fetchedCampaign loaded but local state not yet synced via useEffect — show skeleton one more cycle
+    if (fetchedCampaign) return <CauseDetailSkeleton />;
     notFound();
     return null;
   }
+
+  const isCreator = userWalletAddress ? isSameAddress(campaign.creator, userWalletAddress) : false;
+  const canEdit = isCreator && !campaign.is_verified && !campaign.is_cancelled;
 
   const raised = stroopsToXlmNumber(campaign.amount_raised);
   const goal = stroopsToXlmNumber(campaign.funding_goal);
@@ -333,6 +344,15 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 )}
               </div>
 
+              {canEdit && (
+                <EditCampaignMetadata
+                  campaignId={campaign.id}
+                  initialTitle={campaign.title}
+                  initialDescription={campaign.description}
+                  initialCoverImageUrl={campaign.cover_image_url ?? ""}
+                />
+              )}
+
               {/* Share + Report toolbar */}
               <div className="flex items-center justify-between flex-wrap gap-3 pt-4 mt-4 border-t border-zinc-100 dark:border-zinc-700">
                 <div className="flex items-center gap-4">
@@ -343,6 +363,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                         : `https://proofofheart.org/causes/${campaign.id}`
                     }
                     title={campaign.title}
+                    walletAddress={campaign.creator}
                   />
                   <button
                     onClick={() => {
@@ -559,7 +580,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
                   {campaign.creator.slice(1, 3).toUpperCase()}
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-mono text-zinc-700 dark:text-zinc-300 break-all">
                     {campaign.creator.slice(0, 10)}...{campaign.creator.slice(-6)}
                   </p>
@@ -567,6 +588,27 @@ export default function CauseDetailClient({ id }: { id: string }) {
                     Deadline: {formatDate(campaign.deadline, locale)}
                   </p>
                 </div>
+                {!isCreator && (
+                  <button
+                    onClick={() => {
+                      if (!userWalletAddress) {
+                        showWarning("Please connect your wallet to follow creators.");
+                        return;
+                      }
+                      toggleFollow(campaign.creator);
+                    }}
+                    className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                      isFollowing(campaign.creator)
+                        ? "bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700"
+                        : "bg-white text-zinc-700 border-zinc-300 hover:border-blue-400 dark:bg-zinc-700 dark:text-zinc-200 dark:border-zinc-600"
+                    }`}
+                    aria-label={
+                      isFollowing(campaign.creator) ? "Unfollow creator" : "Follow creator"
+                    }
+                  >
+                    {isFollowing(campaign.creator) ? "✓ Following" : "+ Follow"}
+                  </button>
+                )}
               </div>
             </div>
 
