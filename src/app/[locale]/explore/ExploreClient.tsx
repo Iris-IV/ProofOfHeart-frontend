@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { Link } from "@/i18n/routing";
 import { useTranslations, useLocale } from "next-intl";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
+import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import CampaignStatusBadge from "@/components/CampaignStatusBadge";
 import FundingProgressBar from "@/components/FundingProgressBar";
 import { CampaignRowSkeleton } from "@/components/Skeleton";
@@ -19,11 +20,40 @@ const CATEGORY_ICONS: Record<Category, string> = {
   [Category.Publisher]: "📚",
 };
 
+const ITEM_HEIGHT = 100;
+
 export default function ExplorePage() {
   const t = useTranslations("Explore");
   const locale = useLocale();
-  const { campaigns, isLoading, error, refetch } = useCampaigns();
+  const { campaigns, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage, error, refetch } =
+    useCampaigns();
   const [activeCategory, setActiveCategory] = useState<"all" | Category>("all");
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [scrollMargin, setScrollMargin] = useState(0);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      setScrollMargin(scrollRef.current.offsetTop);
+    }
+  }, []);
+
+  // Fetch more campaigns when the sentinel comes into view.
+  useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage) return;
+    const el = loadMoreRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { rootMargin: "400px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const categories = useMemo(() => {
     const seen = new Set(campaigns.map((c) => c.category));
@@ -52,6 +82,13 @@ export default function ExplorePage() {
       }),
     [filtered],
   );
+
+  const virtualizer = useWindowVirtualizer({
+    count: sorted.length,
+    estimateSize: () => ITEM_HEIGHT,
+    overscan: 5,
+    scrollMargin,
+  });
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-14 sm:px-6">
@@ -116,62 +153,93 @@ export default function ExplorePage() {
         </div>
       )}
 
-      {/* Campaign list */}
+      {/* Campaign list (virtualized) */}
       {!isLoading && !error && sorted.length > 0 && (
-        <div className="mt-6 space-y-3">
-          {sorted.map((campaign, idx) => (
-            <Link
-              key={campaign.id}
-              href={`/causes/${campaign.id}`}
-              className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm transition-all group"
-            >
-              {/* Rank */}
-              <span className="w-6 text-center text-sm font-bold text-zinc-400 dark:text-zinc-500 shrink-0">
-                {idx + 1}
-              </span>
+        <div ref={scrollRef}>
+          <div
+            style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}
+            className="mt-6"
+          >
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const campaign = sorted[virtualItem.index];
+              return (
+                <div
+                  key={campaign.id}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: `${virtualItem.size}px`,
+                    transform: `translateY(${virtualItem.start}px)`,
+                  }}
+                >
+                  <Link
+                    href={`/causes/${campaign.id}`}
+                    className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm transition-all group"
+                  >
+                    {/* Rank */}
+                    <span className="w-6 text-center text-sm font-bold text-zinc-400 dark:text-zinc-500 shrink-0">
+                      {virtualItem.index + 1}
+                    </span>
 
-              {/* Icon / thumbnail */}
-              <span className="text-2xl shrink-0 w-10 h-10 flex items-center justify-center">
-                {campaign.cover_image_url ? (
-                  <span className="relative w-10 h-10 rounded-md overflow-hidden block">
-                    <Image
-                      src={campaign.cover_image_url}
-                      alt={campaign.title}
-                      fill
-                      unoptimized
-                      loading="lazy"
-                      className="object-cover"
-                    />
-                  </span>
-                ) : (
-                  (CATEGORY_ICONS[campaign.category] ?? "💡")
-                )}
-              </span>
+                    {/* Icon / thumbnail */}
+                    <span className="text-2xl shrink-0 w-10 h-10 flex items-center justify-center">
+                      {campaign.cover_image_url ? (
+                        <span className="relative w-10 h-10 rounded-md overflow-hidden block">
+                          <Image
+                            src={campaign.cover_image_url}
+                            alt={campaign.title}
+                            fill
+                            unoptimized
+                            loading="lazy"
+                            className="object-cover"
+                          />
+                        </span>
+                      ) : (
+                        (CATEGORY_ICONS[campaign.category] ?? "💡")
+                      )}
+                    </span>
 
-              {/* Title + meta */}
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-zinc-900 dark:text-zinc-50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
-                  {campaign.title}
-                </p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  By {formatAddress(campaign.creator)} ·{" "}
-                  {formatAmount(campaign.amount_raised, locale, { maximumFractionDigits: 1 })} /{" "}
-                  {formatAmount(campaign.funding_goal, locale, { maximumFractionDigits: 1 })} XLM
-                </p>
-                <div className="mt-1.5">
-                  <FundingProgressBar
-                    amountRaised={campaign.amount_raised}
-                    fundingGoal={campaign.funding_goal}
-                  />
+                    {/* Title + meta */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-zinc-900 dark:text-zinc-50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+                        {campaign.title}
+                      </p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                        By {formatAddress(campaign.creator)} ·{" "}
+                        {formatAmount(campaign.amount_raised, locale, { maximumFractionDigits: 1 })}{" "}
+                        /{" "}
+                        {formatAmount(campaign.funding_goal, locale, { maximumFractionDigits: 1 })}{" "}
+                        XLM
+                      </p>
+                      <div className="mt-1.5">
+                        <FundingProgressBar
+                          amountRaised={campaign.amount_raised}
+                          fundingGoal={campaign.funding_goal}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Status badge */}
+                    <div className="shrink-0">
+                      <CampaignStatusBadge campaign={campaign} />
+                    </div>
+                  </Link>
                 </div>
-              </div>
+              );
+            })}
+          </div>
 
-              {/* Status badge */}
-              <div className="shrink-0">
-                <CampaignStatusBadge campaign={campaign} />
+          {/* Sentinel for infinite scroll */}
+          {hasNextPage && (
+            <div ref={loadMoreRef} className="mt-4 flex justify-center">
+              <div className="inline-flex items-center gap-2 px-6 py-2.5 text-sm text-zinc-500 dark:text-zinc-400">
+                <span className="inline-block motion-safe:animate-spin rounded-full h-4 w-4 border-2 border-zinc-300 border-t-blue-600" />
+                {t("loadingMore")}
               </div>
-            </Link>
-          ))}
+            </div>
+          )}
         </div>
       )}
     </div>

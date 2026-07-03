@@ -500,6 +500,31 @@ export async function getAllCampaigns(): Promise<Campaign[]> {
   }
 }
 
+export async function getCampaignsChunk(
+  startIndex: number,
+  limit: number,
+): Promise<{ campaigns: Campaign[]; totalCount: number }> {
+  if (USE_MOCKS) {
+    const campaigns = MOCK_CAMPAIGNS.slice(startIndex, startIndex + limit);
+    return { campaigns: [...campaigns], totalCount: MOCK_CAMPAIGNS.length };
+  }
+  try {
+    const count = await getCampaignCount();
+    const end = Math.min(startIndex + limit, count);
+    const ids: number[] = [];
+    for (let i = startIndex; i < end; i++) {
+      ids.push(i + 1);
+    }
+    const results = await Promise.all(ids.map((id) => getCampaign(id)));
+    return {
+      campaigns: results.filter((c): c is Campaign => c !== null),
+      totalCount: count,
+    };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
 export async function getContribution(campaignId: number, contributor: string): Promise<bigint> {
   if (USE_MOCKS) return BigInt(0);
   try {

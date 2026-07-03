@@ -323,7 +323,8 @@
     "noCausesInCategory": "No causes in this category",
     "checkBackSoon": "Check back soon — the community is just getting started.",
     "tryDifferentCategory": "Try selecting a different category above.",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "loadingMore": "Loading more causes…"
   },
   "DonationModal": {
     "titleConfirmed": "Donation Confirmed",
