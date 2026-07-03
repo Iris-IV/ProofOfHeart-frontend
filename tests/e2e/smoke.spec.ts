@@ -44,9 +44,7 @@ test.describe("Core User Flow Smoke Test", () => {
     await expect(page.locator("body")).toBeVisible();
 
     // Step 3: Navigate to a specific Cause Detail page
-    const causeCard = page
-      .locator('[data-testid="cause-card"], a[href*="/causes/"]')
-      .first();
+    const causeCard = page.locator('[data-testid="cause-card"], a[href*="/causes/"]').first();
     if (await causeCard.isVisible()) {
       await causeCard.click();
       await page.waitForURL(/\/(en|es)\/causes\/[^/]+$/);

@@ -28,9 +28,7 @@ test.describe("Critical User Journeys", () => {
   test("should connect wallet successfully", async ({ page }) => {
     // The "Connect Wallet" button is in the desktop nav (hidden md:flex).
     // Playwright's default viewport (1280x720) is wide enough to see it.
-    const connectButton = page
-      .getByRole("button", { name: /Connect Wallet/i })
-      .first();
+    const connectButton = page.getByRole("button", { name: /Connect Wallet/i }).first();
     await expect(connectButton).toBeVisible();
 
     await connectButton.click();
@@ -39,9 +37,7 @@ test.describe("Critical User Journeys", () => {
     // "Connected" label above the truncated public key and a disconnect
     // icon button with aria-label="Disconnect".
     await expect(page.getByText("Connected").first()).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: /Disconnect/i }),
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /Disconnect/i })).toBeVisible();
   });
 
   test("should contribute to an active campaign", async ({ page }) => {
@@ -61,12 +57,16 @@ test.describe("Critical User Journeys", () => {
     await page.goto("/en/causes/1");
     await expect(page).toHaveURL(/\/(en|es)\/causes\/1$/);
 
+    // Wait for the campaign to finish loading on the client side.
+    // The skeleton is shown while isLoading=true; once data arrives the title appears.
+    await expect(page.getByText("Clean Water for Rural Communities").first()).toBeVisible({
+      timeout: 15000,
+    });
+
     // 4. Click "Fund This Cause" — this is the donate trigger button on the detail page
     //    (shown when campaign.is_active && !campaign.is_cancelled)
-    const fundButton = page
-      .getByRole("button", { name: /Fund This Cause/i })
-      .first();
-    await expect(fundButton).toBeVisible();
+    const fundButton = page.getByRole("button", { name: /Fund This Cause/i }).first();
+    await expect(fundButton).toBeVisible({ timeout: 10000 });
     await fundButton.click();
 
     // 5. The DonationModal should be open; fill in the amount via its label
@@ -83,9 +83,7 @@ test.describe("Critical User Journeys", () => {
 
     // 7. Verify success message shown in the confirmed step of the modal
     //    DonationModal key "donatedSuccess": "{amount} XLM donated successfully"
-    await expect(
-      page.getByText(/donated successfully/i).first(),
-    ).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/donated successfully/i).first()).toBeVisible({ timeout: 15000 });
   });
 
   test("should vote on an active campaign", async ({ page }) => {
@@ -100,18 +98,21 @@ test.describe("Critical User Journeys", () => {
     await page.goto("/en/causes/2");
     await expect(page).toHaveURL(/\/(en|es)\/causes\/2$/);
 
+    // Wait for the campaign to finish loading on the client side.
+    await expect(
+      page.getByText("Education Technology for Underprivileged Children").first(),
+    ).toBeVisible({ timeout: 15000 });
+
     // 3. Find and click the Approve vote button
     //    aria-label="Approve campaign", visible text t("approve") = "Approve"
-    const approveButton = page
-      .getByRole("button", { name: /Approve/i })
-      .first();
-    await expect(approveButton).toBeVisible();
+    const approveButton = page.getByRole("button", { name: /Approve/i }).first();
+    await expect(approveButton).toBeVisible({ timeout: 10000 });
     await approveButton.click();
 
     // 4. Verify the "voted" confirmation text appears in the VotingComponent
     //    t("votedUpvote") = "You voted to approve this cause"
-    await expect(
-      page.getByText(/You voted to approve this cause/i).first(),
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/You voted to approve this cause/i).first()).toBeVisible({
+      timeout: 10000,
+    });
   });
 });
