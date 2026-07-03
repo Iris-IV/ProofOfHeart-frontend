@@ -22,6 +22,13 @@ import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
 import dynamic from "next/dynamic";
 
+const AdminTwoFactorSetup = dynamic(() => import("@/components/admin/AdminTwoFactorSetup"), {
+  ssr: false,
+});
+const CampaignMap = dynamic(() => import("@/components/CampaignMap"), {
+  ssr: false,
+});
+
 const TransferAdminModal = dynamic(() => import("@/components/TransferAdminModal"), {
   ssr: false,
 });
@@ -718,6 +725,18 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* ── Campaign Map ── */}
+      <section className="mt-12">
+        <CampaignMap campaigns={campaigns} />
+      </section>
+
+      {/* ── Two-Factor Authentication ── */}
+      {publicKey && (
+        <section className="mt-8">
+          <AdminTwoFactorSetup adminAddress={publicKey} />
+        </section>
+      )}
 
       {/* ── Reports Queue ── */}
       <section className="mt-12">

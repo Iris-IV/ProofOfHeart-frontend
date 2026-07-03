@@ -16,6 +16,7 @@ test.describe("Critical User Journeys", () => {
     });
     // Ensure we are in mock mode; wait for the locale redirect to settle
     await page.goto("/");
+    await page.waitForLoadState("networkidle");
   });
 
   test("should connect wallet successfully", async ({ page }) => {
@@ -38,6 +39,7 @@ test.describe("Critical User Journeys", () => {
 
     // 2. Navigate directly to a verified campaign detail page (campaign 1 is verified in mock)
     await page.goto("/en/causes/1");
+    await page.waitForLoadState("networkidle");
 
     // 3. Wait for campaign to finish loading (skeleton → detail)
     await expect(page.getByRole("heading", { name: /Clean Water/i })).toBeVisible({
@@ -62,6 +64,7 @@ test.describe("Critical User Journeys", () => {
 
     // 2. Navigate to the causes list where VotingComponent is inline on each card
     await page.goto("/en/causes");
+    await page.waitForLoadState("networkidle");
 
     // 3. Wait for campaigns to render
     await expect(page.getByText(/Education Technology/i).first()).toBeVisible({ timeout: 10000 });

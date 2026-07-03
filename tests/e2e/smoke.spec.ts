@@ -16,6 +16,7 @@ test.describe("Core User Flow Smoke Test", () => {
 
     // Step 1: Navigate to Home page
     await page.goto("/");
+    await page.waitForLoadState("networkidle");
     await expect(page).toHaveURL(/\/(en|es)?\/?$/);
     await expect(page.locator("body")).toBeVisible();
 
@@ -26,6 +27,12 @@ test.describe("Core User Flow Smoke Test", () => {
 
     // Step 3: Navigate to a specific Cause Detail page
     await page.goto("/en/causes/1");
+    // CauseCard renders no anchor links to detail pages, so navigate directly.
+    // Wait for networkidle first so CausesClient's router.replace URL-sync
+    // doesn't interrupt the next navigation (especially on webkit/firefox).
+    await page.waitForLoadState("networkidle");
+    await page.goto("/en/causes/1");
+    await page.waitForLoadState("networkidle");
     await expect(page).toHaveURL(/\/causes\/[^/]+$/);
     await expect(page.locator("body")).toBeVisible();
 
