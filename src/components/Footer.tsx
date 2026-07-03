@@ -122,10 +122,11 @@ export default function Footer() {
               )}
               {!isLoading && version !== null && (
                 <span
-                  className={`flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] uppercase font-bold ${isMismatch
+                  className={`flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] uppercase font-bold ${
+                    isMismatch
                       ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800"
                       : "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-100/50 dark:border-blue-800/50"
-                    }`}
+                  }`}
                   title={
                     isMismatch
                       ? "Contract version mismatch! Unexpected behavior may occur."
