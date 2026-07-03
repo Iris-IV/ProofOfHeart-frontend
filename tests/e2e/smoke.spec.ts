@@ -21,6 +21,11 @@ test.describe("Core User Flow Smoke Test", () => {
   });
 
   test("should navigate from home to causes to cause detail to dashboard", async ({ page }) => {
+    // Dismiss the onboarding tour so it doesn't intercept pointer events
+    await page.addInitScript(() => {
+      localStorage.setItem("onboarding_tour_dismissed", "1");
+    });
+
     // Step 1: Navigate to Home page
     // The middleware redirects / → /en (or the negotiated locale)
     await page.goto("/");
