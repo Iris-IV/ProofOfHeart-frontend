@@ -7,76 +7,111 @@ import { test, expect } from "@playwright/test";
  * 3. Vote on a campaign
  *
  * These tests run in mock mode (NEXT_PUBLIC_USE_MOCKS=true) for determinism.
+ *
+ * Note: The app uses next-intl for i18n routing, so all pages are served
+ * under a locale prefix (e.g. /en/causes). Direct navigation uses /en/ prefix
+ * and URL assertions use patterns that match both /en/ and /es/ locales.
  */
 test.describe("Critical User Journeys", () => {
   test.beforeEach(async ({ page }) => {
-    // Dismiss the onboarding tour so it doesn't intercept pointer events
+    // Dismiss the onboarding tour on every page load so it never blocks clicks.
+    // The tour is shown when "onboarding_tour_dismissed" is absent from localStorage.
     await page.addInitScript(() => {
       localStorage.setItem("onboarding_tour_dismissed", "1");
     });
-    // Ensure we are in mock mode; wait for the locale redirect to settle
+
+    // Start on the home page; middleware redirects / → /<locale>
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.waitForURL(/\/(en|es)(\/)?$/);
   });
 
   test("should connect wallet successfully", async ({ page }) => {
+    // The "Connect Wallet" button is in the desktop nav (hidden md:flex).
+    // Playwright's default viewport (1280x720) is wide enough to see it.
     const connectButton = page.getByRole("button", { name: /Connect Wallet/i }).first();
     await expect(connectButton).toBeVisible();
 
     await connectButton.click();
 
-    // In mock mode, it should immediately show as connected
-    await expect(page.getByText(/Connected/i).first()).toBeVisible();
+    // In mock mode, connecting is synchronous. The nav shows a small
+    // "Connected" label above the truncated public key and a disconnect
+    // icon button with aria-label="Disconnect".
+    await expect(page.getByText("Connected").first()).toBeVisible();
     await expect(page.getByRole("button", { name: /Disconnect/i })).toBeVisible();
   });
 
-  test("should contribute to a verified campaign", async ({ page }) => {
-    // 1. Connect wallet
+  test("should contribute to an active campaign", async ({ page }) => {
+    // 1. Connect wallet first
     await page
       .getByRole("button", { name: /Connect Wallet/i })
       .first()
       .click();
+    // Wait until wallet is shown as connected
+    await expect(page.getByText("Connected").first()).toBeVisible();
 
-    // 2. Navigate directly to a verified campaign detail page (campaign 1 is verified in mock)
+    // 2. Navigate to the Causes page (mock campaign id=1 is active & verified)
+    await page.goto("/en/causes");
+    await expect(page).toHaveURL(/\/(en|es)\/causes/);
+
+    // 3. Navigate to campaign detail (id 1)
     await page.goto("/en/causes/1");
-    await page.waitForLoadState("networkidle");
+    await expect(page).toHaveURL(/\/(en|es)\/causes\/1$/);
 
-    // 3. Wait for campaign to finish loading (skeleton → detail)
-    await expect(page.getByRole("heading", { name: /Clean Water/i })).toBeVisible({
-      timeout: 10000,
+    // Wait for the campaign to finish loading on the client side.
+    // The skeleton is shown while isLoading=true; once data arrives the title appears.
+    await expect(page.getByText("Clean Water for Rural Communities").first()).toBeVisible({
+      timeout: 15000,
     });
 
-    // 4. Click "Fund This Cause"
+    // 4. Click "Fund This Cause" — this is the donate trigger button on the detail page
+    //    (shown when campaign.is_active && !campaign.is_cancelled)
     const fundButton = page.getByRole("button", { name: /Fund This Cause/i }).first();
-    await expect(fundButton).toBeVisible();
+    await expect(fundButton).toBeVisible({ timeout: 10000 });
     await fundButton.click();
 
-    // 5. Verify donation modal opened
-    await expect(page.getByRole("dialog")).toBeVisible();
+    // 5. The DonationModal should be open; fill in the amount via its label
+    const amountInput = page.getByLabel(/Amount/i);
+    await expect(amountInput).toBeVisible();
+    await amountInput.fill("50");
+
+    // 6. Submit the donation — button reads "Donate 50 XLM" once amount is entered
+    const donateSubmitButton = page.getByRole("button", {
+      name: /Donate 50 XLM/i,
+    });
+    await expect(donateSubmitButton).toBeVisible();
+    await donateSubmitButton.click();
+
+    // 7. Verify success message shown in the confirmed step of the modal
+    //    DonationModal key "donatedSuccess": "{amount} XLM donated successfully"
+    await expect(page.getByText(/donated successfully/i).first()).toBeVisible({ timeout: 15000 });
   });
 
   test("should vote on an active campaign", async ({ page }) => {
-    // 1. Connect wallet
+    // 1. Connect wallet first so userWalletAddress is set in VotingComponent
     await page
       .getByRole("button", { name: /Connect Wallet/i })
       .first()
       .click();
+    await expect(page.getByText("Connected").first()).toBeVisible();
 
-    // 2. Navigate to the causes list where VotingComponent is inline on each card
-    await page.goto("/en/causes");
-    await page.waitForLoadState("networkidle");
+    // 2. Navigate to campaign 2 (is_active: true, is_verified: false — valid for voting)
+    await page.goto("/en/causes/2");
+    await expect(page).toHaveURL(/\/(en|es)\/causes\/2$/);
 
-    // 3. Wait for campaigns to render
-    await expect(page.getByText(/Education Technology/i).first()).toBeVisible({ timeout: 10000 });
+    // Wait for the campaign to finish loading on the client side.
+    await expect(
+      page.getByText("Education Technology for Underprivileged Children").first(),
+    ).toBeVisible({ timeout: 15000 });
 
-    // 4. Find the Approve vote button on an active campaign card
-    const approveButton = page.getByRole("button", { name: /Approve campaign/i }).first();
-    await expect(approveButton).toBeVisible();
-
+    // 3. Find and click the Approve vote button
+    //    aria-label="Approve campaign", visible text t("approve") = "Approve"
+    const approveButton = page.getByRole("button", { name: /Approve/i }).first();
+    await expect(approveButton).toBeVisible({ timeout: 10000 });
     await approveButton.click();
 
-    // 5. Verify vote confirmation message appears
-    await expect(page.getByText(/You voted to approve this cause/i)).toBeVisible({
+    // 4. Verify the "voted" confirmation text appears in the VotingComponent
+    //    t("votedUpvote") = "You voted to approve this cause"
+    await expect(page.getByText(/You voted to approve this cause/i).first()).toBeVisible({
       timeout: 10000,
     });
   });

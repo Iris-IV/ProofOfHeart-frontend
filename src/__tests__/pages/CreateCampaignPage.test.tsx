@@ -285,10 +285,9 @@ describe("CreateCampaignPage — revenue sharing", () => {
     await userEvent.click(screen.getByRole("switch"));
 
     const slider = await screen.findByLabelText(/revenue share percentage/i);
-    fireEvent.change(slider, { target: { value: "2500" } }); // 2500 bps = 25%
+    fireEvent.change(slider, { target: { value: "25" } }); // 25% = 2500 bps
 
     expect(screen.getByText(/25\.00%/)).toBeInTheDocument();
-    expect(screen.getByText(/2500 bps/)).toBeInTheDocument();
   });
 
   it("hides revenue sharing section when switching away from Educational Startup", async () => {

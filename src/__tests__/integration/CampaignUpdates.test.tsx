@@ -1,15 +1,23 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ToastProvider } from "@/components/ToastProvider";
-import { WalletProvider } from "@/components/WalletContext";
 import UpdatesSection from "@/components/UpdatesSection";
 import { Campaign, Category } from "@/types";
 import * as campaignUpdatesModule from "@/lib/campaignUpdates";
+
+// Mock WalletContext so we can control publicKey without real Freighter
+let mockPublicKey: string | null = null;
+jest.mock("@/components/WalletContext", () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  WalletProvider: ({ children }: { children: any }) => children,
+  useWallet: () => ({ publicKey: mockPublicKey, isWalletConnected: mockPublicKey !== null }),
+}));
 
 // Mock the campaign updates module
 jest.mock("@/lib/campaignUpdates", () => ({
   getCampaignUpdates: jest.fn(),
   createCampaignUpdate: jest.fn(),
+  verifyUpdateSignature: jest.fn().mockResolvedValue(true),
 }));
 
 const mockGetCampaignUpdates = campaignUpdatesModule.getCampaignUpdates as jest.Mock;
@@ -45,14 +53,13 @@ const createTestQueryClient = () => {
 };
 
 const renderUpdatesSection = (campaign: Campaign, walletPublicKey: string | null = null) => {
+  mockPublicKey = walletPublicKey;
   const queryClient = createTestQueryClient();
 
   return render(
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
-        <WalletProvider>
-          <UpdatesSection campaign={campaign} />
-        </WalletProvider>
+        <UpdatesSection campaign={campaign} />
       </ToastProvider>
     </QueryClientProvider>,
   );
@@ -62,6 +69,7 @@ describe("UpdatesSection Integration", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
+    mockPublicKey = null;
   });
 
   describe("Viewing updates", () => {
@@ -232,7 +240,9 @@ describe("UpdatesSection Integration", () => {
 
       fireEvent.click(screen.getByText("Post Update"));
 
-      expect(screen.getByText("Posting...")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("Posting...")).toBeInTheDocument();
+      });
     });
 
     it("shows error toast on submission failure", async () => {

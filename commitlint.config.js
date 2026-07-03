@@ -8,6 +8,8 @@
 
 module.exports = {
   extends: ["@commitlint/config-conventional"],
+  // Ignore merge commits (e.g. "merge upstream main into feat/...")
+  ignores: [(commit) => /^merge /i.test(commit)],
   rules: {
     "type-enum": [
       2,
