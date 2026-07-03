@@ -37,7 +37,8 @@
     "fundingHistory": "Historial de Financiación/Donaciones",
     "noFundingHistory": "Aún no hay actividad de financiación/donación.",
     "donated": "Donó {amount} XLM el {date}",
-    "campaignFallback": "Campaña #{id}"
+    "campaignFallback": "Campaña #{id}",
+    "loadMore": "Cargar más"
   },
   "MyContributions": {
     "title": "Mis Contribuciones",

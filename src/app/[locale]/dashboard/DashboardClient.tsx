@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import MyContributionsSection from "@/components/MyContributionsSection";
 import { Spinner, DashboardSkeleton } from "@/components/Skeleton";
 import { useWallet } from "@/components/WalletContext";
@@ -23,6 +23,12 @@ export default function DashboardPage() {
   } = useStellarBalance(publicKey);
   const balanceError = balanceQueryError ? t("balanceFetchError") : null;
   const { savedIds } = useSavedCampaigns();
+
+  const [visibleSavedCount, setVisibleSavedCount] = useState(5);
+  const [visibleSubmittedCount, setVisibleSubmittedCount] = useState(5);
+
+  const handleLoadMoreSaved = () => setVisibleSavedCount((prev) => prev + 5);
+  const handleLoadMoreSubmitted = () => setVisibleSubmittedCount((prev) => prev + 5);
 
   const savedCampaigns = useMemo(
     () => campaigns.filter((c) => savedIds.includes(c.id)),
@@ -106,19 +112,29 @@ export default function DashboardPage() {
             You haven&apos;t saved any campaigns yet.
           </span>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {savedCampaigns.map((campaign) => (
-              <Link
-                key={campaign.id}
-                href={`/causes/${campaign.id}`}
-                className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {savedCampaigns.slice(0, visibleSavedCount).map((campaign) => (
+                <Link
+                  key={campaign.id}
+                  href={`/causes/${campaign.id}`}
+                  className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
+                >
+                  <div className="font-medium text-zinc-900 dark:text-zinc-50">{campaign.title}</div>
+                  <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2 break-words">
+                    {campaign.description}
+                  </div>
+                </Link>
+              ))}
+            </div>
+            {visibleSavedCount < savedCampaigns.length && (
+              <button
+                onClick={handleLoadMoreSaved}
+                className="self-center px-4 py-2 border rounded-full text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
               >
-                <div className="font-medium text-zinc-900 dark:text-zinc-50">{campaign.title}</div>
-                <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2 break-words">
-                  {campaign.description}
-                </div>
-              </Link>
-            ))}
+                {t("loadMore")}
+              </button>
+            )}
           </div>
         )}
       </section>
@@ -128,19 +144,29 @@ export default function DashboardPage() {
         {submittedCampaigns.length === 0 ? (
           <span className="text-zinc-500 dark:text-zinc-400">{t("noSubmittedCampaigns")}</span>
         ) : (
-          <ul className="space-y-2">
-            {submittedCampaigns.map((campaign) => (
-              <li
-                key={campaign.id}
-                className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 min-h-[60px]"
+          <div className="flex flex-col gap-4">
+            <ul className="space-y-2">
+              {submittedCampaigns.slice(0, visibleSubmittedCount).map((campaign) => (
+                <li
+                  key={campaign.id}
+                  className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 min-h-[60px]"
+                >
+                  <div className="font-medium text-zinc-900 dark:text-zinc-50">{campaign.title}</div>
+                  <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
+                    {campaign.description}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {visibleSubmittedCount < submittedCampaigns.length && (
+              <button
+                onClick={handleLoadMoreSubmitted}
+                className="self-center px-4 py-2 border rounded-full text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
               >
-                <div className="font-medium text-zinc-900 dark:text-zinc-50">{campaign.title}</div>
-                <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
-                  {campaign.description}
-                </div>
-              </li>
-            ))}
-          </ul>
+                {t("loadMore")}
+              </button>
+            )}
+          </div>
         )}
       </section>
 

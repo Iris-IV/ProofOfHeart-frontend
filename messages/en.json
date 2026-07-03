@@ -37,7 +37,8 @@
     "fundingHistory": "Funding/Donation History",
     "noFundingHistory": "No funding/donation activity yet.",
     "donated": "Donated {amount} XLM on {date}",
-    "campaignFallback": "Campaign #{id}"
+    "campaignFallback": "Campaign #{id}",
+    "loadMore": "Load more"
   },
   "MyContributions": {
     "title": "My Contributions",
