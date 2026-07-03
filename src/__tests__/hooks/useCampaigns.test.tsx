@@ -14,9 +14,7 @@ jest.mock("@/hooks/useWindowVisibility", () => ({
 
 import { getCampaignsChunk } from "@/lib/contractClient";
 
-const mockGetCampaignsChunk = getCampaignsChunk as jest.MockedFunction<
-  typeof getCampaignsChunk
->;
+const mockGetCampaignsChunk = getCampaignsChunk as jest.MockedFunction<typeof getCampaignsChunk>;
 
 function makeCampaign(id: number): Campaign {
   return {
@@ -48,9 +46,7 @@ function createWrapper() {
     defaultOptions: { queries: { retry: false } },
   });
   return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={client}>{children}</QueryClientProvider>
-    );
+    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
   };
 }
 
@@ -60,9 +56,7 @@ describe("useCampaigns", () => {
   });
 
   it("transitions from loading to success with campaign list", async () => {
-    mockGetCampaignsChunk.mockResolvedValue(
-      chunkResult(makeCampaign(1), makeCampaign(2))
-    );
+    mockGetCampaignsChunk.mockResolvedValue(chunkResult(makeCampaign(1), makeCampaign(2)));
 
     const { result } = renderHook(() => useCampaigns(), {
       wrapper: createWrapper(),
@@ -91,9 +85,7 @@ describe("useCampaigns", () => {
   });
 
   it("exposes pagination controls", async () => {
-    const campaigns = Array.from({ length: 25 }, (_, i) =>
-      makeCampaign(i + 1)
-    );
+    const campaigns = Array.from({ length: 25 }, (_, i) => makeCampaign(i + 1));
     mockGetCampaignsChunk.mockImplementation(async (startIndex: number) => {
       const chunk = campaigns.slice(startIndex, startIndex + 20);
       return { campaigns: chunk, totalCount: campaigns.length };

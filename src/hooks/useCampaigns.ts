@@ -19,39 +19,27 @@ export interface UseCampaignsResult {
   refetch: () => void;
 }
 
-const POLL_INTERVAL =
-  Number(process.env.NEXT_PUBLIC_POLL_INTERVAL_LISTING_MS) || 60_000;
+const POLL_INTERVAL = Number(process.env.NEXT_PUBLIC_POLL_INTERVAL_LISTING_MS) || 60_000;
 
 export function useCampaigns(): UseCampaignsResult {
   const queryClient = useQueryClient();
   const isVisible = useWindowVisibility();
 
-  const {
-    data,
-    isLoading,
-    isFetching,
-    isFetchingNextPage,
-    fetchNextPage,
-    hasNextPage,
-    error,
-  } = useInfiniteQuery({
-    queryKey: ["campaigns"],
-    queryFn: ({ pageParam }) =>
-      getCampaignsChunk(pageParam, CAMPAIGNS_CHUNK_SIZE),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, _allPages, lastPageParam) => {
-      const nextStart = lastPageParam + CAMPAIGNS_CHUNK_SIZE;
-      return nextStart < lastPage.totalCount ? nextStart : undefined;
-    },
-    staleTime: POLL_INTERVAL,
-    refetchInterval: isVisible ? POLL_INTERVAL : false,
-    refetchIntervalInBackground: false,
-  });
+  const { data, isLoading, isFetching, isFetchingNextPage, fetchNextPage, hasNextPage, error } =
+    useInfiniteQuery({
+      queryKey: ["campaigns"],
+      queryFn: ({ pageParam }) => getCampaignsChunk(pageParam, CAMPAIGNS_CHUNK_SIZE),
+      initialPageParam: 0,
+      getNextPageParam: (lastPage, _allPages, lastPageParam) => {
+        const nextStart = lastPageParam + CAMPAIGNS_CHUNK_SIZE;
+        return nextStart < lastPage.totalCount ? nextStart : undefined;
+      },
+      staleTime: POLL_INTERVAL,
+      refetchInterval: isVisible ? POLL_INTERVAL : false,
+      refetchIntervalInBackground: false,
+    });
 
-  const campaigns = useMemo(
-    () => data?.pages.flatMap((page) => page.campaigns) ?? [],
-    [data]
-  );
+  const campaigns = useMemo(() => data?.pages.flatMap((page) => page.campaigns) ?? [], [data]);
 
   return {
     campaigns,
