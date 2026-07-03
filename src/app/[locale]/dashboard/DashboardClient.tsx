@@ -120,7 +120,9 @@ export default function DashboardPage() {
                   href={`/causes/${campaign.id}`}
                   className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
                 >
-                  <div className="font-medium text-zinc-900 dark:text-zinc-50">{campaign.title}</div>
+                  <div className="font-medium text-zinc-900 dark:text-zinc-50">
+                    {campaign.title}
+                  </div>
                   <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2 break-words">
                     {campaign.description}
                   </div>
@@ -151,7 +153,9 @@ export default function DashboardPage() {
                   key={campaign.id}
                   className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 min-h-[60px]"
                 >
-                  <div className="font-medium text-zinc-900 dark:text-zinc-50">{campaign.title}</div>
+                  <div className="font-medium text-zinc-900 dark:text-zinc-50">
+                    {campaign.title}
+                  </div>
                   <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
                     {campaign.description}
                   </div>
