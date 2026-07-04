@@ -1,5 +1,17 @@
 import { signTransaction, getAddress } from "@stellar/freighter-api";
-import { rpc, xdr, TransactionBuilder, BASE_FEE, Contract, Keypair, Account, scValToBigInt, Address, nativeToScVal, Transaction } from "@stellar/stellar-sdk";
+import {
+  Account,
+  Address,
+  BASE_FEE,
+  Contract,
+  Keypair,
+  Transaction,
+  TransactionBuilder,
+  nativeToScVal,
+  rpc,
+  scValToBigInt,
+  xdr,
+} from "@stellar/stellar-sdk";
 import { captureTransactionError } from "./errorTracking";
 import {
   classifyRpcFailure,
@@ -121,10 +133,7 @@ async function buildAndSubmitTransaction(
   }
 
   const preparedTx = rpc
-    .assembleTransaction(
-      builtTx,
-      simulated as rpc.Api.SimulateTransactionSuccessResponse,
-    )
+    .assembleTransaction(builtTx, simulated as rpc.Api.SimulateTransactionSuccessResponse)
     .build();
 
   options?.onStatus?.({ phase: "signing" });
@@ -137,10 +146,7 @@ async function buildAndSubmitTransaction(
     wrapFreighterError(error);
   }
 
-  const signedTx = TransactionBuilder.fromXDR(
-    signedTxXdr,
-    NETWORK_PASSPHRASE,
-  ) as Transaction;
+  const signedTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE) as Transaction;
 
   options?.onStatus?.({ phase: "submitting" });
   let submissionResult;
@@ -215,10 +221,7 @@ function emitMockLifecycle(txHash: string, options?: TransactionLifecycleOptions
   return txHash;
 }
 
-async function invokeViewMethod(
-  method: string,
-  args: xdr.ScVal[] = [],
-): Promise<xdr.ScVal | null> {
+async function invokeViewMethod(method: string, args: xdr.ScVal[] = []): Promise<xdr.ScVal | null> {
   const server = getServer();
   const contract = new Contract(CONTRACT_ADDRESS);
 
@@ -477,9 +480,7 @@ export async function getCampaignCount(): Promise<number> {
 export async function getCampaign(id: number): Promise<Campaign | null> {
   if (USE_MOCKS) return MOCK_CAMPAIGNS.find((c) => c.id === id) ?? null;
   try {
-    const result = await invokeViewMethod("get_campaign", [
-      nativeToScVal(id, { type: "u32" }),
-    ]);
+    const result = await invokeViewMethod("get_campaign", [nativeToScVal(id, { type: "u32" })]);
     if (!result) return null;
     return decodeCampaign(result);
   } catch (err) {
@@ -775,10 +776,7 @@ export async function cancelCampaign(
   if (USE_MOCKS) return emitMockLifecycle("mock_tx_cancel_campaign", options);
   const { address: callerAddress } = await getAddress();
   const contract = new Contract(CONTRACT_ADDRESS);
-  const op = contract.call(
-    "cancel_campaign",
-    nativeToScVal(campaignId, { type: "u32" }),
-  );
+  const op = contract.call("cancel_campaign", nativeToScVal(campaignId, { type: "u32" }));
   try {
     const txResult = await buildAndSubmitTransaction(callerAddress, op, {
       ...options,
@@ -902,10 +900,7 @@ export async function verifyCampaign(
   if (USE_MOCKS) return emitMockLifecycle("mock_tx_verify_campaign", options);
   const { address: callerAddress } = await getAddress();
   const contract = new Contract(CONTRACT_ADDRESS);
-  const op = contract.call(
-    "verify_campaign",
-    nativeToScVal(campaignId, { type: "u32" }),
-  );
+  const op = contract.call("verify_campaign", nativeToScVal(campaignId, { type: "u32" }));
   try {
     const txResult = await buildAndSubmitTransaction(callerAddress, op, {
       ...options,
@@ -928,10 +923,7 @@ export async function updatePlatformFee(
 
   const { address: callerAddress } = await getAddress();
   const contract = new Contract(CONTRACT_ADDRESS);
-  const op = contract.call(
-    "update_platform_fee",
-    nativeToScVal(platformFee, { type: "u32" }),
-  );
+  const op = contract.call("update_platform_fee", nativeToScVal(platformFee, { type: "u32" }));
 
   try {
     const txResult = await buildAndSubmitTransaction(callerAddress, op, {
