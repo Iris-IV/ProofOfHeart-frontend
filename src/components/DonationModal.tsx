@@ -170,7 +170,9 @@ export default function DonationModal({
   const amountError =
     error ||
     (amount.trim() && !validation.valid
-      ? validation.errorKey || "Please enter a valid amount."
+      ? validation.errorKey
+        ? formatError(validation.errorKey)
+        : "Please enter a valid amount."
       : null);
   const amountNum = validation.amount || 0;
   const newRaised = raised + amountNum;

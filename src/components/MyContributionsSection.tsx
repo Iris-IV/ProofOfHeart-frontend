@@ -8,6 +8,8 @@ import { useContributions } from "../hooks/useContributions";
 import { stroopsToXlmNumber } from "../lib/stellarAmount";
 import { useToast } from "./ToastProvider";
 import { parseContractError } from "../utils/contractErrors";
+import { Download } from "lucide-react";
+import type { ContributionHistoryItem } from "../hooks/useContributions";
 
 interface MyContributionsSectionProps {
   walletAddress: string;
@@ -186,11 +188,51 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
     return claimStatuses.get(claimKey(itemId, type)) ?? "idle";
   };
 
+  const getContributionDisplayStatus = (item: ContributionHistoryItem) => {
+    if (item.canClaimRefund) return "refundable";
+    if (item.canClaimRevenue) return "revenue-claimable";
+    if (item.campaign.is_verified) return "verified";
+    if (item.campaign.is_cancelled) return "cancelled";
+    return "active";
+  };
+
+  const handleExportCsv = () => {
+    const header = ["Campaign", "Action", "Amount (XLM)", "Status", "Tx Hash", "Date"];
+    const rows: string[] = [];
+
+    contributions.forEach((item) => {
+      item.transactions.forEach((tx) => {
+        let amountStr = "0";
+        if (tx.action === "contribute" || tx.action === "claim_refund") {
+          amountStr = (Number(item.contribution) / 10000000).toFixed(7);
+        } else if (tx.action === "claim_revenue") {
+          amountStr = (Number(item.claimableRevenue) / 10000000).toFixed(7);
+        }
+
+        const date = new Date(tx.timestamp).toISOString();
+        const status = getContributionDisplayStatus(item);
+        const title = `"${item.campaign.title.replace(/"/g, '""')}"`;
+
+        rows.push([title, tx.action, amountStr, status, tx.txHash, date].join(","));
+      });
+    });
+
+    const csvContent = [header.join(","), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `history_${walletAddress}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <section className="mb-8">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-xl font-semibold">My Contributions</h2>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {claimableCount > 1 && (
             <button
               onClick={handleClaimAll}
@@ -198,6 +240,15 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
               className="rounded-full bg-indigo-600 px-4 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-zinc-400"
             >
               {isBatchClaiming ? "Claiming all..." : `Claim All (${claimableCount})`}
+            </button>
+          )}
+          {contributions.length > 0 && (
+            <button
+              onClick={handleExportCsv}
+              className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+            >
+              <Download size={14} />
+              Export CSV
             </button>
           )}
           <div className="text-sm text-zinc-500 dark:text-zinc-400">

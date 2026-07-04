@@ -4,6 +4,7 @@ import { Heart, Shield, Globe, Code, ArrowRight, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useWallet } from "@/components/WalletContext";
 import { Link } from "@/i18n/routing";
+import TrendingCampaigns from "@/components/TrendingCampaigns";
 
 export default function HomeClient() {
   const t = useTranslations("Home");
@@ -56,8 +57,11 @@ export default function HomeClient() {
           </div>
         </div>
 
+        {/* Trending Section */}
+        <TrendingCampaigns />
+
         {/* Features Section */}
-        <section aria-labelledby="features-heading" className="mt-32">
+        <section aria-labelledby="features-heading" className="mt-24 sm:mt-32">
           <h2 id="features-heading" className="sr-only">
             Key features
           </h2>

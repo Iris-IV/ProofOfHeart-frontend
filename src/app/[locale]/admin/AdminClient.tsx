@@ -122,6 +122,7 @@ export default function AdminDashboard() {
 
   // Optimistic UI State
   const [optimisticPendingIds, setOptimisticPendingIds] = useState<Set<number>>(new Set());
+  const [optimisticRemovedIds, setOptimisticRemovedIds] = useState<number[]>([]);
 
   useEffect(() => {
     let cancelled = false;
