@@ -71,7 +71,9 @@
   "Donation": {
     "title": "Financiar Esta Causa",
     "confirmedTitle": "Donación Confirmada",
+    "closeAriaLabel": "Cerrar",
     "amountLabel": "Monto (XLM)",
+    "amountPlaceholder": "ej. 10",
     "percentFunded": "{percent}% financiado",
     "afterDonation": "Después de tu donación: {percent}% financiado",
     "goalReached": "¡Meta alcanzada!",
@@ -80,6 +82,7 @@
     "totalLine": "Total desde tu wallet",
     "donate": "Donar",
     "donateAmount": "Donar {amount} XLM",
+    "feeUnavailable": "No se pudo cargar la tarifa — continuar puede implicar tarifas de plataforma.",
     "platformFeeNote": "Se deduce una tarifa de plataforma del {feePercent} al retirar fondos el creador. Tu donación completa cuenta para el total de la campaña.",
     "networkFeeNote": "La tarifa de red estimada cubre los costos del ledger de Stellar para esta transacción. Es independiente de la tarifa de plataforma.",
     "waitingSignature": "Esperando firma de Freighter…",
