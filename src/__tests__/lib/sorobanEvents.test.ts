@@ -30,9 +30,7 @@ import {
   sumContributionAmounts,
 } from "@/lib/sorobanEvents";
 
-const mockGetEvents = (
-  StellarSdk as unknown as { __mockGetEvents: jest.Mock }
-).__mockGetEvents;
+const mockGetEvents = (StellarSdk as unknown as { __mockGetEvents: jest.Mock }).__mockGetEvents;
 
 function makeContributionEvent(id: string, campaignId: number, amount: bigint) {
   return {
