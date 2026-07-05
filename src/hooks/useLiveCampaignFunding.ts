@@ -14,8 +14,8 @@ export interface UseLiveCampaignFundingResult {
 }
 
 /**
- * Campaign detail funding with live increments from `contribution_made` events
- * and periodic reconciliation via `get_campaign`.
+ * Campaign detail funding with live increments from streamed `contribution_made` events
+ * and reconciliation when `get_campaign` refetches.
  */
 export function useLiveCampaignFunding(campaignId: number): UseLiveCampaignFundingResult {
   const { campaign, isLoading, error, refetch } = useCampaign(campaignId);
