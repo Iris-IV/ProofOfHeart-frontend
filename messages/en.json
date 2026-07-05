@@ -240,9 +240,7 @@
     "tryDifferentSearch": "Try different search terms or clear the filters to see all causes.",
     "tryAgain": "Try again",
     "loadMore": "Load more causes",
-    "showingRange": "Showing {shown} of {total}",
-    "listView": "List",
-    "mapView": "Map"
+    "showingRange": "Showing {shown} of {total}"
   },
   "Status": {
     "active": "Active",
@@ -257,7 +255,7 @@
     "pageSubtitle": "Fill in the details below to launch your campaign on-chain via Freighter.",
     "walletGuard": "Connect your Freighter wallet to create a campaign.",
     "connectWallet": "Connect Wallet",
-    "connecting": "Connecting…",
+    "connecting": "Connecting\u2026",
     "labelTitle": "Campaign Title",
     "placeholderTitle": "A clear, compelling title for your campaign",
     "labelDescription": "Description",
@@ -267,7 +265,7 @@
     "creatorEmailNote": "Optional, off-chain only. Used for campaign milestone and deadline notifications.",
     "labelFundingGoal": "Funding Goal (XLM)",
     "labelDuration": "Duration (days)",
-    "placeholderDuration": "1–365",
+    "placeholderDuration": "1\u2013365",
     "labelCategory": "Category",
     "startupRevenueHint": "Revenue sharing is available for Educational Startup campaigns.",
     "revenueSharingTitle": "Revenue Sharing",
@@ -292,7 +290,7 @@
     "reviewFieldTimestamp": "Estimated Deadline Timestamp",
     "editDetails": "Edit Details",
     "confirmAndSign": "Confirm & Sign",
-    "submitting": "Submitting…",
+    "submitting": "Submitting\u2026",
     "successMessage": "Campaign \"{title}\" created successfully!",
     "emailWebhookFailed": "Campaign created, but we could not save your optional email subscription.",
     "walletRequiredError": "Please connect your Freighter wallet before creating a campaign.",
@@ -304,11 +302,14 @@
     "validationFundingGoalInvalid": "Funding goal must be greater than 0 XLM.",
     "validationDurationInvalid": "Duration must be between 1 and 365 days.",
     "validationRevenueShareInvalid": "Revenue share must be between 0.01% and 50%.",
-    "labelDescriptionLanguage": "Description Language",
-    "tabEnglish": "English",
-    "tabSpanish": "Spanish (optional)",
-    "placeholderDescriptionEs": "Describe tu campaña en español (opcional)",
-    "validationDescriptionEsTooLong": "Spanish description must be 1,000 characters or fewer."
+    "labelCoverImage": "Cover Image",
+    "optional": "optional",
+    "placeholderCoverImage": "https://ipfs.io/ipfs/... or paste an external URL",
+    "coverImageUpload": "Upload",
+    "coverImageUploading": "Uploading…",
+    "coverImageUploadSuccess": "Cover image uploaded to IPFS.",
+    "coverImageUploadFailed": "Failed to upload cover image. Please try again.",
+    "coverImageHelpText": "Upload an image to IPFS or paste a URL from an allowed host."
   },
   "Footer": {
     "tagline": "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
@@ -319,7 +320,7 @@
     "about": "About",
     "github": "GitHub",
     "stellar": "Stellar",
-    "rights": "© {year} ProofOfHeart. All rights reserved.",
+    "rights": "\u00a9 {year} ProofOfHeart. All rights reserved.",
     "builtWith": "Built with Next.js + Stellar"
   },
   "Explore": {
@@ -356,9 +357,7 @@
     "invalidAmount": "Please enter a valid amount.",
     "amountMustBePositive": "Amount must be greater than zero.",
     "invalidNumberFormat": "Invalid number format.",
-    "maxDecimalPlaces": "Maximum 7 decimal places allowed.",
-    "amountExceedsRemainingGoal": "Amount exceeds the remaining funding goal.",
-    "campaignAlreadyFunded": "This cause is already fully funded."
+    "maxDecimalPlaces": "Maximum 7 decimal places allowed."
   },
   "WithdrawFunds": {
     "withdrawalSuccessToast": "Withdrawal successful! You received {amount} XLM.",
@@ -382,35 +381,6 @@
     "disabledAlreadyWithdrawn": "Funds have already been withdrawn",
     "disabledGoalNotReached": "Funding goal has not been reached",
     "disabledStillActive": "Campaign is still active"
-  },
-  "MultiSigPanel": {
-    "title": "Multi-Signature Withdrawal",
-    "description": "Require multiple organization members to approve before withdrawing funds. Set up co-signers and a signature threshold.",
-    "setupProposal": "Set Up Multi-Sig Withdrawal",
-    "signersLabel": "Co-signer Wallet Addresses",
-    "signerPlaceholder": "G… Stellar address",
-    "removeSigner": "Remove signer",
-    "addSigner": "Add another signer",
-    "thresholdLabel": "Required signatures",
-    "thresholdOf": "of {total} signers",
-    "createProposal": "Create Proposal",
-    "cancel": "Cancel",
-    "cancelProposal": "Cancel Proposal",
-    "proposalCreated": "Withdrawal proposal created. Share it with your co-signers.",
-    "signaturesProgress": "{signed} of {required} signatures collected",
-    "statusPending": "Pending",
-    "statusReady": "Ready to Execute",
-    "signProposal": "Sign Proposal",
-    "signedSuccess": "You signed the withdrawal proposal.",
-    "executeWithdrawal": "Execute Withdrawal ({amount} XLM)",
-    "executedTitle": "Multi-sig withdrawal executed successfully.",
-    "viewOnExplorer": "View on Explorer",
-    "signing": "Signing…",
-    "confirming": "Confirming…",
-    "processing": "Processing…",
-    "withdrawalSuccess": "Withdrawal successful! You received {amount} XLM.",
-    "errorNoSigners": "Please add at least one co-signer address.",
-    "errorInvalidThreshold": "Required signatures must be between 1 and the number of co-signers."
   },
   "Voting": {
     "title": "Vote on this cause",

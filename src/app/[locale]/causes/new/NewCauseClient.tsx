@@ -2,7 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import SafeMarkdown from "@/components/SafeMarkdown";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { validateImageFile } from "@/lib/imageValidation";
 import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
 import { useRouter } from "@/i18n/routing";
@@ -14,7 +15,6 @@ import {
 import { Category, CATEGORY_LABELS } from "@/types";
 import { xlmToStroops } from "@/lib/stellarAmount";
 import { parseContractError } from "@/utils/contractErrors";
-import { encodeLocalizedDescription } from "@/utils/localizedDescription";
 
 // ---------------------------------------------------------------------------
 // Validation — returns translation keys instead of hardcoded strings
@@ -23,7 +23,6 @@ import { encodeLocalizedDescription } from "@/utils/localizedDescription";
 interface FormErrorKeys {
   title?: string;
   description?: string;
-  descriptionEs?: string;
   creatorEmail?: string;
   fundingGoal?: string;
   durationDays?: string;
@@ -51,7 +50,6 @@ const IMAGE_URL_RE = /^https?:\/\/.+\..+/;
 function validateForm(
   title: string,
   description: string,
-  descriptionEs: string,
   creatorEmail: string,
   fundingGoal: string,
   durationDays: string,
@@ -72,10 +70,6 @@ function validateForm(
     errors.description = "validationDescriptionRequired";
   } else if (description.trim().length > 1000) {
     errors.description = "validationDescriptionTooLong";
-  }
-
-  if (descriptionEs.trim().length > 1000) {
-    errors.descriptionEs = "validationDescriptionEsTooLong";
   }
 
   if (creatorEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(creatorEmail.trim())) {
@@ -130,25 +124,21 @@ export default function CreateCampaignPage() {
   const [milestones, setMilestones] = useState<{ targetAmount: string; description: string }[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [descriptionTab, setDescriptionTab] = useState<"write" | "preview">("write");
-  const [descriptionEs, setDescriptionEs] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
 
-  const draftKey = publicKey
-    ? `proof_of_heart_draft_${publicKey}`
-    : "proof_of_heart_draft_anonymous";
-  const [hasDraft, setHasDraft] = useState(false);
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const DRAFT_KEY = "proof_of_heart_next_draft";
   const CREATOR_EMAIL_WEBHOOK_URL = process.env.NEXT_PUBLIC_CREATOR_EMAIL_WEBHOOK_URL?.trim() ?? "";
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(draftKey);
+      const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.title) setTitle(parsed.title);
         if (parsed.description) setDescription(parsed.description);
-        if (parsed.descriptionEs) setDescriptionEs(parsed.descriptionEs);
         if (parsed.creatorEmail) setCreatorEmail(parsed.creatorEmail);
         if (parsed.fundingGoal) setFundingGoal(parsed.fundingGoal);
         if (parsed.durationDays) setDurationDays(parsed.durationDays);
@@ -159,7 +149,6 @@ export default function CreateCampaignPage() {
         if (parsed.tags) setTags(parsed.tags);
         if (parsed.coverImageUrl) setCoverImageUrl(parsed.coverImageUrl);
         if (parsed.milestones) setMilestones(parsed.milestones);
-        setHasDraft(true);
       }
     } catch (e) {
       console.warn("Failed to load draft from localStorage:", e);
@@ -169,11 +158,10 @@ export default function CreateCampaignPage() {
   useEffect(() => {
     try {
       localStorage.setItem(
-        draftKey,
+        DRAFT_KEY,
         JSON.stringify({
           title,
           description,
-          descriptionEs,
           creatorEmail,
           fundingGoal,
           durationDays,
@@ -185,15 +173,12 @@ export default function CreateCampaignPage() {
           milestones,
         }),
       );
-      setLastSavedAt(Date.now());
-      setHasDraft(true);
     } catch (e) {
       console.warn("Failed to save draft to localStorage:", e);
     }
   }, [
     title,
     description,
-    descriptionEs,
     creatorEmail,
     fundingGoal,
     durationDays,
@@ -205,27 +190,6 @@ export default function CreateCampaignPage() {
     milestones,
   ]);
 
-  const handleDiscardDraft = () => {
-    try {
-      localStorage.removeItem(draftKey);
-    } catch {
-      // ignore
-    }
-    setTitle("");
-    setDescription("");
-    setCreatorEmail("");
-    setFundingGoal("");
-    setDurationDays("");
-    setCategory(Category.Learner);
-    setHasRevenueSharing(false);
-    setRevenueSharePercentage(5);
-    setTags([]);
-    setCoverImageUrl("");
-    setMilestones([]);
-    setHasDraft(false);
-    setLastSavedAt(null);
-  };
-
   const isStartup = category === Category.EducationalStartup;
 
   const handleCategoryChange = (val: Category) => {
@@ -233,6 +197,49 @@ export default function CreateCampaignPage() {
     if (val !== Category.EducationalStartup) {
       setHasRevenueSharing(false);
       setRevenueSharePercentage(1);
+    }
+  };
+
+  const handleCoverImageUpload = async (file: File) => {
+    const clientValidation = validateImageFile(file);
+    if (!clientValidation.valid) {
+      showError(clientValidation.error ?? t("coverImageUploadFailed"));
+      return;
+    }
+
+    setIsUploadingCover(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      const payload = (await response.json().catch(() => null)) as {
+        url?: string;
+        message?: string;
+      } | null;
+
+      if (!response.ok || !payload?.url) {
+        throw new Error(payload?.message ?? t("coverImageUploadFailed"));
+      }
+
+      setCoverImageUrl(payload.url);
+      setErrorKeys((prev) => {
+        const next = { ...prev };
+        delete next.coverImageUrl;
+        return next;
+      });
+      showSuccess(t("coverImageUploadSuccess"));
+    } catch (error) {
+      showError(error instanceof Error ? error.message : t("coverImageUploadFailed"));
+    } finally {
+      setIsUploadingCover(false);
+      if (coverFileInputRef.current) {
+        coverFileInputRef.current.value = "";
+      }
     }
   };
 
@@ -320,7 +327,7 @@ export default function CreateCampaignPage() {
       setReviewData(null);
 
       try {
-        localStorage.removeItem(draftKey);
+        localStorage.removeItem(DRAFT_KEY);
       } catch {
         // ignore
       }
@@ -351,7 +358,6 @@ export default function CreateCampaignPage() {
     const keys = validateForm(
       title,
       description,
-      descriptionEs,
       creatorEmail,
       fundingGoal,
       durationDays,
@@ -377,13 +383,9 @@ export default function CreateCampaignPage() {
         description: m.description.trim(),
       }));
 
-    const encodedDescription = descriptionEs.trim()
-      ? encodeLocalizedDescription({ en: description.trim(), es: descriptionEs.trim() })
-      : description.trim();
-
     setReviewData({
       title: title.trim(),
-      description: encodedDescription,
+      description: description.trim(),
       creatorEmail: creatorEmail.trim(),
       fundingGoalXlm: parsedGoal,
       durationDays: parsedDays,
@@ -416,27 +418,6 @@ export default function CreateCampaignPage() {
           </h1>
           <p className="text-zinc-600 dark:text-zinc-400 text-sm">{t("pageSubtitle")}</p>
         </div>
-
-        {/* Draft indicator */}
-        {hasDraft && (
-          <div className="mb-4 flex items-center justify-between rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-2.5 text-xs text-zinc-600 dark:text-zinc-400">
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2 w-2 rounded-full bg-green-500" aria-hidden="true" />
-              {lastSavedAt
-                ? Date.now() - lastSavedAt < 60_000
-                  ? "Draft saved · Saved a moment ago"
-                  : `Draft saved · ${new Date(lastSavedAt).toLocaleString()}`
-                : "Draft restored"}
-            </span>
-            <button
-              type="button"
-              onClick={handleDiscardDraft}
-              className="ml-4 font-medium text-red-500 hover:text-red-600 transition-colors"
-            >
-              Discard draft
-            </button>
-          </div>
-        )}
 
         {/* Wallet guard banner */}
         {!isWalletConnected && (
@@ -561,41 +542,6 @@ export default function CreateCampaignPage() {
                 <span />
               )}
               <span className="text-xs text-zinc-400 ms-auto">{description.length}/1,000</span>
-            </div>
-          </div>
-
-          {/* Spanish Description (optional) */}
-          <div>
-            <label
-              htmlFor="description-es"
-              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
-            >
-              {t("tabSpanish")}
-            </label>
-            <textarea
-              id="description-es"
-              value={descriptionEs}
-              onChange={(e) => setDescriptionEs(e.target.value)}
-              maxLength={1000}
-              rows={4}
-              aria-invalid={Boolean(errorKeys.descriptionEs)}
-              aria-describedby={errorKeys.descriptionEs ? "description-es-error" : undefined}
-              placeholder={t("placeholderDescriptionEs")}
-              className={`w-full px-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors resize-y ${
-                errorKeys.descriptionEs
-                  ? "border-red-400 dark:border-red-500"
-                  : "border-zinc-200 dark:border-zinc-600"
-              }`}
-            />
-            <div className="flex justify-between mt-1">
-              {errorKeys.descriptionEs ? (
-                <p id="description-es-error" className="text-xs text-red-500">
-                  {t(errorKeys.descriptionEs as Parameters<typeof t>[0])}
-                </p>
-              ) : (
-                <span />
-              )}
-              <span className="text-xs text-zinc-400 ms-auto">{descriptionEs.length}/1,000</span>
             </div>
           </div>
 
@@ -890,22 +836,48 @@ export default function CreateCampaignPage() {
               htmlFor="coverImageUrl"
               className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
             >
-              Cover Image URL <span className="text-xs font-normal text-zinc-400">(optional)</span>
+              {t("labelCoverImage")}{" "}
+              <span className="text-xs font-normal text-zinc-400">({t("optional")})</span>
             </label>
-            <input
-              id="coverImageUrl"
-              type="url"
-              value={coverImageUrl}
-              onChange={(e) => setCoverImageUrl(e.target.value)}
-              placeholder="https://ipfs.io/ipfs/... or https://i.imgur.com/..."
-              aria-invalid={Boolean(errorKeys.coverImageUrl)}
-              aria-describedby={errorKeys.coverImageUrl ? "cover-image-error" : undefined}
-              className={`w-full px-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                errorKeys.coverImageUrl
-                  ? "border-red-400 dark:border-red-500"
-                  : "border-zinc-200 dark:border-zinc-600"
-              }`}
-            />
+            <div className="flex gap-2">
+              <input
+                id="coverImageUrl"
+                type="url"
+                value={coverImageUrl}
+                onChange={(e) => setCoverImageUrl(e.target.value)}
+                placeholder={t("placeholderCoverImage")}
+                aria-invalid={Boolean(errorKeys.coverImageUrl)}
+                aria-describedby={errorKeys.coverImageUrl ? "cover-image-error" : undefined}
+                className={`flex-1 min-w-0 px-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+                  errorKeys.coverImageUrl
+                    ? "border-red-400 dark:border-red-500"
+                    : "border-zinc-200 dark:border-zinc-600"
+                }`}
+              />
+              <input
+                ref={coverFileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+                className="hidden"
+                aria-hidden="true"
+                tabIndex={-1}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleCoverImageUpload(file);
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => coverFileInputRef.current?.click()}
+                disabled={isUploadingCover}
+                className="shrink-0 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-sm font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isUploadingCover ? t("coverImageUploading") : t("coverImageUpload")}
+              </button>
+            </div>
+            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1">
+              {t("coverImageHelpText")}
+            </p>
             {errorKeys.coverImageUrl && (
               <p id="cover-image-error" className="text-xs text-red-500 mt-1">
                 Please enter a valid URL (must start with http:// or https://).
