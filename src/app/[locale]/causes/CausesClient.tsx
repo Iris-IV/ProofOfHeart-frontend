@@ -479,48 +479,48 @@ function CausesContent() {
           </div>
 
           {/* Category filter chips */}
-          <div role="group" aria-label={t("labelCategory")} className="flex flex-wrap gap-2">
-            {(["all", ...CATEGORY_VALUES] as CategoryFilter[]).map((cat) => {
-              const selected = isCategorySelected(cat);
-              const count = cat === "all" ? categoryCounts.all : categoryCounts[cat as Category];
-              const label =
-                cat === "all"
-                  ? t("allCategories")
-                  : `${CATEGORY_ICONS[cat]} ${CATEGORY_LABELS[cat]}`;
-              const accessibleName =
-                cat === "all" ? t("allCategories") : CATEGORY_LABELS[cat as Category];
+          {!isLoading && !error && (
+            <div role="group" aria-label={t("labelCategory")} className="flex flex-wrap gap-2">
+              {(["all", ...CATEGORY_VALUES] as CategoryFilter[]).map((cat) => {
+                const selected = isCategorySelected(cat);
+                const count = cat === "all" ? categoryCounts.all : categoryCounts[cat as Category];
+                const label =
+                  cat === "all"
+                    ? t("allCategories")
+                    : `${CATEGORY_ICONS[cat]} ${CATEGORY_LABELS[cat]}`;
+                const accessibleName =
+                  cat === "all" ? t("allCategories") : CATEGORY_LABELS[cat as Category];
 
-              return (
-                <button
-                  key={String(cat)}
-                  type="button"
-                  aria-pressed={selected}
-                  aria-label={t(
-                    selected ? "categoryChipAriaSelected" : "categoryChipAriaUnselected",
-                    { label: accessibleName, count },
-                  )}
-                  onClick={() => setCategory(cat === "all" ? "all" : String(cat))}
-                  className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800 ${
-                    selected
-                      ? "bg-blue-600 text-white"
-                      : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600"
-                  }`}
-                >
-                  <span aria-hidden="true">{label}</span>
-                  <span
-                    className={`tabular-nums text-xs font-semibold px-1.5 py-0.5 rounded-full ${
-                      selected
-                        ? "bg-blue-500 text-white"
-                        : "bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300"
-                    }`}
-                    aria-hidden="true"
+                return (
+                  <button
+                    key={String(cat)}
+                    type="button"
+                    aria-pressed={selected}
+                    aria-label={t(
+                      selected ? "categoryChipAriaSelected" : "categoryChipAriaUnselected",
+                      { label: accessibleName, count },
+                    )}
+                    onClick={() => setCategory(cat === "all" ? "all" : String(cat))}
+                    className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800 ${selected
+                        ? "bg-blue-600 text-white"
+                        : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600"
+                      }`}
                   >
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                    <span aria-hidden="true">{label}</span>
+                    <span
+                      className={`tabular-nums text-xs font-semibold px-1.5 py-0.5 rounded-full ${selected
+                          ? "bg-blue-500 text-white"
+                          : "bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300"
+                        }`}
+                      aria-hidden="true"
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Filter row */}
           <div className="flex flex-wrap gap-3 items-center">
