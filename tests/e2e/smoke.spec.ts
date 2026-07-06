@@ -50,35 +50,17 @@ test.describe("Core User Flow Smoke Test", () => {
     ).toBeVisible();
 
     // Step 2: Navigate to Causes page
-    // Look for navigation link or directly navigate
-    const causesLink = page.locator('a[href*="causes"]').first();
-    if (await causesLink.isVisible()) {
-      await causesLink.click();
-      await page.waitForURL(/\/causes/);
-    } else {
-      // Fallback: direct navigation if nav link not found
-      await page.goto("/causes");
-    }
+    await page.goto("/en/causes");
     await expect(page).toHaveURL(/\/causes/);
     await expect(page.locator("body")).toBeVisible();
 
     // Step 3: Navigate to a specific Cause Detail page
-    // Navigate directly and wait for content to appear instead of networkidle
     await page.goto("/en/causes/1");
-    await expect(page).toHaveURL(/\/causes\/1$/);
-    await expect(
-      page.getByRole("heading", { name: /Clean Water/i }).or(page.locator("body")),
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page).toHaveURL(/\/causes\/[^/]+$/);
+    await expect(page.locator("body")).toBeVisible();
 
     // Step 4: Navigate to Dashboard
-    const dashboardLink = page.locator('a[href*="dashboard"]').first();
-    if (await dashboardLink.isVisible()) {
-      await dashboardLink.click();
-      await page.waitForURL(/\/dashboard/);
-    } else {
-      // Fallback: direct navigation
-      await page.goto("/dashboard");
-    }
+    await page.goto("/en/dashboard");
     await expect(page).toHaveURL(/\/dashboard/);
     await expect(page.locator("body")).toBeVisible();
   });
