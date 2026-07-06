@@ -514,17 +514,19 @@ function CausesContent() {
                       { label: accessibleName, count },
                     )}
                     onClick={() => setCategory(cat === "all" ? "all" : String(cat))}
-                    className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800 ${selected
+                    className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800 ${
+                      selected
                         ? "bg-blue-600 text-white"
                         : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600"
-                      }`}
+                    }`}
                   >
                     <span aria-hidden="true">{label}</span>
                     <span
-                      className={`tabular-nums text-xs font-semibold px-1.5 py-0.5 rounded-full ${selected
+                      className={`tabular-nums text-xs font-semibold px-1.5 py-0.5 rounded-full ${
+                        selected
                           ? "bg-blue-500 text-white"
                           : "bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300"
-                        }`}
+                      }`}
                       aria-hidden="true"
                     >
                       {count}
