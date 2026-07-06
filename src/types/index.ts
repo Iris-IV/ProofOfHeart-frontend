@@ -83,6 +83,7 @@ export interface Campaign {
   milestones?: Milestone[];
   latitude?: number;
   longitude?: number;
+  social_links?: string[];
 }
 
 // ---------------------------------------------------------------------------
