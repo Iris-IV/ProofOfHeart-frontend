@@ -1,6 +1,7 @@
 import { render, screen, act, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WalletProvider, useWallet } from "../WalletContext";
+import { isConnected, isAllowed, getAddress, getNetwork } from "@stellar/freighter-api";
 import { useToast } from "../ToastProvider";
 
 // Wrap children in a fresh QueryClient to satisfy WalletProvider's useQueryClient call.
@@ -92,35 +93,21 @@ jest.mock("../ToastProvider", () => ({
   useToast: jest.fn(),
 }));
 
-jest.mock("../WalletSelectModal", () => ({
-  __esModule: true,
-  default: ({
-    isOpen,
-    onSelect,
-    onClose,
-  }: {
-    isOpen: boolean;
-    onSelect: (id: string) => void;
-    onClose: () => void;
-  }) =>
-    isOpen ? (
-      <div data-testid="wallet-select-modal">
-        <button onClick={() => onSelect("freighter")}>Select Freighter</button>
-        <button onClick={onClose}>Close Modal</button>
-      </div>
-    ) : null,
-}));
-
+const mockIsConnected = isConnected as jest.Mock;
+const mockIsAllowed = isAllowed as jest.Mock;
+const mockGetAddress = getAddress as jest.Mock;
+const mockGetNetwork = getNetwork as jest.Mock;
 const mockUseToast = useToast as jest.Mock;
 
 const mockShowError = jest.fn();
 const mockShowWarning = jest.fn();
 const mockShowSuccess = jest.fn();
 
-// ---------------------------------------------------------------------------
-// Test component
-// ---------------------------------------------------------------------------
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
 
+// Dummy component to test the context
 const TestComponent = () => {
   const { publicKey, isWalletConnected, connectWallet, disconnectWallet, isLoading } = useWallet();
   return (
@@ -134,18 +121,8 @@ const TestComponent = () => {
   );
 };
 
-// ---------------------------------------------------------------------------
-// Render helper (wraps WalletProvider in the required QueryClientProvider)
-// ---------------------------------------------------------------------------
-
-const renderWithProviders = (ui: React.ReactElement) => {
-  const Wrapper = createWrapper();
-  return render(<Wrapper>{ui}</Wrapper>);
-};
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+const renderWithProviders = (ui: React.ReactElement) =>
+  render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 
 describe("WalletContext", () => {
   beforeEach(() => {
@@ -156,18 +133,19 @@ describe("WalletContext", () => {
       showWarning: mockShowWarning,
       showSuccess: mockShowSuccess,
     });
-    // Default: Freighter is available but not connected
-    mockFreighterIsAvailable.mockReturnValue(true);
-    mockFreighterIsConnected.mockResolvedValue(false);
-    mockFreighterGetPublicKey.mockResolvedValue("GB...");
-    mockFreighterConnect.mockResolvedValue("GB...");
+    // Default to not connected
+    // Freighter API v6 returns objects, not primitives
+    mockIsConnected.mockResolvedValue({ isConnected: false });
+    mockIsAllowed.mockResolvedValue({ isAllowed: false });
+    mockGetAddress.mockResolvedValue({ address: "GB..." });
+    mockGetNetwork.mockResolvedValue({ network: "testnet", networkPassphrase: "" });
   });
 
-  it("silently restores from localStorage on mount when previously connected", async () => {
-    localStorage.setItem("stellar_wallet_id", "freighter");
-    localStorage.setItem("stellar_wallet_public_key", "G-RESTORED");
-    mockFreighterIsConnected.mockResolvedValue(true);
-    mockFreighterGetPublicKey.mockResolvedValue("G-RESTORED");
+  it("checks wallet connection on mount - success path", async () => {
+    mockIsConnected.mockResolvedValue({ isConnected: true });
+    mockIsAllowed.mockResolvedValue({ isAllowed: true });
+    mockGetAddress.mockResolvedValue({ address: "G-MO-DEV-SUCCESS" });
+    mockGetNetwork.mockResolvedValue({ network: "testnet", networkPassphrase: "" });
 
     await act(async () => {
       renderWithProviders(
@@ -181,7 +159,10 @@ describe("WalletContext", () => {
     expect(screen.getByTestId("isConnected")).toHaveTextContent("true");
   });
 
-  it("starts disconnected when no localStorage entry exists", async () => {
+  it("checks wallet connection on mount - failure path (not allowed)", async () => {
+    mockIsConnected.mockResolvedValue({ isConnected: true });
+    mockIsAllowed.mockResolvedValue({ isAllowed: false });
+
     await act(async () => {
       renderWithProviders(
         <WalletProvider>
@@ -194,12 +175,20 @@ describe("WalletContext", () => {
     expect(screen.getByTestId("publicKey")).toHaveTextContent("");
   });
 
-  it("connectWallet opens the wallet selection modal", async () => {
+  it("connectWallet - success path", async () => {
+    mockIsConnected.mockResolvedValue({ isConnected: true });
+    mockIsAllowed.mockResolvedValue({ isAllowed: true });
+    mockGetAddress.mockResolvedValue({ address: "G-MO-DEV-CONNECT-SUCCESS" });
+    mockGetNetwork.mockResolvedValue({ network: "testnet", networkPassphrase: "" });
+
     renderWithProviders(
       <WalletProvider>
         <TestComponent />
       </WalletProvider>,
     );
+
+    // Initial state check (default mock: not connected)
+    expect(screen.getByTestId("isConnected")).toHaveTextContent("false");
 
     await act(async () => {
       fireEvent.click(screen.getByText("Connect"));
@@ -208,8 +197,8 @@ describe("WalletContext", () => {
     expect(screen.getByTestId("wallet-select-modal")).toBeInTheDocument();
   });
 
-  it("selecting a wallet in the modal connects and persists the key", async () => {
-    mockFreighterConnect.mockResolvedValue("G-MO-DEV-CONNECT-SUCCESS");
+  it("connectWallet - freighter not installed", async () => {
+    mockIsConnected.mockResolvedValue({ isConnected: false });
 
     renderWithProviders(
       <WalletProvider>
@@ -221,19 +210,12 @@ describe("WalletContext", () => {
       fireEvent.click(screen.getByText("Connect"));
     });
 
-    await act(async () => {
-      fireEvent.click(screen.getByText("Select Freighter"));
-    });
-
-    expect(screen.getByTestId("publicKey")).toHaveTextContent("G-MO-DEV-CONNECT-SUCCESS");
-    expect(screen.getByTestId("isConnected")).toHaveTextContent("true");
-    expect(mockShowSuccess).toHaveBeenCalledWith("Wallet connected successfully.");
-    expect(localStorage.getItem("stellar_wallet_public_key")).toBe("G-MO-DEV-CONNECT-SUCCESS");
-    expect(localStorage.getItem("stellar_wallet_id")).toBe("freighter");
+    expect(screen.getByTestId("isLoading")).toHaveTextContent("false");
   });
 
-  it("shows error toast when wallet connection fails", async () => {
-    mockFreighterConnect.mockRejectedValue(new Error("User rejected"));
+  it("connectWallet - not allowed", async () => {
+    mockIsConnected.mockResolvedValue({ isConnected: true });
+    mockIsAllowed.mockResolvedValue({ isAllowed: false });
 
     renderWithProviders(
       <WalletProvider>
@@ -255,7 +237,11 @@ describe("WalletContext", () => {
     expect(screen.getByTestId("isLoading")).toHaveTextContent("false");
   });
 
-  it("closing the modal without selecting does not connect", async () => {
+  it("connectWallet - error path", async () => {
+    mockIsConnected.mockResolvedValue({ isConnected: true });
+    mockIsAllowed.mockResolvedValue({ isAllowed: true });
+    mockGetAddress.mockRejectedValue(new Error("Failed"));
+
     renderWithProviders(
       <WalletProvider>
         <TestComponent />
@@ -274,11 +260,12 @@ describe("WalletContext", () => {
     expect(screen.getByTestId("isConnected")).toHaveTextContent("false");
   });
 
-  it("disconnectWallet clears state and localStorage", async () => {
-    localStorage.setItem("stellar_wallet_id", "freighter");
-    localStorage.setItem("stellar_wallet_public_key", "G-DISCONNECT");
-    mockFreighterIsConnected.mockResolvedValue(true);
-    mockFreighterGetPublicKey.mockResolvedValue("G-DISCONNECT");
+  it("disconnectWallet", async () => {
+    // Start with a connected wallet
+    mockIsConnected.mockResolvedValue({ isConnected: true });
+    mockIsAllowed.mockResolvedValue({ isAllowed: true });
+    mockGetAddress.mockResolvedValue({ address: "G-DISCONNECT" });
+    mockGetNetwork.mockResolvedValue({ network: "testnet", networkPassphrase: "" });
 
     renderWithProviders(
       <WalletProvider>
@@ -286,7 +273,9 @@ describe("WalletContext", () => {
       </WalletProvider>,
     );
 
-    await act(async () => {}); // Wait for silent restore
+    // Wait for the initial useEffect to connect
+    await act(async () => {}); // Wait for useEffect
+    expect(screen.getByTestId("isConnected")).toHaveTextContent("true");
 
     await act(async () => {
       fireEvent.click(screen.getByText("Disconnect"));
@@ -297,6 +286,77 @@ describe("WalletContext", () => {
     expect(localStorage.getItem("stellar_wallet_public_key")).toBeNull();
     expect(localStorage.getItem("stellar_wallet_id")).toBeNull();
     expect(mockShowWarning).toHaveBeenCalledWith(expect.stringContaining("Disconnected"));
+  });
+
+  it("detects external disconnection from Freighter extension", async () => {
+    // Mount with wallet connected
+    mockIsConnected.mockResolvedValue({ isConnected: true });
+    mockIsAllowed.mockResolvedValue({ isAllowed: true });
+    mockGetAddress.mockResolvedValue({ address: "G-EXTERNAL-DISCONNECT" });
+    mockGetNetwork.mockResolvedValue({ network: "testnet", networkPassphrase: "" });
+
+    // Use fake timers BEFORE render so setInterval uses the fake version
+    jest.useFakeTimers();
+
+    await act(async () => {
+      renderWithProviders(
+        <WalletProvider>
+          <TestComponent />
+        </WalletProvider>,
+      );
+    });
+
+    expect(screen.getByTestId("isConnected")).toHaveTextContent("true");
+
+    // Simulate external disconnection: Freighter now reports not connected
+    mockIsConnected.mockResolvedValue({ isConnected: false });
+    mockIsAllowed.mockResolvedValue({ isAllowed: false });
+
+    // Advance fake timers to trigger polling interval + flush async work
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+    // Flush any remaining pending microtasks (async checkWalletConnection)
+    await act(async () => {});
+    jest.useRealTimers();
+
+    // After polling detects the disconnection, context should clear state
+    expect(screen.getByTestId("isConnected")).toHaveTextContent("false");
+    expect(screen.getByTestId("publicKey")).toHaveTextContent("");
+    expect(localStorage.getItem("stellar_wallet_public_key")).toBeNull();
+  });
+
+  it("detects account switch and invalidates queries", async () => {
+    // Mount with Account A
+    mockIsConnected.mockResolvedValue({ isConnected: true });
+    mockIsAllowed.mockResolvedValue({ isAllowed: true });
+    mockGetAddress.mockResolvedValue({ address: "G-ACCOUNT-A" });
+    mockGetNetwork.mockResolvedValue({ network: "testnet", networkPassphrase: "" });
+
+    // Use fake timers BEFORE render so setInterval uses the fake version
+    jest.useFakeTimers();
+
+    await act(async () => {
+      renderWithProviders(
+        <WalletProvider>
+          <TestComponent />
+        </WalletProvider>,
+      );
+    });
+
+    expect(screen.getByTestId("publicKey")).toHaveTextContent("G-ACCOUNT-A");
+
+    // Simulate account switch: Freighter returns different address
+    mockGetAddress.mockResolvedValue({ address: "G-ACCOUNT-B" });
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+    await act(async () => {});
+    jest.useRealTimers();
+
+    // Context should reflect the new account
+    expect(screen.getByTestId("publicKey")).toHaveTextContent("G-ACCOUNT-B");
   });
 
   it("throws error when used outside of Provider", () => {

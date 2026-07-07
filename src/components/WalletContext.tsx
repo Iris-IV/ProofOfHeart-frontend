@@ -1,6 +1,6 @@
 "use client";
 import * as StellarSdk from "@stellar/stellar-sdk";
-import { getNetwork } from "@stellar/freighter-api";
+import { getAddress, getNetwork, isConnected, isAllowed } from "@stellar/freighter-api";
 import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from "react";
 import { useToast } from "./ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
@@ -133,23 +133,55 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /**
-   * On page load, try to silently restore the previously chosen wallet
-   * session without showing any prompts.
-   */
-  const silentRestore = async () => {
-    if (typeof window === "undefined") return;
+    // WatchWalletChanges only fires on address/network changes, NOT on external
+    // disconnection. Use polling instead to detect all state transitions.
+    const POLL_INTERVAL_MS = 5000;
+    const intervalId = window.setInterval(() => {
+      if (!document.hidden) {
+        void checkWalletConnection();
+      }
+    }, POLL_INTERVAL_MS);
 
-    const savedWalletId = localStorage.getItem(WALLET_ID_STORAGE_KEY) as WalletId | null;
-    if (!savedWalletId) return;
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        void checkWalletConnection();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+    // checkWalletConnection is intentionally omitted from deps -- all its
+    // transitive deps (state setters, refs, env constant) are stable across
+    // renders, so the function identity is effectively stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
     // Validate saved ID against known adapters
     const knownIds = ALL_ADAPTERS.map((a) => a.id);
     if (!knownIds.includes(savedWalletId)) return;
 
     try {
-      const adapter = getAdapter(savedWalletId);
-      if (!adapter.isAvailable()) return;
+      const { isConnected: connected } = await isConnected();
+      const { isAllowed: allowed } = await isAllowed();
+      if (connected && allowed) {
+        const key = await getAddress();
+        const network = await getNetwork();
+        const walletNetworkPassphrase = network.networkPassphrase || "";
+
+        if (walletNetworkPassphrase !== appNetworkPassphrase) {
+          setPublicKey(null);
+          setIsWalletConnected(false);
+          setWalletNetworkWarning(
+            `Switch Freighter to ${appNetworkLabel} to continue. Current wallet network does not match the app network.`,
+          );
+          localStorage.removeItem("stellar_wallet_public_key");
+          // Invalidate queries on network mismatch
+          invalidateWalletQueries();
+          return;
+        }
 
       const connected = await adapter.isConnected();
       if (!connected) return;
@@ -200,27 +232,10 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       } finally {
         setIsLoading(false);
       }
-      return;
-    }
-
-    // Show the wallet selection modal
-    setShowSelectModal(true);
-  };
-
-  // -------------------------------------------------------------------------
-  // handleWalletSelected — called when the user picks a wallet in the modal
-  // -------------------------------------------------------------------------
-
-  const handleWalletSelected = async (id: WalletId) => {
-    setConnectingId(id);
-    setIsLoading(true);
-    try {
-      const adapter = getAdapter(id);
-
-      if (!adapter.isAvailable()) {
-        // Not installed; modal shows the install link — shouldn't reach here
-        // for unavailable wallets, but guard anyway.
-        window.open(adapter.installUrl, "_blank");
+      const { isAllowed: allowed } = await isAllowed();
+      if (!allowed) {
+        showWarning("Please allow Freighter to connect to this site.");
+        setIsLoading(false);
         return;
       }
 
