@@ -61,7 +61,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     entries: entries
       .filter((entry) => normalizeAddress(entry.adminAddress) === normalized)
-      .sort((a, b) => b.timestamp - a.timestamp),
+      .sort((a, c) => c.timestamp - a.timestamp),
   });
 }
 
