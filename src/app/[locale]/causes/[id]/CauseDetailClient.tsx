@@ -43,7 +43,7 @@ import { parseContractError } from "@/utils/contractErrors";
 import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncAction";
 import { trackViewCampaign } from "@/lib/analytics";
 import { formatXlm, formatDate } from "@/lib/formatters";
-<<<<<<< HEAD
+import { getLocalizedDescription } from "@/utils/localizedDescription";
 import { isSameAddress } from "@/lib/stellar";
 const EditCampaignMetadata = dynamic(() => import("@/components/EditCampaignMetadata"), {
   ssr: false,
