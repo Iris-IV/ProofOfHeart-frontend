@@ -18,7 +18,9 @@
     "heroTitle": "Decentralized validation for heart-driven causes.",
     "heroSubtitle": "The community validates, you contribute, and impact is recorded on-chain.",
     "startCampaign": "Start a Campaign",
-    "exploreCauses": "Explore Causes"
+    "exploreCauses": "Explore Causes",
+    "statsRaised": "raised across all causes",
+    "statsCampaigns": "campaigns launched"
   },
   "Dashboard": {
     "title": "Your Dashboard",
