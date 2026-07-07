@@ -51,8 +51,8 @@ describe("VotingComponent Accessibility & Interaction", () => {
       />,
     );
 
-    const approveBtn = screen.getByRole("button", { name: "approveCampaignAria" });
-    const rejectBtn = screen.getByRole("button", { name: "rejectCampaignAria" });
+    const approveBtn = screen.getByRole("button", { name: "Approve campaign" });
+    const rejectBtn = screen.getByRole("button", { name: "Reject campaign" });
 
     expect(approveBtn).toBeInTheDocument();
     expect(rejectBtn).toBeInTheDocument();
@@ -68,8 +68,8 @@ describe("VotingComponent Accessibility & Interaction", () => {
       />,
     );
 
-    const approveBtn = screen.getByRole("button", { name: "approveCampaignAria" });
-    const rejectBtn = screen.getByRole("button", { name: "rejectCampaignAria" });
+    const approveBtn = screen.getByRole("button", { name: "Approve campaign" });
+    const rejectBtn = screen.getByRole("button", { name: "Reject campaign" });
 
     // Move focus to the first button (Approve)
     await userEvent.tab();
@@ -90,7 +90,7 @@ describe("VotingComponent Accessibility & Interaction", () => {
       />,
     );
 
-    const approveBtn = screen.getByRole("button", { name: "approveCampaignAria" });
+    const approveBtn = screen.getByRole("button", { name: "Approve campaign" });
     await userEvent.click(approveBtn);
     expect(mockOnVote).toHaveBeenCalledWith(campaign.id, "upvote");
   });
@@ -105,7 +105,7 @@ describe("VotingComponent Accessibility & Interaction", () => {
       />,
     );
 
-    const rejectBtn = screen.getByRole("button", { name: "rejectCampaignAria" });
+    const rejectBtn = screen.getByRole("button", { name: "Reject campaign" });
     await userEvent.click(rejectBtn);
     expect(mockOnVote).toHaveBeenCalledWith(campaign.id, "downvote");
   });
@@ -129,12 +129,12 @@ describe("VotingComponent Accessibility & Interaction", () => {
       />,
     );
 
-    const approveBtn = screen.getByRole("button", { name: "approveCampaignAria" });
-    const rejectBtn = screen.getByRole("button", { name: "rejectCampaignAria" });
+    const approveBtn = screen.getByRole("button", { name: "Approve campaign" });
+    const rejectBtn = screen.getByRole("button", { name: "Reject campaign" });
 
     expect(approveBtn).toBeDisabled();
     expect(rejectBtn).toBeDisabled();
-    expect(screen.getByText("votedUpvote")).toBeInTheDocument();
+    expect(screen.getByText("You voted to approve this cause")).toBeInTheDocument();
   });
 
   it("disables voting and shows prompt when user is not a token holder", () => {
@@ -148,12 +148,12 @@ describe("VotingComponent Accessibility & Interaction", () => {
       />,
     );
 
-    const approveBtn = screen.getByRole("button", { name: "approveCampaignAria" });
-    const rejectBtn = screen.getByRole("button", { name: "rejectCampaignAria" });
+    const approveBtn = screen.getByRole("button", { name: "Approve campaign" });
+    const rejectBtn = screen.getByRole("button", { name: "Reject campaign" });
 
     expect(approveBtn).toBeDisabled();
     expect(rejectBtn).toBeDisabled();
-    expect(screen.getByText("tokenHoldersOnlyPrompt")).toBeInTheDocument();
+    expect(screen.getByText("Only governance token holders can vote on causes")).toBeInTheDocument();
   });
 
   it("disables voting when voting is in progress", () => {
@@ -166,8 +166,8 @@ describe("VotingComponent Accessibility & Interaction", () => {
       />,
     );
 
-    const approveBtn = screen.getByRole("button", { name: "approveCampaignAria" });
-    const rejectBtn = screen.getByRole("button", { name: "rejectCampaignAria" });
+    const approveBtn = screen.getByRole("button", { name: "Approve campaign" });
+    const rejectBtn = screen.getByRole("button", { name: "Reject campaign" });
 
     expect(approveBtn).toBeDisabled();
     expect(rejectBtn).toBeDisabled();
@@ -183,11 +183,11 @@ describe("VotingComponent Accessibility & Interaction", () => {
       />,
     );
 
-    const approveBtn = screen.getByRole("button", { name: "approveCampaignAria" });
-    const rejectBtn = screen.getByRole("button", { name: "rejectCampaignAria" });
+    const approveBtn = screen.getByRole("button", { name: "Approve campaign" });
+    const rejectBtn = screen.getByRole("button", { name: "Reject campaign" });
 
     expect(approveBtn).toBeDisabled();
     expect(rejectBtn).toBeDisabled();
-    expect(screen.getByText("connectWalletPrompt")).toBeInTheDocument();
+    expect(screen.getByText("Connect your wallet to vote on this cause")).toBeInTheDocument();
   });
 });

@@ -1,4 +1,10 @@
-import { signTransaction, getAddress } from "@stellar/freighter-api";
+import {
+  type WalletAdapter,
+  WALLET_ADAPTERS,
+  MockAdapter,
+  UserCancelledError,
+} from "./walletAdapters";
+import { IS_MOCK_MODE } from "./runtimeEnv";
 import * as StellarSdk from "@stellar/stellar-sdk";
 import { captureTransactionError } from "./errorTracking";
 import {
@@ -11,7 +17,6 @@ import {
 import { appendWalletTransaction } from "./transactionLog";
 import { Campaign, Category, deriveStatus, CampaignStatus, Milestone } from "../types";
 import { parseContractError, getContractErrorCode, ContractError } from "../utils/contractErrors";
-import { wrapFreighterError } from "../utils/freighterErrors";
 import {
   validateStellarAddress,
   validateFundingGoal,
@@ -36,6 +41,39 @@ const CONTRACT_ADDRESS =
 
 const NETWORK_PASSPHRASE =
   process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
+
+// ---------------------------------------------------------------------------
+// Active wallet adapter registry
+// ---------------------------------------------------------------------------
+
+/**
+ * The adapter currently selected by the user.
+ * Set by WalletContext after a successful connection; cleared on disconnect.
+ * Falls back to MockAdapter in mock mode.
+ */
+let _activeAdapter: WalletAdapter | null = null;
+
+/**
+ * Called by WalletContext to register the active adapter after the user
+ * connects, and with null when they disconnect.
+ */
+export function setActiveWalletAdapter(adapter: WalletAdapter | null): void {
+  _activeAdapter = adapter;
+}
+
+function getActiveAdapter(): WalletAdapter {
+  if (_activeAdapter) return _activeAdapter;
+  // In mock mode, fall back to the first available mock keypair stored in localStorage
+  if (IS_MOCK_MODE) {
+    const mockKey =
+      typeof window !== "undefined"
+        ? (localStorage.getItem("stellar_wallet_public_key") ?? "")
+        : "";
+    return new MockAdapter(mockKey);
+  }
+  // Default to Freighter if nothing has been explicitly set (backwards-compat)
+  return WALLET_ADAPTERS.find((a) => a.id === "freighter") ?? WALLET_ADAPTERS[0];
+}
 
 export type TransactionLifecyclePhase =
   | "building"
@@ -130,11 +168,10 @@ async function buildAndSubmitTransaction(
   options?.onStatus?.({ phase: "signing" });
   let signedTxXdr: string;
   try {
-    ({ signedTxXdr } = await signTransaction(preparedTx.toXDR(), {
-      networkPassphrase: NETWORK_PASSPHRASE,
-    }));
+    signedTxXdr = await getActiveAdapter().signTransaction(preparedTx.toXDR(), NETWORK_PASSPHRASE);
   } catch (error) {
-    wrapFreighterError(error);
+    if (error instanceof UserCancelledError) throw error;
+    throw error;
   }
 
   const signedTx = StellarSdk.TransactionBuilder.fromXDR(
@@ -742,7 +779,7 @@ export async function withdrawFunds(
   options?: TransactionLifecycleOptions,
 ): Promise<string> {
   if (USE_MOCKS) return emitMockLifecycle("mock_tx_withdraw_funds", options);
-  const { address: callerAddress } = await getAddress();
+  const callerAddress = await getActiveAdapter().getAddress();
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call("withdraw_funds", StellarSdk.nativeToScVal(campaignId, { type: "u32" }));
   try {
@@ -773,7 +810,7 @@ export async function cancelCampaign(
   options?: TransactionLifecycleOptions,
 ): Promise<string> {
   if (USE_MOCKS) return emitMockLifecycle("mock_tx_cancel_campaign", options);
-  const { address: callerAddress } = await getAddress();
+  const callerAddress = await getActiveAdapter().getAddress();
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     "cancel_campaign",
@@ -847,7 +884,7 @@ export async function depositRevenue(
 ): Promise<string> {
   validateAmount(amount);
   if (USE_MOCKS) return emitMockLifecycle("mock_tx_deposit_revenue", options);
-  const { address: callerAddress } = await getAddress();
+  const callerAddress = await getActiveAdapter().getAddress();
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     "deposit_revenue",
@@ -900,7 +937,7 @@ export async function verifyCampaign(
   options?: TransactionLifecycleOptions,
 ): Promise<string> {
   if (USE_MOCKS) return emitMockLifecycle("mock_tx_verify_campaign", options);
-  const { address: callerAddress } = await getAddress();
+  const callerAddress = await getActiveAdapter().getAddress();
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     "verify_campaign",
@@ -926,7 +963,7 @@ export async function updatePlatformFee(
 ): Promise<string> {
   if (USE_MOCKS) return emitMockLifecycle("mock_tx_update_platform_fee", options);
 
-  const { address: callerAddress } = await getAddress();
+  const callerAddress = await getActiveAdapter().getAddress();
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     "update_platform_fee",
@@ -954,7 +991,7 @@ export async function updateAdmin(
   validateStellarAddress(newAdmin);
   if (USE_MOCKS) return emitMockLifecycle("mock_tx_update_admin", options);
 
-  const { address: callerAddress } = await getAddress();
+  const callerAddress = await getActiveAdapter().getAddress();
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call("update_admin", new StellarSdk.Address(newAdmin).toScVal());
 
@@ -1092,7 +1129,7 @@ export async function verifyCampaignWithVotes(
   options?: TransactionLifecycleOptions,
 ): Promise<string> {
   if (USE_MOCKS) return emitMockLifecycle("mock_tx_verify_with_votes", options);
-  const { address: callerAddress } = await getAddress();
+  const callerAddress = await getActiveAdapter().getAddress();
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     "verify_campaign_with_votes",
