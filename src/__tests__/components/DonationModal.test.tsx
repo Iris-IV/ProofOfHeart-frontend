@@ -19,6 +19,7 @@ jest.mock("@/components/ToastProvider", () => ({
 jest.mock("@/components/WalletContext", () => ({
   useWallet: () => ({
     publicKey: "GCONTRIB1111111111111111111111111111111111111111111111111",
+    checkWalletConnection: jest.fn(),
   }),
 }));
 

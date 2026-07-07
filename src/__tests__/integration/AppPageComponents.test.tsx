@@ -186,6 +186,7 @@ describe("app page components", () => {
       isWalletConnected: true,
       connectWallet: mockConnectWallet,
       isLoading: false,
+      checkWalletConnection: jest.fn(),
     });
     mockUseCampaign.mockReturnValue({
       campaign: makeCampaign(),
@@ -209,6 +210,7 @@ describe("app page components", () => {
       isWalletConnected: false,
       connectWallet: mockConnectWallet,
       isLoading: false,
+      checkWalletConnection: jest.fn(),
     });
 
     render(withQueryClient(<HomeClient />));

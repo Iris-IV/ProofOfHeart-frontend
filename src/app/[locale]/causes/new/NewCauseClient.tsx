@@ -110,7 +110,13 @@ function validateForm(
 export default function CreateCampaignPage() {
   const t = useTranslations("CreateCampaign");
   const router = useRouter();
-  const { publicKey, isWalletConnected, connectWallet, isLoading: walletLoading } = useWallet();
+  const {
+    publicKey,
+    isWalletConnected,
+    connectWallet,
+    isLoading: walletLoading,
+    checkWalletConnection,
+  } = useWallet();
   const { showError, showSuccess, showWarning } = useToast();
 
   const [title, setTitle] = useState("");
@@ -340,8 +346,11 @@ export default function CreateCampaignPage() {
     setTxPhase(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check wallet connection in real-time before validation to catch disconnections early
+    await checkWalletConnection();
 
     if (!isWalletConnected || !publicKey) {
       showError(t("walletRequiredError"));
