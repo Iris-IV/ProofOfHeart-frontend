@@ -457,7 +457,10 @@ function CausesContent() {
         <div className="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4 mb-6 space-y-3">
           {/* Search */}
           <div className="relative" role="search">
-            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" aria-hidden="true" />
+            <Search
+              className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400"
+              aria-hidden="true"
+            />
             <input
               id="causes-search"
               type="search"
