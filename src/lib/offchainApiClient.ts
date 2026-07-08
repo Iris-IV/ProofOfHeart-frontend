@@ -1,5 +1,12 @@
 import { getAddress, signTransaction } from "@stellar/freighter-api";
-import { hash, TransactionBuilder, Account, BASE_FEE, Operation, Transaction } from "@stellar/stellar-sdk";
+import {
+  hash,
+  TransactionBuilder,
+  Account,
+  BASE_FEE,
+  Operation,
+  Transaction,
+} from "@stellar/stellar-sdk";
 import { wrapFreighterError } from "../utils/freighterErrors";
 
 const OFFCHAIN_API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").trim().replace(/\/+$/, "");
@@ -111,10 +118,7 @@ export async function signOffchainPayload(
     wrapFreighterError(error);
   }
 
-  const signedTx = TransactionBuilder.fromXDR(
-    signedTxXdr,
-    NETWORK_PASSPHRASE,
-  ) as Transaction;
+  const signedTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE) as Transaction;
 
   const signature = signedTx.signatures[0]?.signature();
   if (!signature) {

@@ -309,8 +309,7 @@ export default function AdminDashboard() {
     if (!isAdmin) return showWarning(t("adminOnlyTransfer"));
 
     const nextAdmin = newAdminInput.trim();
-    if (!StrKey.isValidEd25519PublicKey(nextAdmin))
-      return showError(t("invalidAddress"));
+    if (!StrKey.isValidEd25519PublicKey(nextAdmin)) return showError(t("invalidAddress"));
 
     setIsTransferModalOpen(true);
   };
