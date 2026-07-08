@@ -1,13 +1,7 @@
 "use client";
 
 import { Keypair } from "@stellar/stellar-sdk";
-import {
-  getAddress,
-  getNetwork,
-  isConnected,
-  isAllowed,
-} from "@stellar/freighter-api";
-
+import { getAddress, getNetwork, isConnected, isAllowed } from "@stellar/freighter-api";
 
 import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from "react";
 import { useToast } from "./ToastProvider";
