@@ -5,6 +5,7 @@ import {
   getNetwork,
   isConnected,
   isAllowed,
+  WatchWalletChanges,
 } from "@stellar/freighter-api";
 import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from "react";
 import { useToast } from "./ToastProvider";
