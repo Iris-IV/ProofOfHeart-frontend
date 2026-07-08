@@ -367,6 +367,8 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     created_at: Math.floor(Date.now() / 1000),
     revenue_share_percentage: 0,
     tags: ["water", "rural", "health"],
+    latitude: -1.2921,
+    longitude: 36.8219,
     milestones: [
       { targetAmount: BigInt(25_000_000_000), description: "First 100 families connected" },
       { targetAmount: BigInt(50_000_000_000), description: "Next 200 families connected" },
@@ -390,6 +392,8 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     has_revenue_sharing: true,
     revenue_share_percentage: 500,
     tags: ["education", "tech", "children"],
+    latitude: 28.6139,
+    longitude: 77.209,
   }),
   makeMockCampaign({
     id: 3,
@@ -408,6 +412,8 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     has_revenue_sharing: false,
     revenue_share_percentage: 0,
     tags: ["medical", "clinic", "rural"],
+    latitude: -3.3818,
+    longitude: 29.3622,
   }),
   makeMockCampaign({
     id: 4,
@@ -425,6 +431,8 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     category: Category.Learner,
     has_revenue_sharing: false,
     revenue_share_percentage: 0,
+    latitude: -9.5316,
+    longitude: 147.4112,
   }),
   makeMockCampaign({
     id: 5,
@@ -459,6 +467,8 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     category: Category.EducationalStartup,
     has_revenue_sharing: true,
     revenue_share_percentage: 300,
+    latitude: 6.5244,
+    longitude: 7.5162,
   }),
 ];
 
