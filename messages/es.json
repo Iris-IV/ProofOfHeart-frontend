@@ -19,7 +19,9 @@
     "heroTitle": "Validación descentralizada para causas impulsadas por el corazón.",
     "heroSubtitle": "La comunidad valida, tú contribuyes y el impacto se registra en la cadena.",
     "startCampaign": "Iniciar una Campaña",
-    "exploreCauses": "Explorar Causas"
+    "exploreCauses": "Explorar Causas",
+    "statsRaised": "recaudado en todas las causas",
+    "statsCampaigns": "campañas lanzadas"
   },
   "Dashboard": {
     "title": "Tu Panel de Control",
