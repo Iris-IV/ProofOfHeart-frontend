@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Bookmark } from "lucide-react";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { useState, useEffect } from "react";
@@ -376,18 +377,11 @@ export default function CauseDetailClient({ id }: { id: string }) {
                         : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
                     }`}
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill={isSaved(campaign.id) ? "currentColor" : "none"}
-                      stroke="currentColor"
+                    <Bookmark
                       className="w-4 h-4"
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                    </svg>
+                      fill={isSaved(campaign.id) ? "currentColor" : "none"}
+                      aria-hidden="true"
+                    />
                     {isSaved(campaign.id) ? "Saved" : "Save"}
                   </button>
                 </div>

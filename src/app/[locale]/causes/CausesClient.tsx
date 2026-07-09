@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
+import { Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { MapIcon, ListIcon } from "lucide-react";
@@ -456,20 +457,10 @@ function CausesContent() {
         <div className="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4 mb-6 space-y-3">
           {/* Search */}
           <div className="relative" role="search">
-            <svg
+            <Search
               className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
               aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
+            />
             <input
               id="causes-search"
               type="search"
