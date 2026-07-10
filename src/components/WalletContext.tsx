@@ -1,6 +1,8 @@
 "use client";
-import * as StellarSdk from "@stellar/stellar-sdk";
+
+import { Keypair } from "@stellar/stellar-sdk";
 import { getAddress, getNetwork, isConnected, isAllowed } from "@stellar/freighter-api";
+
 import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from "react";
 import { useToast } from "./ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,7 +18,7 @@ interface WalletContextType {
   isLoading: boolean;
 }
 
-const MOCK_PUBLIC_KEY = IS_MOCK_MODE ? StellarSdk.Keypair.random().publicKey() : null;
+let MOCK_PUBLIC_KEY: string | null = null;
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
@@ -35,6 +37,17 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     : appNetworkPassphrase.includes("Test SDF")
       ? "Testnet"
       : "the app network";
+
+  // Initialize mock key once on first render (client-side only)
+  useEffect(() => {
+    if (IS_MOCK_MODE && !MOCK_PUBLIC_KEY) {
+      try {
+        MOCK_PUBLIC_KEY = Keypair.random().publicKey();
+      } catch (error) {
+        console.error("Failed to initialize mock wallet key:", error);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (IS_MOCK_MODE) {

@@ -1,4 +1,4 @@
-import * as StellarSdk from "@stellar/stellar-sdk";
+import { hash, StrKey, verify } from "@stellar/stellar-sdk";
 import { CampaignUpdate, UpdatePayload } from "../types";
 import { parseContractError } from "../utils/contractErrors";
 import {
@@ -185,11 +185,11 @@ export async function verifyUpdateSignature(update: CampaignUpdate): Promise<boo
       timestamp: update.timestamp,
     });
 
-    const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
+    const payloadHash = hash(Buffer.from(payloadString));
     const signature = Buffer.from(update.signature, "hex");
-    const publicKey = StellarSdk.StrKey.decodeEd25519PublicKey(update.authorAddress);
+    const publicKey = StrKey.decodeEd25519PublicKey(update.authorAddress);
 
-    const verified = StellarSdk.verify(payloadHash, signature, publicKey);
+    const verified = verify(payloadHash, signature, publicKey);
 
     return verified;
   } catch {

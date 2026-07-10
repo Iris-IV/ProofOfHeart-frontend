@@ -1,6 +1,6 @@
 "use client";
 
-import * as StellarSdk from "@stellar/stellar-sdk";
+import { StrKey } from "@stellar/stellar-sdk";
 import {
   CheckCircle,
   XCircle,
@@ -331,8 +331,7 @@ export default function AdminDashboard() {
     if (!isAdmin) return showWarning(t("adminOnlyTransfer"));
 
     const nextAdmin = newAdminInput.trim();
-    if (!StellarSdk.StrKey.isValidEd25519PublicKey(nextAdmin))
-      return showError(t("invalidAddress"));
+    if (!StrKey.isValidEd25519PublicKey(nextAdmin)) return showError(t("invalidAddress"));
 
     setIsTransferModalOpen(true);
   };

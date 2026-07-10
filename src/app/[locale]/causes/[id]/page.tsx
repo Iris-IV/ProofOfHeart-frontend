@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: Props) {
       },
       alternates: buildAlternates(`/causes/${id}`, locale),
     };
-  } catch (error) {
+  } catch {
     return {
       title: "Campaign | ProofOfHeart",
       alternates: buildAlternates(`/causes/${id}`, locale),

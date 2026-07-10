@@ -1,5 +1,12 @@
 import { getAddress, signTransaction } from "@stellar/freighter-api";
-import * as StellarSdk from "@stellar/stellar-sdk";
+import {
+  hash,
+  TransactionBuilder,
+  Account,
+  BASE_FEE,
+  Operation,
+  Transaction,
+} from "@stellar/stellar-sdk";
 import { wrapFreighterError } from "../utils/freighterErrors";
 
 const OFFCHAIN_API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").trim().replace(/\/+$/, "");
@@ -85,17 +92,17 @@ export async function signOffchainPayload(
     payload,
   };
   const payloadString = JSON.stringify(envelope);
-  const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
+  const payloadHash = hash(Buffer.from(payloadString));
 
   let signedTxXdr: string;
   try {
     ({ signedTxXdr } = await signTransaction(
-      new StellarSdk.TransactionBuilder(new StellarSdk.Account(walletAddress, "0"), {
-        fee: StellarSdk.BASE_FEE,
+      new TransactionBuilder(new Account(walletAddress, "0"), {
+        fee: BASE_FEE,
         networkPassphrase: NETWORK_PASSPHRASE,
       })
         .addOperation(
-          StellarSdk.Operation.manageData({
+          Operation.manageData({
             name: `offchain_${purpose}`,
             value: payloadHash,
           }),
@@ -111,10 +118,7 @@ export async function signOffchainPayload(
     wrapFreighterError(error);
   }
 
-  const signedTx = StellarSdk.TransactionBuilder.fromXDR(
-    signedTxXdr,
-    NETWORK_PASSPHRASE,
-  ) as StellarSdk.Transaction;
+  const signedTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE) as Transaction;
 
   const signature = signedTx.signatures[0]?.signature();
   if (!signature) {
