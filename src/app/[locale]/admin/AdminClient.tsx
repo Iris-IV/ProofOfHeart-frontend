@@ -22,6 +22,13 @@ import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
 import dynamic from "next/dynamic";
 
+const AdminTwoFactorSetup = dynamic(() => import("@/components/admin/AdminTwoFactorSetup"), {
+  ssr: false,
+});
+const CampaignMap = dynamic(() => import("@/components/CampaignMap"), {
+  ssr: false,
+});
+
 const TransferAdminModal = dynamic(() => import("@/components/TransferAdminModal"), {
   ssr: false,
 });
@@ -52,8 +59,11 @@ const CancelCampaignModal = dynamic(() => import("@/components/cancelCampaignMod
   ssr: false,
 });
 import { AdminSkeleton } from "@/components/Skeleton";
+import Pagination from "@/components/Pagination";
 import { Campaign } from "@/types";
 import { useContractVersion } from "@/hooks/useContractVersion";
+
+const ADMIN_CAMPAIGNS_PAGE_SIZE = 5;
 
 export default function AdminDashboard() {
   const { campaigns, isLoading, refetch, isRefreshing } = useCampaigns();
@@ -106,6 +116,9 @@ export default function AdminDashboard() {
   // Rejection Modal State
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [campaignToReject, setCampaignToReject] = useState<Campaign | null>(null);
+
+  // Pending campaigns pagination
+  const [campaignsPage, setCampaignsPage] = useState(1);
 
   // Optimistic UI State
   const [optimisticPendingIds, setOptimisticPendingIds] = useState<Set<number>>(new Set());
@@ -167,6 +180,15 @@ export default function AdminDashboard() {
       (c) => !c.is_verified && c.is_active && !c.is_cancelled && !optimisticPendingIds.has(c.id),
     );
   }, [campaigns, optimisticPendingIds]);
+
+  const campaignsTotalPages = Math.max(
+    1,
+    Math.ceil(pendingCampaigns.length / ADMIN_CAMPAIGNS_PAGE_SIZE),
+  );
+  const pagedCampaigns = pendingCampaigns.slice(
+    (campaignsPage - 1) * ADMIN_CAMPAIGNS_PAGE_SIZE,
+    campaignsPage * ADMIN_CAMPAIGNS_PAGE_SIZE,
+  );
 
   const totalRaised = useMemo(() => {
     return campaigns.reduce((sum, c) => sum + BigInt(c.amount_raised), BigInt(0));
@@ -514,83 +536,92 @@ export default function AdminDashboard() {
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("subtitle")}</p>
               </div>
             ) : (
-              <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {pendingCampaigns.map((c) => (
-                  <article
-                    key={c.id}
-                    className="p-8 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-colors group"
-                  >
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200/50 dark:border-amber-800">
-                            #{c.id}
-                          </span>
-                          <span className="text-xs font-bold text-zinc-400 capitalize">
-                            {CATEGORY_LABELS[c.category as Category]}
-                          </span>
-                        </div>
-                        <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2 group-hover:text-amber-600 transition-colors">
-                          {c.title}
-                        </h3>
-                        <p className="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2 max-w-2xl mb-4">
-                          {c.description}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-bold">
-                          <div className="flex items-center gap-2">
-                            <span className="text-zinc-400">{t("creator")}:</span>
-                            <span className="font-mono text-zinc-600 dark:text-zinc-300">
-                              {c.creator.slice(0, 6)}...{c.creator.slice(-6)}
+              <>
+                <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                  {pagedCampaigns.map((c) => (
+                    <article
+                      key={c.id}
+                      className="p-8 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-colors group"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200/50 dark:border-amber-800">
+                              #{c.id}
+                            </span>
+                            <span className="text-xs font-bold text-zinc-400 capitalize">
+                              {CATEGORY_LABELS[c.category as Category]}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-zinc-400">{t("goal")}:</span>
-                            <span className="text-zinc-900 dark:text-zinc-100">
-                              {formatAmount(BigInt(c.funding_goal), locale)} XLM
-                            </span>
+                          <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2 group-hover:text-amber-600 transition-colors">
+                            {c.title}
+                          </h3>
+                          <p className="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2 max-w-2xl mb-4">
+                            {c.description}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-bold">
+                            <div className="flex items-center gap-2">
+                              <span className="text-zinc-400">{t("creator")}:</span>
+                              <span className="font-mono text-zinc-600 dark:text-zinc-300">
+                                {c.creator.slice(0, 6)}...{c.creator.slice(-6)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-zinc-400">{t("goal")}:</span>
+                              <span className="text-zinc-900 dark:text-zinc-100">
+                                {formatAmount(BigInt(c.funding_goal), locale)} XLM
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="flex md:flex-col items-center gap-3">
-                        <Link
-                          href={`/causes/${c.id}`}
-                          className="flex-1 md:w-full inline-flex items-center justify-center gap-2 px-6 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
-                        >
-                          {t("reviewDetails")}
-                          <ExternalLink size={14} />
-                        </Link>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleReject(c)}
-                            disabled={cancellingId === c.id || verifyingId === c.id}
-                            className="size-12 flex items-center justify-center rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 border border-red-100 dark:border-red-900/50 hover:bg-red-100 transition disabled:opacity-50"
-                            title={t("reject")}
+                        <div className="flex md:flex-col items-center gap-3">
+                          <Link
+                            href={`/causes/${c.id}`}
+                            className="flex-1 md:w-full inline-flex items-center justify-center gap-2 px-6 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
                           >
-                            {cancellingId === c.id ? (
-                              <Loader2 className="motion-safe:animate-spin" size={20} />
-                            ) : (
-                              <XCircle size={20} />
-                            )}
-                          </button>
-                          <button
-                            onClick={() => handleApprove(c.id)}
-                            disabled={verifyingId === c.id || cancellingId === c.id}
-                            className="size-12 flex items-center justify-center rounded-xl bg-green-500 text-white shadow-lg shadow-green-500/20 hover:bg-green-600 transition hover:motion-safe:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
-                            title={t("approve")}
-                          >
-                            {verifyingId === c.id ? (
-                              <Loader2 className="motion-safe:animate-spin" size={20} />
-                            ) : (
-                              <CheckCircle size={20} />
-                            )}
-                          </button>
+                            {t("reviewDetails")}
+                            <ExternalLink size={14} />
+                          </Link>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleReject(c)}
+                              disabled={cancellingId === c.id || verifyingId === c.id}
+                              className="size-12 flex items-center justify-center rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 border border-red-100 dark:border-red-900/50 hover:bg-red-100 transition disabled:opacity-50"
+                              title={t("reject")}
+                            >
+                              {cancellingId === c.id ? (
+                                <Loader2 className="motion-safe:animate-spin" size={20} />
+                              ) : (
+                                <XCircle size={20} />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleApprove(c.id)}
+                              disabled={verifyingId === c.id || cancellingId === c.id}
+                              className="size-12 flex items-center justify-center rounded-xl bg-green-500 text-white shadow-lg shadow-green-500/20 hover:bg-green-600 transition hover:motion-safe:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
+                              title={t("approve")}
+                            >
+                              {verifyingId === c.id ? (
+                                <Loader2 className="motion-safe:animate-spin" size={20} />
+                              ) : (
+                                <CheckCircle size={20} />
+                              )}
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
+                    </article>
+                  ))}
+                </div>
+                <Pagination
+                  currentPage={campaignsPage}
+                  totalPages={campaignsTotalPages}
+                  onPrev={() => setCampaignsPage((p) => Math.max(1, p - 1))}
+                  onNext={() => setCampaignsPage((p) => Math.min(campaignsTotalPages, p + 1))}
+                  className="px-8 py-4 border-t border-zinc-100 dark:border-zinc-800"
+                />
+              </>
             )}
           </div>
         </div>
@@ -718,6 +749,18 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* ── Campaign Map ── */}
+      <section className="mt-12">
+        <CampaignMap campaigns={campaigns} />
+      </section>
+
+      {/* ── Two-Factor Authentication ── */}
+      {publicKey && (
+        <section className="mt-8">
+          <AdminTwoFactorSetup adminAddress={publicKey} />
+        </section>
+      )}
 
       {/* ── Reports Queue ── */}
       <section className="mt-12">
