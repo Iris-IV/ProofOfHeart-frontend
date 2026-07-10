@@ -205,7 +205,7 @@ describe("UpdateComposer", () => {
     fireEvent.change(textarea, { target: { value: "Valid content here" } });
 
     expect(screen.getByText("Posting...")).toBeInTheDocument();
-    expect(screen.getByText("Posting...")).toBeDisabled();
+    expect(screen.getByRole("button", { name: /posting/i })).toBeDisabled();
   });
 
   it("shows cancel button when expanded", () => {

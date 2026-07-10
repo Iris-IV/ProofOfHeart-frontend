@@ -45,7 +45,6 @@ jobs:
           SKIP_MOCK_CHECK: "true"
           NODE_ENV: "development"
 
-
       - name: Copy static assets into standalone bundle
         run: |
           cp -r .next/static .next/standalone/.next/static
