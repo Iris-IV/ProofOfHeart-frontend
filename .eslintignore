@@ -23,3 +23,7 @@ coverage/
 
 # Miscellaneous
 .DS_Store
+
+# Playwright test output
+playwright-report/
+test-results/
