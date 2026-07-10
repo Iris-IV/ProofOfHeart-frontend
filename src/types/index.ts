@@ -81,6 +81,8 @@ export interface Campaign {
   tags?: string[];
   cover_image_url?: string;
   milestones?: Milestone[];
+  latitude?: number;
+  longitude?: number;
 }
 
 // ---------------------------------------------------------------------------

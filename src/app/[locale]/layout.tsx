@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations } from "next-intl/server";
+import { Inter } from "next/font/google";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
@@ -17,6 +18,12 @@ import { getTextDirection } from "@/lib/direction";
 import { getThemeBlockingScript } from "@/lib/preferences";
 import type { Metadata } from "next";
 import "../globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 // #138 — Pre-render locale shells at build time so /en and /es appear in the
 // static-pages section of the build output instead of being dynamic routes.
@@ -81,7 +88,12 @@ export default async function RootLayout({
   const t = await getTranslations("Common");
 
   return (
-    <html lang={locale} dir={getTextDirection(locale)} suppressHydrationWarning>
+    <html
+      lang={locale}
+      dir={getTextDirection(locale)}
+      className={inter.variable}
+      suppressHydrationWarning
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{

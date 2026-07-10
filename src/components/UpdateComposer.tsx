@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 
 interface UpdateComposerProps {
@@ -170,7 +171,14 @@ export default function UpdateComposer({
                 disabled={!canSubmit}
                 className="w-full py-3 px-6 bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-zinc-200 disabled:to-zinc-300 dark:disabled:from-zinc-800 dark:disabled:to-zinc-900 disabled:text-zinc-500 dark:disabled:text-zinc-600 text-white font-bold rounded-xl transition-all duration-300 shadow-md hover:shadow-lg disabled:shadow-none text-sm active:scale-[0.98]"
               >
-                {isSubmitting ? "Posting..." : "Post Update"}
+                {isSubmitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="animate-spin h-4 w-4" aria-hidden="true" />
+                    Posting...
+                  </span>
+                ) : (
+                  "Post Update"
+                )}
               </button>
             </div>
             <button

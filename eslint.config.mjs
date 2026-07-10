@@ -108,6 +108,9 @@ const eslintConfig = defineConfig([
     // Scripts and build artifacts
     "scripts/**",
     "coverage/**",
+    // Playwright test output (generated, not source)
+    "playwright-report/**",
+    "test-results/**",
   ]),
 ]);
 
