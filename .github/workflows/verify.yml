@@ -4,7 +4,6 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -31,6 +30,11 @@ jobs:
         env:
           NEXT_PUBLIC_USE_MOCKS: "true"
           SKIP_MOCK_CHECK: "true"
+
+      - name: Copy static assets into standalone bundle
+        run: |
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
 
       - name: Run Playwright tests
         run: npm run test:e2e

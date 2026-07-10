@@ -44,7 +44,10 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: "npm run dev",
+    // next.config.ts sets output: "standalone", so `next start` won't work.
+    // In CI the app is pre-built by the workflow step; serve the standalone
+    // bundle directly. Locally, fall back to the dev server.
+    command: process.env.CI ? "node .next/standalone/server.js" : "npm run dev",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
@@ -52,6 +55,8 @@ export default defineConfig({
     stderr: "pipe",
     env: {
       NEXT_PUBLIC_USE_MOCKS: "true",
+      PORT: "3000",
+      HOSTNAME: "0.0.0.0",
     },
   },
 });
