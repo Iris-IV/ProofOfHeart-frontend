@@ -8,6 +8,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "node ./scripts/validate-production-build.mjs && next build",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
     "start": "next start",
     "lint": "eslint",
     "format": "prettier --write .",
@@ -32,11 +34,13 @@
     "@stellar/stellar-sdk": "^15.1.0",
     "@tanstack/react-query": "^5.100.14",
     "framer-motion": "^12.40.0",
+    "leaflet": "^1.9.4",
     "lucide-react": "^1.17.0",
     "next": "^16.2.6",
     "next-intl": "^4.13.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
+    "react-leaflet": "^5.0.0",
     "react-markdown": "^10.1.0",
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1"
@@ -54,6 +58,7 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/jest": "^30.0.0",
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^25",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -69,7 +74,12 @@
     "prettier": "^3.8.3",
     "tailwindcss": "^4.3.0",
     "ts-node": "^10.9.2",
-    "typescript": "^6"
+    "typescript": "^6",
+    "@storybook/addon-essentials": "^8",
+    "@storybook/addon-interactions": "^8",
+    "@storybook/nextjs": "^8",
+    "@storybook/react": "^8",
+    "storybook": "^8"
   },
   "overrides": {
     "axios": "1.16.1",

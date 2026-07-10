@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Bookmark } from "lucide-react";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { useState, useEffect } from "react";
@@ -43,6 +44,7 @@ import { parseContractError } from "@/utils/contractErrors";
 import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncAction";
 import { trackViewCampaign } from "@/lib/analytics";
 import { formatXlm, formatDate } from "@/lib/formatters";
+import { getLocalizedDescription } from "@/utils/localizedDescription";
 import { isSameAddress } from "@/lib/stellar";
 const EditCampaignMetadata = dynamic(() => import("@/components/EditCampaignMetadata"), {
   ssr: false,
@@ -318,25 +320,26 @@ export default function CauseDetailClient({ id }: { id: string }) {
                   className={`overflow-hidden transition-all duration-300 ${!isDescriptionExpanded ? "max-h-[250px] relative" : ""}`}
                 >
                   <SafeMarkdown className="prose prose-zinc dark:prose-invert max-w-none break-words">
-                    {campaign.description}
+                    {getLocalizedDescription(campaign.description, locale)}
                   </SafeMarkdown>
                   {!isDescriptionExpanded && (
                     <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white dark:from-zinc-800 to-transparent pointer-events-none" />
                   )}
                 </div>
-                {campaign.description && campaign.description.length > 500 && (
-                  <div className="mt-2 text-center">
-                    <button
-                      type="button"
-                      onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                      className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-3 py-1 transition-colors"
-                      aria-expanded={isDescriptionExpanded}
-                      aria-controls="campaign-description"
-                    >
-                      {isDescriptionExpanded ? "Show less" : "Read more"}
-                    </button>
-                  </div>
-                )}
+                {campaign.description &&
+                  getLocalizedDescription(campaign.description, locale).length > 500 && (
+                    <div className="mt-2 text-center">
+                      <button
+                        type="button"
+                        onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-3 py-1 transition-colors"
+                        aria-expanded={isDescriptionExpanded}
+                        aria-controls="campaign-description"
+                      >
+                        {isDescriptionExpanded ? "Show less" : "Read more"}
+                      </button>
+                    </div>
+                  )}
               </div>
 
               {canEdit && (
@@ -374,18 +377,11 @@ export default function CauseDetailClient({ id }: { id: string }) {
                         : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
                     }`}
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill={isSaved(campaign.id) ? "currentColor" : "none"}
-                      stroke="currentColor"
+                    <Bookmark
                       className="w-4 h-4"
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                    </svg>
+                      fill={isSaved(campaign.id) ? "currentColor" : "none"}
+                      aria-hidden="true"
+                    />
                     {isSaved(campaign.id) ? "Saved" : "Save"}
                   </button>
                 </div>
@@ -648,6 +644,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
           campaign={campaign}
           onClose={() => setIsDonationModalOpen(false)}
           onSuccess={refetch}
+          onRefetch={refetch}
         />
       )}
 

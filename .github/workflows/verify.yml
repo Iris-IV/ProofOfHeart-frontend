@@ -7,7 +7,6 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
   workflow_dispatch:
 
 # Prevent duplicate runs on the same branch/PR.
@@ -46,9 +45,12 @@ jobs:
           SKIP_MOCK_CHECK: "true"
           NODE_ENV: "development"
 
-      # In CI, playwright.config.ts uses `npm run start` as the webServer command.
-      # next start requires PORT and NODE_ENV to be set correctly.
-      # BASE_URL must match what the webServer serves.
+
+      - name: Copy static assets into standalone bundle
+        run: |
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
+
       - name: Run Playwright tests
         run: npm run test:e2e
         env:

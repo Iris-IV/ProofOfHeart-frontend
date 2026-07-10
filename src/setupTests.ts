@@ -5,12 +5,12 @@ import type React from "react";
 globalThis.TextEncoder ??= TextEncoder;
 globalThis.TextDecoder ??= TextDecoder;
 
-// Global mock for Freighter API
+// Global mock for Freighter API (v6.x returns objects, not primitives)
 jest.mock("@stellar/freighter-api", () => ({
-  isConnected: jest.fn(),
-  isAllowed: jest.fn(),
-  getAddress: jest.fn(),
-  getNetwork: jest.fn().mockResolvedValue({ networkPassphrase: "" }),
+  isConnected: jest.fn().mockResolvedValue({ isConnected: false }),
+  isAllowed: jest.fn().mockResolvedValue({ isAllowed: false }),
+  getAddress: jest.fn().mockResolvedValue({ address: "" }),
+  getNetwork: jest.fn().mockResolvedValue({ network: "", networkPassphrase: "" }),
   WatchWalletChanges: jest.fn().mockImplementation(() => ({
     watch: jest.fn(),
     stop: jest.fn(),

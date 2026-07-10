@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { memo, useState } from "react";
+import { Bookmark } from "lucide-react";
 import { useLocale } from "next-intl";
 import { formatAddress } from "@/lib/formatAddress";
 import { formatShortDate } from "@/lib/formatters";
@@ -142,18 +143,11 @@ function CauseCard({
           className="absolute top-2 right-2 p-2 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm rounded-full text-zinc-700 dark:text-zinc-200 hover:bg-white dark:hover:bg-zinc-800 transition-colors shadow-sm"
           title={isSaved(campaign.id) ? "Remove from saved" : "Save campaign"}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill={isSaved(campaign.id) ? "currentColor" : "none"}
-            stroke="currentColor"
+          <Bookmark
             className={`w-5 h-5 ${isSaved(campaign.id) ? "text-blue-500" : ""}`}
-            strokeWidth={1.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-          </svg>
+            fill={isSaved(campaign.id) ? "currentColor" : "none"}
+            aria-hidden="true"
+          />
         </button>
       </div>
 

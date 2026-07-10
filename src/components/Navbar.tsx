@@ -104,6 +104,10 @@ export default function Navbar() {
     { href: "/about", label: t("about") },
   ];
 
+  if (isWalletConnected) {
+    navLinks.push({ href: "/profile", label: t("profile") });
+  }
+
   if (isAdmin) {
     navLinks.push({ href: "/admin", label: t("admin") });
   }

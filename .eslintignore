@@ -20,6 +20,8 @@ node_modules/
 
 # Test artifacts
 coverage/
+playwright-report/
+test-results/
 
 # Miscellaneous
 .DS_Store
