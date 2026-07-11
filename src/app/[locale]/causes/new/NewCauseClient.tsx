@@ -110,7 +110,13 @@ function validateForm(
 export default function CreateCampaignPage() {
   const t = useTranslations("CreateCampaign");
   const router = useRouter();
-  const { publicKey, isWalletConnected, connectWallet, isLoading: walletLoading } = useWallet();
+  const {
+    publicKey,
+    isWalletConnected,
+    connectWallet,
+    isLoading: walletLoading,
+    checkWalletConnection,
+  } = useWallet();
   const { showError, showSuccess, showWarning } = useToast();
 
   const [title, setTitle] = useState("");
@@ -275,6 +281,9 @@ export default function CreateCampaignPage() {
 
   const handleConfirmAndSign = async () => {
     if (!reviewData) return;
+
+    // Check actual wallet connection status in case it disconnected after form fill
+    await checkWalletConnection();
 
     if (!isWalletConnected || !publicKey) {
       showError(t("walletRequiredError"));
