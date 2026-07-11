@@ -58,7 +58,7 @@ jest.mock("@/hooks/useCampaigns", () => ({
 }));
 
 jest.mock("@/components/WalletContext", () => ({
-  useWallet: () => ({ publicKey: null }),
+  useWallet: () => ({ publicKey: null, checkWalletConnection: jest.fn() }),
 }));
 
 jest.mock("@/components/ToastProvider", () => ({
