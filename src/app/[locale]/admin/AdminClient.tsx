@@ -21,6 +21,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
 import dynamic from "next/dynamic";
+import MapErrorBoundary from "@/components/MapErrorBoundary";
 
 const AdminTwoFactorSetup = dynamic(() => import("@/components/admin/AdminTwoFactorSetup"), {
   ssr: false,
@@ -752,7 +753,9 @@ export default function AdminDashboard() {
 
       {/* ── Campaign Map ── */}
       <section className="mt-12">
-        <CampaignMap campaigns={campaigns} />
+        <MapErrorBoundary>
+          <CampaignMap campaigns={campaigns} />
+        </MapErrorBoundary>
       </section>
 
       {/* ── Two-Factor Authentication ── */}
