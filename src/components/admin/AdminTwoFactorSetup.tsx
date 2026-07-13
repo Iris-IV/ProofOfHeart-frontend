@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ShieldCheck, KeyRound, CheckCircle2, Copy, RefreshCw } from "lucide-react";
+import { ShieldCheck, KeyRound, CheckCircle2, Copy, RefreshCw, Loader2 } from "lucide-react";
 
 // TOTP setup steps
 type Step = "intro" | "qr" | "verify" | "done";
@@ -28,6 +28,7 @@ export default function AdminTwoFactorSetup({ adminAddress }: Props) {
   const [step, setStep] = useState<Step>("intro");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const secret = deriveMockSecret(adminAddress);
@@ -42,15 +43,23 @@ export default function AdminTwoFactorSetup({ adminAddress }: Props) {
     });
   }
 
-  function handleVerify(e: React.FormEvent) {
+  async function handleVerify(e: React.FormEvent) {
     e.preventDefault();
-    // In production, POST the code to /api/auth/totp/verify.
-    // Here we accept any 6-digit code as a UI demo.
-    if (/^\d{6}$/.test(code)) {
-      setError("");
-      setStep("done");
-    } else {
-      setError("Enter the 6-digit code from your authenticator app.");
+    if (isVerifying) return; // guard against double-submit
+    setIsVerifying(true);
+    setError("");
+    try {
+      // In production, POST the code to /api/auth/totp/verify.
+      // Here we accept any 6-digit code as a UI demo; the short delay makes the
+      // pending state visible and mirrors the real network round-trip.
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      if (/^\d{6}$/.test(code)) {
+        setStep("done");
+      } else {
+        setError("Enter the 6-digit code from your authenticator app.");
+      }
+    } finally {
+      setIsVerifying(false);
     }
   }
 
@@ -287,9 +296,18 @@ export default function AdminTwoFactorSetup({ adminAddress }: Props) {
             </button>
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+              disabled={isVerifying}
+              aria-busy={isVerifying}
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Verify
+              {isVerifying ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+                  Verifying...
+                </>
+              ) : (
+                "Verify"
+              )}
             </button>
           </div>
         </form>
