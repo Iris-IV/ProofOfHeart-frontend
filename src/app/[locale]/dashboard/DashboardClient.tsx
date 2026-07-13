@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import MyContributionsSection from "@/components/MyContributionsSection";
 import MultiSigWithdrawalPanel from "@/components/MultiSigWithdrawalPanel";
 import { Spinner, DashboardSkeleton } from "@/components/Skeleton";
@@ -63,6 +63,13 @@ export default function DashboardPage() {
     [campaigns, publicKey],
   );
 
+  const ITEMS_PER_PAGE = 5;
+  const [visibleSavedCount, setVisibleSavedCount] = useState(ITEMS_PER_PAGE);
+  const [visibleSubmittedCount, setVisibleSubmittedCount] = useState(ITEMS_PER_PAGE);
+
+  const displayedSaved = savedCampaigns.slice(0, visibleSavedCount);
+  const displayedSubmitted = submittedCampaigns.slice(0, visibleSubmittedCount);
+
   if (!isWalletConnected || !publicKey) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
@@ -107,19 +114,33 @@ export default function DashboardPage() {
             You haven&apos;t saved any campaigns yet.
           </span>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {savedCampaigns.map((campaign) => (
-              <Link
-                key={campaign.id}
-                href={`/causes/${campaign.id}`}
-                className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
-              >
-                <div className="font-medium text-zinc-900 dark:text-zinc-50">{campaign.title}</div>
-                <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2 break-words">
-                  {campaign.description}
-                </div>
-              </Link>
-            ))}
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {displayedSaved.map((campaign) => (
+                <Link
+                  key={campaign.id}
+                  href={`/causes/${campaign.id}`}
+                  className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
+                >
+                  <div className="font-medium text-zinc-900 dark:text-zinc-50">
+                    {campaign.title}
+                  </div>
+                  <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2 break-words">
+                    {campaign.description}
+                  </div>
+                </Link>
+              ))}
+            </div>
+            {visibleSavedCount < savedCampaigns.length && (
+              <div className="text-center mt-4">
+                <button
+                  onClick={() => setVisibleSavedCount((prev) => prev + ITEMS_PER_PAGE)}
+                  className="px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-full text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+                >
+                  Load More
+                </button>
+              </div>
+            )}
           </div>
         )}
       </section>
@@ -129,17 +150,31 @@ export default function DashboardPage() {
         {submittedCampaigns.length === 0 ? (
           <span className="text-zinc-500 dark:text-zinc-400">{t("noSubmittedCampaigns")}</span>
         ) : (
-          <ul className="space-y-4">
-            {submittedCampaigns.map((campaign) => (
-              <li key={campaign.id} className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900">
-                <div className="font-medium text-zinc-900 dark:text-zinc-50">{campaign.title}</div>
-                <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
-                  {campaign.description}
-                </div>
-                <MultiSigWithdrawalPanel campaign={campaign} walletAddress={publicKey} />
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-4">
+            <ul className="space-y-4">
+              {displayedSubmitted.map((campaign) => (
+                <li key={campaign.id} className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900">
+                  <div className="font-medium text-zinc-900 dark:text-zinc-50">
+                    {campaign.title}
+                  </div>
+                  <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
+                    {campaign.description}
+                  </div>
+                  <MultiSigWithdrawalPanel campaign={campaign} walletAddress={publicKey} />
+                </li>
+              ))}
+            </ul>
+            {visibleSubmittedCount < submittedCampaigns.length && (
+              <div className="text-center mt-4">
+                <button
+                  onClick={() => setVisibleSubmittedCount((prev) => prev + ITEMS_PER_PAGE)}
+                  className="px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-full text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+                >
+                  Load More
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </section>
 

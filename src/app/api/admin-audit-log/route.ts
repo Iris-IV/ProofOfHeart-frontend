@@ -5,10 +5,7 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 type AdminAuditAction =
-  | "verify_campaign"
-  | "reject_campaign"
-  | "update_platform_fee"
-  | "transfer_admin";
+  "verify_campaign" | "reject_campaign" | "update_platform_fee" | "transfer_admin";
 
 interface AdminAuditLogEntry {
   adminAddress: string;
@@ -64,7 +61,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     entries: entries
       .filter((entry) => normalizeAddress(entry.adminAddress) === normalized)
-      .sort((a, b) => b.timestamp - a.timestamp),
+      .sort((a, c) => c.timestamp - a.timestamp),
   });
 }
 
