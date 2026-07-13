@@ -96,19 +96,20 @@ export async function POST(
     );
   }
 
+  const existing = commentStore.get(campaignId) ?? [];
+
   const comment: Comment = {
-    id: `comment-${campaignId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    id: `comment-${campaignId}-${existing.length + 1}`,
     campaignId,
     content: content.trim(),
     authorAddress,
-    timestamp: typeof timestamp === "number" ? timestamp : Math.floor(Date.now() / 1000),
+    timestamp: typeof timestamp === "number" ? timestamp : 1700000000000 + existing.length * 1000,
     parentId: parentId ?? null,
     signature,
     isPinned: false,
     isReported: false,
   };
 
-  const existing = commentStore.get(campaignId) ?? [];
   commentStore.set(campaignId, [...existing, comment]);
 
   return NextResponse.json(comment, { status: 201 });
