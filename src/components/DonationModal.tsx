@@ -6,6 +6,7 @@ import { contribute, getCampaign } from "../lib/contractClient";
 import { getEstimatedContributeNetworkFeeXlm } from "../lib/networkFee";
 import { Campaign, basisPointsToPercentage } from "../types";
 import { xlmToStroops, stroopsToXlmNumber } from "@/lib/stellarAmount";
+import { sanitizeAmountInput } from "@/lib/amountInput";
 import { formatAmount } from "@/lib/formatters";
 import { useToast } from "./ToastProvider";
 import { useWallet } from "./WalletContext";
@@ -353,9 +354,13 @@ export default function DonationModal({
                     aria-invalid={amountError ? "true" : "false"}
                     disabled={isFullyFunded}
                     onChange={(e) => {
-                      setAmount(e.target.value);
+                      // A donation amount can never be negative; strip any minus
+                      // sign so the field never holds one (HTML min on
+                      // type="number" does not block typing "-").
+                      const next = sanitizeAmountInput(e.target.value);
+                      setAmount(next);
                       setError(null);
-                      if (e.target.value && parseFloat(e.target.value) > 0) {
+                      if (next && parseFloat(next) > 0) {
                         trackEnterAmount(campaign.id);
                       }
                     }}
