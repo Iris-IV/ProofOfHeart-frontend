@@ -11,6 +11,10 @@ jest.mock("@stellar/freighter-api", () => ({
   isAllowed: jest.fn().mockResolvedValue({ isAllowed: false }),
   getAddress: jest.fn().mockResolvedValue({ address: "" }),
   getNetwork: jest.fn().mockResolvedValue({ network: "", networkPassphrase: "" }),
+  WatchWalletChanges: jest.fn().mockImplementation(() => ({
+    watch: jest.fn(),
+    stop: jest.fn(),
+  })),
 }));
 
 jest.mock("next-intl", () => ({

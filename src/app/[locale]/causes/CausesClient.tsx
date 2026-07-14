@@ -124,7 +124,13 @@ function CausesContent() {
   >({});
   const [isVotingFor, setIsVotingFor] = useState<number | null>(null);
   const [visibleCount, setVisibleCount] = useState(CAUSES_PAGE_SIZE);
+  const [mounted, setMounted] = useState(false);
   const { publicKey: userWalletAddress } = useWallet();
+
+  // Prevent SSR/hydration mismatch — URL-dependent rendering only runs client-side
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const { showError, showSuccess, showWarning } = useToast();
 
   // Mirror contract data into local state so optimistic updates work

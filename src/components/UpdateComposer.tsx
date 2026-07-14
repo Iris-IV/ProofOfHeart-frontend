@@ -27,14 +27,17 @@ export default function UpdateComposer({
   const [content, setContent] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
   const [notify, setNotify] = useState(true);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const { showError, showSuccess } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
 
     const trimmedContent = content.trim();
     if (trimmedContent.length < MIN_CONTENT_LENGTH) {
-      showError(`Update must be at least ${MIN_CONTENT_LENGTH} characters.`);
+      const remaining = MIN_CONTENT_LENGTH - trimmedContent.length;
+      setSubmitError(`${remaining} more characters needed`);
       return;
     }
 
@@ -42,6 +45,7 @@ export default function UpdateComposer({
       await onSubmit(trimmedContent, notify);
       setContent("");
       setIsExpanded(false);
+      setSubmitError(null);
       showSuccess("Update posted successfully!");
     } catch (error) {
       showError(
@@ -53,12 +57,14 @@ export default function UpdateComposer({
   const handleCancel = () => {
     setContent("");
     setIsExpanded(false);
+    setSubmitError(null);
   };
 
   const characterCount = content.length;
   const isOverLimit = characterCount > MAX_CONTENT_LENGTH;
   const isUnderMinLength = characterCount > 0 && characterCount < MIN_CONTENT_LENGTH;
   const canSubmit = !isSubmitting && !isOverLimit && characterCount >= MIN_CONTENT_LENGTH;
+  const overBy = isOverLimit ? characterCount - MAX_CONTENT_LENGTH : 0;
 
   return (
     <form
@@ -85,10 +91,7 @@ export default function UpdateComposer({
           onClick={() => setIsExpanded(true)}
           className="w-full py-4 px-6 bg-linear-to-r from-purple-600/10 to-blue-600/10 hover:from-purple-600/20 hover:to-blue-600/20 text-purple-700 dark:text-purple-300 font-bold rounded-2xl border-2 border-dashed border-purple-200 dark:border-purple-800 transition-all duration-300 group"
         >
-          <span className="group-hover:scale-110 inline-block transition-transform duration-200">
-            ✏️
-          </span>{" "}
-          Write an update to your supporters...
+          ✏️ Write an update
         </button>
       ) : (
         <div className="space-y-5">
@@ -100,8 +103,11 @@ export default function UpdateComposer({
             <textarea
               id={`update-content-${campaignId}`}
               value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Share progress, milestones, or news..."
+              onChange={(e) => {
+                setContent(e.target.value);
+                setSubmitError(null);
+              }}
+              placeholder="Share progress, milestones, or news with your supporters..."
               rows={5}
               className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 dark:focus:ring-purple-400/50 focus:border-purple-500/50 transition-all text-sm leading-relaxed"
               autoFocus
@@ -136,27 +142,45 @@ export default function UpdateComposer({
                       : "text-zinc-500"
                 }`}
               >
-                {characterCount} / {MAX_CONTENT_LENGTH}
+                {isOverLimit ? `${overBy} over limit` : `${characterCount}/${MAX_CONTENT_LENGTH}`}
               </span>
             </div>
           </div>
 
+          {/* Inline validation message */}
+          {submitError && (
+            <p className="text-xs text-amber-600 dark:text-amber-400" role="alert">
+              {submitError}
+            </p>
+          )}
+
           {/* Action buttons */}
           <div className="flex items-center gap-3 pt-2">
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              className="flex-1 py-3 px-6 bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-zinc-200 disabled:to-zinc-300 dark:disabled:from-zinc-800 dark:disabled:to-zinc-900 disabled:text-zinc-500 dark:disabled:text-zinc-600 text-white font-bold rounded-xl transition-all duration-300 shadow-md hover:shadow-lg disabled:shadow-none text-sm active:scale-[0.98]"
+            {/* Wrap in div to allow click-to-validate even when button is disabled */}
+            <div
+              className="flex-1"
+              onClick={() => {
+                if (isUnderMinLength) {
+                  const remaining = MIN_CONTENT_LENGTH - content.trim().length;
+                  if (remaining > 0) setSubmitError(`${remaining} more characters needed`);
+                }
+              }}
             >
-              {isSubmitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <Loader2 className="animate-spin h-4 w-4" aria-hidden="true" />
-                  Posting...
-                </span>
-              ) : (
-                "Post Update"
-              )}
-            </button>
+              <button
+                type="submit"
+                disabled={!canSubmit}
+                className="w-full py-3 px-6 bg-linear-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-zinc-200 disabled:to-zinc-300 dark:disabled:from-zinc-800 dark:disabled:to-zinc-900 disabled:text-zinc-500 dark:disabled:text-zinc-600 text-white font-bold rounded-xl transition-all duration-300 shadow-md hover:shadow-lg disabled:shadow-none text-sm active:scale-[0.98]"
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="animate-spin h-4 w-4" aria-hidden="true" />
+                    Posting...
+                  </span>
+                ) : (
+                  "Post Update"
+                )}
+              </button>
+            </div>
             <button
               type="button"
               onClick={handleCancel}

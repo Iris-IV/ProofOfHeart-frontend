@@ -2,7 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import SafeMarkdown from "@/components/SafeMarkdown";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { validateImageFile } from "@/lib/imageValidation";
 import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
 import { useRouter } from "@/i18n/routing";
@@ -132,6 +133,8 @@ export default function CreateCampaignPage() {
   const [descriptionTab, setDescriptionTab] = useState<"write" | "preview">("write");
   const [descriptionEs, setDescriptionEs] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
 
   const draftKey = publicKey
@@ -233,6 +236,49 @@ export default function CreateCampaignPage() {
     if (val !== Category.EducationalStartup) {
       setHasRevenueSharing(false);
       setRevenueSharePercentage(1);
+    }
+  };
+
+  const handleCoverImageUpload = async (file: File) => {
+    const clientValidation = validateImageFile(file);
+    if (!clientValidation.valid) {
+      showError(clientValidation.error ?? t("coverImageUploadFailed"));
+      return;
+    }
+
+    setIsUploadingCover(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      const payload = (await response.json().catch(() => null)) as {
+        url?: string;
+        message?: string;
+      } | null;
+
+      if (!response.ok || !payload?.url) {
+        throw new Error(payload?.message ?? t("coverImageUploadFailed"));
+      }
+
+      setCoverImageUrl(payload.url);
+      setErrorKeys((prev) => {
+        const next = { ...prev };
+        delete next.coverImageUrl;
+        return next;
+      });
+      showSuccess(t("coverImageUploadSuccess"));
+    } catch (error) {
+      showError(error instanceof Error ? error.message : t("coverImageUploadFailed"));
+    } finally {
+      setIsUploadingCover(false);
+      if (coverFileInputRef.current) {
+        coverFileInputRef.current.value = "";
+      }
     }
   };
 
@@ -890,22 +936,48 @@ export default function CreateCampaignPage() {
               htmlFor="coverImageUrl"
               className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
             >
-              Cover Image URL <span className="text-xs font-normal text-zinc-400">(optional)</span>
+              {t("labelCoverImage")}{" "}
+              <span className="text-xs font-normal text-zinc-400">({t("optional")})</span>
             </label>
-            <input
-              id="coverImageUrl"
-              type="url"
-              value={coverImageUrl}
-              onChange={(e) => setCoverImageUrl(e.target.value)}
-              placeholder="https://ipfs.io/ipfs/... or https://i.imgur.com/..."
-              aria-invalid={Boolean(errorKeys.coverImageUrl)}
-              aria-describedby={errorKeys.coverImageUrl ? "cover-image-error" : undefined}
-              className={`w-full px-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                errorKeys.coverImageUrl
-                  ? "border-red-400 dark:border-red-500"
-                  : "border-zinc-200 dark:border-zinc-600"
-              }`}
-            />
+            <div className="flex gap-2">
+              <input
+                id="coverImageUrl"
+                type="url"
+                value={coverImageUrl}
+                onChange={(e) => setCoverImageUrl(e.target.value)}
+                placeholder={t("placeholderCoverImage")}
+                aria-invalid={Boolean(errorKeys.coverImageUrl)}
+                aria-describedby={errorKeys.coverImageUrl ? "cover-image-error" : undefined}
+                className={`flex-1 min-w-0 px-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+                  errorKeys.coverImageUrl
+                    ? "border-red-400 dark:border-red-500"
+                    : "border-zinc-200 dark:border-zinc-600"
+                }`}
+              />
+              <input
+                ref={coverFileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+                className="hidden"
+                aria-hidden="true"
+                tabIndex={-1}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleCoverImageUpload(file);
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => coverFileInputRef.current?.click()}
+                disabled={isUploadingCover}
+                className="shrink-0 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-sm font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isUploadingCover ? t("coverImageUploading") : t("coverImageUpload")}
+              </button>
+            </div>
+            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1">
+              {t("coverImageHelpText")}
+            </p>
             {errorKeys.coverImageUrl && (
               <p id="cover-image-error" className="text-xs text-red-500 mt-1">
                 Please enter a valid URL (must start with http:// or https://).

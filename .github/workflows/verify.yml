@@ -1,17 +1,25 @@
 name: Verification (E2E)
 
+# Runs on every PR and every push to main.
+# pull_request_target is intentionally NOT used here because this workflow
+# executes arbitrary build/test code; pull_request is safer for untrusted forks.
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
   workflow_dispatch:
+
+# Prevent duplicate runs on the same branch/PR.
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   playwright:
     name: Playwright Tests
     timeout-minutes: 60
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -26,16 +34,33 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
+      # Build with mock mode enabled so NEXT_PUBLIC_USE_MOCKS is baked into
+      # the bundle. next start then serves the pre-built output in the webServer.
       - name: Build application
         run: npm run build
         env:
           NEXT_PUBLIC_USE_MOCKS: "true"
+          NEXT_TELEMETRY_DISABLED: "1"
+          # Suppress the production guard that blocks mock mode
           SKIP_MOCK_CHECK: "true"
+          NODE_ENV: "development"
+
+      - name: Copy static assets into standalone bundle
+        run: |
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
 
       - name: Run Playwright tests
         run: npm run test:e2e
         env:
+          CI: "true"
+          BASE_URL: "http://localhost:3000"
           NEXT_PUBLIC_USE_MOCKS: "true"
+          NEXT_TELEMETRY_DISABLED: "1"
+          PORT: "3000"
+          HOSTNAME: "0.0.0.0"
+          # Keep NODE_ENV as test so mock-mode guard doesn't fire
+          NODE_ENV: "test"
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4

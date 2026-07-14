@@ -37,8 +37,14 @@ const TestComponent = () => {
   );
 };
 
-const renderWithProviders = (ui: React.ReactElement) =>
-  render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+function createQueryClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+}
+
+function renderWithProviders(ui: React.ReactElement) {
+  const queryClient = createQueryClient();
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
 
 describe("WalletContext", () => {
   beforeEach(() => {
@@ -118,6 +124,7 @@ describe("WalletContext", () => {
   });
 
   it("connectWallet - freighter not installed", async () => {
+    // isFreighterInstalled checks result.isConnected; { isConnected: false } → not installed
     mockIsConnected.mockResolvedValue({ isConnected: false });
 
     renderWithProviders(
@@ -130,7 +137,10 @@ describe("WalletContext", () => {
       fireEvent.click(screen.getByText("Connect"));
     });
 
+    // Component shows InstallFreighterModal (setShowInstallPrompt) instead of window.open
+    // Verify wallet stays disconnected and loading clears
     expect(screen.getByTestId("isLoading")).toHaveTextContent("false");
+    expect(screen.getByTestId("isConnected")).toHaveTextContent("false");
   });
 
   it("connectWallet - not allowed", async () => {

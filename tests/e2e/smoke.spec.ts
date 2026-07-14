@@ -1,11 +1,15 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * Smoke test for the core user navigation flow:
- * Home → Causes → Cause Detail → Dashboard
+ * Smoke tests for core page availability and navigation.
  *
- * This test runs with NEXT_PUBLIC_USE_MOCKS=true to validate
- * the critical user path without external dependencies.
+ * The app uses next-intl locale routing — all pages live under /[locale]/,
+ * e.g. /en/, /en/causes, /en/dashboard.  Requests to bare paths like /causes
+ * are redirected to /en/causes by the middleware, so we navigate directly to
+ * the canonical locale URLs to avoid redirect races.
+ *
+ * These tests run with NEXT_PUBLIC_USE_MOCKS=true (set in playwright.config.ts
+ * webServer env) so no real Soroban RPC or Freighter extension is needed.
  */
 test.describe("Core User Flow Smoke Test", () => {
   test.beforeEach(async ({ page }) => {
