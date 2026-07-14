@@ -4,9 +4,18 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+# Cancel in-progress runs for the same PR so pushes don't stack up.
+concurrency:
+  group: commitlint-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
-  commitlint:
-    name: Validate commit messages
+  # ──────────────────────────────────────────────────────────────────────────
+  # Shared setup: install Node + cache deps once, then let the two lint jobs
+  # reuse the npm cache instead of each running a full `npm ci`.
+  # ──────────────────────────────────────────────────────────────────────────
+  setup:
+    name: Install dependencies
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,11 +30,47 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate commit messages
-        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to HEAD
+  # ──────────────────────────────────────────────────────────────────────────
+  # Job 1: Validate every commit in the PR range.
+  # ──────────────────────────────────────────────────────────────────────────
+  commitlint:
+    name: Validate commit messages
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      # Restore the npm cache populated by the setup job.
+      - name: Install dependencies
+        run: npm ci
+
+      # Use the PR base SHA as the range start.
+      # Fall back to HEAD~1 on force-pushed bases where the SHA may be
+      # temporarily unavailable (extremely rare but safe to guard against).
+      - name: Validate commit messages
+        shell: bash
+        run: |
+          FROM="${{ github.event.pull_request.base.sha }}"
+          if [ -z "$FROM" ]; then
+            echo "::warning::base.sha is empty, falling back to HEAD~1"
+            FROM="HEAD~1"
+          fi
+          npx commitlint --from "$FROM" --to HEAD
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Job 2: Validate the PR title (must also follow Conventional Commits).
+  # This is blocking — no continue-on-error.
+  # ──────────────────────────────────────────────────────────────────────────
   pr-title:
     name: Validate PR title
+    needs: setup
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +83,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Pass the PR title via an environment variable to avoid any shell
+      # injection from titles that contain quotes, backticks, or $(...).
+      # The here-string form `<<<` requires bash; `shell: bash` ensures that.
       - name: Validate PR title
-        continue-on-error: true
-        run: |
-          npx commitlint --config commitlint.config.js <<< "${{ github.event.pull_request.title }}"
+        shell: bash
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: echo "$PR_TITLE" | npx commitlint --config commitlint.config.js

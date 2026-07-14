@@ -56,26 +56,43 @@ perf(ui): optimize image loading
 added new feature          ❌ Missing type and scope
 feat: Add Email            ❌ Capitalized subject
 fix(auth): fixed bug.      ❌ Ends with period
-feat(auth): add email verification flow that does many things and is very long and exceeds the character limit ❌ Too long
+feat(auth): add email verification flow that does many things and is very long and exceeds the character limit ❌ Too long (max 100 chars)
 ```
 
 ## Enforcement
 
 ### Local Validation
 
-- **Hook**: `commit-msg` (runs on every commit)
+- **Hook**: `commit-msg` (runs on every commit via Husky)
 - **Tool**: commitlint
-- **When**: Before commit is created
-- **Failure**: Commit is rejected with helpful error message
+- **When**: Before the commit is created
+- **Failure**: Commit is rejected with a helpful error message
 
 ### CI Validation
 
 - **Workflow**: `.github/workflows/commitlint.yml`
+- **Concurrency**: Redundant runs on the same PR are automatically cancelled
 - **Checks**:
-  1. All commits in PR follow format
-  2. PR title follows format
-- **When**: On pull request creation/update
-- **Failure**: PR check fails with clear error
+  1. **All commits in the PR** must follow the Conventional Commits format
+  2. **PR title** must follow the Conventional Commits format (blocking — failures fail the check)
+- **When**: On pull request open, synchronize, or reopen
+- **Failure**: PR check fails with a clear error
+
+#### How CI runs
+
+The workflow has three jobs:
+
+| Job | Purpose |
+|-----|---------|
+| `setup` | Checks out code and primes the npm cache |
+| `commitlint` | Validates every commit from `base.sha` to `HEAD` |
+| `pr-title` | Validates the PR title as a single commit message |
+
+Both `commitlint` and `pr-title` depend on `setup` and reuse its npm cache
+rather than installing dependencies twice.
+
+The base SHA falls back to `HEAD~1` if `github.event.pull_request.base.sha` is
+unexpectedly empty (e.g. after a force-push race condition).
 
 ## Helpful Error Messages
 
@@ -112,7 +129,8 @@ git push
 
 ## PR Titles
 
-PR titles must also follow Conventional Commits format:
+PR titles must also follow Conventional Commits format. This is a **blocking**
+check — a PR with an invalid title cannot be merged until the title is fixed.
 
 ```
 feat(auth): add email verification
@@ -120,7 +138,9 @@ fix(contract): handle campaign fetch errors
 docs: update contributing guide
 ```
 
-This is validated automatically when you open a PR.
+The PR title is passed to commitlint via an environment variable (not shell
+interpolation) so titles containing special characters like quotes, backticks,
+or `$(...)` are handled safely.
 
 ## Configuration
 
