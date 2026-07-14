@@ -1,10 +1,7 @@
 import { normalizeAddress } from "./stellar";
 
 export type AdminAuditAction =
-  | "verify_campaign"
-  | "reject_campaign"
-  | "update_platform_fee"
-  | "transfer_admin";
+  "verify_campaign" | "reject_campaign" | "update_platform_fee" | "transfer_admin";
 
 export interface AdminAuditLogEntry {
   adminAddress: string;
