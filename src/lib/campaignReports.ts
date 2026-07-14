@@ -38,13 +38,13 @@ export async function submitReport(
 ): Promise<CampaignReport> {
   if (USE_MOCKS || !hasOffchainApiBaseUrl()) {
     return {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      id: `mock-report-${campaignId}`,
       campaignId,
       campaignTitle,
       reason,
       notes,
       reporterAddress,
-      timestamp: Date.now(),
+      timestamp: 1700000000000,
       status: "pending",
     };
   }

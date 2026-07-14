@@ -13,7 +13,7 @@ export function applyMockScenario(campaign: Campaign, scenario: MockScenario): C
     return campaign;
   }
 
-  const now = Math.floor(Date.now() / 1000);
+  const now = 1700000000;
 
   switch (scenario) {
     case "active":

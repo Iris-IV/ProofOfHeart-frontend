@@ -16,6 +16,7 @@ const USE_MOCKS = typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_
 // ---------------------------------------------------------------------------
 // Mock data for campaign updates
 // ---------------------------------------------------------------------------
+const MOCK_TIMESTAMP_SEC = 1700000000;
 
 const MOCK_UPDATES: Record<number, CampaignUpdate[]> = {
   1: [
@@ -25,7 +26,7 @@ const MOCK_UPDATES: Record<number, CampaignUpdate[]> = {
       content:
         "We've successfully completed the first phase of our clean water project! 200 families now have access to clean drinking water thanks to your support. The next phase will focus on extending the pipeline to the remaining 300 families.",
       authorAddress: "GABC123456789012345678901234567890123456789012345678901234567890",
-      timestamp: Math.floor(Date.now() / 1000) - 86400 * 5,
+      timestamp: MOCK_TIMESTAMP_SEC - 86400 * 5,
       signature: "mock-signature-update-1-1",
     },
     {
@@ -34,7 +35,7 @@ const MOCK_UPDATES: Record<number, CampaignUpdate[]> = {
       content:
         "Thank you all for the incredible support! We've reached 50% of our funding goal. The community response has been overwhelming, and we're excited to continue making progress.",
       authorAddress: "GABC123456789012345678901234567890123456789012345678901234567890",
-      timestamp: Math.floor(Date.now() / 1000) - 86400 * 10,
+      timestamp: MOCK_TIMESTAMP_SEC - 86400 * 10,
       signature: "mock-signature-update-1-2",
     },
   ],
@@ -45,7 +46,7 @@ const MOCK_UPDATES: Record<number, CampaignUpdate[]> = {
       content:
         "Great news! We've partnered with TechForGood Foundation to provide tablets for all students. The first batch of 50 tablets has arrived and will be distributed next week.",
       authorAddress: "GDEF123456789012345678901234567890123456789012345678901234567890",
-      timestamp: Math.floor(Date.now() / 1000) - 86400 * 3,
+      timestamp: MOCK_TIMESTAMP_SEC - 86400 * 3,
       signature: "mock-signature-update-2-1",
     },
   ],
@@ -107,12 +108,13 @@ export async function createCampaignUpdate(
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 800));
 
-    const timestamp = Math.floor(Date.now() / 1000);
+    const timestamp = MOCK_TIMESTAMP_SEC;
     const payload: UpdatePayload = { campaignId, content, timestamp };
     const signature = await signPayload(payload);
 
+    const existingCount = MOCK_UPDATES[campaignId]?.length || 0;
     const newUpdate: CampaignUpdate = {
-      id: `update-${campaignId}-${Date.now()}`,
+      id: `update-${campaignId}-${existingCount + 1}`,
       campaignId,
       content,
       authorAddress: creatorAddress,
