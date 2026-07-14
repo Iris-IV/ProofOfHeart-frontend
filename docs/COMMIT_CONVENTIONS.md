@@ -82,11 +82,11 @@ feat(auth): add email verification flow that does many things and is very long a
 
 The workflow has three jobs:
 
-| Job | Purpose |
-|-----|---------|
-| `setup` | Checks out code and primes the npm cache |
-| `commitlint` | Validates every commit from `base.sha` to `HEAD` |
-| `pr-title` | Validates the PR title as a single commit message |
+| Job          | Purpose                                           |
+| ------------ | ------------------------------------------------- |
+| `setup`      | Checks out code and primes the npm cache          |
+| `commitlint` | Validates every commit from `base.sha` to `HEAD`  |
+| `pr-title`   | Validates the PR title as a single commit message |
 
 Both `commitlint` and `pr-title` depend on `setup` and reuse its npm cache
 rather than installing dependencies twice.
