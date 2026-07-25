@@ -14,6 +14,7 @@ import {
 import { Category, CATEGORY_LABELS } from "@/types";
 import { xlmToStroops } from "@/lib/stellarAmount";
 import { parseContractError } from "@/utils/contractErrors";
+import { encodeLocalizedDescription } from "@/utils/localizedDescription";
 
 // ---------------------------------------------------------------------------
 // Validation — returns translation keys instead of hardcoded strings
@@ -22,6 +23,7 @@ import { parseContractError } from "@/utils/contractErrors";
 interface FormErrorKeys {
   title?: string;
   description?: string;
+  descriptionEs?: string;
   creatorEmail?: string;
   fundingGoal?: string;
   durationDays?: string;
@@ -49,6 +51,7 @@ const IMAGE_URL_RE = /^https?:\/\/.+\..+/;
 function validateForm(
   title: string,
   description: string,
+  descriptionEs: string,
   creatorEmail: string,
   fundingGoal: string,
   durationDays: string,
@@ -69,6 +72,10 @@ function validateForm(
     errors.description = "validationDescriptionRequired";
   } else if (description.trim().length > 1000) {
     errors.description = "validationDescriptionTooLong";
+  }
+
+  if (descriptionEs.trim().length > 1000) {
+    errors.descriptionEs = "validationDescriptionEsTooLong";
   }
 
   if (creatorEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(creatorEmail.trim())) {
@@ -123,19 +130,25 @@ export default function CreateCampaignPage() {
   const [milestones, setMilestones] = useState<{ targetAmount: string; description: string }[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [descriptionTab, setDescriptionTab] = useState<"write" | "preview">("write");
+  const [descriptionEs, setDescriptionEs] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
 
-  const DRAFT_KEY = "proof_of_heart_next_draft";
+  const draftKey = publicKey
+    ? `proof_of_heart_draft_${publicKey}`
+    : "proof_of_heart_draft_anonymous";
+  const [hasDraft, setHasDraft] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const CREATOR_EMAIL_WEBHOOK_URL = process.env.NEXT_PUBLIC_CREATOR_EMAIL_WEBHOOK_URL?.trim() ?? "";
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(DRAFT_KEY);
+      const saved = localStorage.getItem(draftKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.title) setTitle(parsed.title);
         if (parsed.description) setDescription(parsed.description);
+        if (parsed.descriptionEs) setDescriptionEs(parsed.descriptionEs);
         if (parsed.creatorEmail) setCreatorEmail(parsed.creatorEmail);
         if (parsed.fundingGoal) setFundingGoal(parsed.fundingGoal);
         if (parsed.durationDays) setDurationDays(parsed.durationDays);
@@ -146,6 +159,7 @@ export default function CreateCampaignPage() {
         if (parsed.tags) setTags(parsed.tags);
         if (parsed.coverImageUrl) setCoverImageUrl(parsed.coverImageUrl);
         if (parsed.milestones) setMilestones(parsed.milestones);
+        setHasDraft(true);
       }
     } catch (e) {
       console.warn("Failed to load draft from localStorage:", e);
@@ -155,10 +169,11 @@ export default function CreateCampaignPage() {
   useEffect(() => {
     try {
       localStorage.setItem(
-        DRAFT_KEY,
+        draftKey,
         JSON.stringify({
           title,
           description,
+          descriptionEs,
           creatorEmail,
           fundingGoal,
           durationDays,
@@ -170,12 +185,15 @@ export default function CreateCampaignPage() {
           milestones,
         }),
       );
+      setLastSavedAt(Date.now());
+      setHasDraft(true);
     } catch (e) {
       console.warn("Failed to save draft to localStorage:", e);
     }
   }, [
     title,
     description,
+    descriptionEs,
     creatorEmail,
     fundingGoal,
     durationDays,
@@ -186,6 +204,27 @@ export default function CreateCampaignPage() {
     coverImageUrl,
     milestones,
   ]);
+
+  const handleDiscardDraft = () => {
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {
+      // ignore
+    }
+    setTitle("");
+    setDescription("");
+    setCreatorEmail("");
+    setFundingGoal("");
+    setDurationDays("");
+    setCategory(Category.Learner);
+    setHasRevenueSharing(false);
+    setRevenueSharePercentage(5);
+    setTags([]);
+    setCoverImageUrl("");
+    setMilestones([]);
+    setHasDraft(false);
+    setLastSavedAt(null);
+  };
 
   const isStartup = category === Category.EducationalStartup;
 
@@ -281,7 +320,7 @@ export default function CreateCampaignPage() {
       setReviewData(null);
 
       try {
-        localStorage.removeItem(DRAFT_KEY);
+        localStorage.removeItem(draftKey);
       } catch {
         // ignore
       }
@@ -312,6 +351,7 @@ export default function CreateCampaignPage() {
     const keys = validateForm(
       title,
       description,
+      descriptionEs,
       creatorEmail,
       fundingGoal,
       durationDays,
@@ -337,9 +377,13 @@ export default function CreateCampaignPage() {
         description: m.description.trim(),
       }));
 
+    const encodedDescription = descriptionEs.trim()
+      ? encodeLocalizedDescription({ en: description.trim(), es: descriptionEs.trim() })
+      : description.trim();
+
     setReviewData({
       title: title.trim(),
-      description: description.trim(),
+      description: encodedDescription,
       creatorEmail: creatorEmail.trim(),
       fundingGoalXlm: parsedGoal,
       durationDays: parsedDays,
@@ -372,6 +416,27 @@ export default function CreateCampaignPage() {
           </h1>
           <p className="text-zinc-600 dark:text-zinc-400 text-sm">{t("pageSubtitle")}</p>
         </div>
+
+        {/* Draft indicator */}
+        {hasDraft && (
+          <div className="mb-4 flex items-center justify-between rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-2.5 text-xs text-zinc-600 dark:text-zinc-400">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-2 w-2 rounded-full bg-green-500" aria-hidden="true" />
+              {lastSavedAt
+                ? Date.now() - lastSavedAt < 60_000
+                  ? "Draft saved · Saved a moment ago"
+                  : `Draft saved · ${new Date(lastSavedAt).toLocaleString()}`
+                : "Draft restored"}
+            </span>
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              className="ml-4 font-medium text-red-500 hover:text-red-600 transition-colors"
+            >
+              Discard draft
+            </button>
+          </div>
+        )}
 
         {/* Wallet guard banner */}
         {!isWalletConnected && (
@@ -496,6 +561,41 @@ export default function CreateCampaignPage() {
                 <span />
               )}
               <span className="text-xs text-zinc-400 ms-auto">{description.length}/1,000</span>
+            </div>
+          </div>
+
+          {/* Spanish Description (optional) */}
+          <div>
+            <label
+              htmlFor="description-es"
+              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+            >
+              {t("tabSpanish")}
+            </label>
+            <textarea
+              id="description-es"
+              value={descriptionEs}
+              onChange={(e) => setDescriptionEs(e.target.value)}
+              maxLength={1000}
+              rows={4}
+              aria-invalid={Boolean(errorKeys.descriptionEs)}
+              aria-describedby={errorKeys.descriptionEs ? "description-es-error" : undefined}
+              placeholder={t("placeholderDescriptionEs")}
+              className={`w-full px-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors resize-y ${
+                errorKeys.descriptionEs
+                  ? "border-red-400 dark:border-red-500"
+                  : "border-zinc-200 dark:border-zinc-600"
+              }`}
+            />
+            <div className="flex justify-between mt-1">
+              {errorKeys.descriptionEs ? (
+                <p id="description-es-error" className="text-xs text-red-500">
+                  {t(errorKeys.descriptionEs as Parameters<typeof t>[0])}
+                </p>
+              ) : (
+                <span />
+              )}
+              <span className="text-xs text-zinc-400 ms-auto">{descriptionEs.length}/1,000</span>
             </div>
           </div>
 

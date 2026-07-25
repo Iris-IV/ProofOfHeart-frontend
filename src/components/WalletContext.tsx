@@ -1,12 +1,6 @@
 "use client";
 import * as StellarSdk from "@stellar/stellar-sdk";
-import {
-  getAddress,
-  getNetwork,
-  isConnected,
-  isAllowed,
-  WatchWalletChanges,
-} from "@stellar/freighter-api";
+import { getAddress, getNetwork, isConnected, isAllowed } from "@stellar/freighter-api";
 import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from "react";
 import { useToast } from "./ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
@@ -58,14 +52,30 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     // Always re-verify with Freighter rather than blindly trusting localStorage (#97)
     void checkWalletConnection();
 
-    const watcher = new WatchWalletChanges(1000);
-    watcher.watch(() => {
-      void checkWalletConnection();
-    });
+    // WatchWalletChanges only fires on address/network changes, NOT on external
+    // disconnection. Use polling instead to detect all state transitions.
+    const POLL_INTERVAL_MS = 5000;
+    const intervalId = window.setInterval(() => {
+      if (!document.hidden) {
+        void checkWalletConnection();
+      }
+    }, POLL_INTERVAL_MS);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        void checkWalletConnection();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      watcher.stop();
+      clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
+    // checkWalletConnection is intentionally omitted from deps -- all its
+    // transitive deps (state setters, refs, env constant) are stable across
+    // renders, so the function identity is effectively stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkWalletConnection = async () => {
@@ -85,8 +95,8 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const connected = await isConnected();
-      const allowed = await isAllowed();
+      const { isConnected: connected } = await isConnected();
+      const { isAllowed: allowed } = await isAllowed();
       if (connected && allowed) {
         const key = await getAddress();
         const network = await getNetwork();
@@ -183,7 +193,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(false);
         return;
       }
-      const allowed = await isAllowed();
+      const { isAllowed: allowed } = await isAllowed();
       if (!allowed) {
         showWarning("Please allow Freighter to connect to this site.");
         setIsLoading(false);

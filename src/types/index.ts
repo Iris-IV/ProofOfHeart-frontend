@@ -61,6 +61,11 @@ export interface Milestone {
   description: string;
 }
 
+export interface SocialLinks {
+  twitter?: string;
+  linkedin?: string;
+  farcaster?: string;
+}
 export interface Campaign {
   id: number;
   creator: string;
@@ -81,6 +86,9 @@ export interface Campaign {
   tags?: string[];
   cover_image_url?: string;
   milestones?: Milestone[];
+  latitude?: number;
+  longitude?: number;
+  social_links?: SocialLinks;
 }
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Clock } from "lucide-react";
 import { useLocale } from "next-intl";
 import { subscribeToCountdownTick } from "@/hooks/useCountdownTick";
 
@@ -24,17 +25,6 @@ function getTimeLeft(deadline: number): TimeLeft | null {
     minutes: Math.floor((diff % 3600) / 60),
   };
 }
-
-const ClockIcon = () => (
-  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-    />
-  </svg>
-);
 
 export default function DeadlineCountdown({ deadline }: DeadlineCountdownProps) {
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(() => getTimeLeft(deadline));
@@ -68,7 +58,7 @@ export default function DeadlineCountdown({ deadline }: DeadlineCountdownProps) 
   if (!timeLeft) {
     return (
       <div className="flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-        <ClockIcon />
+        <Clock className="w-4 h-4" aria-hidden="true" />
         <span>Campaign ended</span>
       </div>
     );
@@ -76,20 +66,7 @@ export default function DeadlineCountdown({ deadline }: DeadlineCountdownProps) 
 
   return (
     <div className="flex items-center gap-1.5 text-sm text-zinc-700 dark:text-zinc-300">
-      <svg
-        className="w-4 h-4 text-blue-500"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-        />
-      </svg>
+      <Clock className="w-4 h-4 text-blue-500" aria-hidden="true" />
       <span>
         {timeLeft.days > 0 && (
           <>

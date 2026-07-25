@@ -3,8 +3,11 @@ import { contribute } from "@/lib/contractClient";
 import DonationModal from "@/components/DonationModal";
 import { Category, type Campaign } from "@/types";
 
+const mockGetCampaign = jest.fn();
+
 jest.mock("@/lib/contractClient", () => ({
   contribute: jest.fn(),
+  getCampaign: (...args: any[]) => mockGetCampaign(...args),
 }));
 
 jest.mock("@/components/ToastProvider", () => ({
@@ -90,7 +93,7 @@ function makeCampaign(overrides: Partial<Campaign> = {}): Campaign {
     description: "Desc",
     created_at: 1,
     status: "active",
-    funding_goal: BigInt(100_000_000),
+    funding_goal: BigInt(1_000_000_000),
     deadline: 9_999_999_999,
     amount_raised: BigInt(10_000_000),
     is_active: true,

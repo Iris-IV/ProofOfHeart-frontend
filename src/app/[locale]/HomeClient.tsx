@@ -1,13 +1,17 @@
 "use client";
 
 import { Heart, Shield, Globe, Code, ArrowRight, Plus } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useWallet } from "@/components/WalletContext";
 import { Link } from "@/i18n/routing";
+import { usePlatformStats } from "@/hooks/usePlatformStats";
+import { formatAmount } from "@/lib/formatters";
 
 export default function HomeClient() {
   const t = useTranslations("Home");
+  const locale = useLocale();
   const { isWalletConnected, connectWallet, isLoading } = useWallet();
+  const { stats, isLoading: statsLoading } = usePlatformStats();
 
   return (
     <div className="relative overflow-hidden bg-white dark:bg-zinc-950">
@@ -55,6 +59,25 @@ export default function HomeClient() {
             </Link>
           </div>
         </div>
+
+        {/* Platform Impact Stats */}
+        {!statsLoading && (
+          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mt-16 motion-safe:animate-in fade-in slide-in-from-bottom-6 duration-1000">
+            <div className="text-center">
+              <p className="text-3xl sm:text-4xl font-black text-zinc-900 dark:text-zinc-50">
+                {formatAmount(stats.totalRaisedStroops, locale, { maximumFractionDigits: 0 })} XLM
+              </p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t("statsRaised")}</p>
+            </div>
+            <div className="hidden sm:block w-px h-12 bg-zinc-200 dark:bg-zinc-800" />
+            <div className="text-center">
+              <p className="text-3xl sm:text-4xl font-black text-zinc-900 dark:text-zinc-50">
+                {stats.campaignCount}
+              </p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t("statsCampaigns")}</p>
+            </div>
+          </div>
+        )}
 
         {/* Features Section */}
         <section aria-labelledby="features-heading" className="mt-32">
