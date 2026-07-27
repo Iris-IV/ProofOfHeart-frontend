@@ -23,27 +23,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
       # Build with mock mode enabled so NEXT_PUBLIC_USE_MOCKS is baked into
       # the bundle. next start then serves the pre-built output in the webServer.
+      # NODE_ENV must NOT be set here — Next.js requires its default value.
       - name: Build application
-        run: npm run build
+        run: pnpm run build
         env:
           NEXT_PUBLIC_USE_MOCKS: "true"
           NEXT_TELEMETRY_DISABLED: "1"
-          # Suppress the production guard that blocks mock mode
           SKIP_MOCK_CHECK: "true"
-          NODE_ENV: "development"
 
       - name: Copy static assets into standalone bundle
         run: |
@@ -51,7 +54,7 @@ jobs:
           cp -r public .next/standalone/public
 
       - name: Run Playwright tests
-        run: npm run test:e2e
+        run: pnpm run test:e2e
         env:
           CI: "true"
           BASE_URL: "http://localhost:3000"
@@ -59,8 +62,6 @@ jobs:
           NEXT_TELEMETRY_DISABLED: "1"
           PORT: "3000"
           HOSTNAME: "0.0.0.0"
-          # Keep NODE_ENV as test so mock-mode guard doesn't fire
-          NODE_ENV: "test"
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4

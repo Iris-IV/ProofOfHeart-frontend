@@ -10,50 +10,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ──────────────────────────────────────────────────────────────────────────
-  # Shared setup: install Node + cache deps once, then let the two lint jobs
-  # reuse the npm cache instead of each running a full `npm ci`.
-  # ──────────────────────────────────────────────────────────────────────────
-  setup:
-    name: Install dependencies
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Job 1: Validate every commit in the PR range.
-  # ──────────────────────────────────────────────────────────────────────────
   commitlint:
     name: Validate commit messages
-    needs: setup
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
+          cache: "pnpm"
 
-      # Restore the npm cache populated by the setup job.
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
-      # Use the PR base SHA as the range start.
-      # Fall back to HEAD~1 on force-pushed bases where the SHA may be
-      # temporarily unavailable (extremely rare but safe to guard against).
+      # Fall back to HEAD~1 if base.sha is unavailable (e.g. force-pushed base).
       - name: Validate commit messages
         shell: bash
         run: |
@@ -64,28 +41,25 @@ jobs:
           fi
           npx commitlint --from "$FROM" --to HEAD
 
-  # ──────────────────────────────────────────────────────────────────────────
-  # Job 2: Validate the PR title (must also follow Conventional Commits).
-  # This is blocking — no continue-on-error.
-  # ──────────────────────────────────────────────────────────────────────────
   pr-title:
     name: Validate PR title
-    needs: setup
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
-      # Pass the PR title via an environment variable to avoid any shell
-      # injection from titles that contain quotes, backticks, or $(...).
-      # The here-string form `<<<` requires bash; `shell: bash` ensures that.
+      # Pass the PR title via env var to avoid shell injection from special chars.
       - name: Validate PR title
         shell: bash
         env:
