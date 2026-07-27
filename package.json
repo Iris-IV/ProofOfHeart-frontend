@@ -5,6 +5,7 @@
   "engines": {
     "node": ">=22"
   },
+  "packageManager": "pnpm@11.15.1",
   "scripts": {
     "dev": "next dev",
     "build": "node ./scripts/validate-production-build.mjs && next build",
