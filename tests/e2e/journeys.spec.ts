@@ -13,13 +13,38 @@ test.describe("Critical User Journeys", () => {
     // Ensure we are in mock mode
     await page.goto("/", { waitUntil: "networkidle" });
     await page.waitForLoadState("domcontentloaded");
+    page.on("pageerror", (err) => {
+      if (
+        err.message.includes("ChunkLoadError") ||
+        err.message.includes("Load failed") ||
+        err.message.includes("access control checks")
+      ) {
+        return;
+      }
+      throw new Error(`Uncaught page error: ${err.message}`);
+    });
+    page.on("console", (msg) => {
+      if (msg.type() === "error") {
+        const text = msg.text();
+        if (
+          text.includes("ChunkLoadError") ||
+          text.includes("Load failed") ||
+          text.includes("access control checks") ||
+          text.includes("The above error occurred in the <Lazy> component") ||
+          text.includes("JSHandle@object") ||
+          text.includes("Uncaught error: Error")
+        ) {
+          return;
+        }
+        throw new Error(`Console error: ${text}`);
+      }
+    });
     // Dismiss the onboarding tour so it doesn't intercept pointer events
     await page.addInitScript(() => {
       localStorage.setItem("onboarding_tour_dismissed", "1");
     });
     // Ensure we are in mock mode; wait for the locale redirect to settle
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
   });
 
   test("should connect wallet successfully", async ({ page }) => {
@@ -68,7 +93,6 @@ test.describe("Critical User Journeys", () => {
     await expect(page.getByText(/donated successfully/i)).toBeVisible({ timeout: 10000 });
     // 2. Navigate directly to a verified campaign detail page (campaign 1 is verified in mock)
     await page.goto("/en/causes/1");
-    await page.waitForLoadState("networkidle");
 
     // 3. Wait for campaign to finish loading (skeleton → detail)
     await expect(page.getByRole("heading", { name: /Clean Water/i })).toBeVisible({
@@ -107,7 +131,6 @@ test.describe("Critical User Journeys", () => {
     await expect(page.getByText(/You voted to approve/i)).toBeVisible({ timeout: 10000 });
     // 2. Navigate to the causes list where VotingComponent is inline on each card
     await page.goto("/en/causes");
-    await page.waitForLoadState("networkidle");
 
     // 3. Wait for campaigns to render
     await expect(page.getByText(/Education Technology/i).first()).toBeVisible({ timeout: 10000 });
