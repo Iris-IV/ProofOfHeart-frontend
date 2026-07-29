@@ -45,7 +45,7 @@ export default function CommentComposer({
       await onSubmit(trimmedContent);
       setContent("");
       setIsExpanded(false);
-      showSuccess(isReply ? "Reply posted successfully!" : "Comment posted successfully!");
+      showSuccess(isReply ? "Answer posted successfully!" : "Question posted successfully!");
       if (onCancel) onCancel();
     } catch (error) {
       showError(

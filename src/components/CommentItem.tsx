@@ -10,6 +10,7 @@ interface CommentItemProps {
   comment: Comment;
   replies?: Comment[];
   isCreator: boolean;
+  creatorAddress: string;
   onReply: (content: string, parentId: string) => Promise<void>;
   onPin?: (commentId: string, isPinned: boolean) => Promise<void>;
   onReport: (commentId: string) => Promise<void>;
@@ -45,6 +46,7 @@ export default function CommentItem({
   comment,
   replies = [],
   isCreator,
+  creatorAddress,
   onReply,
   onPin,
   onReport,
@@ -53,6 +55,8 @@ export default function CommentItem({
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
+  const isCreatorAuthor = comment.authorAddress === creatorAddress;
+  const canAnswer = isCreator && !!userAddress && userAddress === creatorAddress && !comment.isReported;
 
   useEffect(() => {
     const verify = async () => {
@@ -109,6 +113,11 @@ export default function CommentItem({
                 >
                   {shortenedAuthor}
                 </span>
+                {isCreatorAuthor && (
+                  <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+                    {comment.parentId ? "Creator answer" : "Creator question"}
+                  </span>
+                )}
                 {isVerified && (
                   <span
                     className="inline-flex items-center text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 px-1.5 py-0.5 rounded-full font-bold"
@@ -168,13 +177,15 @@ export default function CommentItem({
         </div>
 
         <div className="ms-0 sm:ms-13 flex gap-4 text-xs font-medium border-t border-zinc-100 dark:border-zinc-800/60 pt-3">
-          <button
-            onClick={() => setShowReplyForm(!showReplyForm)}
-            className="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors flex items-center gap-1.5"
-          >
-            <CornerUpLeft className="w-3.5 h-3.5" aria-hidden="true" />
-            Reply
-          </button>
+          {canAnswer && (
+            <button
+              onClick={() => setShowReplyForm(!showReplyForm)}
+              className="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors flex items-center gap-1.5"
+            >
+              <CornerUpLeft className="w-3.5 h-3.5" aria-hidden="true" />
+              Answer
+            </button>
+          )}
         </div>
       </article>
 
@@ -183,7 +194,7 @@ export default function CommentItem({
           userAddress={userAddress}
           isSubmitting={isReplying}
           onSubmit={handleReplySubmit}
-          placeholder="Write a reply..."
+          placeholder="Write your answer..."
           isReply={true}
           onCancel={() => setShowReplyForm(false)}
         />
@@ -196,6 +207,7 @@ export default function CommentItem({
               key={reply.id}
               comment={reply}
               isCreator={isCreator}
+              creatorAddress={creatorAddress}
               onReply={onReply}
               onReport={onReport}
             />

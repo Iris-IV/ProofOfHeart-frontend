@@ -29,7 +29,7 @@ jest.mock("@/components/CommentsList", () => {
 describe("CommentsSection", () => {
   const mockCampaign: Campaign = {
     id: 1,
-    creator: "GABC",
+    creator: "GABC123",
     title: "Test",
     description: "Test",
     created_at: 1000,
@@ -70,8 +70,9 @@ describe("CommentsSection", () => {
     render(<CommentsSection campaign={mockCampaign} />);
 
     // There are 2 top-level comments and 1 reply in the mock
-    expect(screen.getByText("Comments / Q&A")).toBeInTheDocument();
+    expect(screen.getByText("Q&A")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("Live")).toBeInTheDocument();
   });
 
   it("renders Composer and List components", () => {

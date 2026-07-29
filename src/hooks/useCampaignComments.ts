@@ -52,6 +52,9 @@ export function useCampaignComments(
     queryFn: () => getCampaignComments(campaignId, page, PAGE_SIZE),
     enabled: !!campaignId,
     placeholderData: (prev) => prev,
+    refetchInterval: 5000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 
   const { mutateAsync: createMutation, isPending: isCreating } = useMutation({

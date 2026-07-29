@@ -60,6 +60,7 @@ describe("CommentsList", () => {
     isLoading: false,
     error: null,
     isCreator: false,
+    creatorAddress: "GCREATOR",
     onReply: jest.fn(),
     onPin: jest.fn(),
     onReport: jest.fn(),

@@ -10,7 +10,7 @@ type CampaignTabId = "updates" | "comments";
 
 const TABS = [
   { id: "updates" as const, label: "Updates" },
-  { id: "comments" as const, label: "Comments / Q&A" },
+  { id: "comments" as const, label: "Q&A" },
 ];
 
 interface CampaignTabsProps {
@@ -33,7 +33,7 @@ export default function CampaignTabs({ campaign }: CampaignTabsProps) {
         tabs={TABS}
         activeId={activeTab}
         onChange={setActiveTab}
-        label="Campaign updates and discussion"
+        label="Campaign updates and Q&A"
         idPrefix="campaign"
       />
 

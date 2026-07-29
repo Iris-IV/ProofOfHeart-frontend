@@ -78,7 +78,7 @@ describe("CommentComposer", () => {
 
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith(validContent);
-      expect(mockShowSuccess).toHaveBeenCalledWith("Comment posted successfully!");
+      expect(mockShowSuccess).toHaveBeenCalledWith("Question posted successfully!");
     });
   });
 

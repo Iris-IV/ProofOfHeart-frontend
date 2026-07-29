@@ -2,7 +2,6 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import CommentItem from "@/components/CommentItem";
 import { useWallet } from "@/components/WalletContext";
-import { ToastProvider } from "@/components/ToastProvider";
 
 jest.mock("@/components/WalletContext", () => ({
   useWallet: jest.fn(),
@@ -17,7 +16,7 @@ describe("CommentItem", () => {
     id: "c1",
     campaignId: 1,
     content: "Test comment",
-    authorAddress: "GABC12345678901234567890123456789012345678901234567890",
+    authorAddress: "GCREATOR12345678901234567890123456789012345678901234567890",
     timestamp: Math.floor(Date.now() / 1000) - 3600,
     parentId: null,
     signature: "mock-sig",
@@ -39,13 +38,14 @@ describe("CommentItem", () => {
       <CommentItem
         comment={mockComment}
         isCreator={false}
+        creatorAddress="GCREATOR12345678901234567890123456789012345678901234567890"
         onReply={mockOnReply}
         onReport={mockOnReport}
       />,
     );
 
     expect(screen.getByText("Test comment")).toBeInTheDocument();
-    expect(screen.getByText("GABC12...7890")).toBeInTheDocument();
+    expect(screen.getByText("GCREAT...7890")).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByText("Verified")).toBeInTheDocument();
@@ -57,6 +57,7 @@ describe("CommentItem", () => {
       <CommentItem
         comment={{ ...mockComment, isPinned: true }}
         isCreator={false}
+        creatorAddress="GCREATOR12345678901234567890123456789012345678901234567890"
         onReply={mockOnReply}
         onReport={mockOnReport}
       />,
@@ -70,6 +71,7 @@ describe("CommentItem", () => {
       <CommentItem
         comment={{ ...mockComment, isReported: true }}
         isCreator={false}
+        creatorAddress="GCREATOR12345678901234567890123456789012345678901234567890"
         onReply={mockOnReply}
         onReport={mockOnReport}
       />,
@@ -86,6 +88,7 @@ describe("CommentItem", () => {
       <CommentItem
         comment={mockComment}
         isCreator={true}
+        creatorAddress="GCREATOR12345678901234567890123456789012345678901234567890"
         onPin={mockOnPin}
         onReply={mockOnReply}
         onReport={mockOnReport}
@@ -99,6 +102,7 @@ describe("CommentItem", () => {
       <CommentItem
         comment={mockComment}
         isCreator={false}
+        creatorAddress="GCREATOR12345678901234567890123456789012345678901234567890"
         onPin={mockOnPin}
         onReply={mockOnReply}
         onReport={mockOnReport}
@@ -113,6 +117,7 @@ describe("CommentItem", () => {
       <CommentItem
         comment={mockComment}
         isCreator={false}
+        creatorAddress="GCREATOR12345678901234567890123456789012345678901234567890"
         onReply={mockOnReply}
         onReport={mockOnReport}
       />,
@@ -123,19 +128,22 @@ describe("CommentItem", () => {
   });
 
   it("opens reply form when Reply is clicked", () => {
+    (useWallet as jest.Mock).mockReturnValue({
+      publicKey: "GCREATOR12345678901234567890123456789012345678901234567890",
+    });
+
     render(
-      <ToastProvider>
-        <CommentItem
-          comment={mockComment}
-          isCreator={false}
-          onReply={mockOnReply}
-          onReport={mockOnReport}
-        />
-      </ToastProvider>,
+      <CommentItem
+        comment={mockComment}
+        isCreator={true}
+        creatorAddress="GCREATOR12345678901234567890123456789012345678901234567890"
+        onReply={mockOnReply}
+        onReport={mockOnReport}
+      />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Reply/i }));
-    expect(screen.getByPlaceholderText("Write a reply...")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Answer/i }));
+    expect(screen.getByPlaceholderText("Write your answer...")).toBeInTheDocument();
   });
 
   it("renders replies correctly", () => {
@@ -151,6 +159,7 @@ describe("CommentItem", () => {
         comment={mockComment}
         replies={[reply]}
         isCreator={false}
+        creatorAddress="GCREATOR12345678901234567890123456789012345678901234567890"
         onReply={mockOnReply}
         onReport={mockOnReport}
       />,
@@ -158,6 +167,7 @@ describe("CommentItem", () => {
 
     expect(screen.getByText("Test comment")).toBeInTheDocument();
     expect(screen.getByText("A reply")).toBeInTheDocument();
+    expect(screen.getAllByText("Creator answer").length).toBeGreaterThan(0);
   });
 
   it("renders XSS payloads as inert text without executable markup", async () => {
@@ -170,6 +180,7 @@ describe("CommentItem", () => {
       <CommentItem
         comment={xssComment}
         isCreator={false}
+        creatorAddress="GCREATOR12345678901234567890123456789012345678901234567890"
         onReply={mockOnReply}
         onReport={mockOnReport}
       />,
