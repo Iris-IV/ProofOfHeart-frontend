@@ -13,6 +13,7 @@ import { isSameAddress } from "../lib/stellar";
 import { parseContractError } from "../utils/contractErrors";
 import { type TransactionLifecyclePhase } from "../lib/contractClient";
 import Tooltip from "./Tooltip";
+import { reportError } from "@/lib/errorReporter";
 
 interface RevenueSharingPanelProps {
   campaign: Campaign;
@@ -91,7 +92,11 @@ export default function RevenueSharingPanel({
       onActionSuccess?.();
       showSuccess("Revenue deposited successfully.");
     } catch (err) {
-      showError(parseContractError(err));
+      reportError(err, {
+        context: { feature: "revenue_sharing_deposit", campaignId: campaign.id },
+        message: parseContractError(err),
+        notify: showError,
+      });
     } finally {
       setIsPending(false);
       setTxPhase(null);
@@ -114,7 +119,11 @@ export default function RevenueSharingPanel({
       onActionSuccess?.();
       showSuccess("Revenue claimed successfully.");
     } catch (err) {
-      showError(parseContractError(err));
+      reportError(err, {
+        context: { feature: "revenue_sharing_claim", campaignId: campaign.id },
+        message: parseContractError(err),
+        notify: showError,
+      });
     } finally {
       setIsPending(false);
       setTxPhase(null);

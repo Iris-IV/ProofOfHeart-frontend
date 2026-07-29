@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useToast } from "@/components/ToastProvider";
 import { submitReport, REPORT_REASON_LABELS, type ReportReason } from "@/lib/campaignReports";
+import { reportError } from "@/lib/errorReporter";
 
 interface ReportModalProps {
   campaignId: number;
@@ -32,8 +33,12 @@ export default function ReportModal({
       submitReport(campaignId, campaignTitle, reason, notes.trim(), reporterAddress);
       showSuccess("Report submitted. Our team will review it shortly.");
       onClose();
-    } catch {
-      showError("Failed to submit report. Please try again.");
+    } catch (error) {
+      reportError(error, {
+        context: { feature: "report_campaign", campaignId, reason },
+        message: "Failed to submit report. Please try again.",
+        notify: showError,
+      });
     } finally {
       setIsSubmitting(false);
     }

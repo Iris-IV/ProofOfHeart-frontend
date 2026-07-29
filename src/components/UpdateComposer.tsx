@@ -5,6 +5,7 @@ import { Bold, Italic, Link2, List, Heading2 } from "lucide-react";
 import SafeMarkdown from "@/components/SafeMarkdown";
 import { useToast } from "@/components/ToastProvider";
 import { Button } from "@/components/ui";
+import { reportError } from "@/lib/errorReporter";
 
 interface UpdateComposerProps {
   campaignId: number;
@@ -97,9 +98,11 @@ export default function UpdateComposer({
       setMode("write");
       showSuccess("Update posted successfully!");
     } catch (error) {
-      showError(
-        error instanceof Error ? error.message : "Failed to post update. Please try again.",
-      );
+      reportError(error, {
+        context: { feature: "campaign_update", campaignId },
+        message: "Failed to post update. Please try again.",
+        notify: showError,
+      });
     }
   };
 

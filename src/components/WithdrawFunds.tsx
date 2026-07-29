@@ -16,6 +16,7 @@ import {
 } from "../lib/contractClient";
 import { useWriteGuard } from "../hooks/useWriteGuard";
 import VerifiedIcon from "./icons/VerifiedIcon";
+import { reportError } from "@/lib/errorReporter";
 
 interface WithdrawFundsProps {
   campaign: Campaign;
@@ -86,7 +87,11 @@ export default function WithdrawFunds({
         showSuccess(t("withdrawalSuccessToast", { amount: formatXlm(creatorAmount) }));
         onWithdrawSuccess?.();
       } catch (err) {
-        showError(localizeContractError(parseContractError(err)));
+        reportError(err, {
+          context: { feature: "withdraw_funds", campaignId: campaign.id },
+          message: localizeContractError(parseContractError(err)),
+          notify: showError,
+        });
         throw err;
       } finally {
         setShowConfirm(false);

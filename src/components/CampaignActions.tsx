@@ -25,6 +25,7 @@ import { parseContractError } from "../utils/contractErrors";
 import { getAsyncActionErrorMessage, withActionTimeout } from "../utils/asyncAction";
 import type { TransactionLifecyclePhase, TransactionLifecycleOptions } from "../lib/contractClient";
 import { useWriteGuard } from "../hooks/useWriteGuard";
+import { reportError } from "@/lib/errorReporter";
 
 interface CampaignActionsProps {
   campaign: Campaign;
@@ -74,7 +75,11 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
         if (onActionSuccess) onActionSuccess();
         return txHash;
       } catch (err) {
-        showError(getAsyncActionErrorMessage(err, parseContractError));
+        reportError(err, {
+          context: { feature: "campaign_actions", campaignId: campaign.id, actionKey },
+          message: getAsyncActionErrorMessage(err, parseContractError),
+          notify: showError,
+        });
         throw err;
       } finally {
         setTxPhase(null);
@@ -131,7 +136,11 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
         showSuccess("Contribution submitted successfully.");
         onActionSuccess?.();
       } catch (err) {
-        showError(getAsyncActionErrorMessage(err, parseContractError));
+        reportError(err, {
+          context: { feature: "campaign_contribution", campaignId: campaign.id },
+          message: getAsyncActionErrorMessage(err, parseContractError),
+          notify: showError,
+        });
         throw err;
       } finally {
         setTxPhase(null);

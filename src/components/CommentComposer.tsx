@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useToast } from "@/components/ToastProvider";
+import { reportError } from "@/lib/errorReporter";
 
 interface CommentComposerProps {
   onSubmit: (content: string) => Promise<void>;
@@ -48,9 +49,11 @@ export default function CommentComposer({
       showSuccess(isReply ? "Reply posted successfully!" : "Comment posted successfully!");
       if (onCancel) onCancel();
     } catch (error) {
-      showError(
-        error instanceof Error ? error.message : "Failed to post comment. Please try again.",
-      );
+      reportError(error, {
+        context: { feature: "comment_composer", isReply: Boolean(isReply) },
+        message: error instanceof Error ? error.message : "Failed to post comment. Please try again.",
+        notify: showError,
+      });
     }
   };
 

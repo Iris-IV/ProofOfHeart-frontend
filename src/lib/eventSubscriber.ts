@@ -1,4 +1,5 @@
 import * as StellarSdk from "@stellar/stellar-sdk";
+import { reportError } from "@/lib/errorReporter";
 
 const SOROBAN_RPC_URL =
   process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ??
@@ -110,7 +111,10 @@ class EventSubscriber {
                   try {
                     h(event);
                   } catch (e) {
-                    console.error("Event handler error:", e);
+                    reportError(e, {
+                      context: { feature: "event_subscriber", topic: topicStr },
+                      message: "Event handler error.",
+                    });
                   }
                 });
               }

@@ -20,6 +20,7 @@ import { type TransactionLifecyclePhase } from "../lib/contractClient";
 import { validateContributorNotCreator } from "../utils/validators";
 import { explorerTxUrl } from "../utils/explorer";
 import FiatOnrampButton from "./FiatOnrampButton";
+import { reportError } from "@/lib/errorReporter";
 import {
   trackClickContribute,
   trackEnterAmount,
@@ -285,7 +286,11 @@ export default function DonationModal({
     } catch (err) {
       const msg = parseContractError(err);
       const localized = localizeContractError(msg);
-      showError(localized);
+      reportError(err, {
+        context: { feature: "donation", campaignId: campaign.id, stage: "submit" },
+        message: localized,
+        notify: showError,
+      });
       setError(msg);
       setStep("input");
       setTxPhase(null);

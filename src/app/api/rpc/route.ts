@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { reportError } from "@/lib/errorReporter";
 
 // Server-side RPC URL with API key (never exposed to browser)
 const MAINNET_RPC_URL = process.env.MAINNET_RPC_URL;
@@ -95,7 +96,10 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error("RPC proxy error:", error);
+    reportError(error, {
+      context: { feature: "rpc_proxy", method: "POST" },
+      message: "RPC proxy error.",
+    });
     return NextResponse.json({ error: "Failed to process RPC request" }, { status: 500 });
   }
 }

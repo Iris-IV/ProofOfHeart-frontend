@@ -2,6 +2,7 @@
 
 import { RefreshCcw, MapIcon } from "lucide-react";
 import React, { Component, ErrorInfo, ReactNode } from "react";
+import { reportError } from "@/lib/errorReporter";
 
 interface Props {
   children?: ReactNode;
@@ -22,7 +23,10 @@ class MapErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Map error:", error, errorInfo);
+    reportError(error, {
+      context: { feature: "map_error_boundary", componentStack: errorInfo.componentStack },
+      message: "Map error.",
+    });
   }
 
   private handleReset = () => {

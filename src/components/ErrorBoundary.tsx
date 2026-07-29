@@ -2,7 +2,8 @@
 
 import { AlertCircle, RefreshCcw } from "lucide-react";
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { captureError, setupGlobalErrorHandlers } from "@/lib/errorTracking";
+import { setupGlobalErrorHandlers } from "@/lib/errorTracking";
+import { reportError } from "@/lib/errorReporter";
 
 interface ErrorReport {
   name: string;
@@ -36,12 +37,12 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
-
     // Send to external tracker
-    captureError(error, {
-      componentStack: errorInfo.componentStack,
-      type: "react_error_boundary",
+    reportError(error, {
+      context: {
+        feature: "react_error_boundary",
+        componentStack: errorInfo.componentStack,
+      },
     });
 
     // Call custom error handler if provided

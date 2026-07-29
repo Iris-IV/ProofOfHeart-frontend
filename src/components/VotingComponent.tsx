@@ -7,6 +7,7 @@ import AsyncButtonContent from "./AsyncButtonContent";
 import { useToast } from "./ToastProvider";
 import { parseContractError } from "../utils/contractErrors";
 import { getAsyncActionErrorMessage, withActionTimeout } from "../utils/asyncAction";
+import { reportError } from "@/lib/errorReporter";
 
 interface VotingComponentProps {
   campaign: Campaign;
@@ -70,8 +71,11 @@ export default function VotingComponent({
       await withActionTimeout(onVote(campaign.id, voteType));
       setLocalVote(voteType);
     } catch (error) {
-      console.error("Voting failed:", error);
-      showError(localizeContractError(getAsyncActionErrorMessage(error, parseContractError)));
+      reportError(error, {
+        context: { feature: "voting", campaignId: campaign.id, voteType },
+        message: localizeContractError(getAsyncActionErrorMessage(error, parseContractError)),
+        notify: showError,
+      });
     }
   };
 

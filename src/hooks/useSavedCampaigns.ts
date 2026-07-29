@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useWallet } from "@/components/WalletContext";
+import { reportError } from "@/lib/errorReporter";
 
 const SAVED_CAMPAIGNS_KEY_PREFIX = "poh_saved_campaigns_";
 
@@ -37,7 +38,10 @@ export function useSavedCampaigns() {
       try {
         localStorage.setItem(key, JSON.stringify(newIds));
       } catch (e) {
-        console.error("Failed to save bookmarks", e);
+        reportError(e, {
+          context: { feature: "saved_campaigns", campaignId },
+          message: "Failed to save bookmarks.",
+        });
       }
       return newIds;
     });

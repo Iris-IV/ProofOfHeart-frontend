@@ -36,6 +36,7 @@ const TransferAdminModal = dynamic(() => import("@/components/TransferAdminModal
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { Link } from "@/i18n/routing";
 import { appendAdminAuditLog, AdminAuditLogEntry, getAdminAuditLog } from "@/lib/adminLog";
+import { reportError } from "@/lib/errorReporter";
 import {
   getAdmin,
   getPlatformFee,
@@ -135,7 +136,11 @@ export default function AdminDashboard() {
         setPlatformFee(fee);
         setFeeInput(String(fee));
       } catch (err) {
-        console.error(err);
+        reportError(err, {
+          context: { feature: "admin_dashboard", action: "load_metadata" },
+          message: "Failed to load admin settings. Please refresh and try again.",
+          notify: showError,
+        });
       } finally {
         if (!cancelled) setIsAdminLoading(false);
       }

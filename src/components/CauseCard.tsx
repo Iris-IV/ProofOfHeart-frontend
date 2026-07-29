@@ -19,6 +19,7 @@ import FundingProgressBar from "./FundingProgressBar";
 import { useToast } from "./ToastProvider";
 import VotingComponent from "./VotingComponent";
 import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
+import { reportError } from "@/lib/errorReporter";
 
 interface CauseCardProps {
   campaign: Campaign;
@@ -84,7 +85,11 @@ function CauseCard({
     try {
       await withActionTimeout(onVote(campaign.id, voteType));
     } catch (error) {
-      showError(getAsyncActionErrorMessage(error, parseContractError));
+      reportError(error, {
+        context: { feature: "cause_card_vote", campaignId: campaign.id, voteType },
+        message: getAsyncActionErrorMessage(error, parseContractError),
+        notify: showError,
+      });
     } finally {
       setIsVoting(false);
     }
@@ -96,7 +101,11 @@ function CauseCard({
       await withActionTimeout(onCancel(campaign.id));
       setIsCancelModalOpen(false);
     } catch (error) {
-      showError(getAsyncActionErrorMessage(error, parseContractError));
+      reportError(error, {
+        context: { feature: "cause_card_cancel", campaignId: campaign.id },
+        message: getAsyncActionErrorMessage(error, parseContractError),
+        notify: showError,
+      });
     } finally {
       setIsCancelling(false);
     }
@@ -107,7 +116,11 @@ function CauseCard({
     try {
       await withActionTimeout(onClaimRefund(campaign.id));
     } catch (error) {
-      showError(getAsyncActionErrorMessage(error, parseContractError));
+      reportError(error, {
+        context: { feature: "cause_card_claim_refund", campaignId: campaign.id },
+        message: getAsyncActionErrorMessage(error, parseContractError),
+        notify: showError,
+      });
     } finally {
       setIsClaimingRefund(false);
     }
