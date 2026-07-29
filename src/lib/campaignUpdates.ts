@@ -103,13 +103,14 @@ export async function createCampaignUpdate(
   content: string,
   creatorAddress: string,
   notify: boolean = false,
+  mediaUrl?: string,
 ): Promise<CampaignUpdate> {
   if (USE_MOCKS || !hasOffchainApiBaseUrl()) {
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 800));
 
     const timestamp = MOCK_TIMESTAMP_SEC;
-    const payload: UpdatePayload = { campaignId, content, timestamp };
+    const payload: UpdatePayload = { campaignId, content, mediaUrl, timestamp };
     const signature = await signPayload(payload);
 
     const existingCount = MOCK_UPDATES[campaignId]?.length || 0;
@@ -117,6 +118,7 @@ export async function createCampaignUpdate(
       id: `update-${campaignId}-${existingCount + 1}`,
       campaignId,
       content,
+      mediaUrl,
       authorAddress: creatorAddress,
       timestamp,
       signature,
@@ -138,7 +140,7 @@ export async function createCampaignUpdate(
 
   try {
     const timestamp = Math.floor(Date.now() / 1000);
-    const payload: UpdatePayload = { campaignId, content, timestamp };
+    const payload: UpdatePayload = { campaignId, content, mediaUrl, timestamp };
 
     // Sign the payload
     const signature = await signPayload(payload);
@@ -150,6 +152,7 @@ export async function createCampaignUpdate(
         payload: {
           campaignId,
           content,
+          mediaUrl,
           authorAddress: creatorAddress,
           timestamp,
           signature,
@@ -159,6 +162,7 @@ export async function createCampaignUpdate(
       body: {
         campaignId,
         content,
+        mediaUrl,
         authorAddress: creatorAddress,
         timestamp,
         signature,
@@ -184,6 +188,7 @@ export async function verifyUpdateSignature(update: CampaignUpdate): Promise<boo
     const payloadString = JSON.stringify({
       campaignId: update.campaignId,
       content: update.content,
+      mediaUrl: update.mediaUrl,
       timestamp: update.timestamp,
     });
 

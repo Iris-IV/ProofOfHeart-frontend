@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { ShieldCheck } from "lucide-react";
+import { ExternalLink, ShieldCheck } from "lucide-react";
 import { CampaignUpdate } from "@/types";
 import SafeMarkdown from "./SafeMarkdown";
 import VerifiedIcon from "./icons/VerifiedIcon";
-import CreatorAvatar from "./CreatorAvatar";
 import { verifyUpdateSignature } from "@/lib/campaignUpdates";
+import { getYoutubeEmbedUrl, isDirectVideoUrl, normalizeVideoUrl } from "@/lib/videoEmbeds";
 
 interface UpdateItemProps {
   update: CampaignUpdate;
@@ -61,6 +61,8 @@ function shortenAddress(address: string): string {
  */
 export default function UpdateItem({ update }: UpdateItemProps) {
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
+  const normalizedVideoUrl = update.mediaUrl ? normalizeVideoUrl(update.mediaUrl) : null;
+  const youtubeEmbedUrl = normalizedVideoUrl ? getYoutubeEmbedUrl(normalizedVideoUrl) : null;
 
   useEffect(() => {
     const verify = async () => {
@@ -76,35 +78,35 @@ export default function UpdateItem({ update }: UpdateItemProps) {
 
   return (
     <article
-      className="group bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-6 shadow-xs hover:shadow-md transition-all duration-300 ring-1 ring-zinc-900/5"
+      className="group rounded-2xl border border-zinc-200 bg-white p-6 shadow-xs ring-1 ring-zinc-900/5 transition-all duration-300 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800"
       aria-label={`Update from ${shortenedAuthor}`}
     >
-      <div className="flex items-start justify-between gap-4 mb-4">
+      <div className="mb-4 flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          {/* Author avatar */}
-          <CreatorAvatar
-            address={update.authorAddress}
-            src={(update as { avatarUrl?: string | null }).avatarUrl}
-            size={48}
-          />
+          <div
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-purple-500 to-blue-600 text-base font-bold text-white shadow-inner ring-2 ring-white dark:ring-zinc-700"
+            aria-hidden="true"
+          >
+            {update.authorAddress.slice(1, 3).toUpperCase()}
+          </div>
           <div>
-            <div className="flex items-center flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span
-                className="text-sm font-bold text-zinc-900 dark:text-zinc-50 tracking-tight"
+                className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-50"
                 title={update.authorAddress}
               >
                 {shortenedAuthor}
               </span>
               <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                <span className="inline-flex items-center rounded-full border border-purple-200 bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700 dark:border-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
                   Creator
                 </span>
                 {isVerified && (
                   <span
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800"
+                    className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300"
                     title="Cryptographically verified update"
                   >
-                    <VerifiedIcon className="w-2.5 h-2.5" />
+                    <VerifiedIcon className="h-2.5 w-2.5" />
                     Verified
                   </span>
                 )}
@@ -112,7 +114,7 @@ export default function UpdateItem({ update }: UpdateItemProps) {
             </div>
             <time
               dateTime={new Date(update.timestamp * 1000).toISOString()}
-              className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-0.5 block"
+              className="mt-0.5 block text-xs font-medium text-zinc-500 dark:text-zinc-400"
               title={absoluteTime}
             >
               {relativeTime}
@@ -120,17 +122,45 @@ export default function UpdateItem({ update }: UpdateItemProps) {
           </div>
         </div>
 
-        {/* Verification Icon - Right side */}
-        <div className="hidden sm:block opacity-20 group-hover:opacity-100 transition-opacity duration-300">
-          <ShieldCheck className="w-5 h-5 text-zinc-400 dark:text-zinc-500" aria-hidden="true" />
+        <div className="hidden opacity-20 transition-opacity duration-300 group-hover:opacity-100 sm:block">
+          <ShieldCheck className="h-5 w-5 text-zinc-400 dark:text-zinc-500" aria-hidden="true" />
         </div>
       </div>
 
-      {/* Update content — markdown, sanitized with the same hardened schema
-          used for campaign descriptions. Author input is never trusted HTML. */}
-      <SafeMarkdown className="prose prose-sm prose-zinc dark:prose-invert max-w-none break-words text-zinc-700 dark:text-zinc-300 ml-0 sm:ml-16">
-        {update.content}
-      </SafeMarkdown>
+      <div className="ml-0 space-y-4 sm:ml-16">
+        {normalizedVideoUrl && (
+          <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-black dark:border-zinc-700">
+            {youtubeEmbedUrl ? (
+              <iframe
+                src={youtubeEmbedUrl}
+                title="Campaign update video"
+                className="aspect-video w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            ) : isDirectVideoUrl(normalizedVideoUrl) ? (
+              <video controls preload="metadata" className="aspect-video w-full bg-black">
+                <source src={normalizedVideoUrl} />
+                Your browser does not support embedded video playback.
+              </video>
+            ) : (
+              <a
+                href={normalizedVideoUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-between gap-3 px-4 py-3 text-sm text-white"
+              >
+                <span className="truncate">Watch attached video</span>
+                <ExternalLink className="h-4 w-4 shrink-0" aria-hidden="true" />
+              </a>
+            )}
+          </div>
+        )}
+
+        <SafeMarkdown className="prose prose-sm prose-zinc max-w-none break-words text-zinc-700 dark:prose-invert dark:text-zinc-300">
+          {update.content}
+        </SafeMarkdown>
+      </div>
     </article>
   );
 }

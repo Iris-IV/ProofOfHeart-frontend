@@ -23,6 +23,7 @@ const mockUpdate: CampaignUpdate = {
   id: "test-update-1",
   campaignId: 1,
   content: "This is a test update content. We have made great progress on our campaign!",
+  mediaUrl: undefined,
   authorAddress: "GABC12345678901234567890123456789012345678901234567890",
   timestamp: Math.floor(Date.now() / 1000) - 3600, // 1 hour ago
   signature: "mock-signature",
@@ -127,5 +128,16 @@ describe("UpdateItem", () => {
 
     expect(container.querySelector("a")).toBeNull();
     expect(screen.getByText(/javascript:alert\(1\)/)).toBeInTheDocument();
+  });
+
+  it("renders a YouTube video embed when a media URL is present", () => {
+    const videoUpdate: CampaignUpdate = {
+      ...mockUpdate,
+      mediaUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    };
+
+    const { container } = render(<UpdateItem update={videoUpdate} />);
+
+    expect(container.querySelector("iframe")).toBeInTheDocument();
   });
 });

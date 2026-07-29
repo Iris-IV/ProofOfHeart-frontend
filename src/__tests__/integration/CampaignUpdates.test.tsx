@@ -17,16 +17,10 @@ jest.mock("@/components/SafeMarkdown", () => ({
   ),
 }));
 
-// Enable mock mode so WalletProvider reads from localStorage
-jest.mock("@/lib/runtimeEnv", () => ({
-  IS_MOCK_MODE: true,
-}));
-
 // Mock the campaign updates module
 jest.mock("@/lib/campaignUpdates", () => ({
   getCampaignUpdates: jest.fn(),
   createCampaignUpdate: jest.fn(),
-  verifyUpdateSignature: jest.fn().mockResolvedValue(true),
 }));
 
 const mockGetCampaignUpdates = campaignUpdatesModule.getCampaignUpdates as jest.Mock;
@@ -134,8 +128,7 @@ describe("UpdatesSection Integration", () => {
 
       renderUpdatesSection(mockCampaign);
 
-      const skeletons = screen.getAllByTestId("skeleton");
-      expect(skeletons.length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByTestId("skeleton")).toHaveLength(9);
     });
 
     it("shows error state on fetch failure", async () => {
@@ -194,6 +187,7 @@ describe("UpdatesSection Integration", () => {
         id: "new-update",
         campaignId: 1,
         content: "New update content",
+        mediaUrl: undefined,
         authorAddress: mockCampaign.creator,
         timestamp: Math.floor(Date.now() / 1000),
         signature: "new-sig",
@@ -222,6 +216,50 @@ describe("UpdatesSection Integration", () => {
           "New update content",
           mockCampaign.creator,
           true,
+          undefined,
+        );
+      });
+    });
+
+    it("allows creator to post a new update with a video URL", async () => {
+      localStorage.setItem("stellar_wallet_public_key", mockCampaign.creator);
+      mockGetCampaignUpdates.mockResolvedValue([]);
+      mockCreateCampaignUpdate.mockResolvedValue({
+        id: "new-video-update",
+        campaignId: 1,
+        content: "Video update content",
+        mediaUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        authorAddress: mockCampaign.creator,
+        timestamp: Math.floor(Date.now() / 1000),
+        signature: "new-video-sig",
+      });
+
+      renderUpdatesSection(mockCampaign, mockCampaign.creator);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Write an update/i)).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText(/Write an update/i));
+
+      const textarea = screen.getByPlaceholderText(/Share progress, milestones, or news/i);
+      fireEvent.change(textarea, {
+        target: { value: "Video update content" },
+      });
+
+      const videoInput = screen.getByLabelText(/Video URL/i);
+      fireEvent.change(videoInput, {
+        target: { value: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" },
+      });
+
+      fireEvent.click(screen.getByText("Post Update"));
+
+      await waitFor(() => {
+        expect(mockCreateCampaignUpdate).toHaveBeenCalledWith(
+          1,
+          "Video update content",
+          mockCampaign.creator,
+          true,
+          "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         );
       });
     });
@@ -247,10 +285,7 @@ describe("UpdatesSection Integration", () => {
 
       fireEvent.click(screen.getByText("Post Update"));
 
-      // Button should be in loading state (disabled with spinner)
-      await waitFor(() => {
-        expect(screen.getByRole("button", { name: /Posting|Post Update/i })).toBeDisabled();
-      });
+      expect(screen.getByText("Posting...")).toBeInTheDocument();
     });
 
     it("shows error toast on submission failure", async () => {

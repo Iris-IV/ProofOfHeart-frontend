@@ -171,6 +171,7 @@ export interface CampaignUpdate {
   id: string;
   campaignId: number;
   content: string;
+  mediaUrl?: string;
   authorAddress: string;
   timestamp: number; // Unix timestamp in seconds
   signature: string;
@@ -183,6 +184,7 @@ export interface CampaignUpdate {
 export interface UpdatePayload {
   campaignId: number;
   content: string;
+  mediaUrl?: string;
   timestamp: number;
 }
 

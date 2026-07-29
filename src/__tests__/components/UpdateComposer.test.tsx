@@ -33,7 +33,7 @@ describe("UpdateComposer", () => {
         isSubmitting={false}
       />,
     );
-    expect(screen.getByText("Write an update to your supporters...")).toBeInTheDocument();
+    expect(screen.getByText(/Write an update/i)).toBeInTheDocument();
   });
 
   it('shows "Post an Update" heading and info text', () => {
@@ -59,7 +59,7 @@ describe("UpdateComposer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("Write an update to your supporters..."));
+    fireEvent.click(screen.getByText(/Write an update/i));
 
     const textarea = screen.getByPlaceholderText(/Share progress, milestones, or news/i);
     expect(textarea).toBeInTheDocument();
@@ -76,15 +76,15 @@ describe("UpdateComposer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("Write an update to your supporters..."));
+    fireEvent.click(screen.getByText(/Write an update/i));
     const textarea = screen.getByPlaceholderText(/Share progress, milestones, or news/i);
 
     fireEvent.change(textarea, { target: { value: "Hello world" } });
 
-    expect(screen.getByText("11 / 2000")).toBeInTheDocument();
+    expect(screen.getByText("11/2000")).toBeInTheDocument();
   });
 
-  it("shows warning when content is below minimum length", async () => {
+  it("shows helper text when content is below minimum length", () => {
     renderWithToastProvider(
       <UpdateComposer
         campaignId={1}
@@ -94,14 +94,13 @@ describe("UpdateComposer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("Write an update to your supporters..."));
+    fireEvent.click(screen.getByText(/Write an update/i));
     const textarea = screen.getByPlaceholderText(/Share progress, milestones, or news/i);
 
     fireEvent.change(textarea, { target: { value: "Short" } });
-    fireEvent.click(screen.getByText("Post Update"));
 
-    // Form submission should be blocked when content is too short
-    expect(mockOnSubmit).not.toHaveBeenCalled();
+    expect(screen.getByText("5 more characters needed")).toBeInTheDocument();
+    expect(screen.getByText("Post Update")).toBeDisabled();
   });
 
   it("disables submit button when content is too short", () => {
@@ -114,7 +113,7 @@ describe("UpdateComposer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("Write an update to your supporters..."));
+    fireEvent.click(screen.getByText(/Write an update/i));
     const textarea = screen.getByPlaceholderText(/Share progress, milestones, or news/i);
 
     fireEvent.change(textarea, { target: { value: "Too short" } });
@@ -132,7 +131,7 @@ describe("UpdateComposer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("Write an update to your supporters..."));
+    fireEvent.click(screen.getByText(/Write an update/i));
     const textarea = screen.getByPlaceholderText(/Share progress, milestones, or news/i);
 
     fireEvent.change(textarea, {
@@ -142,7 +141,7 @@ describe("UpdateComposer", () => {
     expect(screen.getByText("Post Update")).not.toBeDisabled();
   });
 
-  it("shows error when content exceeds maximum length", () => {
+  it("shows helper text when content exceeds maximum length", () => {
     renderWithToastProvider(
       <UpdateComposer
         campaignId={1}
@@ -152,17 +151,17 @@ describe("UpdateComposer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("Write an update to your supporters..."));
+    fireEvent.click(screen.getByText(/Write an update/i));
     const textarea = screen.getByPlaceholderText(/Share progress, milestones, or news/i);
 
     const longContent = "a".repeat(2001);
     fireEvent.change(textarea, { target: { value: longContent } });
 
-    expect(screen.getByText("2001 / 2000")).toBeInTheDocument();
+    expect(screen.getByText("1 over limit")).toBeInTheDocument();
     expect(screen.getByText("Post Update")).toBeDisabled();
   });
 
-  it("calls onSubmit with trimmed content and notify flag on successful submit", async () => {
+  it("calls onSubmit with trimmed content, notify flag, and no media URL on successful submit", async () => {
     renderWithToastProvider(
       <UpdateComposer
         campaignId={1}
@@ -181,8 +180,34 @@ describe("UpdateComposer", () => {
     fireEvent.click(screen.getByText("Post Update"));
 
     await waitFor(() => {
-      expect(mockOnSubmit).toHaveBeenCalledWith("Valid update content with spaces", true);
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        "Valid update content with spaces",
+        true,
+        undefined,
+      );
     });
+  });
+
+  it("supports a video URL preview in preview mode", () => {
+    renderWithToastProvider(
+      <UpdateComposer
+        campaignId={1}
+        creatorAddress="GABC123"
+        onSubmit={mockOnSubmit}
+        isSubmitting={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByText(/Write an update/i));
+    fireEvent.change(screen.getByPlaceholderText(/Share progress/i), {
+      target: { value: "Video update content" },
+    });
+    fireEvent.change(screen.getByLabelText(/Video URL/i), {
+      target: { value: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Preview/i }));
+
+    expect(screen.getByTitle("Video preview")).toBeInTheDocument();
   });
 
   it("shows submitting state while isSubmitting is true", () => {
@@ -195,7 +220,7 @@ describe("UpdateComposer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("Write an update to your supporters..."));
+    fireEvent.click(screen.getByText(/Write an update/i));
     const textarea = screen.getByPlaceholderText(/Share progress, milestones, or news/i);
 
     fireEvent.change(textarea, { target: { value: "Valid content here" } });
@@ -214,7 +239,7 @@ describe("UpdateComposer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("Write an update to your supporters..."));
+    fireEvent.click(screen.getByText(/Write an update/i));
     expect(screen.getByText("Cancel")).toBeInTheDocument();
   });
 
@@ -228,14 +253,14 @@ describe("UpdateComposer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("Write an update to your supporters..."));
+    fireEvent.click(screen.getByText(/Write an update/i));
     const textarea = screen.getByPlaceholderText(/Share progress, milestones, or news/i);
 
     fireEvent.change(textarea, { target: { value: "Some content" } });
     fireEvent.click(screen.getByText("Cancel"));
 
     expect(screen.queryByPlaceholderText(/Share progress/i)).not.toBeInTheDocument();
-    expect(screen.getByText("Write an update to your supporters...")).toBeInTheDocument();
+    expect(screen.getByText(/Write an update/i)).toBeInTheDocument();
   });
 
   it("clears content after successful submission", async () => {
@@ -250,7 +275,7 @@ describe("UpdateComposer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("Write an update to your supporters..."));
+    fireEvent.click(screen.getByText(/Write an update/i));
     const textarea = screen.getByPlaceholderText(/Share progress, milestones, or news/i);
 
     fireEvent.change(textarea, { target: { value: "Valid update content" } });

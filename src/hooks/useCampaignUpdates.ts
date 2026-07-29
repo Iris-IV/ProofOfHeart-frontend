@@ -8,7 +8,7 @@ export interface UseCampaignUpdatesResult {
   updates: CampaignUpdate[];
   isLoading: boolean;
   error: string | null;
-  createUpdate: (content: string, notify?: boolean) => Promise<void>;
+  createUpdate: (content: string, notify?: boolean, mediaUrl?: string) => Promise<void>;
   isCreating: boolean;
   refetch: () => void;
 }
@@ -26,11 +26,19 @@ export function useCampaignUpdates(
   });
 
   const { mutateAsync: createUpdateMutation, isPending: isCreating } = useMutation({
-    mutationFn: async ({ content, notify }: { content: string; notify: boolean }) => {
+    mutationFn: async ({
+      content,
+      notify,
+      mediaUrl,
+    }: {
+      content: string;
+      notify: boolean;
+      mediaUrl?: string;
+    }) => {
       if (!creatorAddress) {
         throw new Error("Creator address not available");
       }
-      return createCampaignUpdate(campaignId, content, creatorAddress, notify);
+      return createCampaignUpdate(campaignId, content, creatorAddress, notify, mediaUrl);
     },
     onSuccess: () => {
       // Invalidate and refetch updates after successful creation
@@ -38,8 +46,8 @@ export function useCampaignUpdates(
     },
   });
 
-  const createUpdate = async (content: string, notify: boolean = false) => {
-    await createUpdateMutation({ content, notify });
+  const createUpdate = async (content: string, notify: boolean = false, mediaUrl?: string) => {
+    await createUpdateMutation({ content, notify, mediaUrl });
   };
 
   return {
