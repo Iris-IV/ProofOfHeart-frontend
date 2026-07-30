@@ -174,6 +174,7 @@ To keep our translation files clean, you can run the unused keys script to find 
 ```bash
 node scripts/find-unused-i18n-keys.js
 ```
+
 This script will output a report of keys present in `messages/en.json` but never referenced in `src/`.
 
 ## 🐳 Docker Support
