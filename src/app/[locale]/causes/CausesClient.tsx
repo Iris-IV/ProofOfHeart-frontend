@@ -107,6 +107,11 @@ function CausesContent() {
 
   const debouncedSearch = useDebounce(rawSearch, 300);
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const STATUS_OPTIONS: ("all" | CampaignStatus)[] = [
     "all",
     "active",

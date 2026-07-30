@@ -8,6 +8,29 @@ import CreateCampaignPage from "@/app/[locale]/causes/new/page";
 
 const mockPush = jest.fn();
 
+import enMessages from "../../../messages/en.json";
+
+jest.mock("next-intl", () => ({
+  NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => children,
+  useTranslations:
+    (namespace?: string) => (key: string, values?: Record<string, string | number>) => {
+      const ns = namespace
+        ? (enMessages as Record<string, Record<string, string>>)[namespace]
+        : null;
+      let val = ns?.[key];
+      if (!val && values?.count !== undefined) {
+        const pluralKey = `${key}_${values.count === 1 ? "one" : "other"}`;
+        val = ns?.[pluralKey];
+      }
+      val = val ?? key;
+      if (typeof val === "string" && values) {
+        return val.replace(/\{(\w+)\}/g, (_, k) => String(values[k] ?? `{${k}}`));
+      }
+      return val;
+    },
+  useLocale: () => "en",
+}));
+
 jest.mock("@/i18n/routing", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
@@ -285,10 +308,10 @@ describe("CreateCampaignPage — revenue sharing", () => {
     await userEvent.click(screen.getByRole("switch"));
 
     const slider = await screen.findByLabelText(/revenue share percentage/i);
-    fireEvent.change(slider, { target: { value: "2500" } }); // 2500 bps = 25%
+    fireEvent.change(slider, { target: { value: "25" } }); // 25% = 2500 bps
 
     expect(screen.getByText(/25\.00%/)).toBeInTheDocument();
-    expect(screen.getByText(/2500 bps/)).toBeInTheDocument();
+    expect(screen.getByTitle(/2500 basis points/i)).toBeInTheDocument();
   });
 
   it("hides revenue sharing section when switching away from Educational Startup", async () => {
@@ -351,7 +374,7 @@ describe("CreateCampaignPage — submission", () => {
     await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
     await userEvent.click(screen.getByRole("switch", { name: /revenue sharing/i }));
     const slider = await screen.findByLabelText(/revenue share percentage/i);
-    fireEvent.change(slider, { target: { value: "500" } }); // 5%
+    fireEvent.change(slider, { target: { value: "5" } }); // 5%
 
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
 
@@ -409,9 +432,9 @@ describe("CreateCampaignPage — submission", () => {
     await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
     await userEvent.click(screen.getByRole("switch"));
 
-    // Move slider to 500 bps (5%)
+    // Move slider to 5% (500 bps)
     const slider = await screen.findByLabelText(/revenue share percentage/i);
-    fireEvent.change(slider, { target: { value: "500" } });
+    fireEvent.change(slider, { target: { value: "5" } });
 
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
     await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
@@ -432,7 +455,7 @@ describe("CreateCampaignPage — submission", () => {
     await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
 
     await waitFor(() => {
-      expect(mockShowSuccess).toHaveBeenCalledWith("Campaign created successfully!");
+      expect(mockShowSuccess).toHaveBeenCalledWith(expect.stringMatching(/created successfully!/i));
     });
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/causes/7");
@@ -460,7 +483,7 @@ describe("CreateCampaignPage — submission", () => {
 
     await waitFor(() => {
       expect(mockShowError).toHaveBeenCalledWith(
-        expect.stringMatching(/no longer accepting contributions/i),
+        expect.stringMatching(/ContractErrors\.CampaignNotActive|no longer accepting/i),
       );
     });
   });

@@ -3,9 +3,13 @@ interface SkeletonProps {
 }
 
 /** Single animated skeleton block */
-export function Skeleton({ className = "" }: SkeletonProps) {
+export function Skeleton({
+  className = "",
+  "data-testid": dataTestId = "skeleton",
+}: SkeletonProps & { "data-testid"?: string }) {
   return (
     <div
+      data-testid={dataTestId}
       className={`motion-safe:animate-pulse rounded bg-zinc-200 dark:bg-zinc-700 ${className}`}
     />
   );

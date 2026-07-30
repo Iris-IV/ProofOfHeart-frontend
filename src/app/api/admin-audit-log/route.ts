@@ -5,7 +5,10 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 type AdminAuditAction =
-  "verify_campaign" | "reject_campaign" | "update_platform_fee" | "transfer_admin";
+  | "verify_campaign"
+  | "reject_campaign"
+  | "update_platform_fee"
+  | "transfer_admin";
 
 interface AdminAuditLogEntry {
   adminAddress: string;

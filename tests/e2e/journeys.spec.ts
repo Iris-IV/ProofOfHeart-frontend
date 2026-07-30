@@ -136,10 +136,10 @@ test.describe("Critical User Journeys", () => {
     await expect(page.getByText(/Education Technology/i).first()).toBeVisible({ timeout: 10000 });
 
     // 4. Find the Approve vote button on an active campaign card
-    const approveButton = page.getByRole("button", { name: /Approve campaign/i }).first();
-    await expect(approveButton).toBeVisible();
+    const approveCampaignButton = page.getByRole("button", { name: /Approve campaign/i }).first();
+    await expect(approveCampaignButton).toBeVisible();
 
-    await approveButton.click();
+    await approveCampaignButton.click();
 
     // 5. Verify vote confirmation message appears
     await expect(page.getByText(/You voted to approve this cause/i)).toBeVisible({

@@ -5,6 +5,20 @@ import type React from "react";
 globalThis.TextEncoder ??= TextEncoder;
 globalThis.TextDecoder ??= TextDecoder;
 
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: jest.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  })),
+});
+
 // Global mock for Freighter API (v6.x returns objects, not primitives)
 jest.mock("@stellar/freighter-api", () => ({
   isConnected: jest.fn().mockResolvedValue({ isConnected: false }),

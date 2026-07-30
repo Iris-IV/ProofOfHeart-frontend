@@ -10,6 +10,7 @@ import * as campaignUpdatesModule from "@/lib/campaignUpdates";
 jest.mock("@/lib/campaignUpdates", () => ({
   getCampaignUpdates: jest.fn(),
   createCampaignUpdate: jest.fn(),
+  verifyUpdateSignature: jest.fn().mockResolvedValue(true),
 }));
 
 const mockGetCampaignUpdates = campaignUpdatesModule.getCampaignUpdates as jest.Mock;
@@ -44,7 +45,25 @@ const createTestQueryClient = () => {
   });
 };
 
+import { getAddress, isConnected, isAllowed } from "@stellar/freighter-api";
+
+const mockGetAddress = getAddress as jest.Mock;
+const mockIsConnected = isConnected as jest.Mock;
+const mockIsAllowed = isAllowed as jest.Mock;
+
 const renderUpdatesSection = (campaign: Campaign, walletPublicKey: string | null = null) => {
+  if (walletPublicKey) {
+    mockGetAddress.mockResolvedValue({ address: walletPublicKey });
+    mockIsConnected.mockResolvedValue({ isConnected: true });
+    mockIsAllowed.mockResolvedValue({ isAllowed: true });
+    localStorage.setItem("stellar_wallet_public_key", walletPublicKey);
+  } else {
+    mockGetAddress.mockResolvedValue({ address: "" });
+    mockIsConnected.mockResolvedValue({ isConnected: false });
+    mockIsAllowed.mockResolvedValue({ isAllowed: false });
+    localStorage.removeItem("stellar_wallet_public_key");
+  }
+
   const queryClient = createTestQueryClient();
 
   return render(
@@ -117,7 +136,7 @@ describe("UpdatesSection Integration", () => {
 
       renderUpdatesSection(mockCampaign);
 
-      expect(screen.getAllByTestId("skeleton")).toHaveLength(9);
+      expect(screen.getAllByTestId("skeleton")).toHaveLength(15);
     });
 
     it("shows error state on fetch failure", async () => {
@@ -140,7 +159,7 @@ describe("UpdatesSection Integration", () => {
       renderUpdatesSection(mockCampaign, mockCampaign.creator);
 
       await waitFor(() => {
-        expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
+        expect(screen.getByText(/Write an update/i)).toBeInTheDocument();
       });
     });
 
@@ -153,7 +172,7 @@ describe("UpdatesSection Integration", () => {
       renderUpdatesSection(mockCampaign, otherAddress);
 
       await waitFor(() => {
-        expect(screen.queryByText("✏️ Write an update")).not.toBeInTheDocument();
+        expect(screen.queryByText(/Write an update/i)).not.toBeInTheDocument();
       });
     });
 
@@ -163,7 +182,7 @@ describe("UpdatesSection Integration", () => {
       renderUpdatesSection(mockCampaign, null);
 
       await waitFor(() => {
-        expect(screen.queryByText("✏️ Write an update")).not.toBeInTheDocument();
+        expect(screen.queryByText(/Write an update/i)).not.toBeInTheDocument();
       });
     });
   });
@@ -185,26 +204,25 @@ describe("UpdatesSection Integration", () => {
 
       // Open composer
       await waitFor(() => {
-        expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
+        expect(screen.getByText(/Write an update/i)).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("✏️ Write an update"));
+      fireEvent.click(screen.getByText(/Write an update/i));
 
       // Type content
-      const textarea = screen.getByPlaceholderText(
-        /Share progress, milestones, or news with your supporters/i,
-      );
+      const textarea = screen.getByPlaceholderText(/Share progress/i);
       fireEvent.change(textarea, {
         target: { value: "New update content" },
       });
 
       // Submit
-      fireEvent.click(screen.getByText("Post Update"));
+      fireEvent.submit(screen.getByText("Post Update").closest("form")!);
 
       await waitFor(() => {
         expect(mockCreateCampaignUpdate).toHaveBeenCalledWith(
           1,
           "New update content",
           mockCampaign.creator,
+          expect.anything(),
         );
       });
     });
@@ -219,20 +237,20 @@ describe("UpdatesSection Integration", () => {
       renderUpdatesSection(mockCampaign, mockCampaign.creator);
 
       await waitFor(() => {
-        expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
+        expect(screen.getByText(/Write an update/i)).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("✏️ Write an update"));
+      fireEvent.click(screen.getByText(/Write an update/i));
 
-      const textarea = screen.getByPlaceholderText(
-        /Share progress, milestones, or news with your supporters/i,
-      );
+      const textarea = screen.getByPlaceholderText(/Share progress/i);
       fireEvent.change(textarea, {
         target: { value: "Update content" },
       });
 
-      fireEvent.click(screen.getByText("Post Update"));
+      fireEvent.submit(screen.getByText("Post Update").closest("form")!);
 
-      expect(screen.getByText("Posting...")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("Posting...")).toBeInTheDocument();
+      });
     });
 
     it("shows error toast on submission failure", async () => {
@@ -243,18 +261,16 @@ describe("UpdatesSection Integration", () => {
       renderUpdatesSection(mockCampaign, mockCampaign.creator);
 
       await waitFor(() => {
-        expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
+        expect(screen.getByText(/Write an update/i)).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("✏️ Write an update"));
+      fireEvent.click(screen.getByText(/Write an update/i));
 
-      const textarea = screen.getByPlaceholderText(
-        /Share progress, milestones, or news with your supporters/i,
-      );
+      const textarea = screen.getByPlaceholderText(/Share progress/i);
       fireEvent.change(textarea, {
         target: { value: "Update content" },
       });
 
-      fireEvent.click(screen.getByText("Post Update"));
+      fireEvent.submit(screen.getByText("Post Update").closest("form")!);
 
       await waitFor(() => {
         expect(screen.getByText(/Submission failed/i)).toBeInTheDocument();
@@ -276,22 +292,20 @@ describe("UpdatesSection Integration", () => {
       renderUpdatesSection(mockCampaign, mockCampaign.creator);
 
       await waitFor(() => {
-        expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
+        expect(screen.getByText(/Write an update/i)).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("✏️ Write an update"));
+      fireEvent.click(screen.getByText(/Write an update/i));
 
-      const textarea = screen.getByPlaceholderText(
-        /Share progress, milestones, or news with your supporters/i,
-      );
+      const textarea = screen.getByPlaceholderText(/Share progress/i);
       fireEvent.change(textarea, {
         target: { value: "Success update" },
       });
 
-      fireEvent.click(screen.getByText("Post Update"));
+      fireEvent.submit(screen.getByText("Post Update").closest("form")!);
 
       // After success, composer should collapse
       await waitFor(() => {
-        expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
+        expect(screen.getByText(/Write an update/i)).toBeInTheDocument();
       });
     });
   });
