@@ -17,36 +17,9 @@ export interface WalletTransactionLogEntry {
 
 import { normalizeAddress } from "./stellar";
 import { hasOffchainApiBaseUrl, requestOffchainJson } from "./offchainApiClient";
+import { readAllEntries, writeAllEntries } from "./localLog";
 
 const STORAGE_KEY = "proof_of_heart_wallet_tx_log_v1";
-
-function canUseStorage(): boolean {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
-}
-
-function readAllEntries(): WalletTransactionLogEntry[] {
-  if (!canUseStorage()) return [];
-
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed as WalletTransactionLogEntry[];
-  } catch {
-    return [];
-  }
-}
-
-function writeAllEntries(entries: WalletTransactionLogEntry[]): void {
-  if (!canUseStorage()) return;
-
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-  } catch {
-    // Ignore localStorage write failures.
-  }
-}
 
 async function syncWalletTransaction(entry: WalletTransactionLogEntry): Promise<void> {
   if (!hasOffchainApiBaseUrl()) return;
@@ -66,7 +39,7 @@ async function syncWalletTransaction(entry: WalletTransactionLogEntry): Promise<
 }
 
 export function appendWalletTransaction(entry: Omit<WalletTransactionLogEntry, "timestamp">): void {
-  const allEntries = readAllEntries();
+  const allEntries = readAllEntries<WalletTransactionLogEntry>(STORAGE_KEY);
   const normalizedEntry: WalletTransactionLogEntry = {
     ...entry,
     walletAddress: normalizeAddress(entry.walletAddress),
@@ -74,13 +47,13 @@ export function appendWalletTransaction(entry: Omit<WalletTransactionLogEntry, "
   };
 
   allEntries.push(normalizedEntry);
-  writeAllEntries(allEntries.slice(-1000));
+  writeAllEntries(STORAGE_KEY, allEntries.slice(-1000));
   void syncWalletTransaction(normalizedEntry);
 }
 
 export function getWalletTransactions(walletAddress: string): WalletTransactionLogEntry[] {
   const normalizedAddress = normalizeAddress(walletAddress);
-  return readAllEntries()
+  return readAllEntries<WalletTransactionLogEntry>(STORAGE_KEY)
     .filter((entry) => normalizeAddress(entry.walletAddress) === normalizedAddress)
     .sort((a, b) => b.timestamp - a.timestamp);
 }

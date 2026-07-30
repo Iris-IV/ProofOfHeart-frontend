@@ -1,4 +1,5 @@
 import { normalizeAddress } from "./stellar";
+import { readAllEntries, writeAllEntries } from "./localLog";
 
 export type AdminAuditAction =
   | "verify_campaign"
@@ -18,33 +19,6 @@ export interface AdminAuditLogEntry {
 const STORAGE_KEY = "proof_of_heart_admin_audit_log_v1";
 const MAX_ENTRIES = 500;
 const API_ENDPOINT = "/api/admin-audit-log";
-
-function canUseStorage(): boolean {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
-}
-
-function readAllEntries(): AdminAuditLogEntry[] {
-  if (!canUseStorage()) return [];
-
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed as AdminAuditLogEntry[];
-  } catch {
-    return [];
-  }
-}
-
-function writeAllEntries(entries: AdminAuditLogEntry[]): void {
-  if (!canUseStorage()) return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries.slice(-MAX_ENTRIES)));
-  } catch {
-    // Ignore localStorage write failures.
-  }
-}
 
 async function readApiEntries(adminAddress?: string): Promise<AdminAuditLogEntry[]> {
   const url = new URL(API_ENDPOINT, window.location.origin);
@@ -90,12 +64,15 @@ export async function appendAdminAuditLog(
 
   try {
     await persistApiEntry(nextEntry);
-    writeAllEntries([...readAllEntries(), nextEntry]);
+    writeAllEntries(
+      STORAGE_KEY,
+      [...readAllEntries<AdminAuditLogEntry>(STORAGE_KEY), nextEntry].slice(-MAX_ENTRIES),
+    );
     return;
   } catch {
-    const allEntries = readAllEntries();
+    const allEntries = readAllEntries<AdminAuditLogEntry>(STORAGE_KEY);
     allEntries.push(nextEntry);
-    writeAllEntries(allEntries);
+    writeAllEntries(STORAGE_KEY, allEntries.slice(-MAX_ENTRIES));
   }
 }
 
@@ -108,14 +85,14 @@ export async function getAdminAuditLog(
   try {
     const apiEntries = await readApiEntries(normalizedAddress);
     if (apiEntries.length > 0) {
-      writeAllEntries(apiEntries);
+      writeAllEntries(STORAGE_KEY, apiEntries.slice(-MAX_ENTRIES));
       return apiEntries.sort((a, b) => b.timestamp - a.timestamp).slice(0, Math.max(0, limit));
     }
   } catch {
     // Fall back to local cache below.
   }
 
-  return readAllEntries()
+  return readAllEntries<AdminAuditLogEntry>(STORAGE_KEY)
     .filter((entry) => normalizeAddress(entry.adminAddress) === normalizedAddress)
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, Math.max(0, limit));
