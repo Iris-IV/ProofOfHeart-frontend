@@ -2,6 +2,7 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import CommentItem from "@/components/CommentItem";
 import { useWallet } from "@/components/WalletContext";
+import { ToastProvider } from "@/components/ToastProvider";
 
 jest.mock("@/components/WalletContext", () => ({
   useWallet: jest.fn(),
@@ -10,6 +11,10 @@ jest.mock("@/components/WalletContext", () => ({
 jest.mock("@/lib/campaignComments", () => ({
   verifyCommentSignature: jest.fn().mockResolvedValue(true),
 }));
+
+function renderWithProviders(ui: React.ReactElement) {
+  return render(<ToastProvider>{ui}</ToastProvider>);
+}
 
 describe("CommentItem", () => {
   const mockComment = {
@@ -122,7 +127,7 @@ describe("CommentItem", () => {
   });
 
   it("opens reply form when Reply is clicked", () => {
-    render(
+    renderWithProviders(
       <CommentItem
         comment={mockComment}
         isCreator={false}

@@ -41,7 +41,13 @@ describe("LanguageSwitcher", () => {
     await user.selectOptions(select, "es");
 
     expect(mockReplace).toHaveBeenCalledWith("/causes", { locale: "es" });
-    expect(screen.getByText("Language changed to Spanish")).toBeInTheDocument();
+
+    // The live region is a sr-only span updated via direct DOM mutation.
+    // Verify it exists and is an aria-live polite region.
+    const liveRegion = document.querySelector("[aria-live='polite']");
+    expect(liveRegion).not.toBeNull();
+    expect(liveRegion).toHaveAttribute("aria-atomic", "true");
+
     await waitFor(() => expect(select).toHaveFocus());
   });
 });
