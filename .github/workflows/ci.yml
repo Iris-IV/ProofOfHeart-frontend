@@ -121,6 +121,7 @@ jobs:
   visual-regression:
     name: Visual regression (Chromatic)
     runs-on: ubuntu-latest
+    if: ${{ secrets.CHROMATIC_PROJECT_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
         with:
