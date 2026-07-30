@@ -78,6 +78,95 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## 🔧 Developing Without a Live Network
+
+The app includes a mock-data development mode that allows you to develop and test the UI without connecting to a live Stellar testnet. This is useful for frontend development, UI testing, and running the test suite locally.
+
+### Enabling Mock Mode
+
+Set the `NEXT_PUBLIC_USE_MOCKS` environment variable to `true` in your `.env.local` file:
+
+```env
+NEXT_PUBLIC_USE_MOCKS=true
+```
+
+When enabled, the app uses mock campaign data instead of fetching from the blockchain. The mock data is defined in `src/lib/contractClient.ts` and is gated behind the `IS_MOCK_MODE` runtime check.
+
+**Important**: The build process will fail if you attempt to build a production bundle with `NEXT_PUBLIC_USE_MOCKS=true`. This is intentional to prevent accidental deployment of mock data to production. See [issue #343](https://github.com/Iris-IV/ProofOfHeart-frontend/issues/343) for details.
+
+### Using the DevMockPanel UI
+
+When mock mode is enabled in development, a **DevMockPanel** component appears as a floating button in the bottom-right corner of the screen (labeled "⚙️ Mock"). Click it to open the mock scenario panel.
+
+The panel allows you to:
+
+- **Switch campaign states** for campaigns 1-6 using dropdown selectors
+- **Test different UI states** without changing mock data files
+- **Persist scenarios** across page reloads (stored in sessionStorage)
+- **Reset all scenarios** to default with one click
+
+#### Available Mock Scenarios
+
+Each campaign can be set to one of the following scenarios:
+
+- **Default**: Original mock data from `contractClient.ts`
+- **Active**: Ongoing campaign, 50% funded, not verified
+- **Verified**: Verified campaign, 33% funded, funds not yet withdrawn
+- **Funded**: Successfully funded campaign, funds withdrawn, deadline passed
+- **Cancelled**: Campaign cancelled by creator, 25% funded
+- **Failed**: Deadline passed, goal not met (20% funded)
+- **Empty**: No data (empty title, description, zero amounts)
+- **Error**: Error state for testing error boundaries and loading states
+
+### Adding a New Mock Scenario
+
+To add a new mock scenario:
+
+1. **Add the scenario type** to the `MockScenario` type in `src/hooks/useDevMockScenario.ts`:
+
+```typescript
+export type MockScenario =
+  | "default"
+  | "active"
+  // ... existing scenarios
+  | "your_new_scenario"; // Add here
+```
+
+2. **Implement the scenario logic** in `src/lib/devMockScenarios.ts` by adding a new case in the `applyMockScenario` function:
+
+```typescript
+case "your_new_scenario":
+  return {
+    ...campaign,
+    // Set your desired campaign properties
+    is_active: true,
+    status: "active" as CampaignStatus,
+  };
+```
+
+3. **Add the scenario to the UI** in `src/components/DevMockPanel.tsx` by adding an `<option>` to the select dropdown:
+
+```tsx
+<option value="your_new_scenario">Your New Scenario</option>
+```
+
+4. **Add to the scenarios list** in `src/lib/devMockScenarios.ts` by updating `MOCK_SCENARIOS`:
+
+```typescript
+export const MOCK_SCENARIOS = [
+  // ... existing scenarios
+  { value: "your_new_scenario", label: "Your New Scenario", description: "Description" },
+] as const;
+```
+
+### Mock Data Files
+
+- **`src/lib/contractClient.ts`**: Contains the base mock campaign data
+- **`src/lib/devMockScenarios.ts`**: Scenario transformation logic
+- **`src/hooks/useDevMockScenario.ts`**: React hook for accessing current scenario
+- **`src/components/DevMockPanel.tsx`**: Dev-only UI for switching scenarios
+- **`src/lib/mockCauses.ts`**: Filter constants for listing pages
+
 ## ⚙️ Configuration
 
 The project uses environment variables for configuration. Create a `.env.local` file in the root directory:
