@@ -3,8 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useWindowVisibility } from "./useWindowVisibility";
 
-const USE_MOCKS =
-  typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_MOCKS === "true";
+const USE_MOCKS = typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
 export interface CampaignEvent {
   id: string;
@@ -61,9 +60,7 @@ export function useCampaignEvents<TEvent extends CampaignEvent>({
 
         cursorRef.current = result.cursor;
 
-        const unseen = result.events.filter(
-          (event) => !seenEventIdsRef.current.has(event.id),
-        );
+        const unseen = result.events.filter((event) => !seenEventIdsRef.current.has(event.id));
         for (const event of unseen) {
           seenEventIdsRef.current.add(event.id);
         }

@@ -15,7 +15,7 @@ class EventSubscriber {
   private cursor: string | undefined;
   private isPolling = false;
   private handlers = new Map<string, EventHandler[]>();
-  private timeoutId: NodeJS.Timeout | null = null;
+  private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private backoffMs = 2000;
   private maxBackoffMs = 60000;
 
