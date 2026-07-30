@@ -2,13 +2,13 @@
 
 import { useEffect, useRef } from "react";
 import {
-  fetchVoteCastEvents,
   isEventStreamingAvailable,
+  isVoteCastEvent,
   parseVoteCastApprove,
 } from "@/lib/sorobanEvents";
 import { useWindowVisibility } from "./useWindowVisibility";
-
-const EVENT_POLL_INTERVAL = Number(process.env.NEXT_PUBLIC_VOTE_EVENTS_POLL_MS) || 5_000;
+import { eventSubscriber } from "../lib/eventSubscriber";
+import * as StellarSdk from "@stellar/stellar-sdk";
 
 export interface VoteCastDelta {
   approve: boolean;
@@ -22,7 +22,7 @@ export interface UseCampaignVoteEventsOptions {
 }
 
 /**
- * Polls Soroban `campaign_vote_cast` events and reports new votes (deduped by event id).
+ * Listens to Soroban `campaign_vote_cast` events and reports new votes (deduped by event id).
  */
 export function useCampaignVoteEvents({
   campaignId,
@@ -32,7 +32,6 @@ export function useCampaignVoteEvents({
 }: UseCampaignVoteEventsOptions): { streamingAvailable: boolean } {
   const isVisible = useWindowVisibility();
   const seenEventIdsRef = useRef<Set<string>>(new Set());
-  const cursorRef = useRef<string | undefined>(undefined);
   const onVoteCastRef = useRef(onVoteCast);
   const streamingAvailable = isEventStreamingAvailable();
 
@@ -42,7 +41,6 @@ export function useCampaignVoteEvents({
 
   useEffect(() => {
     seenEventIdsRef.current = new Set();
-    cursorRef.current = undefined;
   }, [campaignId]);
 
   useEffect(() => {
@@ -55,36 +53,21 @@ export function useCampaignVoteEvents({
 
     if (!isVisible) return;
 
-    let cancelled = false;
+    eventSubscriber.start();
 
-    const poll = async () => {
-      try {
-        const result = await fetchVoteCastEvents({
-          campaignId,
-          cursor: cursorRef.current,
-        });
-        if (!result || cancelled) return;
-
-        cursorRef.current = result.cursor;
-
-        for (const event of result.events) {
-          if (seenEventIdsRef.current.has(event.id)) continue;
+    const handler = (event: StellarSdk.rpc.Api.EventResponse) => {
+      if (isVoteCastEvent(event, campaignId)) {
+        if (!seenEventIdsRef.current.has(event.id)) {
           seenEventIdsRef.current.add(event.id);
           onVoteCastRef.current?.({ approve: parseVoteCastApprove(event) });
         }
-      } catch {
-        onStreamingUnavailable?.();
       }
     };
 
-    void poll();
-    const intervalId = window.setInterval(() => {
-      void poll();
-    }, EVENT_POLL_INTERVAL);
+    eventSubscriber.on("campaign_vote_cast", handler);
 
     return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
+      eventSubscriber.off("campaign_vote_cast", handler);
     };
   }, [campaignId, enabled, isVisible, streamingAvailable, onStreamingUnavailable]);
 

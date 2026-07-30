@@ -10,6 +10,13 @@ const CONTRACT_ADDRESS =
 
 export type EventHandler = (event: StellarSdk.rpc.Api.EventResponse) => void;
 
+/**
+ * EventSubscriber maintains a single underlying Soroban event polling stream for the contract.
+ * Multiple hooks (like useContractEvents, useCampaignContributionEvents, useCampaignVoteEvents)
+ * can subscribe to specific topics via `on()`.
+ * This deduplicates subscriptions by ensuring only one RPC polling loop runs regardless of
+ * how many consumers exist, satisfying #833.
+ */
 class EventSubscriber {
   private server: StellarSdk.rpc.Server;
   private cursor: string | undefined;
