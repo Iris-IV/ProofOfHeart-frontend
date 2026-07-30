@@ -10,18 +10,7 @@ const NETWORK_PASSPHRASE =
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_RETRIES = 2;
 
-export class OffchainApiError extends Error {
-  status?: number;
-  details?: unknown;
-
-  constructor(message: string, options?: { status?: number; details?: unknown }) {
-    super(message);
-    this.name = "OffchainApiError";
-    this.status = options?.status;
-    this.details = options?.details;
-  }
-}
-
+import { ClientError } from "./clientError";
 export interface OffchainRequestAuth {
   purpose: string;
   payload?: unknown;
@@ -50,7 +39,7 @@ function resolveOffchainUrl(path: string): string {
 
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   if (!hasOffchainApiBaseUrl()) {
-    throw new OffchainApiError("NEXT_PUBLIC_API_URL is not configured.");
+    throw new ClientError("NEXT_PUBLIC_API_URL is not configured.");
   }
 
   return `${OFFCHAIN_API_BASE_URL}${normalizedPath}`;
@@ -119,7 +108,7 @@ export async function signOffchainPayload(
 
   const signature = signedTx.signatures[0]?.signature();
   if (!signature) {
-    throw new OffchainApiError("No wallet signature was generated.");
+    throw new ClientError("No wallet signature was generated.");
   }
 
   return {
@@ -190,7 +179,7 @@ export async function requestOffchainJson<T>(
           details && typeof details === "object" && details !== null && "message" in details
             ? String((details as { message?: unknown }).message ?? response.statusText)
             : response.statusText || "Off-chain request failed.";
-        const error = new OffchainApiError(errorMessage, {
+        const error = new ClientError(errorMessage, {
           status: response.status,
           details,
         });
@@ -215,10 +204,10 @@ export async function requestOffchainJson<T>(
         await sleep(250 * (attempt + 1));
         continue;
       }
-      if (error instanceof OffchainApiError) {
+      if (error instanceof ClientError) {
         throw error;
       }
-      throw new OffchainApiError("Failed to contact off-chain service.", {
+      throw new ClientError("Failed to contact off-chain service.", {
         details: error,
       });
     } finally {
@@ -226,7 +215,7 @@ export async function requestOffchainJson<T>(
     }
   }
 
-  throw new OffchainApiError("Failed to contact off-chain service.", {
+  throw new ClientError("Failed to contact off-chain service.", {
     details: lastError,
   });
 }
