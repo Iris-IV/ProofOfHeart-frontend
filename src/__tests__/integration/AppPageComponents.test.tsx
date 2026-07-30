@@ -214,7 +214,7 @@ describe("app page components", () => {
     render(withQueryClient(<HomeClient />));
     await userEvent.click(screen.getByRole("link", { name: /startCampaign/i }));
 
-    expect(screen.getByRole("heading", { name: "heroTitle" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /heroTitle/i })).toBeInTheDocument();
     expect(mockConnectWallet).toHaveBeenCalledTimes(1);
   });
 
