@@ -6,7 +6,7 @@ import { motion, useSpring, useTransform } from "framer-motion";
 export default function AnimatedProgressFill({ targetPct }: { targetPct: number }) {
   const hasMountedRef = useRef(false);
   const springPct = useSpring(targetPct, { stiffness: 120, damping: 20, mass: 0.6 });
-  const barWidth = useTransform(springPct, (v) => `${v}%`);
+  const barWidth = useTransform(springPct, (v) => `${Math.min(100, v)}%`);
 
   useEffect(() => {
     if (!hasMountedRef.current) {
