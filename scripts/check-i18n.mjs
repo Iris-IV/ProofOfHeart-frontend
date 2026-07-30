@@ -48,7 +48,6 @@ function checkUnusedKeys() {
   for (const fullKey of allKeys) {
     const parts = fullKey.split(".");
     const key = parts[parts.length - 1];
-    const namespace = parts.length > 1 ? parts[0] : "";
 
     // Check if the key appears in the source code
     // It could be t('key') or t("key") or next-intl dynamic keys
