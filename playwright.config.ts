@@ -16,7 +16,7 @@ export default defineConfig({
   reporter: process.env.CI ? [["github"], ["list"], ["html"]] : [["list"]],
 
   use: {
-    baseURL: process.env.BASE_URL || "http://localhost:3000",
+    baseURL: process.env.BASE_URL || "http://127.0.0.1:3000",
     trace: process.env.CI ? "on-first-retry" : "retain-on-failure",
     screenshot: "only-on-failure",
     video: process.env.CI ? "retain-on-failure" : "off",
@@ -45,7 +45,7 @@ export default defineConfig({
 
   webServer: {
     command: "npm run dev",
-    url: "http://localhost:3000",
+    url: "http://127.0.0.1:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
     stdout: "pipe",
