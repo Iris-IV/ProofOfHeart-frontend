@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { calculateGamificationProfile } from '../lib/gamification';
+import { useTranslations } from 'next-intl';
 
 interface DonatorBadgesProps {
   totalDonated: number;
@@ -14,6 +15,8 @@ export function DonatorBadges({
   donationCount = 0,
   isEarlyBacker = false,
 }: DonatorBadgesProps) {
+  const t = useTranslations('DonatorBadges');
+  const tGamification = useTranslations('Gamification');
   const profile = calculateGamificationProfile(totalDonated, donationCount, isEarlyBacker);
 
   return (
@@ -23,15 +26,15 @@ export function DonatorBadges({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">
-              Level {profile.levelNumber}: {profile.level}
+              {t("level", { levelNumber: profile.levelNumber, levelName: tGamification(`level_${profile.levelId}`) })}
             </span>
             <span className="text-xs text-slate-400">
-              {profile.totalDonated} XLM Total
+              {t("totalXlm", { amount: profile.totalDonated })}
             </span>
           </div>
           {profile.progressPercent < 100 && (
             <span className="text-xs text-slate-400">
-              Next: {profile.nextLevelThreshold} XLM
+              {t("nextXlm", { amount: profile.nextLevelThreshold })}
             </span>
           )}
         </div>
@@ -48,7 +51,7 @@ export function DonatorBadges({
       {/* Badges List */}
       <div>
         <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-          Earned Badges
+          {t("earnedBadges")}
         </h4>
         <div className="grid grid-cols-2 gap-2">
           {profile.badges.map((badge) => (
@@ -62,9 +65,9 @@ export function DonatorBadges({
             >
               <span className="text-xl leading-none">{badge.icon}</span>
               <div className="flex flex-col min-w-0">
-                <span className="text-xs font-semibold truncate">{badge.name}</span>
+                <span className="text-xs font-semibold truncate">{tGamification(badge.name)}</span>
                 <span className="text-[10px] text-slate-400 truncate">
-                  {badge.unlocked ? badge.description : 'Locked'}
+                  {badge.unlocked ? tGamification(badge.description) : tGamification('locked')}
                 </span>
               </div>
             </div>
