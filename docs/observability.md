@@ -70,6 +70,7 @@ ObservabilityMetricsSnapshot { counters, rates, alerts, recentEvents }
 ### Counters
 
 The module tracks:
+
 - Total events
 - Events by kind
 - Events by contract error code
@@ -78,6 +79,7 @@ The module tracks:
 ### Rates
 
 Computed over a sliding time window (default 5 minutes):
+
 - `simulationFailureRate` - simulation failures / transaction attempts
 - `submissionFailureRate` - submission failures / transaction attempts
 - `rpcTimeoutRate` - RPC timeouts / RPC operations
@@ -105,7 +107,7 @@ export type ObservabilityKind =
   | "contract_error"
   | "simulation_failure"
   // ... existing kinds
-  | "your_new_kind";  // Add here
+  | "your_new_kind"; // Add here
 ```
 
 ### 2. Add Classification Logic (if needed)
@@ -117,7 +119,7 @@ If your new kind requires error classification, add a classifier in `classify.ts
 export function classifyYourError(error: unknown, operation?: string): ClassifiedFailure {
   // Your classification logic here
   return {
-    category: "transaction",  // or "contract" or "rpc"
+    category: "transaction", // or "contract" or "rpc"
     kind: "your_new_kind",
     message: error instanceof Error ? error.message : String(error),
   };
@@ -166,9 +168,7 @@ function computeRates(
   windowMs: number,
 ): ObservabilityRatesSnapshot {
   // Add your new kind to the relevant denominator or numerator
-  const yourNewKindCount = windowEvents.filter(
-    (event) => event.kind === "your_new_kind",
-  ).length;
+  const yourNewKindCount = windowEvents.filter((event) => event.kind === "your_new_kind").length;
 
   // Update the returned snapshot if you want a new rate field
   return {
