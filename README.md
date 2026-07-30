@@ -202,7 +202,11 @@ To run the production container:
 docker run -p 3000:3000 proofofheart-frontend
 ```
 
-## 🛡 Error Reporting
+## � Observability
+
+The application includes an internal observability module for monitoring contract interactions, transaction flows, and RPC operations. See [docs/observability.md](docs/observability.md) for architecture details, event types, and instructions on adding new observability events.
+
+## �🛡 Error Reporting
 
 `src/components/ErrorBoundary.tsx` exposes an optional `onError` prop that receives a PII-safe error report (`name`, `message`, `stack`) whenever a React render error is caught.
 
