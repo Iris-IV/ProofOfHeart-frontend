@@ -177,7 +177,8 @@
     "signing": "Signing...",
     "submitting": "Submitting...",
     "confirming": "Confirming...",
-    "transferring": "Transferring..."
+    "transferring": "Transferring...",
+    "requiredWord": "CONFIRM"
   },
   "ContractErrors": {
     "NotAuthorized": "You are not authorized to perform this action.",
@@ -497,5 +498,53 @@
     "createdCampaigns": "Created Campaigns",
     "noSavedCampaigns": "No saved campaigns yet.",
     "browseCauses": "Browse causes"
+  },
+  "EditCampaignMetadata": {
+    "editMetadata": "Edit metadata",
+    "note": "Note: title, description, and cover image are display-only — stored locally until the campaign is verified on-chain.",
+    "titleLabel": "Title",
+    "descriptionLabel": "Description",
+    "coverImageUrlLabel": "Cover Image URL",
+    "saveButton": "Save",
+    "lastEdited": "Last edited:",
+    "clearEdits": "Clear edits"
+  },
+  "Notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "noNotifications": "No notifications yet",
+    "connectWallet": "Connect your wallet to see notifications",
+    "viewDetails": "View details",
+    "unreadLabel": "{count} unread",
+    "justNow": "just now",
+    "mAgo": "{count}m ago",
+    "hAgo": "{count}h ago",
+    "dAgo": "{count}d ago",
+    "settingsTitle": "Notification Preferences",
+    "settingsAriaLabel": "Notification settings",
+    "prefContributions": "My Contributions",
+    "prefVerified": "Campaign Verification",
+    "prefRefundAvailable": "Refund Available",
+    "prefRevenueDeposited": "Revenue Deposited"
+  },
+  "Onboarding": {
+    "tourLabel": "Welcome Tour",
+    "skip": "Skip",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "stepProgress": "Step {current} of {total}",
+    "step_connect_icon": "🔌",
+    "step_connect_title": "Connect Wallet",
+    "step_connect_body": "Connect your Stellar wallet to get started.",
+    "step_chooseCause_icon": "❤️",
+    "step_chooseCause_title": "Choose a Cause",
+    "step_chooseCause_body": "Find a campaign that you care about.",
+    "step_contribute_icon": "💎",
+    "step_contribute_title": "Contribute",
+    "step_contribute_body": "Donate XLM to the campaign.",
+    "step_confirm_icon": "✅",
+    "step_confirm_title": "Confirm",
+    "step_confirm_body": "Your contribution is verified on-chain."
   }
 }

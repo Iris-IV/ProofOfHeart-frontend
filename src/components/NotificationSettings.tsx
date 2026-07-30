@@ -3,18 +3,12 @@
 import { useState, useMemo } from "react";
 import { Settings2 } from "lucide-react";
 import { useWallet } from "./WalletContext";
+import { useTranslations } from "next-intl";
 import {
   type NotificationPreferences,
   getNotificationPreferences,
   setNotificationPreferences,
 } from "@/lib/preferences";
-
-const PREF_LABELS: Record<keyof NotificationPreferences, string> = {
-  contributions: "My Contributions",
-  verified: "Campaign Verification",
-  refundAvailable: "Refund Available",
-  revenueDeposited: "Revenue Deposited",
-};
 
 const ALL_EVENTS: (keyof NotificationPreferences)[] = [
   "contributions",
@@ -24,12 +18,20 @@ const ALL_EVENTS: (keyof NotificationPreferences)[] = [
 ];
 
 export default function NotificationSettings() {
+  const t = useTranslations("Notifications");
   const { publicKey } = useWallet();
   const [isOpen, setIsOpen] = useState(false);
   const storedPrefs = useMemo(
     () => (publicKey ? getNotificationPreferences(publicKey) : null),
     [publicKey],
   );
+
+  const PREF_LABELS: Record<keyof NotificationPreferences, string> = useMemo(() => ({
+    contributions: t("prefContributions"),
+    verified: t("prefVerified"),
+    refundAvailable: t("prefRefundAvailable"),
+    revenueDeposited: t("prefRevenueDeposited"),
+  }), [t]);
   const [localPrefs, setLocalPrefs] = useState<NotificationPreferences | null>(null);
 
   const prefs = localPrefs ?? storedPrefs;
@@ -47,7 +49,7 @@ export default function NotificationSettings() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex size-9 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-950 hover:bg-black/5 dark:border-white/15 dark:bg-zinc-800 dark:text-white dark:hover:bg-white/10 transition-colors shadow-sm"
-        aria-label="Notification settings"
+        aria-label={t("settingsAriaLabel")}
       >
         <Settings2 size={16} />
       </button>
@@ -56,7 +58,7 @@ export default function NotificationSettings() {
         <div className="absolute right-0 mt-2 w-64 rounded-xl border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
           <div className="border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
             <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-              Notification Preferences
+              {t("settingsTitle")}
             </h3>
           </div>
           <div className="p-2">

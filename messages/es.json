@@ -177,7 +177,8 @@
     "signing": "Firmando...",
     "submitting": "Enviando...",
     "confirming": "Confirmando...",
-    "transferring": "Transfiriendo..."
+    "transferring": "Transfiriendo...",
+    "requiredWord": "CONFIRMAR"
   },
   "ContractErrors": {
     "NotAuthorized": "No estás autorizado para realizar esta acción.",
@@ -497,5 +498,53 @@
     "createdCampaigns": "Campañas creadas",
     "noSavedCampaigns": "Aún no tienes campañas guardadas.",
     "browseCauses": "Explorar causas"
+  },
+  "EditCampaignMetadata": {
+    "editMetadata": "Editar metadatos",
+    "note": "Nota: el título, la descripción y la imagen de portada son solo para visualización, almacenados localmente hasta que la campaña se verifique en la cadena.",
+    "titleLabel": "Título",
+    "descriptionLabel": "Descripción",
+    "coverImageUrlLabel": "URL de la imagen de portada",
+    "saveButton": "Guardar",
+    "lastEdited": "Última edición:",
+    "clearEdits": "Borrar ediciones"
+  },
+  "Notifications": {
+    "title": "Notificaciones",
+    "markAllRead": "Marcar todo como leído",
+    "noNotifications": "Aún no hay notificaciones",
+    "connectWallet": "Conecta tu billetera para ver notificaciones",
+    "viewDetails": "Ver detalles",
+    "unreadLabel": "{count} sin leer",
+    "justNow": "justo ahora",
+    "mAgo": "hace {count}m",
+    "hAgo": "hace {count}h",
+    "dAgo": "hace {count}d",
+    "settingsTitle": "Preferencias de notificaciones",
+    "settingsAriaLabel": "Configuración de notificaciones",
+    "prefContributions": "Mis contribuciones",
+    "prefVerified": "Verificación de campañas",
+    "prefRefundAvailable": "Reembolso disponible",
+    "prefRevenueDeposited": "Ingresos depositados"
+  },
+  "Onboarding": {
+    "tourLabel": "Recorrido de bienvenida",
+    "skip": "Omitir",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "done": "Hecho",
+    "stepProgress": "Paso {current} de {total}",
+    "step_connect_icon": "🔌",
+    "step_connect_title": "Conectar billetera",
+    "step_connect_body": "Conecta tu billetera Stellar para comenzar.",
+    "step_chooseCause_icon": "❤️",
+    "step_chooseCause_title": "Elige una causa",
+    "step_chooseCause_body": "Encuentra una campaña que te importe.",
+    "step_contribute_icon": "💎",
+    "step_contribute_title": "Contribuir",
+    "step_contribute_body": "Dona XLM a la campaña.",
+    "step_confirm_icon": "✅",
+    "step_confirm_title": "Confirmar",
+    "step_confirm_body": "Tu contribución está verificada en la cadena."
   }
 }
