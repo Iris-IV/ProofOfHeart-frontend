@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Link } from "@/i18n/routing";
 import { useTranslations, useLocale } from "next-intl";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import CampaignStatusBadge from "@/components/CampaignStatusBadge";
 import FundingProgressBar from "@/components/FundingProgressBar";
 import { CampaignRowSkeleton } from "@/components/Skeleton";
@@ -24,6 +24,13 @@ export default function ExplorePage() {
   const locale = useLocale();
   const { campaigns, isLoading, error, refetch } = useCampaigns();
   const [activeCategory, setActiveCategory] = useState<"all" | Category>("all");
+
+  // Scroll back to the top of the list whenever the category filter changes,
+  // so switching categories doesn't leave the user stranded deep in the
+  // previous (now stale) scroll position.
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [activeCategory]);
 
   const categories = useMemo(() => {
     const seen = new Set(campaigns.map((c) => c.category));
