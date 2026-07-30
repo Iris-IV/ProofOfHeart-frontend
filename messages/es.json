@@ -556,5 +556,23 @@
     "totalXlm": "{amount} XLM en Total",
     "nextXlm": "Siguiente: {amount} XLM",
     "earnedBadges": "Insignias Ganadas"
+  },
+  "Notifications": {
+    "title": "Notificaciones",
+    "unreadLabel": "{count} notificaciones sin leer",
+    "markAllRead": "Marcar todas leídas",
+    "noNotifications": "Aún no hay notificaciones.",
+    "connectWallet": "Conecta tu wallet para ver notificaciones.",
+    "viewDetails": "Ver detalles",
+    "justNow": "ahora",
+    "mAgo": "hace {count} min",
+    "hAgo": "hace {count} h",
+    "dAgo": "hace {count} d",
+    "settingsAriaLabel": "Configuración de notificaciones",
+    "settingsTitle": "Preferencias de Notificación",
+    "prefContributions": "Confirmaciones de contribución",
+    "prefVerified": "Campaña verificada",
+    "prefRefundAvailable": "Reembolso disponible",
+    "prefRevenueDeposited": "Depósitos de ingresos"
   }
 }

@@ -556,5 +556,23 @@
     "totalXlm": "{amount} XLM Total",
     "nextXlm": "Next: {amount} XLM",
     "earnedBadges": "Earned Badges"
+  },
+  "Notifications": {
+    "title": "Notifications",
+    "unreadLabel": "{count} unread notifications",
+    "markAllRead": "Mark all read",
+    "noNotifications": "No notifications yet.",
+    "connectWallet": "Connect wallet to see notifications.",
+    "viewDetails": "View details",
+    "justNow": "just now",
+    "mAgo": "{count}m ago",
+    "hAgo": "{count}h ago",
+    "dAgo": "{count}d ago",
+    "settingsAriaLabel": "Notification settings",
+    "settingsTitle": "Notification Preferences",
+    "prefContributions": "Contribution confirmations",
+    "prefVerified": "Campaign verified",
+    "prefRefundAvailable": "Refund available",
+    "prefRevenueDeposited": "Revenue deposits"
   }
 }
