@@ -13,16 +13,27 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
+      # Fall back to HEAD~1 if base.sha is unavailable (e.g. force-pushed base).
       - name: Validate commit messages
-        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to HEAD
+        shell: bash
+        run: |
+          FROM="${{ github.event.pull_request.base.sha }}"
+          if [ -z "$FROM" ]; then
+            FROM="HEAD~1"
+          fi
+          npx commitlint --from "$FROM" --to HEAD
 
   pr-title:
     name: Validate PR title
@@ -30,15 +41,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
+      # Pass the PR title via env var to avoid shell injection from special chars.
       - name: Validate PR title
-        continue-on-error: true
+        shell: bash
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          npx commitlint --config commitlint.config.js <<< "${{ github.event.pull_request.title }}"
+          echo "$PR_TITLE" | npx commitlint --config commitlint.config.js

@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { calculateGamificationProfile } from '../lib/gamification';
+import React from "react";
+import { calculateGamificationProfile } from "../lib/gamification";
 
 interface DonatorBadgesProps {
   totalDonated: number;
@@ -25,14 +25,10 @@ export function DonatorBadges({
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">
               Level {profile.levelNumber}: {profile.level}
             </span>
-            <span className="text-xs text-slate-400">
-              {profile.totalDonated} XLM Total
-            </span>
+            <span className="text-xs text-slate-400">{profile.totalDonated} XLM Total</span>
           </div>
           {profile.progressPercent < 100 && (
-            <span className="text-xs text-slate-400">
-              Next: {profile.nextLevelThreshold} XLM
-            </span>
+            <span className="text-xs text-slate-400">Next: {profile.nextLevelThreshold} XLM</span>
           )}
         </div>
 
@@ -57,14 +53,14 @@ export function DonatorBadges({
               className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all ${
                 badge.unlocked
                   ? `${badge.color} shadow-sm`
-                  : 'bg-slate-900/40 text-slate-500 border-slate-800/60 opacity-60'
+                  : "bg-slate-900/40 text-slate-500 border-slate-800/60 opacity-60"
               }`}
             >
               <span className="text-xl leading-none">{badge.icon}</span>
               <div className="flex flex-col min-w-0">
                 <span className="text-xs font-semibold truncate">{badge.name}</span>
                 <span className="text-[10px] text-slate-400 truncate">
-                  {badge.unlocked ? badge.description : 'Locked'}
+                  {badge.unlocked ? badge.description : "Locked"}
                 </span>
               </div>
             </div>

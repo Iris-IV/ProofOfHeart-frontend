@@ -17,24 +17,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Restore Next.js build cache
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/.next/cache
-          key: ${{ runner.os }}-nextjs-bundle-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.ts','**/*.tsx') }}
+          key: ${{ runner.os }}-nextjs-bundle-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**/*.ts','**/*.tsx') }}
           restore-keys: |
-            ${{ runner.os }}-nextjs-bundle-${{ hashFiles('**/package-lock.json') }}-
+            ${{ runner.os }}-nextjs-bundle-${{ hashFiles('**/pnpm-lock.yaml') }}-
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build (standalone)
-        run: npm run build
+        run: pnpm run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
           NEXT_PUBLIC_USE_MOCKS: false
