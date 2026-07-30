@@ -55,7 +55,9 @@ function makeCampaign(overrides: Partial<Campaign> = {}): Campaign {
   };
 }
 
-function makeContribution(overrides: Partial<ContributionHistoryItem> = {}): ContributionHistoryItem {
+function makeContribution(
+  overrides: Partial<ContributionHistoryItem> = {},
+): ContributionHistoryItem {
   const campaign = overrides.campaign ?? makeCampaign();
   return {
     campaign,
