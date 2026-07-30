@@ -45,7 +45,7 @@ test.describe("Core User Flow Smoke Test", () => {
     // Step 1: Navigate to Home page
     await page.goto("/", { waitUntil: "networkidle" });
     await page.waitForLoadState("domcontentloaded");
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/(en|es)?\/?$/);
     await page.goto("/");
     await expect(page).toHaveURL(/\/(en|es)?\/?$/);
     await expect(

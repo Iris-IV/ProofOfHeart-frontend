@@ -497,5 +497,25 @@
     "createdCampaigns": "Created Campaigns",
     "noSavedCampaigns": "No saved campaigns yet.",
     "browseCauses": "Browse causes"
+  },
+  "Onboarding": {
+    "tourLabel": "Welcome tour",
+    "skip": "Skip",
+    "back": "Back",
+    "next": "Next",
+    "done": "Get started",
+    "stepProgress": "Step {current} of {total}",
+    "step_connect_icon": "🔗",
+    "step_connect_title": "Connect your wallet",
+    "step_connect_body": "Connect your Stellar-compatible wallet to start contributing and voting.",
+    "step_chooseCause_icon": "🌟",
+    "step_chooseCause_title": "Choose a cause",
+    "step_chooseCause_body": "Explore verified community causes that align with your values.",
+    "step_contribute_icon": "💛",
+    "step_contribute_title": "Contribute",
+    "step_contribute_body": "Donate XLM directly on-chain with zero hidden fees.",
+    "step_confirm_icon": "✅",
+    "step_confirm_title": "Confirm & track",
+    "step_confirm_body": "Track your impact and transaction status on the Stellar network."
   }
 }
