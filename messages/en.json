@@ -539,6 +539,24 @@
     "badge_heart_champion_desc": "Reached Diamond level (5,000+ XLM donated)",
     "locked": "Locked"
   },
+  "Notifications": {
+    "title": "Notifications",
+    "unreadLabel": "{count} unread notifications",
+    "markAllRead": "Mark all read",
+    "noNotifications": "No notifications yet",
+    "connectWallet": "Connect your wallet to see notifications",
+    "viewDetails": "View details",
+    "justNow": "Just now",
+    "mAgo": "{count}m ago",
+    "hAgo": "{count}h ago",
+    "dAgo": "{count}d ago",
+    "settingsAriaLabel": "Notification settings",
+    "settingsTitle": "Notification settings",
+    "prefContributions": "Contributions",
+    "prefVerified": "Campaign verification",
+    "prefRefundAvailable": "Refunds available",
+    "prefRevenueDeposited": "Revenue deposits"
+  },
   "ContributorLeaderboard": {
     "title": "Top Supporters",
     "subtitle": "Leaderboard",

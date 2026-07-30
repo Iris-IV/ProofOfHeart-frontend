@@ -539,6 +539,24 @@
     "badge_heart_champion_desc": "Alcanzó el nivel Diamante (5,000+ XLM donados)",
     "locked": "Bloqueado"
   },
+  "Notifications": {
+    "title": "Notificaciones",
+    "unreadLabel": "{count} notificaciones sin leer",
+    "markAllRead": "Marcar todas como leidas",
+    "noNotifications": "Aun no hay notificaciones",
+    "connectWallet": "Conecta tu billetera para ver notificaciones",
+    "viewDetails": "Ver detalles",
+    "justNow": "Ahora mismo",
+    "mAgo": "Hace {count} min",
+    "hAgo": "Hace {count} h",
+    "dAgo": "Hace {count} d",
+    "settingsAriaLabel": "Configuracion de notificaciones",
+    "settingsTitle": "Configuracion de notificaciones",
+    "prefContributions": "Contribuciones",
+    "prefVerified": "Verificacion de campana",
+    "prefRefundAvailable": "Reembolsos disponibles",
+    "prefRevenueDeposited": "Depositos de ingresos"
+  },
   "ContributorLeaderboard": {
     "title": "Principales Apoyadores",
     "subtitle": "Tabla de clasificación",
