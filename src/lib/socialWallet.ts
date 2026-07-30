@@ -218,4 +218,8 @@ export const socialSigner: WalletSigner = {
     tx.sign(keypair);
     return tx.toXDR();
   },
+  async signMessage(message) {
+    if (!keypair) throw new Error("Social wallet is not connected.");
+    return keypair.sign(Buffer.from(message, "utf8")).toString("base64");
+  },
 };

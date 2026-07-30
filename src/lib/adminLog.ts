@@ -1,3 +1,9 @@
+import {
+  ADMIN_ADDRESS_HEADER,
+  ADMIN_SIGNATURE_HEADER,
+  ADMIN_TIMESTAMP_HEADER,
+  buildAdminChallenge,
+} from "./adminAuth";
 import { normalizeAddress } from "./stellar";
 import {
   readAllEntries,
@@ -5,6 +11,7 @@ import {
   appendTimestamp,
   filterAndSortByTimestamp,
 } from "./logUtil";
+import { signWalletMessage } from "./walletSigner";
 
 export type AdminAuditAction =
   | "verify_campaign"
@@ -25,15 +32,55 @@ const STORAGE_KEY = "proof_of_heart_admin_audit_log_v1";
 const MAX_ENTRIES = 500;
 const API_ENDPOINT = "/api/admin-audit-log";
 
-async function readApiEntries(adminAddress?: string): Promise<AdminAuditLogEntry[]> {
-  const url = new URL(API_ENDPOINT, window.location.origin);
-  if (adminAddress) {
-    url.searchParams.set("adminAddress", adminAddress);
+/**
+ * A signed challenge is reused for a short spell so a run of admin actions does
+ * not put a wallet prompt in front of the user for every request. Kept well
+ * inside the freshness window the route enforces.
+ */
+const CHALLENGE_REUSE_MS = 60_000;
+
+const headerCache = new Map<string, { headers: Record<string, string>; timestamp: number }>();
+
+/**
+ * Proves to the API route that the caller controls `adminAddress` by signing a
+ * challenge bound to this exact request. The route rejects anything unsigned,
+ * so these headers are mandatory rather than best-effort.
+ */
+async function adminAuthHeaders(
+  adminAddress: string,
+  method: string,
+): Promise<Record<string, string>> {
+  const cacheKey = `${normalizeAddress(adminAddress)}:${method}`;
+  const cached = headerCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CHALLENGE_REUSE_MS) {
+    return cached.headers;
   }
+
+  const timestamp = Date.now();
+  const signature = await signWalletMessage(
+    buildAdminChallenge({ address: adminAddress, method, path: API_ENDPOINT, timestamp }),
+  );
+
+  const headers = {
+    [ADMIN_ADDRESS_HEADER]: adminAddress,
+    [ADMIN_TIMESTAMP_HEADER]: String(timestamp),
+    [ADMIN_SIGNATURE_HEADER]: signature,
+  };
+
+  headerCache.set(cacheKey, { headers, timestamp });
+  return headers;
+}
+
+async function readApiEntries(adminAddress: string): Promise<AdminAuditLogEntry[]> {
+  const url = new URL(API_ENDPOINT, window.location.origin);
+  url.searchParams.set("adminAddress", adminAddress);
 
   const response = await fetch(url.toString(), {
     method: "GET",
-    headers: { Accept: "application/json" },
+    headers: {
+      Accept: "application/json",
+      ...(await adminAuthHeaders(adminAddress, "GET")),
+    },
   });
 
   if (!response.ok) {
@@ -47,7 +94,10 @@ async function readApiEntries(adminAddress?: string): Promise<AdminAuditLogEntry
 async function persistApiEntry(entry: AdminAuditLogEntry): Promise<void> {
   const response = await fetch(API_ENDPOINT, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(await adminAuthHeaders(entry.adminAddress, "POST")),
+    },
     body: JSON.stringify(entry),
   });
 
