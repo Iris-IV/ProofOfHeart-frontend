@@ -102,7 +102,14 @@ function walletActionToNotification(
   }
 }
 
-async function fetchRemoteNotifications(walletAddress: string): Promise<AppNotification[] | null> {
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
+}
+
+async function fetchRemoteNotifications(
+  walletAddress: string,
+  signal?: AbortSignal,
+): Promise<AppNotification[] | null> {
   try {
     const url = new URL(REMOTE_FEED_ENDPOINT, window.location.origin);
     url.searchParams.set("walletAddress", walletAddress);
@@ -112,6 +119,7 @@ async function fetchRemoteNotifications(walletAddress: string): Promise<AppNotif
         Accept: "application/json",
       },
       cache: "no-store",
+      signal,
     });
 
     if (!response.ok) {
@@ -127,7 +135,11 @@ async function fetchRemoteNotifications(walletAddress: string): Promise<AppNotif
         ...item,
         read: Boolean(item.read),
       }));
-  } catch {
+  } catch (error) {
+    // Propagate aborts so callers can skip setState instead of falling back to local data.
+    if (signal?.aborted || isAbortError(error)) {
+      throw error instanceof Error ? error : new DOMException("Aborted", "AbortError");
+    }
     return null;
   }
 }
@@ -151,11 +163,21 @@ function deriveLocalNotifications(walletAddress: string): AppNotification[] {
     .filter(Boolean) as AppNotification[];
 }
 
-export async function fetchNotifications(walletAddress: string): Promise<AppNotification[]> {
+export async function fetchNotifications(
+  walletAddress: string,
+  options?: { signal?: AbortSignal },
+): Promise<AppNotification[]> {
   const normalizedWallet = normalizeAddress(walletAddress);
   if (!normalizedWallet) return [];
 
-  const remoteNotifications = await fetchRemoteNotifications(normalizedWallet);
+  if (options?.signal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
+
+  const remoteNotifications = await fetchRemoteNotifications(
+    normalizedWallet,
+    options?.signal,
+  );
   const notifications = remoteNotifications ?? deriveLocalNotifications(normalizedWallet);
   const readIds = readNotificationIds(normalizedWallet);
 
