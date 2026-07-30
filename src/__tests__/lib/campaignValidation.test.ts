@@ -1,5 +1,4 @@
-import { validateForm, type FormErrorKeys } from "@/lib/campaignValidation";
-import { Category } from "@/types";
+import { validateForm } from "@/lib/campaignValidation";
 
 describe("validateForm", () => {
   const valid = {
