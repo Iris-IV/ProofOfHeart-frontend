@@ -92,16 +92,35 @@ export default function CreateCampaignPage() {
       milestones,
     });
   }, [
-    title, description, descriptionEs, creatorEmail, fundingGoal, durationDays,
-    category, hasRevenueSharing, revenueSharePercentage, tags, coverImageUrl, milestones,
+    title,
+    description,
+    descriptionEs,
+    creatorEmail,
+    fundingGoal,
+    durationDays,
+    category,
+    hasRevenueSharing,
+    revenueSharePercentage,
+    tags,
+    coverImageUrl,
+    milestones,
     saveDraft,
   ]);
 
   const handleDiscardDraft = () => {
     discardDraft({
-      setTitle, setDescription, setDescriptionEs, setCreatorEmail,
-      setFundingGoal, setDurationDays, setCategory, setHasRevenueSharing,
-      setRevenueSharePercentage, setTags, setCoverImageUrl, setMilestones,
+      setTitle,
+      setDescription,
+      setDescriptionEs,
+      setCreatorEmail,
+      setFundingGoal,
+      setDurationDays,
+      setCategory,
+      setHasRevenueSharing,
+      setRevenueSharePercentage,
+      setTags,
+      setCoverImageUrl,
+      setMilestones,
     });
   };
 
@@ -215,8 +234,15 @@ export default function CreateCampaignPage() {
     setIsSubmitting(false);
     setTxPhase(null);
   }, [
-    reviewData, isWalletConnected, publicKey, showError, showSuccess, t,
-    notifyEmailOptIn, clearDraft, router,
+    reviewData,
+    isWalletConnected,
+    publicKey,
+    showError,
+    showSuccess,
+    t,
+    notifyEmailOptIn,
+    clearDraft,
+    router,
   ]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -228,8 +254,15 @@ export default function CreateCampaignPage() {
     }
 
     const keys = validateForm(
-      title, description, descriptionEs, creatorEmail, fundingGoal,
-      durationDays, hasRevenueSharing, revenueSharePercentage, coverImageUrl,
+      title,
+      description,
+      descriptionEs,
+      creatorEmail,
+      fundingGoal,
+      durationDays,
+      hasRevenueSharing,
+      revenueSharePercentage,
+      coverImageUrl,
     );
 
     if (Object.keys(keys).length > 0) {
