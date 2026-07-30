@@ -19,3 +19,14 @@ jest.mock("next-intl", () => ({
     values?.count === 1 ? `${key}_one` : key,
   useLocale: () => "en",
 }));
+
+// react-markdown ships ESM this Jest setup does not transform, so the markdown
+// renderer is stubbed globally.
+jest.mock("@/components/SafeMarkdown", () => ({
+  __esModule: true,
+  default: ({ children, className }: { children: string; className?: string }) => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const React = require("react");
+    return React.createElement("div", { "data-testid": "safe-markdown", className }, children);
+  }
+}));

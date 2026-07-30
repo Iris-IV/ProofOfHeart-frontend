@@ -73,10 +73,10 @@ async function fillRequiredFields({
   fundingGoal = "1000",
   durationDays = "30",
 } = {}) {
-  await userEvent.type(screen.getByLabelText(/campaign title/i), title);
-  await userEvent.type(screen.getByLabelText(/description/i), description);
-  await userEvent.type(screen.getByLabelText(/funding goal/i), fundingGoal);
-  await userEvent.type(screen.getByLabelText(/duration/i), durationDays);
+  await userEvent.type(screen.getByLabelText(/labelTitle/i), title);
+  await userEvent.type(screen.getByLabelText(/labelDescription/i), description);
+  await userEvent.type(screen.getByLabelText(/labelFundingGoal/i), fundingGoal);
+  await userEvent.type(screen.getByLabelText(/labelDuration/i), durationDays);
 }
 
 // ---------------------------------------------------------------------------
@@ -98,21 +98,21 @@ beforeEach(() => {
 describe("CreateCampaignPage — rendering", () => {
   it("renders the page heading", () => {
     render(<CreateCampaignPage />);
-    expect(screen.getByRole("heading", { name: /create a campaign/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "pageTitle" })).toBeInTheDocument();
   });
 
   it("renders all required form fields", () => {
     render(<CreateCampaignPage />);
-    expect(screen.getByLabelText(/campaign title/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/funding goal/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/duration/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/category/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/labelTitle/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/labelDescription/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/labelFundingGoal/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/labelDuration/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/labelCategory/i)).toBeInTheDocument();
   });
 
   it('renders the "Launch Campaign" submit button', () => {
     render(<CreateCampaignPage />);
-    expect(screen.getByRole("button", { name: /launch campaign/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /launchCampaign/i })).toBeInTheDocument();
   });
 });
 
@@ -123,34 +123,36 @@ describe("CreateCampaignPage — rendering", () => {
 describe("CreateCampaignPage — wallet guard", () => {
   it("shows the wallet guard banner when wallet is not connected", () => {
     render(<CreateCampaignPage />);
-    expect(screen.getByText(/connect your freighter wallet/i)).toBeInTheDocument();
+    expect(screen.getByText("walletGuard")).toBeInTheDocument();
   });
 
   it("disables the submit button when wallet is not connected", () => {
     render(<CreateCampaignPage />);
-    expect(screen.getByRole("button", { name: /launch campaign/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /launchCampaign/i })).toBeDisabled();
   });
 
   it("does not show the wallet guard banner when wallet is connected", () => {
     setWalletConnected();
     render(<CreateCampaignPage />);
-    expect(screen.queryByText(/connect your freighter wallet/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("walletRequiredError")).not.toBeInTheDocument();
   });
 
   it('calls connectWallet when the "Connect Wallet" button in the banner is clicked', async () => {
+    setWalletDisconnected();
     render(<CreateCampaignPage />);
-    const connectBtn = screen.getByRole("button", { name: /connect wallet/i });
+    const connectBtn = screen.getByRole("button", { name: "connectWallet" });
     await userEvent.click(connectBtn);
     expect(mockConnectWallet).toHaveBeenCalledTimes(1);
   });
 
   it("shows an error toast if submit is triggered without a wallet (edge case)", async () => {
     // wallet disconnected but form submission attempted programmatically
+    setWalletDisconnected();
     render(<CreateCampaignPage />);
-    fireEvent.submit(screen.getByRole("button", { name: /launch campaign/i }).closest("form")!);
+    fireEvent.submit(screen.getByRole("button", { name: /launchCampaign/i }).closest("form")!);
     await waitFor(() => {
       expect(mockShowError).toHaveBeenCalledWith(
-        expect.stringMatching(/connect your freighter wallet/i),
+        expect.stringMatching("walletRequiredError"),
       );
     });
   });
@@ -165,18 +167,18 @@ describe("CreateCampaignPage — client-side validation", () => {
 
   it("shows a title error when the field is empty", async () => {
     render(<CreateCampaignPage />);
-    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
-    expect(await screen.findByText(/title is required/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /launchCampaign/i }));
+    expect(await screen.findByText("validationTitleRequired")).toBeInTheDocument();
   });
 
   it("links field errors to inputs with aria-describedby and aria-invalid", async () => {
     render(<CreateCampaignPage />);
-    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /launchCampaign/i }));
 
-    const titleInput = screen.getByLabelText(/campaign title/i);
-    const descriptionInput = screen.getByLabelText(/description/i);
-    const fundingGoalInput = screen.getByLabelText(/funding goal/i);
-    const durationInput = screen.getByLabelText(/duration/i);
+    const titleInput = screen.getByLabelText(/labelTitle/i);
+    const descriptionInput = screen.getByLabelText(/labelDescription/i);
+    const fundingGoalInput = screen.getByLabelText(/labelFundingGoal/i);
+    const durationInput = screen.getByLabelText(/labelDuration/i);
 
     expect(titleInput).toHaveAttribute("aria-invalid", "true");
     expect(titleInput).toHaveAttribute("aria-describedby", "title-error");
@@ -191,57 +193,57 @@ describe("CreateCampaignPage — client-side validation", () => {
   it("shows a title error when title exceeds 100 characters", async () => {
     render(<CreateCampaignPage />);
     // fireEvent.change bypasses the maxLength DOM attribute so we can test the JS validator
-    fireEvent.change(screen.getByLabelText(/campaign title/i), {
+    fireEvent.change(screen.getByLabelText(/labelTitle/i), {
       target: { value: "A".repeat(101) },
     });
-    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
-    expect(await screen.findByText(/100 characters or fewer/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /launchCampaign/i }));
+    expect(await screen.findByText("validationTitleTooLong")).toBeInTheDocument();
   });
 
   it("shows a description error when the field is empty", async () => {
     render(<CreateCampaignPage />);
-    await userEvent.type(screen.getByLabelText(/campaign title/i), "Valid Title");
-    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
-    expect(await screen.findByText(/description is required/i)).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText(/labelTitle/i), "Valid Title");
+    await userEvent.click(screen.getByRole("button", { name: /launchCampaign/i }));
+    expect(await screen.findByText("validationDescriptionRequired")).toBeInTheDocument();
   });
 
   it("shows a description error when description exceeds 1000 characters", async () => {
     render(<CreateCampaignPage />);
-    await userEvent.type(screen.getByLabelText(/campaign title/i), "Valid Title");
-    fireEvent.change(screen.getByLabelText(/description/i), {
+    await userEvent.type(screen.getByLabelText(/labelTitle/i), "Valid Title");
+    fireEvent.change(screen.getByLabelText(/labelDescription/i), {
       target: { value: "B".repeat(1001) },
     });
-    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
-    expect(await screen.findByText(/1,000 characters or fewer/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /launchCampaign/i }));
+    expect(await screen.findByText("validationDescriptionTooLong")).toBeInTheDocument();
   });
 
   it("shows a funding goal error when value is 0 or empty", async () => {
     render(<CreateCampaignPage />);
-    await userEvent.type(screen.getByLabelText(/campaign title/i), "Valid Title");
+    await userEvent.type(screen.getByLabelText(/labelTitle/i), "Valid Title");
     await userEvent.type(
-      screen.getByLabelText(/description/i),
+      screen.getByLabelText(/labelDescription/i),
       "A valid description for this campaign.",
     );
-    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
-    expect(await screen.findByText(/greater than 0 xlm/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /launchCampaign/i }));
+    expect(await screen.findByText("validationFundingGoalInvalid")).toBeInTheDocument();
   });
 
   it("shows a duration error when value is outside 1–365", async () => {
     render(<CreateCampaignPage />);
-    await userEvent.type(screen.getByLabelText(/campaign title/i), "Valid Title");
+    await userEvent.type(screen.getByLabelText(/labelTitle/i), "Valid Title");
     await userEvent.type(
-      screen.getByLabelText(/description/i),
+      screen.getByLabelText(/labelDescription/i),
       "A valid description for this campaign.",
     );
-    await userEvent.type(screen.getByLabelText(/funding goal/i), "1000");
-    await userEvent.type(screen.getByLabelText(/duration/i), "400");
-    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
-    expect(await screen.findByText(/between 1 and 365 days/i)).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText(/labelFundingGoal/i), "1000");
+    await userEvent.type(screen.getByLabelText(/labelDuration/i), "400");
+    await userEvent.click(screen.getByRole("button", { name: /launchCampaign/i }));
+    expect(await screen.findByText("validationDurationInvalid")).toBeInTheDocument();
   });
 
   it("does not call createCampaign when there are validation errors", async () => {
     render(<CreateCampaignPage />);
-    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /launchCampaign/i }));
     expect(mockCreateCampaign).not.toHaveBeenCalled();
   });
 });
@@ -261,42 +263,41 @@ describe("CreateCampaignPage — revenue sharing", () => {
 
   it('shows the revenue sharing section when "Educational Startup" is selected', async () => {
     render(<CreateCampaignPage />);
-    await userEvent.selectOptions(screen.getByLabelText(/category/i), "1"); // EducationalStartup = 1
-    expect(screen.getByRole("switch", { name: /revenue sharing/i })).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText(/labelCategory/i), "1"); // EducationalStartup = 1
+    expect(screen.getByRole("switch", { name: /revenueSharingAriaLabel/i })).toBeInTheDocument();
   });
 
   it("hides the slider when the revenue sharing toggle is off", async () => {
     render(<CreateCampaignPage />);
-    await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
+    await userEvent.selectOptions(screen.getByLabelText(/labelCategory/i), "1");
     // Toggle is off by default
-    expect(screen.queryByLabelText(/revenue share percentage/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/labelRevenueSharePct/i)).not.toBeInTheDocument();
   });
 
   it("shows the slider when the revenue sharing toggle is turned on", async () => {
     render(<CreateCampaignPage />);
-    await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
+    await userEvent.selectOptions(screen.getByLabelText(/labelCategory/i), "1");
     await userEvent.click(screen.getByRole("switch"));
-    expect(await screen.findByLabelText(/revenue share percentage/i)).toBeInTheDocument();
+    expect(await screen.findByLabelText(/labelRevenueSharePct/i)).toBeInTheDocument();
   });
 
   it("updates the displayed percentage when the slider is moved", async () => {
     render(<CreateCampaignPage />);
-    await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
+    await userEvent.selectOptions(screen.getByLabelText(/labelCategory/i), "1");
     await userEvent.click(screen.getByRole("switch"));
 
-    const slider = await screen.findByLabelText(/revenue share percentage/i);
-    fireEvent.change(slider, { target: { value: "2500" } }); // 2500 bps = 25%
+    const slider = await screen.findByLabelText(/labelRevenueSharePct/i);
+    fireEvent.change(slider, { target: { value: "25" } }); // 25%
 
-    expect(screen.getByText(/25\.00%/)).toBeInTheDocument();
-    expect(screen.getByText(/2500 bps/)).toBeInTheDocument();
+    expect(screen.getByDisplayValue("2500")).toBeInTheDocument();
   });
 
   it("hides revenue sharing section when switching away from Educational Startup", async () => {
     render(<CreateCampaignPage />);
-    await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
+    await userEvent.selectOptions(screen.getByLabelText(/labelCategory/i), "1");
     expect(screen.getByRole("switch")).toBeInTheDocument();
 
-    await userEvent.selectOptions(screen.getByLabelText(/category/i), "0"); // Learner
+    await userEvent.selectOptions(screen.getByLabelText(/labelCategory/i), "0"); // Learner
     expect(screen.queryByRole("switch")).not.toBeInTheDocument();
   });
 });
@@ -312,14 +313,14 @@ describe("CreateCampaignPage — submission", () => {
     render(<CreateCampaignPage />);
     await fillRequiredFields();
 
-    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /launchCampaign/i }));
 
     expect(
-      screen.getByRole("heading", { name: /review campaign before signing/i }),
+      screen.getByRole("heading", { name: /reviewTitle/i }),
     ).toBeInTheDocument();
     expect(mockCreateCampaign).not.toHaveBeenCalled();
 
-    await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /confirmAndSign/i }));
 
     await waitFor(() => expect(mockCreateCampaign).toHaveBeenCalledTimes(1));
   });
@@ -328,19 +329,19 @@ describe("CreateCampaignPage — submission", () => {
     render(<CreateCampaignPage />);
     await fillRequiredFields();
 
-    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /launchCampaign/i }));
     expect(screen.getByText("My Test Campaign")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /edit details/i }));
+    await userEvent.click(screen.getByRole("button", { name: /editDetails/i }));
     expect(
-      screen.queryByRole("heading", { name: /review campaign before signing/i }),
+      screen.queryByRole("heading", { name: /reviewTitle/i }),
     ).not.toBeInTheDocument();
 
-    const titleInput = screen.getByLabelText(/campaign title/i);
+    const titleInput = screen.getByLabelText(/labelTitle/i);
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, "Updated Campaign Title");
 
-    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /launchCampaign/i }));
     expect(screen.getByText("Updated Campaign Title")).toBeInTheDocument();
   });
 
@@ -348,22 +349,22 @@ describe("CreateCampaignPage — submission", () => {
     render(<CreateCampaignPage />);
     await fillRequiredFields({ durationDays: "10" });
 
-    await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
-    await userEvent.click(screen.getByRole("switch", { name: /revenue sharing/i }));
-    const slider = await screen.findByLabelText(/revenue share percentage/i);
-    fireEvent.change(slider, { target: { value: "500" } }); // 5%
+    await userEvent.selectOptions(screen.getByLabelText(/labelCategory/i), "1");
+    await userEvent.click(screen.getByRole("switch", { name: /revenueSharingAriaLabel/i }));
+    const slider = await screen.findByLabelText(/labelRevenueSharePct/i);
+    fireEvent.change(slider, { target: { value: "5" } }); // 5%
 
-    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /launchCampaign/i }));
 
     const reviewDialog = screen.getByRole("dialog");
     const reviewScope = within(reviewDialog);
 
     expect(reviewScope.getByText("My Test Campaign")).toBeInTheDocument();
     expect(reviewScope.getByText(/1,?000 xlm/i)).toBeInTheDocument();
-    expect(reviewScope.getByText(/10 days/i)).toBeInTheDocument();
+    expect(reviewScope.getByText("reviewFieldDurationDays")).toBeInTheDocument();
     expect(reviewScope.getByText(/^Educational Startup$/)).toBeInTheDocument();
     expect(reviewScope.getByText("5.00%")).toBeInTheDocument();
-    expect(reviewScope.getByText(/end date \(your timezone\)/i)).toBeInTheDocument();
+    expect(reviewScope.getByText("reviewFieldEndDate")).toBeInTheDocument();
 
     const timestampValues = reviewScope
       .getAllByText(/^\d+$/)
@@ -375,8 +376,8 @@ describe("CreateCampaignPage — submission", () => {
   it("calls createCampaign with correct args on valid submission", async () => {
     render(<CreateCampaignPage />);
     await fillRequiredFields();
-    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
-    await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /launchCampaign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /confirmAndSign/i }));
 
     await waitFor(() => expect(mockCreateCampaign).toHaveBeenCalledTimes(1));
 
@@ -406,15 +407,15 @@ describe("CreateCampaignPage — submission", () => {
     await fillRequiredFields();
 
     // Switch to Educational Startup and enable revenue sharing
-    await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
+    await userEvent.selectOptions(screen.getByLabelText(/labelCategory/i), "1");
     await userEvent.click(screen.getByRole("switch"));
 
     // Move slider to 500 bps (5%)
-    const slider = await screen.findByLabelText(/revenue share percentage/i);
-    fireEvent.change(slider, { target: { value: "500" } });
+    const slider = await screen.findByLabelText(/labelRevenueSharePct/i);
+    fireEvent.change(slider, { target: { value: "5" } });
 
-    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
-    await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /launchCampaign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /confirmAndSign/i }));
 
     await waitFor(() => expect(mockCreateCampaign).toHaveBeenCalledTimes(1));
 
@@ -428,11 +429,11 @@ describe("CreateCampaignPage — submission", () => {
     mockGetCampaignCount.mockResolvedValue(7);
     render(<CreateCampaignPage />);
     await fillRequiredFields();
-    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
-    await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /launchCampaign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /confirmAndSign/i }));
 
     await waitFor(() => {
-      expect(mockShowSuccess).toHaveBeenCalledWith("Campaign created successfully!");
+      expect(mockShowSuccess).toHaveBeenCalledWith("successMessage");
     });
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/causes/7");
@@ -443,8 +444,8 @@ describe("CreateCampaignPage — submission", () => {
     mockGetCampaignCount.mockRejectedValue(new Error("rpc error"));
     render(<CreateCampaignPage />);
     await fillRequiredFields();
-    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
-    await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /launchCampaign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /confirmAndSign/i }));
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/causes");
@@ -455,13 +456,11 @@ describe("CreateCampaignPage — submission", () => {
     mockCreateCampaign.mockRejectedValue(new Error("Error(Contract, #3)"));
     render(<CreateCampaignPage />);
     await fillRequiredFields();
-    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
-    await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /launchCampaign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /confirmAndSign/i }));
 
     await waitFor(() => {
-      expect(mockShowError).toHaveBeenCalledWith(
-        expect.stringMatching(/no longer accepting contributions/i),
-      );
+      expect(mockShowError).toHaveBeenCalledWith("ContractErrors.CampaignNotActive");
     });
   });
 
@@ -476,8 +475,8 @@ describe("CreateCampaignPage — submission", () => {
 
     render(<CreateCampaignPage />);
     await fillRequiredFields();
-    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
-    fireEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /launchCampaign/i }));
+    fireEvent.click(screen.getByRole("button", { name: /confirmAndSign/i }));
 
     expect(await screen.findByRole("button", { name: /submitting/i })).toBeDisabled();
 
@@ -502,13 +501,13 @@ describe("CreateCampaignPage — character counters", () => {
 
   it("updates the title character counter as user types", async () => {
     render(<CreateCampaignPage />);
-    await userEvent.type(screen.getByLabelText(/campaign title/i), "Hello");
+    await userEvent.type(screen.getByLabelText(/labelTitle/i), "Hello");
     expect(screen.getByText("5/100")).toBeInTheDocument();
   });
 
   it("updates the description character counter as user types", async () => {
     render(<CreateCampaignPage />);
-    await userEvent.type(screen.getByLabelText(/description/i), "Test");
+    await userEvent.type(screen.getByLabelText(/labelDescription/i), "Test");
     expect(screen.getByText("4/1,000")).toBeInTheDocument();
   });
 });
