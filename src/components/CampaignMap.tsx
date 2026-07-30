@@ -5,7 +5,7 @@ import L from "leaflet";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { Campaign } from "@/types";
 import { Link } from "@/i18n/routing";
-import { useMemo } from "react";
+import { useMemo, memo } from "react";
 
 // Fix Leaflet default marker icon (broken in bundlers)
 // https://github.com/Leaflet/Leaflet/issues/4968
@@ -64,7 +64,13 @@ interface CampaignMapProps {
   campaigns: Campaign[];
 }
 
-export default function CampaignMap({ campaigns }: CampaignMapProps) {
+/**
+ * Manual verification note:
+ * Wrapped in React.memo to ensure that the map instance is only updated when the `campaigns` 
+ * prop changes (shallow comparison). This prevents expensive teardown and rebuild of the 
+ * Leaflet map on unrelated parent state changes.
+ */
+const CampaignMap = memo(function CampaignMap({ campaigns }: CampaignMapProps) {
   const validCampaigns = useMemo(() => filterByValidCoordinates(campaigns), [campaigns]);
 
   const center = useMemo<[number, number]>(() => {
@@ -118,4 +124,6 @@ export default function CampaignMap({ campaigns }: CampaignMapProps) {
       </MapContainer>
     </div>
   );
-}
+});
+
+export default CampaignMap;
