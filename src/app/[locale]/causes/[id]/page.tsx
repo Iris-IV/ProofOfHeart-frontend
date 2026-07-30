@@ -19,10 +19,15 @@ export async function generateMetadata({ params }: Props) {
     }
 
     const description = campaign.description.slice(0, 160);
-    const imageUrl = campaign.cover_image_url
-      ? absoluteUrl(campaign.cover_image_url)
-      : absoluteUrl(`/${locale}/causes/${id}/opengraph-image`);
 
+    // #642 — `images` is deliberately omitted here. It used to point at
+    // `campaign.cover_image_url` while declaring a hard-coded 1200x630, but cover
+    // images are arbitrary user uploads on IPFS/Arweave: wrong aspect ratio, often
+    // SVG or WebP, and behind a gateway Apple's scraper frequently cannot fetch
+    // within its timeout. iMessage drops the preview when the bytes disagree with
+    // the declared dimensions. Letting the sibling `opengraph-image.tsx` /
+    // `twitter-image.tsx` conventions supply the tags guarantees a self-hosted
+    // 1200x630 PNG with matching `og:image:width`/`height`/`type`.
     return {
       title: `${campaign.title} | ProofOfHeart`,
       description,
@@ -31,25 +36,17 @@ export async function generateMetadata({ params }: Props) {
         description,
         type: "website",
         siteName: "ProofOfHeart",
+        locale,
         url: absoluteUrl(`/${locale}/causes/${id}`),
-        images: [
-          {
-            url: imageUrl,
-            width: 1200,
-            height: 630,
-            alt: campaign.title,
-          },
-        ],
       },
       twitter: {
         card: "summary_large_image",
         title: campaign.title,
         description,
-        images: [imageUrl],
       },
       alternates: buildAlternates(`/causes/${id}`, locale),
     };
-  } catch (error) {
+  } catch {
     return {
       title: "Campaign | ProofOfHeart",
       alternates: buildAlternates(`/causes/${id}`, locale),

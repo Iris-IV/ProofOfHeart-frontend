@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useMemo, useState, useCallback } from "react";
+import { Download } from "lucide-react";
 import { claimRefund, claimRevenue } from "../lib/contractClient";
 import { getStellarExplorerTxUrl } from "../lib/stellarExplorer";
 import { useContributions } from "../hooks/useContributions";
 import { stroopsToXlmNumber } from "../lib/stellarAmount";
 import { useToast } from "./ToastProvider";
 import { parseContractError } from "../utils/contractErrors";
+import { exportContributionHistoryCsv } from "../utils/exportCsv";
 
 interface MyContributionsSectionProps {
   walletAddress: string;
@@ -199,6 +201,16 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-xl font-semibold">My Contributions</h2>
         <div className="flex items-center gap-3">
+          {contributions.length > 0 && (
+            <button
+              onClick={() => exportContributionHistoryCsv(contributions, walletAddress)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300 transition hover:bg-zinc-100 dark:hover:bg-zinc-700"
+              aria-label="Export contribution history as CSV"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span>Export CSV</span>
+            </button>
+          )}
           {claimableCount > 1 && (
             <button
               onClick={handleClaimAll}

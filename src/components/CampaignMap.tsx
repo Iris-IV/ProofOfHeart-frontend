@@ -21,14 +21,34 @@ const defaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = defaultIcon;
 
+/** Geographic bounds of a WGS-84 coordinate. */
+export const LATITUDE_BOUNDS = { min: -90, max: 90 } as const;
+export const LONGITUDE_BOUNDS = { min: -180, max: 180 } as const;
+
+/**
+ * True when a campaign carries coordinates Leaflet can actually project.
+ *
+ * Presence and finiteness are not enough: Leaflet's Mercator projection blows
+ * up on out-of-range latitudes (|lat| >= 90 projects to ±Infinity, which
+ * throws inside `MapContainer` and takes the whole page down), and a longitude
+ * outside ±180 places a marker off the world. Bad data from the contract or a
+ * mistyped form entry therefore has to be rejected here, before it reaches
+ * the map.
+ */
 export function hasValidCoordinates(
   campaign: Campaign,
 ): campaign is Campaign & { latitude: number; longitude: number } {
+  const { latitude, longitude } = campaign;
+
   return (
-    campaign.latitude != null &&
-    campaign.longitude != null &&
-    Number.isFinite(campaign.latitude) &&
-    Number.isFinite(campaign.longitude)
+    latitude != null &&
+    longitude != null &&
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    latitude >= LATITUDE_BOUNDS.min &&
+    latitude <= LATITUDE_BOUNDS.max &&
+    longitude >= LONGITUDE_BOUNDS.min &&
+    longitude <= LONGITUDE_BOUNDS.max
   );
 }
 

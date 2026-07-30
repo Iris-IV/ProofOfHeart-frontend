@@ -32,6 +32,7 @@ export default function Navbar() {
     connectWallet,
     disconnectWallet,
     isLoading,
+    socialProfile,
   } = useWallet();
   const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
@@ -238,7 +239,10 @@ export default function Navbar() {
                 </Link>
                 <div className="flex flex-col items-end">
                   <span className="hidden lg:block text-[10px] uppercase tracking-wider font-bold text-zinc-400 dark:text-zinc-500 leading-none mb-1">
-                    Connected
+                    {/* #649 — Social users recognise their account name, not a G… address. */}
+                    {socialProfile?.name
+                      ? t("signedInAs", { name: socialProfile.name })
+                      : "Connected"}
                   </span>
                   <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-mono font-bold border border-blue-100 dark:border-blue-800">
                     {formatAddress(publicKey!)}

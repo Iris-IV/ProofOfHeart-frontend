@@ -2,7 +2,9 @@ export type WalletTransactionAction =
   | "contribute"
   | "claim_refund"
   | "claim_revenue"
+  | "claim_reserve"
   | "deposit_revenue"
+  | "withdraw"
   | "vote";
 
 export interface WalletTransactionLogEntry {

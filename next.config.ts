@@ -2,6 +2,7 @@ import path from "node:path";
 import createNextIntlPlugin from "next-intl/plugin";
 import type { NextConfig } from "next";
 import withBundleAnalyzer from "@next/bundle-analyzer";
+import { getThirdPartyScriptOrigins } from "./src/lib/thirdParty";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const withAnalyzer = withBundleAnalyzer({
@@ -72,19 +73,37 @@ const nextConfig: NextConfig = {
     ];
   },
   async headers() {
+    // #657 — Derived from the same module that `ThirdPartyScripts` renders from,
+    // so a newly configured analytics or support-widget origin can never be
+    // blocked by a stale hand-maintained allow-list. Empty when nothing is
+    // configured, which keeps the default policy exactly as tight as before.
+    const thirdPartyOrigins = getThirdPartyScriptOrigins();
+    const allow = (...origins: string[]) => origins.filter(Boolean).join(" ");
+
     const CSP_DIRECTIVES = [
       // Default to same-origin for everything
       "default-src 'self'",
       // Allow scripts from self and inline scripts (needed for Freighter)
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      `script-src ${allow("'self'", "'unsafe-inline'", "'unsafe-eval'", ...thirdPartyOrigins)}`,
       // Allow styles from self and inline styles
       "style-src 'self' 'unsafe-inline'",
       // Allow images from self and allowed image domains
       "img-src 'self' data: https: blob:",
       // Allow fonts from self
       "font-src 'self' data:",
-      // Allow connect to self, RPC endpoints, and Freighter extension
-      "connect-src 'self' https://*.freighter.app https://soroban-testnet.stellar.org https://mainnet.stellar.validationcloud.io https://*.stellar.org",
+      // Allow connect to self, RPC endpoints, and Freighter extension.
+      // Third-party origins are included because analytics beacons and support
+      // widget websockets go back to the origin that served their script.
+      `connect-src ${allow(
+        "'self'",
+        "https://*.freighter.app",
+        "https://soroban-testnet.stellar.org",
+        "https://mainnet.stellar.validationcloud.io",
+        "https://*.stellar.org",
+        ...thirdPartyOrigins,
+      )}`,
+      // Support widgets render their chat UI inside an iframe they serve themselves.
+      `frame-src ${allow("'self'", ...thirdPartyOrigins)}`,
       // Allow frame ancestors from same origin (no embedding)
       "frame-ancestors 'none'",
       // Allow forms from same origin

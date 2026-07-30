@@ -12,11 +12,10 @@ import { WalletProvider } from "@/components/WalletContext";
 import { DevMockPanel } from "@/components/DevMockPanel";
 import OnboardingTour from "@/components/OnboardingTour";
 import MaintenanceBypass from "@/components/MaintenanceBypass";
+import ThirdPartyScripts from "@/components/ThirdPartyScripts";
 import { routing } from "@/i18n/routing";
-import { absoluteUrl } from "@/lib/seo";
 import { getTextDirection } from "@/lib/direction";
 import { getThemeBlockingScript } from "@/lib/preferences";
-import type { Metadata } from "next";
 import "../globals.css";
 
 const inter = Inter({
@@ -31,42 +30,7 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://proofofheart.xyz"),
-  title: "ProofOfHeart",
-  description:
-    "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
-  alternates: {
-    languages: {
-      en: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://proofofheart.xyz"}/en`,
-      es: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://proofofheart.xyz"}/es`,
-      "x-default": `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://proofofheart.xyz"}/en`,
-    },
-  },
-  openGraph: {
-    type: "website",
-    siteName: "ProofOfHeart",
-    url: absoluteUrl(`/${routing.defaultLocale}`),
-    title: "ProofOfHeart",
-    description:
-      "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
-    images: [
-      {
-        url: "/proof-of-heart-logo.svg",
-        width: 512,
-        height: 512,
-        alt: "ProofOfHeart logo",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "ProofOfHeart",
-    description:
-      "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
-    images: ["/proof-of-heart-logo.svg"],
-  },
-};
+export { siteMetadata as metadata } from "@/lib/siteMetadata";
 
 export default async function RootLayout({
   children,
@@ -95,6 +59,12 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        {/*
+          The only script that legitimately belongs in <head>. It is inline (no
+          network round-trip) and must run before first paint to apply the stored
+          theme without a flash of the wrong colours. Every third-party script is
+          loaded from <ThirdPartyScripts /> at the end of <body> instead (#657).
+        */}
         <script
           dangerouslySetInnerHTML={{
             __html: getThemeBlockingScript(),
@@ -129,6 +99,7 @@ export default async function RootLayout({
               </ErrorBoundary>
             </ThemeProvider>
           </QueryProvider>
+          <ThirdPartyScripts />
         </NextIntlClientProvider>
       </body>
     </html>

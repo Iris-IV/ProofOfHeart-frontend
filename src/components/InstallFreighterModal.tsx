@@ -1,11 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 interface InstallFreighterModalProps {
   isOpen: boolean;
   onClose: () => void;
   onRetry: () => void;
+  /**
+   * #649 — Social sign-in options, injected by `WalletContext`. Passed in rather
+   * than imported so this modal stays free of wallet-provider dependencies.
+   */
+  socialLogin?: ReactNode;
 }
 
 function detectBrowser(): { name: string; supported: boolean } {
@@ -22,6 +27,7 @@ export default function InstallFreighterModal({
   isOpen,
   onClose,
   onRetry,
+  socialLogin,
 }: InstallFreighterModalProps) {
   const browser = useMemo(
     () => (isOpen ? detectBrowser() : { name: "", supported: false }),
@@ -47,11 +53,13 @@ export default function InstallFreighterModal({
           </div>
 
           <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
-            Freighter Wallet Required
+            {socialLogin ? "Connect a wallet" : "Freighter Wallet Required"}
           </h2>
 
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            This app requires the Freighter browser extension to interact with the Stellar network.
+            {socialLogin
+              ? "Install the Freighter extension, or sign in with a social account and we will create a Stellar wallet for you."
+              : "This app requires the Freighter browser extension to interact with the Stellar network."}
           </p>
 
           {!browser.supported && browser.name && (
@@ -78,6 +86,8 @@ export default function InstallFreighterModal({
             >
               {checking ? "Checking..." : "I installed it — check again"}
             </button>
+
+            {socialLogin}
 
             <button
               onClick={onClose}

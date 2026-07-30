@@ -13,7 +13,12 @@
     "languageChanged": "Language changed to {language}",
     "skipToMainContent": "Skip to main content",
     "xlmPrecisionWarning": "Rounded to {amount} XLM",
-    "profile": "Profile"
+    "profile": "Profile",
+    "socialLoginDivider": "or",
+    "continueWithGoogle": "Continue with Google",
+    "continueWithX": "Continue with X",
+    "socialLoginHint": "Creates a Stellar wallet secured by your social account — no extension needed.",
+    "signedInAs": "Signed in as {name}"
   },
   "Home": {
     "heroTitle": "Decentralized validation for heart-driven causes.",
@@ -40,7 +45,10 @@
     "fundingHistory": "Funding/Donation History",
     "noFundingHistory": "No funding/donation activity yet.",
     "donated": "Donated {amount} XLM on {date}",
-    "campaignFallback": "Campaign #{id}"
+    "campaignFallback": "Campaign #{id}",
+    "withdrawalsTab": "Withdrawals",
+    "withdrawalsHeading": "Multi-Signature Withdrawals",
+    "withdrawalsDescription": "Campaigns you run. Once a campaign reaches its goal you can propose a withdrawal and collect approvals from your organization's signers before the funds move."
   },
   "MyContributions": {
     "title": "My Contributions",

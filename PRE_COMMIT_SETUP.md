@@ -4,6 +4,13 @@ Extended pre-commit hook to run typecheck and affected tests.
 
 ## What Was Added
 
+### Hook Update
+
+- **`.husky/pre-commit`** - Updated to run new script
+  - Runs lint-staged (existing)
+  - Runs pre-commit-checks.mjs (new)
+  - Runs commitlint (existing)
+
 ### Script
 
 - **`scripts/pre-commit-checks.mjs`** - Smart typecheck + test runner
@@ -13,12 +20,13 @@ Extended pre-commit hook to run typecheck and affected tests.
   - Runs `jest --bail` on affected tests only
   - Optimized for speed (5-30 seconds typical)
 
-### Hook Update
+### CONTRIBUTING Update
 
-- **`.husky/pre-commit`** - Updated to run new script
-  - Runs lint-staged (existing)
-  - Runs pre-commit-checks.mjs (new)
-  - Runs commitlint (existing)
+- **`CONTRIBUTING.md`** - Section 4 added
+  - Pre-commit checks explained
+  - What happens if checks fail
+  - Performance expectations
+  - How to skip checks (not recommended)
 
 ### Documentation
 
@@ -28,13 +36,7 @@ Extended pre-commit hook to run typecheck and affected tests.
   - Performance tips
   - Troubleshooting
 
-### CONTRIBUTING Update
 
-- **`CONTRIBUTING.md`** - Section 4 added
-  - Pre-commit checks explained
-  - What happens if checks fail
-  - Performance expectations
-  - How to skip checks (not recommended)
 
 ## How It Works
 

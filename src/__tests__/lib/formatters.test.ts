@@ -36,12 +36,60 @@ describe("formatXlm", () => {
 });
 
 describe("formatAmount", () => {
+  // Baseline: function already uses stroopsToXlm internally — these guard against regressions.
   it("formats stroops as locale-aware XLM in en", () => {
     expect(formatAmount(12_500_000n, "en", { maximumFractionDigits: 2 })).toBe("1.25");
   });
 
   it("formats zero stroops", () => {
     expect(formatAmount(0n, "en")).toBe("0");
+  });
+
+  // Issue #616 coverage: ensure raw stroops are never displayed as-is (10_000_000x off)
+  it("does NOT display stroops as raw integer — 10_000_000 stroops is 1 XLM", () => {
+    const result = formatAmount(10_000_000n, "en");
+    expect(result).toBe("1");
+    expect(result).not.toBe("10,000,000");
+  });
+
+  it("formats 1 stroop as fractional XLM", () => {
+    // 1 stroop = 0.0000001 XLM — should not round to 0 when enough fraction digits
+    const result = formatAmount(1n, "en", { maximumFractionDigits: 7 });
+    expect(result).toBe("0.0000001");
+  });
+
+  it("defaults to 2 decimal places and rounds correctly", () => {
+    // 10_050_000 stroops = 1.005 XLM → rounds to 1.01 at maximumFractionDigits 2
+    // (behaviour depends on JS Intl rounding — just check it is "1" or "1.01")
+    const result = formatAmount(10_050_000n, "en");
+    expect(result).toMatch(/^1/);
+  });
+
+  it("formats large campaign goal (100_000 XLM)", () => {
+    const result = formatAmount(1_000_000_000_000n, "en"); // 100,000 XLM
+    expect(result).toBe("100,000");
+  });
+
+  it("formats a typical 5 XLM contribution", () => {
+    expect(formatAmount(50_000_000n, "en")).toBe("5");
+  });
+
+  it("respects minimumFractionDigits option", () => {
+    // 1 XLM with min 2 decimals
+    expect(formatAmount(10_000_000n, "en", { minimumFractionDigits: 2 })).toBe("1.00");
+  });
+
+  it("returns locale-appropriate separators in es for large amount", () => {
+    // 1,000 XLM = 10_000_000_000 stroops — Spanish may use period as thousands separator
+    const result = formatAmount(10_000_000_000n, "es");
+    expect(result).toMatch(/1/);
+    expect(result).toMatch(/000/);
+  });
+
+  it("formats the maximum fraction digits edge case", () => {
+    // 15_000_000 stroops = 1.5 XLM, with maximumFractionDigits 0 → "2" (rounded)
+    const result = formatAmount(15_000_000n, "en", { maximumFractionDigits: 0 });
+    expect(result).toMatch(/^[12]$/); // rounded to 1 or 2 depending on Intl implementation
   });
 });
 

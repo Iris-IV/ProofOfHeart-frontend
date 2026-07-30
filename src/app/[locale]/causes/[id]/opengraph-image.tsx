@@ -2,15 +2,13 @@ import { ImageResponse } from "next/og";
 import { getCampaign } from "@/lib/contractClient";
 import { CATEGORY_LABELS } from "@/types";
 import { stroopsToXlmNumber } from "@/lib/stellarAmount";
+import { BrandOgCard, OG_CONTENT_TYPE, OG_SIZE, truncate } from "@/lib/ogCard";
 
 export const runtime = "edge";
 export const revalidate = 300; // Cache for 5 minutes
-export const alt = "Campaign Details";
-export const size = {
-  width: 1200,
-  height: 630,
-};
-export const contentType = "image/png";
+export const alt = "Campaign details on ProofOfHeart";
+export const size = OG_SIZE;
+export const contentType = OG_CONTENT_TYPE;
 
 export default async function Image({
   params,
@@ -19,11 +17,6 @@ export default async function Image({
 }) {
   const { id, locale } = await params;
   const safeLocale = locale === "es" ? "es" : "en";
-
-  /** Truncate a string to maxLen chars, appending ellipsis if needed. */
-  function truncate(str: string, maxLen: number): string {
-    return str.length > maxLen ? str.slice(0, maxLen - 1) + "…" : str;
-  }
 
   function fmtNumber(n: number): string {
     return new Intl.NumberFormat(safeLocale, { maximumFractionDigits: 2 }).format(n);
@@ -227,47 +220,12 @@ export default async function Image({
         ...size,
       },
     );
-  } catch (error) {
-    // Fallback image if campaign not found
+  } catch {
+    // Campaign lookup failed — still return a valid 1200x630 PNG rather than a 500,
+    // otherwise the scraper falls back to no preview at all.
     return new ImageResponse(
-      <div
-        style={{
-          height: "100%",
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: "#fafafa",
-          fontFamily: "system-ui, sans-serif",
-        }}
-      >
-        <div
-          style={{
-            fontSize: "72px",
-            fontWeight: "bold",
-            color: "#18181b",
-            display: "flex",
-            alignItems: "center",
-            gap: "24px",
-          }}
-        >
-          <span style={{ fontSize: "96px" }}>💜</span>
-          ProofOfHeart
-        </div>
-        <div
-          style={{
-            fontSize: "36px",
-            color: "#71717a",
-            marginTop: "24px",
-          }}
-        >
-          Blockchain-Powered Crowdfunding
-        </div>
-      </div>,
-      {
-        ...size,
-      },
+      <BrandOgCard title="ProofOfHeart" subtitle="Blockchain-powered crowdfunding" />,
+      { ...size },
     );
   }
 }

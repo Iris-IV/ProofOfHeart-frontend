@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ShieldCheck } from "lucide-react";
 import { CampaignUpdate } from "@/types";
+import SafeMarkdown from "./SafeMarkdown";
 import VerifiedIcon from "./icons/VerifiedIcon";
 import { verifyUpdateSignature } from "@/lib/campaignUpdates";
 
@@ -125,10 +126,11 @@ export default function UpdateItem({ update }: UpdateItemProps) {
         </div>
       </div>
 
-      {/* Update content */}
-      <div className="text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap break-words text-sm ml-0 sm:ml-16">
+      {/* Update content — markdown, sanitized with the same hardened schema
+          used for campaign descriptions. Author input is never trusted HTML. */}
+      <SafeMarkdown className="prose prose-sm prose-zinc dark:prose-invert max-w-none break-words text-zinc-700 dark:text-zinc-300 ml-0 sm:ml-16">
         {update.content}
-      </div>
+      </SafeMarkdown>
     </article>
   );
 }

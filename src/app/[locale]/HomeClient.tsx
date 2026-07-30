@@ -6,11 +6,12 @@ import { useWallet } from "@/components/WalletContext";
 import { Link } from "@/i18n/routing";
 import { usePlatformStats } from "@/hooks/usePlatformStats";
 import { formatAmount } from "@/lib/formatters";
+import TrendingCampaigns from "@/components/TrendingCampaigns";
 
 export default function HomeClient() {
   const t = useTranslations("Home");
   const locale = useLocale();
-  const { isWalletConnected, connectWallet, isLoading } = useWallet();
+  const { isWalletConnected, connectWallet, isLoading, publicKey } = useWallet();
   const { stats, isLoading: statsLoading } = usePlatformStats();
 
   return (
@@ -78,6 +79,9 @@ export default function HomeClient() {
             </div>
           </div>
         )}
+
+        {/* Trending Causes Section */}
+        <TrendingCampaigns userWalletAddress={publicKey} />
 
         {/* Features Section */}
         <section aria-labelledby="features-heading" className="mt-32">

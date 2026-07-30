@@ -115,6 +115,33 @@ describe("hasValidCoordinates", () => {
     const campaign = makeCampaign({ latitude: -Infinity, longitude: -74.006 });
     expect(hasValidCoordinates(campaign)).toBe(false);
   });
+
+  // Out-of-range values are finite numbers, so a finiteness check alone lets
+  // them through — and Leaflet's Mercator projection throws on |lat| >= 90.
+  it("returns false when latitude is above 90", () => {
+    expect(hasValidCoordinates(makeCampaign({ latitude: 91, longitude: 0 }))).toBe(false);
+  });
+
+  it("returns false when latitude is below -90", () => {
+    expect(hasValidCoordinates(makeCampaign({ latitude: -90.5, longitude: 0 }))).toBe(false);
+  });
+
+  it("returns false when longitude is above 180", () => {
+    expect(hasValidCoordinates(makeCampaign({ latitude: 0, longitude: 180.1 }))).toBe(false);
+  });
+
+  it("returns false when longitude is below -180", () => {
+    expect(hasValidCoordinates(makeCampaign({ latitude: 0, longitude: -181 }))).toBe(false);
+  });
+
+  it("accepts the exact bounds of the coordinate system", () => {
+    expect(hasValidCoordinates(makeCampaign({ latitude: 90, longitude: 180 }))).toBe(true);
+    expect(hasValidCoordinates(makeCampaign({ latitude: -90, longitude: -180 }))).toBe(true);
+  });
+
+  it("accepts null island (0, 0) — a valid coordinate, not a missing one", () => {
+    expect(hasValidCoordinates(makeCampaign({ latitude: 0, longitude: 0 }))).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -145,6 +172,16 @@ describe("filterByValidCoordinates", () => {
   it("handles empty array", () => {
     const result = filterByValidCoordinates([]);
     expect(result).toHaveLength(0);
+  });
+
+  it("drops out-of-range coordinates before they reach the map", () => {
+    const good = makeCampaign({ id: 1, latitude: 40.7128, longitude: -74.006 });
+    const badLat = makeCampaign({ id: 2, latitude: 1000, longitude: 10 });
+    const badLng = makeCampaign({ id: 3, latitude: 10, longitude: -900 });
+
+    const result = filterByValidCoordinates([good, badLat, badLng]);
+
+    expect(result.map((c) => c.id)).toEqual([1]);
   });
 });
 

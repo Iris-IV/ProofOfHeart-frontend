@@ -4,3 +4,5 @@ coverage
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
+npm-audit-temp.json
+npm-audit-report.json

@@ -2,6 +2,17 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import UpdateComposer from "@/components/UpdateComposer";
 import { ToastProvider } from "@/components/ToastProvider";
 
+// react-markdown ships ESM this Jest setup does not transform, so the markdown
+// renderer is stubbed the same way AppPageComponents.test.tsx does.
+jest.mock("@/components/SafeMarkdown", () => ({
+  __esModule: true,
+  default: ({ children, className }: { children: string; className?: string }) => (
+    <div data-testid="safe-markdown" className={className}>
+      {children}
+    </div>
+  ),
+}));
+
 const mockOnSubmit = jest.fn();
 
 const renderWithToastProvider = (ui: React.ReactElement) => {

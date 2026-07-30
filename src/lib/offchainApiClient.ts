@@ -1,5 +1,6 @@
-import { getAddress, signTransaction } from "@stellar/freighter-api";
 import * as StellarSdk from "@stellar/stellar-sdk";
+// #649 — Freighter and the embedded social wallet both satisfy this interface.
+import { getSignerAddress, signTransactionXdr } from "./walletSigner";
 import { wrapFreighterError } from "../utils/freighterErrors";
 
 const OFFCHAIN_API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").trim().replace(/\/+$/, "");
@@ -77,7 +78,7 @@ export async function signOffchainPayload(
   payload: unknown,
   purpose: string,
 ): Promise<SignedOffchainPayload> {
-  const { address: walletAddress } = await getAddress();
+  const walletAddress = await getSignerAddress();
   const timestamp = Math.floor(Date.now() / 1000);
   const envelope = {
     purpose,
@@ -89,7 +90,7 @@ export async function signOffchainPayload(
 
   let signedTxXdr: string;
   try {
-    ({ signedTxXdr } = await signTransaction(
+    signedTxXdr = await signTransactionXdr(
       new StellarSdk.TransactionBuilder(new StellarSdk.Account(walletAddress, "0"), {
         fee: StellarSdk.BASE_FEE,
         networkPassphrase: NETWORK_PASSPHRASE,
@@ -106,7 +107,7 @@ export async function signOffchainPayload(
       {
         networkPassphrase: NETWORK_PASSPHRASE,
       },
-    ));
+    );
   } catch (error) {
     wrapFreighterError(error);
   }

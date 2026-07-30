@@ -1,17 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import MyContributionsSection from "@/components/MyContributionsSection";
-import MultiSigWithdrawalPanel from "@/components/MultiSigWithdrawalPanel";
+import TransactionHistorySection from "@/components/TransactionHistorySection";
 import { Spinner, DashboardSkeleton } from "@/components/Skeleton";
 import { useWallet } from "@/components/WalletContext";
+import { Tabs, TabPanel, Card } from "@/components/ui";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { useStellarBalance } from "@/hooks/useStellarBalance";
 import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
 import { isSameAddress } from "@/lib/stellar";
-import { explorerTxUrl } from "@/utils/explorer";
+
+// Pulls in the contract client and the proposal store; only creators with a
+// funded campaign ever open this tab, so keep it out of the dashboard bundle.
+const MultiSigWithdrawalPanel = dynamic(() => import("@/components/MultiSigWithdrawalPanel"), {
+  ssr: false,
+});
 
 export default function DashboardPage() {
   const t = useTranslations("Dashboard");
@@ -25,42 +32,23 @@ export default function DashboardPage() {
   const balanceError = balanceQueryError ? t("balanceFetchError") : null;
   const { savedIds } = useSavedCampaigns();
 
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "contributions" | "history" | "withdrawals"
+  >("overview");
+
   const savedCampaigns = useMemo(
     () => campaigns.filter((c) => savedIds.includes(c.id)),
     [campaigns, savedIds],
   );
 
-  const mockVotes = useMemo(
-    () => [
-      {
-        campaignId: 1,
-        voter: publicKey,
-        voteType: "upvote",
-        timestamp: new Date("2024-02-01"),
-        transactionHash: "tx1",
-      },
-      {
-        campaignId: 2,
-        voter: publicKey,
-        voteType: "downvote",
-        timestamp: new Date("2024-02-10"),
-        transactionHash: "tx2",
-      },
-    ],
-    [publicKey],
-  );
-
-  const mockFunding = useMemo(
-    () => [
-      { campaignId: 3, amount: 100, timestamp: new Date("2024-02-15"), tx: "fund1" },
-      { campaignId: 1, amount: 50, timestamp: new Date("2024-02-20"), tx: "fund2" },
-    ],
-    [],
-  );
-
   const submittedCampaigns = useMemo(
     () => campaigns.filter((c) => isSameAddress(c.creator, publicKey)),
     [campaigns, publicKey],
+  );
+
+  const campaignTitleMap = useMemo(
+    () => Object.fromEntries(campaigns.map((c) => [c.id, c.title])),
+    [campaigns],
   );
 
   if (!isWalletConnected || !publicKey) {
@@ -83,136 +71,138 @@ export default function DashboardPage() {
     return <DashboardSkeleton />;
   }
 
+  const tabs: Array<{ id: typeof activeTab; label: string; count?: number }> = [
+    { id: "overview", label: "Overview" },
+    { id: "contributions", label: "My Contributions" },
+    { id: "history", label: "Transaction History" },
+    { id: "withdrawals", label: t("withdrawalsTab"), count: submittedCampaigns.length },
+  ];
+
   return (
     <div className="max-w-4xl mx-auto py-10 px-4">
-      <h1 className="text-3xl font-bold mb-8">{t("title")}</h1>
+      <h1 className="text-3xl font-bold mb-6">{t("title")}</h1>
 
-      <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-2">{t("walletBalance")}</h2>
-        {balanceLoading ? (
-          <span className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
-            <Spinner className="h-4 w-4 text-blue-500" /> {t("loadingBalance")}
-          </span>
-        ) : balanceError ? (
-          <span className="text-red-500">{balanceError}</span>
-        ) : (
-          <span className="text-zinc-900 dark:text-zinc-50 font-mono">{balance} XLM</span>
-        )}
-      </section>
+      {/* Tab navigation */}
+      <Tabs
+        tabs={tabs}
+        activeId={activeTab}
+        onChange={setActiveTab}
+        label="Dashboard sections"
+        idPrefix="dashboard"
+        className="mb-8"
+      />
 
-      <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-2">Saved Campaigns</h2>
-        {savedCampaigns.length === 0 ? (
-          <span className="text-zinc-500 dark:text-zinc-400">
-            You haven&apos;t saved any campaigns yet.
-          </span>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {savedCampaigns.map((campaign) => (
-              <Link
-                key={campaign.id}
-                href={`/causes/${campaign.id}`}
-                className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
-              >
-                <div className="font-medium text-zinc-900 dark:text-zinc-50">{campaign.title}</div>
-                <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2 break-words">
-                  {campaign.description}
-                </div>
-              </Link>
-            ))}
+      {/* Overview tab */}
+      <TabPanel tabId="overview" idPrefix="dashboard" active={activeTab === "overview"}>
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold mb-2">{t("walletBalance")}</h2>
+          {balanceLoading ? (
+            <span className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
+              <Spinner className="h-4 w-4 text-blue-500" /> {t("loadingBalance")}
+            </span>
+          ) : balanceError ? (
+            <span className="text-red-500">{balanceError}</span>
+          ) : (
+            <span className="text-zinc-900 dark:text-zinc-50 font-mono">{balance} XLM</span>
+          )}
+        </section>
+
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold mb-2">Saved Campaigns</h2>
+          {savedCampaigns.length === 0 ? (
+            <span className="text-zinc-500 dark:text-zinc-400">
+              You haven&apos;t saved any campaigns yet.
+            </span>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {savedCampaigns.map((campaign) => (
+                <Link
+                  key={campaign.id}
+                  href={`/causes/${campaign.id}`}
+                  className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
+                >
+                  <div className="font-medium text-zinc-900 dark:text-zinc-50">
+                    {campaign.title}
+                  </div>
+                  <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2 break-words">
+                    {campaign.description}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold mb-2">{t("submittedCampaigns")}</h2>
+          {submittedCampaigns.length === 0 ? (
+            <span className="text-zinc-500 dark:text-zinc-400">{t("noSubmittedCampaigns")}</span>
+          ) : (
+            <ul className="space-y-2">
+              {submittedCampaigns.map((campaign) => (
+                <li
+                  key={campaign.id}
+                  className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 min-h-[60px]"
+                >
+                  <Link
+                    href={`/causes/${campaign.id}`}
+                    className="font-medium text-zinc-900 dark:text-zinc-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  >
+                    {campaign.title}
+                  </Link>
+                  <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
+                    {campaign.description}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </TabPanel>
+
+      {/* Contributions tab */}
+      <TabPanel tabId="contributions" idPrefix="dashboard" active={activeTab === "contributions"}>
+        <MyContributionsSection walletAddress={publicKey} />
+      </TabPanel>
+
+      {/* Transaction History tab */}
+      <TabPanel tabId="history" idPrefix="dashboard" active={activeTab === "history"}>
+        <TransactionHistorySection walletAddress={publicKey} campaignTitleMap={campaignTitleMap} />
+      </TabPanel>
+
+      {/* Withdrawals tab — multi-signature approvals for campaigns you run */}
+      <TabPanel tabId="withdrawals" idPrefix="dashboard" active={activeTab === "withdrawals"}>
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold mb-1">{t("withdrawalsHeading")}</h2>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              {t("withdrawalsDescription")}
+            </p>
           </div>
-        )}
-      </section>
 
-      <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-2">{t("submittedCampaigns")}</h2>
-        {submittedCampaigns.length === 0 ? (
-          <span className="text-zinc-500 dark:text-zinc-400">{t("noSubmittedCampaigns")}</span>
-        ) : (
-          <ul className="space-y-4">
-            {submittedCampaigns.map((campaign) => (
-              <li key={campaign.id} className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900">
-                <div className="font-medium text-zinc-900 dark:text-zinc-50">{campaign.title}</div>
-                <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
-                  {campaign.description}
+          {submittedCampaigns.length === 0 ? (
+            <span className="text-zinc-500 dark:text-zinc-400">{t("noSubmittedCampaigns")}</span>
+          ) : (
+            submittedCampaigns.map((campaign) => (
+              <Card key={campaign.id} padding="sm" className="bg-zinc-50 dark:bg-zinc-900">
+                <div className="flex items-start justify-between gap-3">
+                  <Link
+                    href={`/causes/${campaign.id}`}
+                    className="font-medium text-zinc-900 dark:text-zinc-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  >
+                    {campaign.title}
+                  </Link>
                 </div>
+
+                {/* The panel renders nothing unless the campaign is funded and
+                    not yet withdrawn, so campaigns that cannot pay out stay
+                    listed but quiet. */}
                 <MultiSigWithdrawalPanel campaign={campaign} walletAddress={publicKey} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <MyContributionsSection walletAddress={publicKey} />
-
-      <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-2">{t("votingHistory")}</h2>
-        {mockVotes.length === 0 ? (
-          <span className="text-zinc-500 dark:text-zinc-400">{t("noVotingHistory")}</span>
-        ) : (
-          <ul className="space-y-2">
-            {mockVotes.map((vote, idx) => {
-              const campaign = campaigns.find((c) => c.id === vote.campaignId);
-              return (
-                <li key={idx} className="border rounded p-3 bg-zinc-50 dark:bg-zinc-900">
-                  <div className="font-medium">
-                    {campaign ? campaign.title : t("campaignFallback", { id: vote.campaignId })}
-                  </div>
-                  <div className="text-sm text-zinc-500 dark:text-zinc-400">
-                    {vote.voteType === "upvote"
-                      ? t("upvotedOn", { date: vote.timestamp.toLocaleDateString() })
-                      : t("downvotedOn", { date: vote.timestamp.toLocaleDateString() })}
-                    <br />
-                    <a
-                      href={explorerTxUrl(vote.transactionHash)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      {t("viewOnExplorer")}
-                    </a>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
-      <section>
-        <h2 className="text-xl font-semibold mb-2">{t("fundingHistory")}</h2>
-        {mockFunding.length === 0 ? (
-          <span className="text-zinc-500 dark:text-zinc-400">{t("noFundingHistory")}</span>
-        ) : (
-          <ul className="space-y-2">
-            {mockFunding.map((fund, idx) => {
-              const campaign = campaigns.find((c) => c.id === fund.campaignId);
-              return (
-                <li key={idx} className="border rounded p-3 bg-zinc-50 dark:bg-zinc-900">
-                  <div className="font-medium">
-                    {campaign ? campaign.title : t("campaignFallback", { id: fund.campaignId })}
-                  </div>
-                  <div className="text-sm text-zinc-500 dark:text-zinc-400">
-                    {t("donated", {
-                      amount: fund.amount,
-                      date: fund.timestamp.toLocaleDateString(),
-                    })}
-                    <br />
-                    <a
-                      href={explorerTxUrl(fund.tx)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      {t("viewOnExplorer")}
-                    </a>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+              </Card>
+            ))
+          )}
+        </section>
+      </TabPanel>
     </div>
   );
 }

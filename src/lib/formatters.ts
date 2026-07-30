@@ -25,8 +25,17 @@ export interface FormatAmountOptions {
 }
 
 /**
- * Format stroops (bigint) as a locale-aware XLM string.
- * This is the canonical way to display XLM amounts across the app.
+ * Format a raw stroops value (bigint, 1 XLM = 10_000_000 stroops) as a
+ * locale-aware XLM string.
+ *
+ * IMPORTANT: always pass stroops, never a pre-divided XLM number.
+ * Contract amounts (i128 / u128) come back as stroops — pass them directly.
+ * If you already have an XLM number, use `formatXlm` instead.
+ *
+ * Verified call-site audit (issue #616): all current call sites in
+ * AdminClient, ExploreClient, ProfileClient, HomeClient, FundingProgressBar,
+ * DonationModal, CampaignActions, Amount, RevenueSharingPanel, and
+ * networkFee.ts pass bigint stroops — no conversion needed at call sites.
  */
 export function formatAmount(
   stroops: bigint,

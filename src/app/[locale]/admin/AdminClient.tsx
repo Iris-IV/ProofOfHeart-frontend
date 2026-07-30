@@ -28,6 +28,7 @@ const AdminTwoFactorSetup = dynamic(() => import("@/components/admin/AdminTwoFac
 const CampaignMap = dynamic(() => import("@/components/CampaignMap"), {
   ssr: false,
 });
+import MapErrorBoundary from "@/components/MapErrorBoundary";
 
 const TransferAdminModal = dynamic(() => import("@/components/TransferAdminModal"), {
   ssr: false,
@@ -752,7 +753,10 @@ export default function AdminDashboard() {
 
       {/* ── Campaign Map ── */}
       <section className="mt-12">
-        <CampaignMap campaigns={campaigns} />
+        {/* A Leaflet failure here must not take the whole admin console down. */}
+        <MapErrorBoundary>
+          <CampaignMap campaigns={campaigns} />
+        </MapErrorBoundary>
       </section>
 
       {/* ── Two-Factor Authentication ── */}

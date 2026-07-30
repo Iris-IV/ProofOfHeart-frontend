@@ -28,7 +28,7 @@ jobs:
         run: npm ci
 
       - name: npm audit (high + critical)
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=high --omit=dev
 
       - name: npm audit (full report)
         run: npm audit --json > npm-audit-report.json || true

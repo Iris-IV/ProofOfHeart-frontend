@@ -13,7 +13,12 @@
     "languageChanged": "Idioma cambiado a {language}",
     "skipToMainContent": "Saltar al contenido principal",
     "xlmPrecisionWarning": "Redondeado a {amount} XLM",
-    "profile": "Perfil"
+    "profile": "Perfil",
+    "socialLoginDivider": "o",
+    "continueWithGoogle": "Continuar con Google",
+    "continueWithX": "Continuar con X",
+    "socialLoginHint": "Crea una billetera Stellar protegida por tu cuenta social, sin necesidad de extensión.",
+    "signedInAs": "Sesión iniciada como {name}"
   },
   "Home": {
     "heroTitle": "Validación descentralizada para causas impulsadas por el corazón.",
@@ -40,7 +45,10 @@
     "fundingHistory": "Historial de Financiación/Donaciones",
     "noFundingHistory": "Aún no hay actividad de financiación/donación.",
     "donated": "Donó {amount} XLM el {date}",
-    "campaignFallback": "Campaña #{id}"
+    "campaignFallback": "Campaña #{id}",
+    "withdrawalsTab": "Retiros",
+    "withdrawalsHeading": "Retiros con firma múltiple",
+    "withdrawalsDescription": "Campañas que administras. Cuando una campaña alcanza su meta, puedes proponer un retiro y reunir las aprobaciones de los firmantes de tu organización antes de mover los fondos."
   },
   "MyContributions": {
     "title": "Mis Contribuciones",
