@@ -26,6 +26,7 @@ export default function CampaignReviewModal({
   const t = useTranslations("CreateCampaign");
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
       role="dialog"
