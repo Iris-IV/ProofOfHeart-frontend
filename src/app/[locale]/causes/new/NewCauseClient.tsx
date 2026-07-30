@@ -139,7 +139,6 @@ export default function CreateCampaignPage() {
     : "proof_of_heart_draft_anonymous";
   const [hasDraft, setHasDraft] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const CREATOR_EMAIL_WEBHOOK_URL = process.env.NEXT_PUBLIC_CREATOR_EMAIL_WEBHOOK_URL?.trim() ?? "";
 
   useEffect(() => {
     try {
@@ -252,10 +251,10 @@ export default function CreateCampaignPage() {
     campaignTitle: string,
     creatorAddress: string,
   ) => {
-    if (!CREATOR_EMAIL_WEBHOOK_URL || !email) return;
+    if (!email) return;
 
     try {
-      await fetch(CREATOR_EMAIL_WEBHOOK_URL, {
+      await fetch('/api/notify-creator', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
