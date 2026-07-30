@@ -36,7 +36,10 @@ test.describe("Creator Withdrawal Flow E2E Test", () => {
     await expect(page.locator("body")).toBeVisible();
 
     // Step 2: Ensure dashboard elements load
-    const dashboardHeader = page.getByRole("heading", { level: 1 }).first().or(page.locator("body"));
+    const dashboardHeader = page
+      .getByRole("heading", { level: 1 })
+      .first()
+      .or(page.locator("body"));
     await expect(dashboardHeader).toBeVisible();
 
     // Step 3: Check for withdrawal action button or navigate directly to withdraw tab
