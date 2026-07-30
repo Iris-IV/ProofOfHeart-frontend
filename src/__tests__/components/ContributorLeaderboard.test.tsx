@@ -1,6 +1,17 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import ContributorLeaderboard from "@/components/ContributorLeaderboard";
 
+const mockCalculateGamificationProfileFromStroops = jest.fn();
+
+jest.mock("@/lib/gamification", () => {
+  const actual = jest.requireActual<typeof import("@/lib/gamification")>("@/lib/gamification");
+  return {
+    ...actual,
+    calculateGamificationProfileFromStroops: (...args: [bigint]) =>
+      mockCalculateGamificationProfileFromStroops(...args),
+  };
+});
+
 const mockUseTopContributors = jest.fn();
 
 jest.mock("@/hooks/useTopContributors", () => ({
@@ -10,6 +21,21 @@ jest.mock("@/hooks/useTopContributors", () => ({
 
 jest.mock("next-intl", () => ({
   useLocale: () => "en",
+  useTranslations: () => (key: string) => {
+    const messages: Record<string, string> = {
+      title: "Top Supporters",
+      subtitle: "Our most generous supporters",
+      emptyMessage: "Be the first supporter for this cause! 💜",
+      youBadge: "You",
+      hideWallet: "Hide my wallet",
+      enableAnon: "Enable anonymous mode",
+      disableAnon: "Disable anonymous mode",
+      anonymousState: "Anonymous",
+      optOutState: "Visible",
+      optOutTooltip: "Your wallet can be hidden from the leaderboard.",
+    };
+    return messages[key] ?? key;
+  },
 }));
 
 const WALLET_1 = "GDA7X7P5H4F3R8E2M1N6K9W4L5V8Q3Z0A1B2C3D4E5F6G7H8I9J0K1L2";
@@ -19,6 +45,11 @@ describe("ContributorLeaderboard component", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
+    mockCalculateGamificationProfileFromStroops.mockImplementation((totalAmountStroops) =>
+      jest
+        .requireActual<typeof import("@/lib/gamification")>("@/lib/gamification")
+        .calculateGamificationProfileFromStroops(totalAmountStroops),
+    );
   });
 
   it("renders loading placeholders when isLoading is true", () => {
@@ -75,6 +106,33 @@ describe("ContributorLeaderboard component", () => {
     expect(screen.getByText("18,000")).toBeInTheDocument();
     expect(screen.getByText("🥇")).toBeInTheDocument();
     expect(screen.getByText("🥈")).toBeInTheDocument();
+  });
+
+  it("recalculates a contributor tier only when their contribution total changes", () => {
+    const contributors = [
+      {
+        walletAddress: WALLET_1,
+        truncatedAddress: "GDA7X7...K1L2",
+        totalAmountStroops: BigInt(250_000_000_000),
+        isAnonymous: false,
+        rank: 1,
+      },
+    ];
+    mockUseTopContributors.mockReturnValue({ contributors, isLoading: false, refetch: jest.fn() });
+
+    const { rerender } = render(<ContributorLeaderboard campaignId={1} userWalletAddress={null} />);
+    expect(mockCalculateGamificationProfileFromStroops).toHaveBeenCalledTimes(1);
+
+    rerender(<ContributorLeaderboard campaignId={1} userWalletAddress={null} />);
+    expect(mockCalculateGamificationProfileFromStroops).toHaveBeenCalledTimes(1);
+
+    mockUseTopContributors.mockReturnValue({
+      contributors: [{ ...contributors[0], totalAmountStroops: BigInt(260_000_000_000) }],
+      isLoading: false,
+      refetch: jest.fn(),
+    });
+    rerender(<ContributorLeaderboard campaignId={1} userWalletAddress={null} />);
+    expect(mockCalculateGamificationProfileFromStroops).toHaveBeenCalledTimes(2);
   });
 
   it("renders Anonymous Supporter when a contributor is marked anonymous", () => {
