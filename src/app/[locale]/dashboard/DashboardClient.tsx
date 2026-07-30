@@ -158,6 +158,15 @@ export default function DashboardPage() {
             </ul>
           )}
         </section>
+
+        <section className="mb-8">
+          <button
+            onClick={() => setActiveTab("withdrawals")}
+            className="px-5 py-2.5 min-h-[44px] text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors"
+          >
+            {t("withdrawFundsAction")}
+          </button>
+        </section>
       </TabPanel>
 
       {/* Contributions tab */}

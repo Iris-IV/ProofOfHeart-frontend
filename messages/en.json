@@ -48,7 +48,8 @@
     "campaignFallback": "Campaign #{id}",
     "withdrawalsTab": "Withdrawals",
     "withdrawalsHeading": "Multi-Signature Withdrawals",
-    "withdrawalsDescription": "Campaigns you run. Once a campaign reaches its goal you can propose a withdrawal and collect approvals from your organization's signers before the funds move."
+    "withdrawalsDescription": "Campaigns you run. Once a campaign reaches its goal you can propose a withdrawal and collect approvals from your organization's signers before the funds move.",
+    "withdrawFundsAction": "Withdraw Funds"
   },
   "MyContributions": {
     "title": "My Contributions",
