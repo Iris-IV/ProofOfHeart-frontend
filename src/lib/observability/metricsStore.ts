@@ -6,6 +6,8 @@ import type {
 } from "./types";
 
 const MAX_EVENTS = 2_000;
+/** Events older than this TTL are purged on ingest and snapshot reads. */
+const MAX_AGE_MS = 60 * 60 * 1_000; // 1 hour
 const DEFAULT_WINDOW_MS = 5 * 60_000;
 
 const events: ObservabilityEvent[] = [];
@@ -17,8 +19,26 @@ function countBy<T extends string>(items: T[]): Record<string, number> {
   }, {});
 }
 
+/** Remove events whose timestamp is older than MAX_AGE_MS from now. */
+export function purgeStaleEvents(now: number = Date.now()): void {
+  const cutoff = now - MAX_AGE_MS;
+  // events is kept in insertion order, so find the first index past the cutoff
+  const firstAlive = events.findIndex(
+    (e) => new Date(e.timestamp).getTime() >= cutoff,
+  );
+  if (firstAlive > 0) {
+    // Some stale events at the front — splice them out
+    events.splice(0, firstAlive);
+  } else if (firstAlive === -1) {
+    // No events within the TTL window — clear the entire buffer
+    events.length = 0;
+  }
+}
+
 export function ingestObservabilityEvent(event: ObservabilityEvent): void {
   events.push(event);
+  // Enforce both TTL and size bounds
+  purgeStaleEvents();
   if (events.length > MAX_EVENTS) {
     events.splice(0, events.length - MAX_EVENTS);
   }
@@ -119,6 +139,8 @@ export function evaluateAlerts(rates: ObservabilityRatesSnapshot): Observability
 export function getObservabilityMetricsSnapshot(
   windowMs: number = DEFAULT_WINDOW_MS,
 ): ObservabilityMetricsSnapshot {
+  // Purge stale events before computing the snapshot so the result is clean
+  purgeStaleEvents();
   const windowEvents = eventsInWindow(windowMs);
   const rates = computeRates(windowEvents, windowMs);
 
