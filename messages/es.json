@@ -461,6 +461,24 @@
     "verifyWithVotes": "✓ Verificar Campaña con Votos",
     "verifying": "Verificando..."
   },
+  "Notifications": {
+    "title": "Notificaciones",
+    "markAllRead": "Marcar todo leído",
+    "noNotifications": "Aún no hay notificaciones",
+    "connectWallet": "Conecta tu wallet para ver notificaciones",
+    "unreadLabel": "{count} notificaciones sin leer",
+    "viewDetails": "Ver detalles",
+    "justNow": "Ahora mismo",
+    "mAgo": "hace {count}m",
+    "hAgo": "hace {count}h",
+    "dAgo": "hace {count}d",
+    "settingsAriaLabel": "Configuración de notificaciones",
+    "settingsTitle": "Configuración de Notificaciones",
+    "prefContributions": "Contribuciones a mi campaña",
+    "prefVerified": "Campaña verificada",
+    "prefRefundAvailable": "Reembolso disponible",
+    "prefRevenueDeposited": "Ingresos depositados"
+  },
   "Observability": {
     "loading": "Cargando métricas de observabilidad…",
     "metricsRequestFailed": "Error al solicitar métricas ({status})",
