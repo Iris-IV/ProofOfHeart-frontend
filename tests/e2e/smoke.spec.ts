@@ -46,7 +46,7 @@ test.describe("Core User Flow Smoke Test", () => {
     await page.goto("/");
     await expect(page).toHaveURL(/\/(en|es)?\/?$/);
     await expect(
-      page.getByRole("heading", { name: /ProofOfHeart/i, level: 1 }).first(),
+      page.getByRole("heading", { level: 1 }).first(),
     ).toBeVisible();
 
     // Step 2: Navigate to Causes page

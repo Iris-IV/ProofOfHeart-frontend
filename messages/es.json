@@ -48,8 +48,7 @@
     "campaignFallback": "Campaña #{id}",
     "withdrawalsTab": "Retiros",
     "withdrawalsHeading": "Retiros con firma múltiple",
-    "withdrawalsDescription": "Campañas que administras. Cuando una campaña alcanza su meta, puedes proponer un retiro y reunir las aprobaciones de los firmantes de tu organización antes de mover los fondos.",
-    "withdrawFundsAction": "Retirar fondos"
+    "withdrawalsDescription": "Campañas que administras. Cuando una campaña alcanza su meta, puedes proponer un retiro y reunir las aprobaciones de los firmantes de tu organización antes de mover los fondos."
   },
   "MyContributions": {
     "title": "Mis Contribuciones",

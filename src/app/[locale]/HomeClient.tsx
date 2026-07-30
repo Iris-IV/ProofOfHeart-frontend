@@ -30,7 +30,6 @@ export default function HomeClient() {
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black text-zinc-900 dark:text-zinc-50 mb-8 leading-[1.1] tracking-tight motion-safe:animate-in fade-in slide-in-from-bottom-6 duration-700">
-            <span className="block text-red-500 dark:text-red-400">ProofOfHeart</span>
             {t("heroTitle")}
           </h1>
 
