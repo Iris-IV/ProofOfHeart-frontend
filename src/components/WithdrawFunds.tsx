@@ -41,7 +41,9 @@ export default function WithdrawFunds({
   const isWithdrawing = isPending("withdrawFunds", campaign.id);
 
   const localizeContractError = (message: string) =>
-    message.startsWith("ContractErrors.") ? tContractErrors(message) : message;
+    message.startsWith("ContractErrors.")
+      ? tContractErrors(message.slice("ContractErrors.".length))
+      : message;
 
   const isCreator = isSameAddress(userWalletAddress, campaign.creator);
 

@@ -47,7 +47,9 @@ export default function VotingComponent({
   const { showError, showWarning } = useToast();
 
   const localizeContractError = (message: string) =>
-    message.startsWith("ContractErrors.") ? tContractErrors(message) : message;
+    message.startsWith("ContractErrors.")
+      ? tContractErrors(message.slice("ContractErrors.".length))
+      : message;
 
   const hasAlreadyVoted = !!userVote || !!localVote;
   const voteDisabled = isVoting || !userWalletAddress || !isTokenHolder || hasAlreadyVoted;

@@ -98,7 +98,9 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const [alreadyRefunded, setAlreadyRefunded] = useState(false);
 
   const localizeContractError = (message: string) =>
-    message.startsWith("ContractErrors.") ? tContractErrors(message) : message;
+    message.startsWith("ContractErrors.")
+      ? tContractErrors(message.slice("ContractErrors.".length))
+      : message;
 
   useEffect(() => {
     if (fetchedCampaign) setCampaign(fetchedCampaign);
@@ -187,7 +189,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
       void reconcileVoteTallies();
       refetch();
     } catch (error) {
-      showError(getAsyncActionErrorMessage(error, parseContractError));
+      showError(localizeContractError(getAsyncActionErrorMessage(error, parseContractError)));
     } finally {
       setIsVoting(false);
     }
@@ -200,7 +202,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
       showSuccess("Campaign verified successfully via community vote!");
       refetch();
     } catch (error) {
-      showError(getAsyncActionErrorMessage(error, parseContractError));
+      showError(localizeContractError(getAsyncActionErrorMessage(error, parseContractError)));
     } finally {
       setIsVerifying(false);
     }
@@ -216,7 +218,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
       showSuccess("Campaign cancelled. Contributors can now claim full refunds.");
       refetch();
     } catch (error) {
-      showError(getAsyncActionErrorMessage(error, parseContractError));
+      showError(localizeContractError(getAsyncActionErrorMessage(error, parseContractError)));
     }
   };
 

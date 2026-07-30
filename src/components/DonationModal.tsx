@@ -101,7 +101,9 @@ export default function DonationModal({
   }, [campaign.id]);
 
   const localizeContractError = (message: string) =>
-    message.startsWith("ContractErrors.") ? tContractErrors(message) : message;
+    message.startsWith("ContractErrors.")
+      ? tContractErrors(message.slice("ContractErrors.".length))
+      : message;
 
   const formatError = (message: string) =>
     message.startsWith("ContractErrors.")
