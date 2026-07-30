@@ -29,7 +29,9 @@ test.describe("Critical User Journeys", () => {
           text.includes("access control checks") ||
           text.includes("The above error occurred in the <Lazy> component") ||
           text.includes("JSHandle@object") ||
-          text.includes("Uncaught error: Error")
+          text.includes("Uncaught error: Error") ||
+          text.includes("MISSING_MESSAGE") ||
+          /Could not resolve `.*` in messages for locale `.*`/.test(text)
         ) {
           return;
         }

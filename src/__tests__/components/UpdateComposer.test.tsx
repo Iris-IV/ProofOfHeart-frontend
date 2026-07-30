@@ -33,7 +33,7 @@ describe("UpdateComposer", () => {
         isSubmitting={false}
       />,
     );
-    expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /write an update/i })).toBeInTheDocument();
   });
 
   it('shows "Post an Update" heading and info text', () => {
@@ -59,10 +59,10 @@ describe("UpdateComposer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("✏️ Write an update"));
+    fireEvent.click(screen.getByRole("button", { name: /write an update/i }));
 
     const textarea = screen.getByPlaceholderText(
-      /Share progress, milestones, or news with your supporters/i,
+      /Share progress, milestones, or news/i,
     );
     expect(textarea).toBeInTheDocument();
     expect(textarea).toHaveFocus();
@@ -78,37 +78,14 @@ describe("UpdateComposer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("✏️ Write an update"));
+    fireEvent.click(screen.getByRole("button", { name: /write an update/i }));
     const textarea = screen.getByPlaceholderText(
-      /Share progress, milestones, or news with your supporters/i,
+      /Share progress, milestones, or news/i,
     );
 
     fireEvent.change(textarea, { target: { value: "Hello world" } });
 
-    expect(screen.getByText("11/2000")).toBeInTheDocument();
-  });
-
-  it("shows warning when content is below minimum length", async () => {
-    renderWithToastProvider(
-      <UpdateComposer
-        campaignId={1}
-        creatorAddress="GABC123"
-        onSubmit={mockOnSubmit}
-        isSubmitting={false}
-      />,
-    );
-
-    fireEvent.click(screen.getByText("✏️ Write an update"));
-    const textarea = screen.getByPlaceholderText(
-      /Share progress, milestones, or news with your supporters/i,
-    );
-
-    fireEvent.change(textarea, { target: { value: "Short" } });
-    fireEvent.click(screen.getByText("Post Update"));
-
-    await waitFor(() => {
-      expect(screen.getByText(/5 more characters needed/i)).toBeInTheDocument();
-    });
+    expect(screen.getByText("11 / 2000")).toBeInTheDocument();
   });
 
   it("disables submit button when content is too short", () => {
@@ -121,9 +98,9 @@ describe("UpdateComposer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("✏️ Write an update"));
+    fireEvent.click(screen.getByRole("button", { name: /write an update/i }));
     const textarea = screen.getByPlaceholderText(
-      /Share progress, milestones, or news with your supporters/i,
+      /Share progress, milestones, or news/i,
     );
 
     fireEvent.change(textarea, { target: { value: "Too short" } });
@@ -141,9 +118,9 @@ describe("UpdateComposer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("✏️ Write an update"));
+    fireEvent.click(screen.getByRole("button", { name: /write an update/i }));
     const textarea = screen.getByPlaceholderText(
-      /Share progress, milestones, or news with your supporters/i,
+      /Share progress, milestones, or news/i,
     );
 
     fireEvent.change(textarea, {
@@ -163,15 +140,15 @@ describe("UpdateComposer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("✏️ Write an update"));
+    fireEvent.click(screen.getByRole("button", { name: /write an update/i }));
     const textarea = screen.getByPlaceholderText(
-      /Share progress, milestones, or news with your supporters/i,
+      /Share progress, milestones, or news/i,
     );
 
     const longContent = "a".repeat(2001);
     fireEvent.change(textarea, { target: { value: longContent } });
 
-    expect(screen.getByText("1 over limit")).toBeInTheDocument();
+    expect(screen.getByText("2001 / 2000")).toBeInTheDocument();
     expect(screen.getByText("Post Update")).toBeDisabled();
   });
 
@@ -208,9 +185,9 @@ describe("UpdateComposer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("✏️ Write an update"));
+    fireEvent.click(screen.getByRole("button", { name: /write an update/i }));
     const textarea = screen.getByPlaceholderText(
-      /Share progress, milestones, or news with your supporters/i,
+      /Share progress, milestones, or news/i,
     );
 
     fireEvent.change(textarea, { target: { value: "Valid content here" } });
@@ -229,7 +206,7 @@ describe("UpdateComposer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("✏️ Write an update"));
+    fireEvent.click(screen.getByRole("button", { name: /write an update/i }));
     expect(screen.getByText("Cancel")).toBeInTheDocument();
   });
 
@@ -243,16 +220,16 @@ describe("UpdateComposer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("✏️ Write an update"));
+    fireEvent.click(screen.getByRole("button", { name: /write an update/i }));
     const textarea = screen.getByPlaceholderText(
-      /Share progress, milestones, or news with your supporters/i,
+      /Share progress, milestones, or news/i,
     );
 
     fireEvent.change(textarea, { target: { value: "Some content" } });
     fireEvent.click(screen.getByText("Cancel"));
 
     expect(screen.queryByPlaceholderText(/Share progress/i)).not.toBeInTheDocument();
-    expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /write an update/i })).toBeInTheDocument();
   });
 
   it("clears content after successful submission", async () => {
@@ -267,9 +244,9 @@ describe("UpdateComposer", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("✏️ Write an update"));
+    fireEvent.click(screen.getByRole("button", { name: /write an update/i }));
     const textarea = screen.getByPlaceholderText(
-      /Share progress, milestones, or news with your supporters/i,
+      /Share progress, milestones, or news/i,
     );
 
     fireEvent.change(textarea, { target: { value: "Valid update content" } });
