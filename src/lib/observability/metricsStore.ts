@@ -23,9 +23,7 @@ function countBy<T extends string>(items: T[]): Record<string, number> {
 export function purgeStaleEvents(now: number = Date.now()): void {
   const cutoff = now - MAX_AGE_MS;
   // events is kept in insertion order, so find the first index past the cutoff
-  const firstAlive = events.findIndex(
-    (e) => new Date(e.timestamp).getTime() >= cutoff,
-  );
+  const firstAlive = events.findIndex((e) => new Date(e.timestamp).getTime() >= cutoff);
   if (firstAlive > 0) {
     // Some stale events at the front — splice them out
     events.splice(0, firstAlive);
