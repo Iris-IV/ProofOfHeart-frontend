@@ -1,11 +1,9 @@
 import createIntlMiddleware from "next-intl/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { routing } from "./i18n/routing";
+import { MAINTENANCE_COOKIE, BYPASS_COOKIE_MAX_AGE } from "./lib/maintenanceConfig";
 
 const intlMiddleware = createIntlMiddleware(routing);
-
-const MAINTENANCE_COOKIE = "maintenance_bypass";
-const BYPASS_COOKIE_MAX_AGE = 60 * 60 * 24; // 24 h
 
 function isMaintenanceEnabled(): boolean {
   return process.env.NEXT_PUBLIC_MAINTENANCE_MODE === "true";
