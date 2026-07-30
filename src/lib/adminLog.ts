@@ -1,4 +1,5 @@
 import { normalizeAddress } from "./stellar";
+import { getArray, setArray } from "./localStorageStore";
 
 export type AdminAuditAction =
   | "verify_campaign"
@@ -19,31 +20,12 @@ const STORAGE_KEY = "proof_of_heart_admin_audit_log_v1";
 const MAX_ENTRIES = 500;
 const API_ENDPOINT = "/api/admin-audit-log";
 
-function canUseStorage(): boolean {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
-}
-
 function readAllEntries(): AdminAuditLogEntry[] {
-  if (!canUseStorage()) return [];
-
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed as AdminAuditLogEntry[];
-  } catch {
-    return [];
-  }
+  return getArray<AdminAuditLogEntry>(STORAGE_KEY);
 }
 
 function writeAllEntries(entries: AdminAuditLogEntry[]): void {
-  if (!canUseStorage()) return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries.slice(-MAX_ENTRIES)));
-  } catch {
-    // Ignore localStorage write failures.
-  }
+  setArray(STORAGE_KEY, entries, MAX_ENTRIES);
 }
 
 async function readApiEntries(adminAddress?: string): Promise<AdminAuditLogEntry[]> {

@@ -1,4 +1,5 @@
 import * as StellarSdk from "@stellar/stellar-sdk";
+import { getItem, setItem } from "./localStorageStore";
 
 const SOROBAN_RPC_URL =
   process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ??
@@ -45,13 +46,9 @@ class EventSubscriber {
     this.isPolling = true;
 
     // Attempt to load the cursor from local storage for persistence across reloads
-    try {
-      const savedCursor = localStorage.getItem(`soroban_cursor_${CONTRACT_ADDRESS}`);
-      if (savedCursor) {
-        this.cursor = savedCursor;
-      }
-    } catch (e) {
-      // Ignore local storage errors
+    const savedCursor = getItem<string>(`soroban_cursor_${CONTRACT_ADDRESS}`);
+    if (savedCursor) {
+      this.cursor = savedCursor;
     }
 
     this.poll();
@@ -120,12 +117,8 @@ class EventSubscriber {
           }
 
           this.cursor = (event as any).pagingToken || event.id;
-          try {
-            if (this.cursor) {
-              localStorage.setItem(`soroban_cursor_${CONTRACT_ADDRESS}`, this.cursor);
-            }
-          } catch (e) {
-            // Ignore
+          if (this.cursor) {
+            setItem(`soroban_cursor_${CONTRACT_ADDRESS}`, this.cursor);
           }
         }
       }

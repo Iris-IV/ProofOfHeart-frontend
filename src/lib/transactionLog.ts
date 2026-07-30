@@ -1,3 +1,7 @@
+import { normalizeAddress } from "./stellar";
+import { hasOffchainApiBaseUrl, requestOffchainJson } from "./offchainApiClient";
+import { getArray, setArray } from "./localStorageStore";
+
 export type WalletTransactionAction =
   | "contribute"
   | "claim_refund"
@@ -15,37 +19,14 @@ export interface WalletTransactionLogEntry {
   timestamp: number;
 }
 
-import { normalizeAddress } from "./stellar";
-import { hasOffchainApiBaseUrl, requestOffchainJson } from "./offchainApiClient";
-
 const STORAGE_KEY = "proof_of_heart_wallet_tx_log_v1";
 
-function canUseStorage(): boolean {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
-}
-
 function readAllEntries(): WalletTransactionLogEntry[] {
-  if (!canUseStorage()) return [];
-
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed as WalletTransactionLogEntry[];
-  } catch {
-    return [];
-  }
+  return getArray<WalletTransactionLogEntry>(STORAGE_KEY);
 }
 
 function writeAllEntries(entries: WalletTransactionLogEntry[]): void {
-  if (!canUseStorage()) return;
-
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-  } catch {
-    // Ignore localStorage write failures.
-  }
+  setArray(STORAGE_KEY, entries);
 }
 
 async function syncWalletTransaction(entry: WalletTransactionLogEntry): Promise<void> {
