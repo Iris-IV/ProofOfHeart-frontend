@@ -1,17 +1,15 @@
 "use client";
-import { getAddress, isConnected, isAllowed } from "@stellar/freighter-api";
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  ReactNode,
-} from "react";
 import * as StellarSdk from "@stellar/stellar-sdk";
 import { getAddress, getNetwork, isConnected, isAllowed } from "@stellar/freighter-api";
-import React, { createContext, useContext, useEffect, useState, useMemo, ReactNode, useRef } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+  ReactNode,
+  useRef,
+} from "react";
 import { useToast } from "./ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
 import { IS_MOCK_MODE } from "@/lib/runtimeEnv";
@@ -35,8 +33,8 @@ import SocialLoginButtons from "./SocialLoginButtons";
  * consumer — including components that only ever call `connectWallet` and never
  * read state. Splitting means:
  *
- *   - `useWalletState()`   re-renders when publicKey / connected / loading change
- *   - `useWalletActions()` never re-renders: the value is created once
+ *   - `useWalletState()`   re-renders when connection state changes
+ *   - `useWalletActions()` re-renders only when an action identity changes
  *
  * Both values are memoized, so a re-render of `WalletProvider` itself does not
  * cascade into consumers unless the data they read actually changed.
@@ -45,19 +43,7 @@ import SocialLoginButtons from "./SocialLoginButtons";
 interface WalletState {
   publicKey: string | null;
   isWalletConnected: boolean;
-  isLoading: boolean;
-}
-
-interface WalletActions {
-  connectWallet: () => Promise<void>;
-  disconnectWallet: () => void;
-}
-
-const WalletStateContext = createContext<WalletState | undefined>(undefined);
-const WalletActionsContext = createContext<WalletActions | undefined>(undefined);
   walletNetworkWarning: string | null;
-  connectWallet: () => Promise<void>;
-  disconnectWallet: () => void;
   isLoading: boolean;
   /** Which wallet backs the current session — null when disconnected. */
   walletKind: WalletKind | null;
@@ -65,12 +51,18 @@ const WalletActionsContext = createContext<WalletActions | undefined>(undefined)
   socialProfile: SocialWalletSession | null;
   /** Whether social login is available (a Web3Auth client id is configured). */
   isSocialLoginAvailable: boolean;
+}
+
+interface WalletActions {
+  connectWallet: () => Promise<void>;
+  disconnectWallet: () => void;
   connectWithSocial: (provider: SocialLoginProvider) => Promise<void>;
 }
 
 const MOCK_PUBLIC_KEY = IS_MOCK_MODE ? StellarSdk.Keypair.random().publicKey() : null;
 
-const WalletContext = createContext<WalletContextType | undefined>(undefined);
+const WalletStateContext = createContext<WalletState | undefined>(undefined);
+const WalletActionsContext = createContext<WalletActions | undefined>(undefined);
 
 export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const [publicKey, setPublicKey] = useState<string | null>(null);
@@ -94,7 +86,6 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       ? "Testnet"
       : "the app network";
 
-  const checkWalletConnection = useCallback(async () => {
   useEffect(() => {
     if (IS_MOCK_MODE) {
       const storedKey =
@@ -258,14 +249,9 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     } catch {
       return false;
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    // Always re-verify with Freighter rather than blindly trusting localStorage (#97)
-    checkWalletConnection();
-  }, [checkWalletConnection]);
-
-  const connectWallet = useCallback(async () => {
+  const connectWallet = async () => {
     setIsLoading(true);
     try {
       if (IS_MOCK_MODE) {
@@ -325,9 +311,8 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [showError, showSuccess, showWarning]);
+  };
 
-  const disconnectWallet = useCallback(() => {
   /**
    * #649 — Create or restore an embedded wallet from a Google or X account, so
    * visitors without a browser extension can still contribute.
@@ -396,56 +381,51 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     showWarning(
       "Disconnected. To fully revoke Freighter access, open the extension and remove this site from Connected Sites.",
     );
-  }, [showWarning]);
+  };
 
   const state = useMemo<WalletState>(
-    () => ({ publicKey, isWalletConnected, isLoading }),
-    [publicKey, isWalletConnected, isLoading]
-  );
-
-  const actions = useMemo<WalletActions>(
-    () => ({ connectWallet, disconnectWallet }),
-    [connectWallet, disconnectWallet]
-  );
-
-  const contextValue = useMemo(
     () => ({
       publicKey,
       isWalletConnected,
       walletNetworkWarning,
-      connectWallet,
-      disconnectWallet,
       isLoading,
       walletKind,
       socialProfile,
       isSocialLoginAvailable: isSocialLoginConfigured(),
+    }),
+    [publicKey, isWalletConnected, walletNetworkWarning, isLoading, walletKind, socialProfile],
+  );
+
+  const actions = useMemo<WalletActions>(
+    () => ({
+      connectWallet,
+      disconnectWallet,
       connectWithSocial,
     }),
-    [publicKey, isWalletConnected, walletNetworkWarning, isLoading, walletKind, socialProfile, connectWithSocial]
+    [connectWithSocial],
   );
 
   return (
     <WalletStateContext.Provider value={state}>
-      <WalletActionsContext.Provider value={actions}>{children}</WalletActionsContext.Provider>
+      <WalletActionsContext.Provider value={actions}>
+        {children}
+        <InstallFreighterModal
+          isOpen={showInstallPrompt}
+          onClose={() => setShowInstallPrompt(false)}
+          onRetry={handleRetryInstall}
+          socialLogin={
+            isSocialLoginConfigured() ? (
+              <SocialLoginButtons
+                available
+                disabled={isLoading}
+                onSelect={connectWithSocial}
+                onConnected={() => setShowInstallPrompt(false)}
+              />
+            ) : undefined
+          }
+        />
+      </WalletActionsContext.Provider>
     </WalletStateContext.Provider>
-    <WalletContext.Provider value={contextValue}>
-      {children}
-      <InstallFreighterModal
-        isOpen={showInstallPrompt}
-        onClose={() => setShowInstallPrompt(false)}
-        onRetry={handleRetryInstall}
-        socialLogin={
-          isSocialLoginConfigured() ? (
-            <SocialLoginButtons
-              available
-              disabled={isLoading}
-              onSelect={connectWithSocial}
-              onConnected={() => setShowInstallPrompt(false)}
-            />
-          ) : undefined
-        }
-      />
-    </WalletContext.Provider>
   );
 };
 
@@ -457,8 +437,8 @@ export const useWalletState = (): WalletState => {
 };
 
 /**
- * Subscribe to wallet actions only. Never causes a re-render — prefer this in
- * components that only trigger connect/disconnect (buttons, menu items).
+ * Subscribe to wallet actions only. Prefer this in components that only trigger
+ * connect/disconnect (buttons, menu items) and never read connection state.
  */
 export const useWalletActions = (): WalletActions => {
   const ctx = useContext(WalletActionsContext);
@@ -472,7 +452,15 @@ export const useWalletActions = (): WalletActions => {
  * a component only needs one half.
  */
 export const useWallet = () => {
-  const state = useWalletState();
-  const actions = useWalletActions();
-  return useMemo(() => ({ ...state, ...actions }), [state, actions]);
+  // Reads the contexts directly rather than composing the two hooks above, so a
+  // call outside the provider still reports `useWallet` — the name the caller
+  // actually used — instead of leaking the split into the error message.
+  const state = useContext(WalletStateContext);
+  const actions = useContext(WalletActionsContext);
+  const value = useMemo(
+    () => (state && actions ? { ...state, ...actions } : null),
+    [state, actions]
+  );
+  if (!value) throw new Error("useWallet must be used within a WalletProvider");
+  return value;
 };
