@@ -14,9 +14,16 @@ function getHorizonServerUrl(): string {
 
 export async function getStellarBalance(publicKey: string): Promise<number> {
   const server = new Horizon.Server(getHorizonServerUrl());
-  const account = await server.loadAccount(publicKey);
-  const xlmBalance = account.balances.find(
-    (b: { asset_type: string; balance: string }) => b.asset_type === "native",
-  );
-  return xlmBalance ? parseFloat(xlmBalance.balance) : 0;
+  try {
+    const account = await server.loadAccount(publicKey);
+    const xlmBalance = account.balances.find(
+      (b: { asset_type: string; balance: string }) => b.asset_type === "native",
+    );
+    return xlmBalance ? parseFloat(xlmBalance.balance) : 0;
+  } catch (error: any) {
+    if (error.response && error.response.status === 404) {
+      return 0;
+    }
+    throw error;
+  }
 }

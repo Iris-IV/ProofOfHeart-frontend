@@ -177,7 +177,8 @@
     "signing": "Signing...",
     "submitting": "Submitting...",
     "confirming": "Confirming...",
-    "transferring": "Transferring..."
+    "transferring": "Transferring...",
+    "requiredWord": "CONFIRM"
   },
   "ContractErrors": {
     "NotAuthorized": "You are not authorized to perform this action.",
@@ -497,5 +498,63 @@
     "createdCampaigns": "Created Campaigns",
     "noSavedCampaigns": "No saved campaigns yet.",
     "browseCauses": "Browse causes"
+  },
+  "Onboarding": {
+    "tourLabel": "Onboarding Tour",
+    "skip": "Skip",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "stepProgress": "Step {current} of {total}",
+    "step_connect_icon": "👛",
+    "step_connect_title": "Connect Wallet",
+    "step_connect_body": "Connect your Stellar wallet to get started.",
+    "step_chooseCause_icon": "❤️",
+    "step_chooseCause_title": "Choose a Cause",
+    "step_chooseCause_body": "Browse and select a cause you want to support.",
+    "step_contribute_icon": "💸",
+    "step_contribute_title": "Contribute",
+    "step_contribute_body": "Make a donation to help the cause reach its funding goal.",
+    "step_confirm_icon": "🔗",
+    "step_confirm_title": "Track Impact",
+    "step_confirm_body": "Your contribution is recorded on the Stellar blockchain."
+  },
+  "CampaignMap": {
+    "emptyTitle": "No campaigns with location data",
+    "emptyBody": "Campaigns with coordinates will appear on this map. Switch to list view to browse all campaigns."
+  },
+  "Gamification": {
+    "level_Bronze": "Bronze",
+    "level_Silver": "Silver",
+    "level_Gold": "Gold",
+    "level_Platinum": "Platinum",
+    "level_Diamond": "Diamond",
+    "badge_early_backer_name": "Early Backer",
+    "badge_early_backer_desc": "Supported ProofOfHeart in its early days",
+    "badge_streak_master_name": "Streak Master",
+    "badge_streak_master_desc": "Made 3 or more donations",
+    "badge_whale_name": "Whale",
+    "badge_whale_desc": "Donated 1,000 XLM or more in total",
+    "badge_heart_champion_name": "Heart Champion",
+    "badge_heart_champion_desc": "Reached Diamond level (5,000+ XLM donated)",
+    "locked": "Locked"
+  },
+  "ContributorLeaderboard": {
+    "title": "Top Supporters",
+    "subtitle": "Leaderboard",
+    "emptyMessage": "Be the first supporter for this cause! 💜",
+    "youBadge": "You",
+    "hideWallet": "Hide my wallet address",
+    "anonymousState": "✓ Anonymous",
+    "optOutState": "Opt out",
+    "optOutTooltip": "Contributors can opt out at any time to remain anonymous on public leaderboards.",
+    "disableAnon": "Disable anonymous mode",
+    "enableAnon": "Enable anonymous mode"
+  },
+  "DonatorBadges": {
+    "level": "Level {levelNumber}: {levelName}",
+    "totalXlm": "{amount} XLM Total",
+    "nextXlm": "Next: {amount} XLM",
+    "earnedBadges": "Earned Badges"
   }
 }
