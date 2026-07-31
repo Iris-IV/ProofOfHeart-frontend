@@ -18,6 +18,7 @@ import FundingProgressBar from "./FundingProgressBar";
 import { useToast } from "./ToastProvider";
 import VotingComponent from "./VotingComponent";
 import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
+import CampaignDescription from "./CampaignDescription";
 
 interface CauseCardProps {
   campaign: Campaign;
@@ -167,9 +168,7 @@ function CauseCard({
         </h3>
 
         {/* Description */}
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3 leading-relaxed break-words h-[4.5rem]">
-          {campaign.description}
-        </p>
+        <CampaignDescription description={campaign.description} />
 
         {/* Funding progress */}
         <div className="space-y-1.5">
@@ -282,6 +281,11 @@ function CauseCard({
   );
 }
 
+/**
+ * Memoized so a list of cards does not re-render wholesale when unrelated
+ * global state changes (#648). Cards are rendered in long lists, so this is
+ * where an unnecessary render is most expensive.
+ */
 function causeCardPropsAreEqual(prev: CauseCardProps, next: CauseCardProps): boolean {
   const prevCampaign = prev.campaign;
   const nextCampaign = next.campaign;

@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+
 import CampaignTabs from "@/components/CampaignTabs";
 const RevenueSharingPanel = dynamic(() => import("@/components/RevenueSharingPanel"), {
   ssr: false,
@@ -14,6 +15,10 @@ const VestingReservePanel = dynamic(() => import("@/components/VestingReservePan
   ssr: false,
 });
 const DonationModal = dynamic(() => import("@/components/DonationModal"), { ssr: false });
+const EditCampaignMetadata = dynamic(() => import("@/components/EditCampaignMetadata"), {
+  ssr: false,
+});
+
 import CampaignStatusBadge from "@/components/CampaignStatusBadge";
 import DeadlineCountdown from "@/components/DeadlineCountdown";
 import FundingProgressBar from "@/components/FundingProgressBar";
@@ -52,9 +57,6 @@ import { trackViewCampaign } from "@/lib/analytics";
 import { formatXlm, formatDate } from "@/lib/formatters";
 import { getLocalizedDescription } from "@/utils/localizedDescription";
 import { isSameAddress } from "@/lib/stellar";
-const EditCampaignMetadata = dynamic(() => import("@/components/EditCampaignMetadata"), {
-  ssr: false,
-});
 
 export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
@@ -325,6 +327,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 </span>
                 <CampaignStatusBadge campaign={campaign} />
               </div>
+
               {campaign.cover_image_url && (
                 <div className="relative w-full aspect-video rounded-lg overflow-hidden mb-4 bg-zinc-100 dark:bg-zinc-700">
                   <Image

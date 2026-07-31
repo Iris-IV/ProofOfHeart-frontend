@@ -863,7 +863,7 @@ export default function AdminDashboard() {
         title={t("confirmTransferTitle")}
         body={t("confirmTransferBody")}
         confirmLabel={t("typeConfirm")}
-        typeConfirmPlaceholder="CONFIRM"
+        typeConfirmPlaceholder={t("requiredWord")}
         cancelLabel={t("cancel")}
         confirmButtonLabel={t("confirmTransfer")}
       />
@@ -878,7 +878,7 @@ export default function AdminDashboard() {
         title={t("confirmHighFeeTitle")}
         body={t("confirmHighFeeBody")}
         confirmLabel={t("confirmFeeContinue")}
-        typeConfirmPlaceholder="CONFIRM"
+        typeConfirmPlaceholder={t("requiredWord")}
         cancelLabel={t("cancel")}
         confirmButtonLabel={t("updateFee")}
       />
