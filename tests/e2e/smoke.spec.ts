@@ -45,9 +45,7 @@ test.describe("Core User Flow Smoke Test", () => {
     // Step 1: Navigate to Home page
     await page.goto("/");
     await expect(page).toHaveURL(/\/(en|es)?\/?$/);
-    await expect(
-      page.getByRole("heading", { level: 1 }).first(),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
 
     // Step 2: Navigate to Causes page
     await page.goto("/en/causes");

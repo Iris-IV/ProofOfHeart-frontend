@@ -41,9 +41,7 @@ test.describe("Creator Withdrawal Flow E2E Test", () => {
     await expect(dashboardHeader).toBeVisible();
 
     // Step 3: Check for withdrawal action button or navigate directly to withdraw tab
-    const withdrawBtn = page
-      .getByRole("button", { name: /withdraw|claim/i })
-      .first();
+    const withdrawBtn = page.getByRole("button", { name: /withdraw|claim/i }).first();
     // Using a softer check since this button might not always exist depending on state
     await expect(page.getByRole("main").first()).toBeVisible();
 
