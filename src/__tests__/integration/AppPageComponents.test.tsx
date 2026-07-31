@@ -143,6 +143,7 @@ jest.mock("@/lib/contractClient", () => ({
   verifyCampaignWithVotes: jest.fn(),
   getContribution: jest.fn(() => Promise.resolve(15_000_000n)),
   claimRefund: jest.fn(),
+  getAllCampaigns: jest.fn(() => Promise.resolve([])),
 }));
 
 jest.mock("@/lib/adminLog", () => ({

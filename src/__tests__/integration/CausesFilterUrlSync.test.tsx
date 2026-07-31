@@ -74,6 +74,8 @@ jest.mock("@/lib/contractClient", () => ({
   claimRefund: jest.fn(),
   voteOnCampaign: jest.fn(),
   hasVoted: jest.fn(),
+  getApproveVotes: jest.fn(() => Promise.resolve(0)),
+  getRejectVotes: jest.fn(() => Promise.resolve(0)),
 }));
 
 jest.mock("@/components/CauseCard", () => ({
@@ -95,6 +97,7 @@ describe("Causes filters URL sync", () => {
   it("syncs category, status, sort and search to URL", async () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     render(<CausesClient />);
+    await act(async () => { await Promise.resolve(); });
 
     const [statusSelect, sortSelect] = screen.getAllByRole("combobox");
     await user.click(screen.getByRole("button", { name: "Learner, 1 causes" }));
@@ -120,6 +123,8 @@ describe("Causes filters URL sync", () => {
     );
 
     render(<CausesClient />);
+    await act(async () => { await Promise.resolve(); });
+
     const [statusSelect, sortSelect] = screen.getAllByRole("combobox");
 
     expect(await screen.findByDisplayValue("astro")).toBeInTheDocument();
@@ -131,8 +136,9 @@ describe("Causes filters URL sync", () => {
     expect(sortSelect).toHaveValue("most_funded");
   });
 
-  it("shows live category counts on filter chips", () => {
+  it("shows live category counts on filter chips", async () => {
     render(<CausesClient />);
+    await act(async () => { await Promise.resolve(); });
 
     expect(
       screen.getByRole("button", { name: "All Categories, 1 causes, selected" }),
