@@ -19,3 +19,19 @@ jest.mock("next-intl", () => ({
     values?.count === 1 ? `${key}_one` : key,
   useLocale: () => "en",
 }));
+
+// Mock StellarSdk to avoid RPC Server instantiation issues in tests
+jest.mock("@stellar/stellar-sdk", () => {
+  const original = jest.requireActual("@stellar/stellar-sdk");
+  return {
+    __esModule: true,
+    ...original,
+    rpc: {
+      ...(original.rpc || {}),
+      Server: class MockServer {
+        getLatestLedger = jest.fn().mockResolvedValue({ sequence: 100 });
+        getEvents = jest.fn().mockResolvedValue({ events: [] });
+      }
+    }
+  };
+});
