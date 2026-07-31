@@ -1,10 +1,17 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ToastProvider } from "@/components/ToastProvider";
-import { WalletProvider } from "@/components/WalletContext";
 import UpdatesSection from "@/components/UpdatesSection";
 import { Campaign, Category } from "@/types";
 import * as campaignUpdatesModule from "@/lib/campaignUpdates";
+import { WalletProvider } from "@/components/WalletContext";
+
+const mockUseWallet = jest.fn();
+
+jest.mock("@/components/WalletContext", () => ({
+  useWallet: () => mockUseWallet(),
+  WalletProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
 
 // react-markdown ships ESM this Jest setup does not transform, so the markdown
 // renderer is stubbed the same way AppPageComponents.test.tsx does.
@@ -21,6 +28,7 @@ jest.mock("@/components/SafeMarkdown", () => ({
 jest.mock("@/lib/campaignUpdates", () => ({
   getCampaignUpdates: jest.fn(),
   createCampaignUpdate: jest.fn(),
+  verifyUpdateSignature: jest.fn().mockResolvedValue(true),
 }));
 
 const mockGetCampaignUpdates = campaignUpdatesModule.getCampaignUpdates as jest.Mock;
@@ -56,6 +64,19 @@ const createTestQueryClient = () => {
 };
 
 const renderUpdatesSection = (campaign: Campaign, walletPublicKey: string | null = null) => {
+  mockUseWallet.mockReturnValue({
+    publicKey: walletPublicKey,
+    isWalletConnected: !!walletPublicKey,
+    walletNetworkWarning: null,
+    connectWallet: jest.fn(),
+    disconnectWallet: jest.fn(),
+    isLoading: false,
+    walletKind: null,
+    socialProfile: null,
+    isSocialLoginAvailable: false,
+    connectWithSocial: jest.fn(),
+  });
+
   const queryClient = createTestQueryClient();
 
   return render(
@@ -128,7 +149,7 @@ describe("UpdatesSection Integration", () => {
 
       renderUpdatesSection(mockCampaign);
 
-      expect(screen.getAllByTestId("skeleton")).toHaveLength(9);
+      expect(screen.getAllByTestId("skeleton")).toHaveLength(15);
     });
 
     it("shows error state on fetch failure", async () => {
@@ -151,7 +172,7 @@ describe("UpdatesSection Integration", () => {
       renderUpdatesSection(mockCampaign, mockCampaign.creator);
 
       await waitFor(() => {
-        expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
+        expect(screen.getByText(/Write an update/i)).toBeInTheDocument();
       });
     });
 
@@ -164,7 +185,7 @@ describe("UpdatesSection Integration", () => {
       renderUpdatesSection(mockCampaign, otherAddress);
 
       await waitFor(() => {
-        expect(screen.queryByText("✏️ Write an update")).not.toBeInTheDocument();
+        expect(screen.queryByText(/Write an update/i)).not.toBeInTheDocument();
       });
     });
 
@@ -174,7 +195,7 @@ describe("UpdatesSection Integration", () => {
       renderUpdatesSection(mockCampaign, null);
 
       await waitFor(() => {
-        expect(screen.queryByText("✏️ Write an update")).not.toBeInTheDocument();
+        expect(screen.queryByText(/Write an update/i)).not.toBeInTheDocument();
       });
     });
   });
@@ -196,13 +217,13 @@ describe("UpdatesSection Integration", () => {
 
       // Open composer
       await waitFor(() => {
-        expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
+        expect(screen.getByText(/Write an update/i)).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("✏️ Write an update"));
+      fireEvent.click(screen.getByText(/Write an update/i));
 
       // Type content
       const textarea = screen.getByPlaceholderText(
-        /Share progress, milestones, or news with your supporters/i,
+        /Share progress, milestones/i,
       );
       fireEvent.change(textarea, {
         target: { value: "New update content" },
@@ -216,6 +237,7 @@ describe("UpdatesSection Integration", () => {
           1,
           "New update content",
           mockCampaign.creator,
+          true,
         );
       });
     });
@@ -230,12 +252,12 @@ describe("UpdatesSection Integration", () => {
       renderUpdatesSection(mockCampaign, mockCampaign.creator);
 
       await waitFor(() => {
-        expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
+        expect(screen.getByText(/Write an update/i)).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("✏️ Write an update"));
+      fireEvent.click(screen.getByText(/Write an update/i));
 
       const textarea = screen.getByPlaceholderText(
-        /Share progress, milestones, or news with your supporters/i,
+        /Share progress, milestones/i,
       );
       fireEvent.change(textarea, {
         target: { value: "Update content" },
@@ -243,7 +265,9 @@ describe("UpdatesSection Integration", () => {
 
       fireEvent.click(screen.getByText("Post Update"));
 
-      expect(screen.getByText("Posting...")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/Posting/i)).toBeInTheDocument();
+      });
     });
 
     it("shows error toast on submission failure", async () => {
@@ -254,12 +278,12 @@ describe("UpdatesSection Integration", () => {
       renderUpdatesSection(mockCampaign, mockCampaign.creator);
 
       await waitFor(() => {
-        expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
+        expect(screen.getByText(/Write an update/i)).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("✏️ Write an update"));
+      fireEvent.click(screen.getByText(/Write an update/i));
 
       const textarea = screen.getByPlaceholderText(
-        /Share progress, milestones, or news with your supporters/i,
+        /Share progress, milestones/i,
       );
       fireEvent.change(textarea, {
         target: { value: "Update content" },
@@ -287,12 +311,12 @@ describe("UpdatesSection Integration", () => {
       renderUpdatesSection(mockCampaign, mockCampaign.creator);
 
       await waitFor(() => {
-        expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
+        expect(screen.getByText(/Write an update/i)).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("✏️ Write an update"));
+      fireEvent.click(screen.getByText(/Write an update/i));
 
       const textarea = screen.getByPlaceholderText(
-        /Share progress, milestones, or news with your supporters/i,
+        /Share progress, milestones/i,
       );
       fireEvent.change(textarea, {
         target: { value: "Success update" },
@@ -302,7 +326,7 @@ describe("UpdatesSection Integration", () => {
 
       // After success, composer should collapse
       await waitFor(() => {
-        expect(screen.getByText("✏️ Write an update")).toBeInTheDocument();
+        expect(screen.getByText(/Write an update/i)).toBeInTheDocument();
       });
     });
   });

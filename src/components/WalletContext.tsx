@@ -11,7 +11,15 @@ import React, {
 } from "react";
 import * as StellarSdk from "@stellar/stellar-sdk";
 import { getAddress, getNetwork, isConnected, isAllowed } from "@stellar/freighter-api";
-import React, { createContext, useContext, useEffect, useState, useMemo, ReactNode, useRef } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+  ReactNode,
+  useRef,
+} from "react";
 import { useToast } from "./ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
 import { IS_MOCK_MODE } from "@/lib/runtimeEnv";
@@ -421,7 +429,15 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       isSocialLoginAvailable: isSocialLoginConfigured(),
       connectWithSocial,
     }),
-    [publicKey, isWalletConnected, walletNetworkWarning, isLoading, walletKind, socialProfile, connectWithSocial]
+    [
+      publicKey,
+      isWalletConnected,
+      walletNetworkWarning,
+      isLoading,
+      walletKind,
+      socialProfile,
+      connectWithSocial,
+    ],
   );
 
   return (

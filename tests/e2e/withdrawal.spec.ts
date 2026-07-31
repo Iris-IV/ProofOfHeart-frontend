@@ -20,29 +20,34 @@ test.describe("Creator Withdrawal Flow E2E Test", () => {
     // Dismiss onboarding tour and pre-set connected wallet state
     await page.addInitScript(() => {
       localStorage.setItem("onboarding_tour_dismissed", "1");
-      localStorage.setItem("stellar_wallet_public_key", "GCREATOR1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ123");
+      localStorage.setItem(
+        "stellar_wallet_public_key",
+        "GCREATOR1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ123",
+      );
     });
   });
 
-  test("should allow creator to navigate to dashboard and trigger withdrawal flow", async ({ page }) => {
+  test("should allow creator to navigate to dashboard and trigger withdrawal flow", async ({
+    page,
+  }) => {
     // Step 1: Navigate to Dashboard page
     await page.goto("/en/dashboard");
     await expect(page).toHaveURL(/\/dashboard/);
     await expect(page.locator("body")).toBeVisible();
 
     // Step 2: Ensure dashboard elements load
-    const dashboardHeader = page.getByRole("heading", { level: 1 }).or(page.locator("body"));
+    const dashboardHeader = page.getByRole("heading", { level: 1 }).first();
     await expect(dashboardHeader).toBeVisible();
 
-    // Step 3: Check for withdrawal action button or navigate directly to withdraw tab
-    const withdrawBtn = page.getByRole("button", { name: /withdraw|claim/i }).or(page.locator("body"));
-    await expect(withdrawBtn).toBeVisible();
+    // Step 3: Navigate to the Withdrawals tab
+    const withdrawalsTab = page.getByRole("tab", { name: /withdrawals/i });
+    await expect(withdrawalsTab).toBeVisible();
+    await withdrawalsTab.click();
 
     // Step 4: Validate mock mode response and withdrawal UI readiness
-    await page.evaluate(() => {
-      return {
-        connected: localStorage.getItem("stellar_wallet_public_key") !== null,
-      };
+    const connected = await page.evaluate(() => {
+      return localStorage.getItem("stellar_wallet_public_key") !== null;
     });
+    expect(connected).toBe(true);
   });
 });
