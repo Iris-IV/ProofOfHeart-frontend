@@ -459,7 +459,7 @@ export const useWallet = () => {
   const actions = useContext(WalletActionsContext);
   const value = useMemo(
     () => (state && actions ? { ...state, ...actions } : null),
-    [state, actions]
+    [state, actions],
   );
   if (!value) throw new Error("useWallet must be used within a WalletProvider");
   return value;
