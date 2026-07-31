@@ -1,4 +1,3 @@
-import * as StellarSdk from "@stellar/stellar-sdk";
 import { rpc } from "@stellar/stellar-sdk";
 
 const SOROBAN_RPC_URL =

@@ -14,7 +14,7 @@ const VestingReservePanel = dynamic(() => import("@/components/VestingReservePan
 const DonationModal = dynamic(() => import("@/components/DonationModal"), { ssr: false });
 const EditCampaignMetadata = dynamic(() => import("@/components/EditCampaignMetadata"), { ssr: false });
 
-import CampaignDescription from "@/components/CampaignDescription";
+
 import CampaignStatusBadge from "@/components/CampaignStatusBadge";
 import DeadlineCountdown from "@/components/DeadlineCountdown";
 import FundingProgressBar from "@/components/FundingProgressBar";
