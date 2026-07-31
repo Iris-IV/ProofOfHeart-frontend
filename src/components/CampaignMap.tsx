@@ -6,6 +6,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { Campaign } from "@/types";
 import { Link } from "@/i18n/routing";
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 
 // Fix Leaflet default marker icon (broken in bundlers)
 // https://github.com/Leaflet/Leaflet/issues/4968
@@ -65,6 +66,7 @@ interface CampaignMapProps {
 }
 
 export default function CampaignMap({ campaigns }: CampaignMapProps) {
+  const t = useTranslations("CampaignMap");
   const validCampaigns = useMemo(() => filterByValidCoordinates(campaigns), [campaigns]);
 
   const center = useMemo<[number, number]>(() => {
@@ -79,11 +81,10 @@ export default function CampaignMap({ campaigns }: CampaignMapProps) {
       <div className="flex flex-col items-center justify-center min-h-[400px] p-6 text-center rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700">
         <div className="text-4xl mb-4">🗺️</div>
         <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-          No campaigns with location data
+          {t("emptyTitle")}
         </h3>
         <p className="text-zinc-600 dark:text-zinc-400 max-w-md">
-          Campaigns with coordinates will appear on this map. Switch to list view to browse all
-          campaigns.
+          {t("emptyBody")}
         </p>
       </div>
     );
