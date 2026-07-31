@@ -46,18 +46,18 @@ test.describe("Core User Flow Smoke Test", () => {
     await page.goto("/");
     await expect(page).toHaveURL(/\/(en|es)?\/?$/);
     await expect(
-      page.getByRole("heading", { name: /ProofOfHeart/i, level: 1 }).or(page.locator("body")),
+      page.getByRole("heading", { level: 1 }).first(),
     ).toBeVisible();
 
     // Step 2: Navigate to Causes page
     await page.goto("/en/causes");
     await expect(page).toHaveURL(/\/causes/);
-    await expect(page.locator("body")).toBeVisible();
+    await expect(page.getByRole("main").first()).toBeVisible();
 
     // Step 3: Navigate to a specific Cause Detail page
     await page.goto("/en/causes/1");
     await expect(page).toHaveURL(/\/causes\/[^/]+$/);
-    await expect(page.locator("body")).toBeVisible();
+    await expect(page.getByRole("main").first()).toBeVisible();
 
     // Step 4: Navigate to Dashboard
     await page.goto("/en/dashboard");
