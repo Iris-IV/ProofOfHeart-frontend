@@ -31,7 +31,7 @@ jest.mock("@stellar/stellar-sdk", () => {
       Server: class MockServer {
         getLatestLedger = jest.fn().mockResolvedValue({ sequence: 100 });
         getEvents = jest.fn().mockResolvedValue({ events: [] });
-      }
-    }
+      },
+    },
   };
 });

@@ -26,7 +26,11 @@ function DonorBadges({ donations, variant = "full" }: DonorBadgesProps) {
           {progress.current.icon} {progress.current.name}
         </span>
         {badges.map((badge) => (
-          <span key={badge.id} title={`${badge.label}: ${badge.description}`} aria-label={badge.label}>
+          <span
+            key={badge.id}
+            title={`${badge.label}: ${badge.description}`}
+            aria-label={badge.label}
+          >
             {badge.icon}
           </span>
         ))}

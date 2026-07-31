@@ -97,7 +97,9 @@ describe("Causes filters URL sync", () => {
   it("syncs category, status, sort and search to URL", async () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     render(<CausesClient />);
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     const [statusSelect, sortSelect] = screen.getAllByRole("combobox");
     await user.click(screen.getByRole("button", { name: "Learner, 1 causes" }));
@@ -123,7 +125,9 @@ describe("Causes filters URL sync", () => {
     );
 
     render(<CausesClient />);
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     const [statusSelect, sortSelect] = screen.getAllByRole("combobox");
 
@@ -138,7 +142,9 @@ describe("Causes filters URL sync", () => {
 
   it("shows live category counts on filter chips", async () => {
     render(<CausesClient />);
-    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     expect(
       screen.getByRole("button", { name: "All Categories, 1 causes, selected" }),

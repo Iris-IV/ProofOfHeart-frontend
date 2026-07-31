@@ -7,13 +7,17 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 
-
 import CampaignTabs from "@/components/CampaignTabs";
-const RevenueSharingPanel = dynamic(() => import("@/components/RevenueSharingPanel"), { ssr: false });
-const VestingReservePanel = dynamic(() => import("@/components/VestingReservePanel"), { ssr: false });
+const RevenueSharingPanel = dynamic(() => import("@/components/RevenueSharingPanel"), {
+  ssr: false,
+});
+const VestingReservePanel = dynamic(() => import("@/components/VestingReservePanel"), {
+  ssr: false,
+});
 const DonationModal = dynamic(() => import("@/components/DonationModal"), { ssr: false });
-const EditCampaignMetadata = dynamic(() => import("@/components/EditCampaignMetadata"), { ssr: false });
-
+const EditCampaignMetadata = dynamic(() => import("@/components/EditCampaignMetadata"), {
+  ssr: false,
+});
 
 import CampaignStatusBadge from "@/components/CampaignStatusBadge";
 import DeadlineCountdown from "@/components/DeadlineCountdown";

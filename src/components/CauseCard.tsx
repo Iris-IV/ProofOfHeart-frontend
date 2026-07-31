@@ -43,7 +43,6 @@ function formatDate(ts: number, locale: string) {
   return formatShortDate(ts, locale);
 }
 
-
 function CauseCard({
   campaign,
   userWalletAddress,

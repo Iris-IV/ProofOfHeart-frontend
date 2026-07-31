@@ -11,11 +11,7 @@ import { useToast } from "./ToastProvider";
 import { useWallet } from "./WalletContext";
 import { usePlatformFee } from "../hooks/usePlatformFee";
 import { parseContractError } from "../utils/contractErrors";
-import {
-  INTERVAL_LABELS,
-  RecurringInterval,
-  createSchedule,
-} from "../lib/recurringDonations";
+import { INTERVAL_LABELS, RecurringInterval, createSchedule } from "../lib/recurringDonations";
 
 const EXPLORER_BASE =
   process.env.NEXT_PUBLIC_EXPLORER_URL ?? "https://stellar.expert/explorer/testnet/tx";
@@ -518,8 +514,8 @@ export default function DonationModal({
                 </p>
                 {isRecurring && (
                   <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">
-                    {INTERVAL_LABELS[recurringInterval]} donation set up. We&apos;ll remind you when the
-                    next one is due.
+                    {INTERVAL_LABELS[recurringInterval]} donation set up. We&apos;ll remind you when
+                    the next one is due.
                   </p>
                 )}
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t("thankYou")}</p>

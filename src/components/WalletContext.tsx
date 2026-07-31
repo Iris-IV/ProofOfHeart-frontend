@@ -401,12 +401,12 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
 
   const state = useMemo<WalletState>(
     () => ({ publicKey, isWalletConnected, isLoading }),
-    [publicKey, isWalletConnected, isLoading]
+    [publicKey, isWalletConnected, isLoading],
   );
 
   const actions = useMemo<WalletActions>(
     () => ({ connectWallet, disconnectWallet }),
-    [connectWallet, disconnectWallet]
+    [connectWallet, disconnectWallet],
   );
 
   const contextValue = useMemo(
@@ -422,7 +422,15 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       isSocialLoginAvailable: isSocialLoginConfigured(),
       connectWithSocial,
     }),
-    [publicKey, isWalletConnected, walletNetworkWarning, isLoading, walletKind, socialProfile, connectWithSocial]
+    [
+      publicKey,
+      isWalletConnected,
+      walletNetworkWarning,
+      isLoading,
+      walletKind,
+      socialProfile,
+      connectWithSocial,
+    ],
   );
 
   return (
