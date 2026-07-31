@@ -64,11 +64,11 @@ export interface TransactionLifecycleOptions {
 // Soroban RPC server (lazily initialised)
 // ---------------------------------------------------------------------------
 
-let _server: rpc.Server | null = null;
+let _server: StellarSdk.rpc.Server | null = null;
 
-function getServer(): rpc.Server {
+function getServer(): StellarSdk.rpc.Server {
   if (!_server) {
-    _server = new rpc.Server(SOROBAN_RPC_URL);
+    _server = new StellarSdk.rpc.Server(SOROBAN_RPC_URL);
   }
   return _server;
 }

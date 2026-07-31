@@ -1,23 +1,3 @@
-'use client';
-
-import Link from 'next/link';
-import { useState, useEffect } from 'react';
-import CampaignActions from '@/components/CampaignActions';
-import CampaignDescription from '@/components/CampaignDescription';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeSanitize from 'rehype-sanitize';
-import CampaignStatusBadge from '@/components/CampaignStatusBadge';
-import DeadlineCountdown from '@/components/DeadlineCountdown';
-import DonationModal from '@/components/DonationModal';
-import FundingProgressBar from '@/components/FundingProgressBar';
-import RevenueSharingPanel from '@/components/RevenueSharingPanel';
-import UpdatesSection from '@/components/UpdatesSection';
-import { useToast } from '@/components/ToastProvider';
-import VotingComponent from '@/components/VotingComponent';
-import { useWallet } from '@/components/WalletContext';
-import { useCampaign } from '@/hooks/useCampaign';
-import { usePlatformFee } from '@/hooks/usePlatformFee';
 "use client";
 
 import Link from "next/link";
@@ -26,14 +6,17 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeSanitize from "rehype-sanitize";
+
 import CampaignTabs from "@/components/CampaignTabs";
-const RevenueSharingPanel = dynamic(() => import("@/components/RevenueSharingPanel"), {
-  ssr: false,
-});
-const VestingReservePanel = dynamic(() => import("@/components/VestingReservePanel"), {
-  ssr: false,
-});
+const RevenueSharingPanel = dynamic(() => import("@/components/RevenueSharingPanel"), { ssr: false });
+const VestingReservePanel = dynamic(() => import("@/components/VestingReservePanel"), { ssr: false });
 const DonationModal = dynamic(() => import("@/components/DonationModal"), { ssr: false });
+const EditCampaignMetadata = dynamic(() => import("@/components/EditCampaignMetadata"), { ssr: false });
+
+import CampaignDescription from "@/components/CampaignDescription";
 import CampaignStatusBadge from "@/components/CampaignStatusBadge";
 import DeadlineCountdown from "@/components/DeadlineCountdown";
 import FundingProgressBar from "@/components/FundingProgressBar";
@@ -60,21 +43,6 @@ import {
   verifyCampaignWithVotes,
   getContribution,
   claimRefund,
-} from '@/lib/contractClient';
-import VotingComponent from '@/components/VotingComponent';
-import CampaignStatusBadge from '@/components/CampaignStatusBadge';
-import DeadlineCountdown from '@/components/DeadlineCountdown';
-import FundingProgressBar from '@/components/FundingProgressBar';
-import { useWallet } from '@/components/WalletContext';
-import CampaignActions from '@/components/CampaignActions';
-import RevenueSharingPanel from '@/components/RevenueSharingPanel';
-import DonationModal from '@/components/DonationModal';
-import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from '@/types';
-import { parseContractError } from '@/utils/contractErrors';
-
-function formatDate(ts: number) {
-  return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(ts * 1000));
-}
   cancelCampaign,
 } from "@/lib/contractClient";
 import { useTranslations, useLocale } from "next-intl";
@@ -87,9 +55,6 @@ import { trackViewCampaign } from "@/lib/analytics";
 import { formatXlm, formatDate } from "@/lib/formatters";
 import { getLocalizedDescription } from "@/utils/localizedDescription";
 import { isSameAddress } from "@/lib/stellar";
-const EditCampaignMetadata = dynamic(() => import("@/components/EditCampaignMetadata"), {
-  ssr: false,
-});
 
 export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
