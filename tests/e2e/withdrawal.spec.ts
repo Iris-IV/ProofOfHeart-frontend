@@ -35,14 +35,21 @@ test.describe("Creator Withdrawal Flow E2E Test", () => {
     await expect(page).toHaveURL(/\/dashboard/);
     await expect(page.locator("body")).toBeVisible();
 
-    // Step 2: Ensure dashboard elements load
-    const dashboardHeader = page.getByRole("heading", { level: 1 }).or(page.locator("body"));
+    // Step 2: Ensure dashboard elements load.
+    // `.first()` because `.or()` yields every match from both sides — once the
+    // page renders an h1 alongside body, strict mode rejects the two-element
+    // result. Same for the button below.
+    const dashboardHeader = page
+      .getByRole("heading", { level: 1 })
+      .or(page.locator("body"))
+      .first();
     await expect(dashboardHeader).toBeVisible();
 
     // Step 3: Check for withdrawal action button or navigate directly to withdraw tab
     const withdrawBtn = page
       .getByRole("button", { name: /withdraw|claim/i })
-      .or(page.locator("body"));
+      .or(page.locator("body"))
+      .first();
     await expect(withdrawBtn).toBeVisible();
 
     // Step 4: Validate mock mode response and withdrawal UI readiness
