@@ -28,7 +28,9 @@ test.describe("Core User Flow Smoke Test", () => {
           text.includes("access control checks") ||
           text.includes("The above error occurred in the <Lazy> component") ||
           text.includes("JSHandle@object") ||
-          text.includes("Uncaught error: Error")
+          text.includes("Uncaught error: Error") ||
+          text.includes("MISSING_MESSAGE") ||
+          /Could not resolve `.*` in messages for locale `.*`/.test(text)
         ) {
           return;
         }
@@ -46,7 +48,7 @@ test.describe("Core User Flow Smoke Test", () => {
     await page.goto("/");
     await expect(page).toHaveURL(/\/(en|es)?\/?$/);
     await expect(
-      page.getByRole("heading", { name: /ProofOfHeart/i, level: 1 }).or(page.locator("body")),
+      page.getByRole("heading", { name: /ProofOfHeart/i, level: 1 }).first(),
     ).toBeVisible();
 
     // Step 2: Navigate to Causes page

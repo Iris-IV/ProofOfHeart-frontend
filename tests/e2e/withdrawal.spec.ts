@@ -16,6 +16,24 @@ test.describe("Creator Withdrawal Flow E2E Test", () => {
       }
       throw new Error(`Uncaught page error: ${err.message}`);
     });
+    page.on("console", (msg) => {
+      if (msg.type() === "error") {
+        const text = msg.text();
+        if (
+          text.includes("ChunkLoadError") ||
+          text.includes("Load failed") ||
+          text.includes("access control checks") ||
+          text.includes("The above error occurred in the <Lazy> component") ||
+          text.includes("JSHandle@object") ||
+          text.includes("Uncaught error: Error") ||
+          text.includes("MISSING_MESSAGE") ||
+          /Could not resolve `.*` in messages for locale `.*`/.test(text)
+        ) {
+          return;
+        }
+        throw new Error(`Console error: ${text}`);
+      }
+    });
 
     // Dismiss onboarding tour and pre-set connected wallet state
     await page.addInitScript(() => {
@@ -31,11 +49,11 @@ test.describe("Creator Withdrawal Flow E2E Test", () => {
     await expect(page.locator("body")).toBeVisible();
 
     // Step 2: Ensure dashboard elements load
-    const dashboardHeader = page.getByRole("heading", { level: 1 }).or(page.locator("body"));
+    const dashboardHeader = page.getByRole("heading", { level: 1 }).first();
     await expect(dashboardHeader).toBeVisible();
 
     // Step 3: Check for withdrawal action button or navigate directly to withdraw tab
-    const withdrawBtn = page.getByRole("button", { name: /withdraw|claim/i }).or(page.locator("body"));
+    const withdrawBtn = page.getByRole("button", { name: /withdraw|claim/i }).first();
     await expect(withdrawBtn).toBeVisible();
 
     // Step 4: Validate mock mode response and withdrawal UI readiness

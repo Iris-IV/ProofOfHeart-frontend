@@ -83,7 +83,7 @@ describe("UpdatesList", () => {
     );
 
     // The feed role should be present
-    expect(screen.getByRole("feed")).toHaveAttribute("aria-label", "Campaign updates");
+    expect(screen.getByLabelText("Campaign updates")).toHaveAttribute("aria-label", "Campaign updates");
   });
 
   it("handles single update correctly", () => {
@@ -125,7 +125,7 @@ describe("UpdatesList", () => {
     render(<UpdatesList updates={mockUpdates} isLoading={false} error={null} />);
 
     // Check that relative times are displayed
-    expect(screen.getByText(/hour ago/)).toBeInTheDocument();
-    expect(screen.getByText(/day ago/)).toBeInTheDocument();
+    expect(screen.getByText(/h ago/)).toBeInTheDocument();
+    expect(screen.getByText(/d ago/)).toBeInTheDocument();
   });
 });

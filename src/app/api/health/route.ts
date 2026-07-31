@@ -55,7 +55,7 @@ export async function GET() {
       healthCheck.services.rpc = "unhealthy";
       healthCheck.status = "degraded";
     }
-  } catch (error) {
+  } catch (_error) {
     healthCheck.services.rpc = "unhealthy";
     healthCheck.status = "degraded";
   }

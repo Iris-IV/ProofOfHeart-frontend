@@ -8,9 +8,6 @@ jest.mock("@/hooks/useTopContributors", () => ({
     mockUseTopContributors(campaignId, wallet, limit),
 }));
 
-jest.mock("next-intl", () => ({
-  useLocale: () => "en",
-}));
 
 const WALLET_1 = "GDA7X7P5H4F3R8E2M1N6K9W4L5V8Q3Z0A1B2C3D4E5F6G7H8I9J0K1L2";
 const WALLET_2 = "GBX8Y8Q6I5G4S9F3N2O7L0X5M6W9R4A1B2C3D4E5F6G7H8I9J0K1L2M3";

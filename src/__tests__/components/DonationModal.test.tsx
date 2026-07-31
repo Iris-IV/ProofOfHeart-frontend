@@ -30,42 +30,6 @@ jest.mock("@/hooks/usePlatformFee", () => ({
   }),
 }));
 
-jest.mock("next-intl", () => ({
-  useLocale: () => "en",
-  useTranslations: () => (key: string, values?: Record<string, unknown>) => {
-    const map: Record<string, string> = {
-      title: "Fund This Cause",
-      confirmedTitle: "Donation Confirmed",
-      amountLabel: "Amount (XLM)",
-      percentFunded: `${values?.percent}% funded`,
-      afterDonation: `After your donation: ${values?.percent}% funded`,
-      goalReached: "Goal reached!",
-      contributionLine: "Contribution",
-      networkFeeLine: "Est. network fee",
-      totalLine: "Total from your wallet",
-      donate: "Donate",
-      donateAmount: `Donate ${values?.amount} XLM`,
-      platformFeeNote: `A platform fee of ${values?.feePercent} is deducted from funds when withdrawn by the creator. Your full donation goes toward the campaign total.`,
-      networkFeeNote: "Network fee note",
-      waitingSignature: "Waiting for Freighter signature…",
-      waitingConfirmation: "Waiting for ledger confirmation…",
-      submitting: "Submitting transaction to the network…",
-      donatedSuccess: `${values?.amount} XLM donated successfully`,
-      thankYou: "Thank you for supporting this cause.",
-      viewExplorer: "View on Stellar Explorer →",
-      close: "Close",
-      scientificNotation: "Scientific notation is not allowed.",
-      invalidNumber: "Please enter a valid number.",
-      invalidAmount: "Please enter a valid amount.",
-      amountMustBePositive: "Amount must be greater than zero.",
-      invalidNumberFormat: "Invalid number format.",
-      maxDecimalPlaces: "Maximum 7 decimal places allowed.",
-      amountExceedsRemainingGoal: "Amount exceeds the remaining funding goal.",
-      campaignAlreadyFunded: "This cause is already fully funded.",
-    };
-    return map[key] ?? key;
-  },
-}));
 
 jest.mock("@/lib/analytics", () => ({
   trackClickContribute: jest.fn(),

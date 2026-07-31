@@ -85,7 +85,7 @@ async function loadClient(options: LoadClientOptions) {
   let txCounter = 0;
 
   const mockServer = {
-    getAccount: jest.fn().mockResolvedValue({ accountId: TEST_ADMIN, sequence: "1" }),
+    getAccount: jest.fn().mockResolvedValue({ accountId: TEST_ADMIN, sequence: "1", sequenceNumber: () => "1" }),
     simulateTransaction: jest
       .fn()
       .mockImplementation((tx: { ops?: Array<{ method?: string }> }) => {
