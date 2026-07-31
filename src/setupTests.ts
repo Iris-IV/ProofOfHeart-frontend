@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom";
 import { TextDecoder, TextEncoder } from "util";
-import type React from "react";
+import React from "react";
 
 globalThis.TextEncoder ??= TextEncoder;
 globalThis.TextDecoder ??= TextDecoder;
@@ -25,8 +25,20 @@ jest.mock("next-intl", () => ({
 jest.mock("@/components/SafeMarkdown", () => ({
   __esModule: true,
   default: ({ children, className }: { children: string; className?: string }) => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const React = require("react");
     return React.createElement("div", { "data-testid": "safe-markdown", className }, children);
   }
 }));
+
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: jest.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  })),
+});

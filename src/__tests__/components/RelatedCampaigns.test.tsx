@@ -8,10 +8,6 @@ jest.mock("@/hooks/useCampaigns", () => ({
   useCampaigns: () => mockUseCampaigns(),
 }));
 
-jest.mock("next-intl", () => ({
-  useLocale: () => "en",
-  useTranslations: () => (key: string) => key,
-}));
 
 jest.mock("@/hooks/useSavedCampaigns", () => ({
   useSavedCampaigns: () => ({ isSaved: () => false, toggleSaved: jest.fn() }),

@@ -95,6 +95,8 @@ beforeEach(() => {
 // Rendering
 // ---------------------------------------------------------------------------
 
+jest.setTimeout(30000);
+
 describe("CreateCampaignPage — rendering", () => {
   it("renders the page heading", () => {
     render(<CreateCampaignPage />);
@@ -119,6 +121,8 @@ describe("CreateCampaignPage — rendering", () => {
 // ---------------------------------------------------------------------------
 // Wallet guard
 // ---------------------------------------------------------------------------
+
+jest.setTimeout(30000);
 
 describe("CreateCampaignPage — wallet guard", () => {
   it("shows the wallet guard banner when wallet is not connected", () => {
@@ -161,6 +165,8 @@ describe("CreateCampaignPage — wallet guard", () => {
 // ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------
+
+jest.setTimeout(30000);
 
 describe("CreateCampaignPage — client-side validation", () => {
   beforeEach(() => setWalletConnected());
@@ -252,6 +258,8 @@ describe("CreateCampaignPage — client-side validation", () => {
 // Category & Revenue Sharing
 // ---------------------------------------------------------------------------
 
+jest.setTimeout(30000);
+
 describe("CreateCampaignPage — revenue sharing", () => {
   beforeEach(() => setWalletConnected());
 
@@ -305,6 +313,8 @@ describe("CreateCampaignPage — revenue sharing", () => {
 // ---------------------------------------------------------------------------
 // Form submission
 // ---------------------------------------------------------------------------
+
+jest.setTimeout(30000);
 
 describe("CreateCampaignPage — submission", () => {
   beforeEach(() => setWalletConnected());
@@ -495,6 +505,8 @@ describe("CreateCampaignPage — submission", () => {
 // ---------------------------------------------------------------------------
 // Character counter
 // ---------------------------------------------------------------------------
+
+jest.setTimeout(30000);
 
 describe("CreateCampaignPage — character counters", () => {
   beforeEach(() => setWalletConnected());

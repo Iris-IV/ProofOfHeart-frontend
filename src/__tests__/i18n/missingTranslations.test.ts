@@ -10,7 +10,7 @@
 import en from "../../../messages/en.json";
 import es from "../../../messages/es.json";
 
-type Messages = Record<string, Record<string, string>>;
+type Messages = Record<string, any>;
 
 /** Flatten a nested messages object into dot-separated keys, e.g. "Admin.title" */
 function flattenKeys(messages: Messages): string[] {
@@ -35,8 +35,8 @@ function emptyKeys(target: Messages): string[] {
   });
 }
 
-const locales: Array<{ name: string; messages: Messages }> = [
-  { name: "es", messages: es as Messages },
+const locales: Array<{ name: string; messages: any }> = [
+  { name: "es", messages: es },
 ];
 
 describe("i18n – no missing or empty translation keys", () => {

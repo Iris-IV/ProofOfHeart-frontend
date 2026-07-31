@@ -1,31 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import OnboardingTour from "@/components/OnboardingTour";
 
-jest.mock("next-intl", () => ({
-  useTranslations: () => (key: string, values?: Record<string, unknown>) => {
-    const map: Record<string, string> = {
-      tourLabel: "Welcome tour",
-      skip: "Skip",
-      back: "Back",
-      next: "Next",
-      done: "Get started",
-      stepProgress: `Step ${values?.current} of ${values?.total}`,
-      step_connect_icon: "🔗",
-      step_connect_title: "Connect your wallet",
-      step_connect_body: "Connect body",
-      step_chooseCause_icon: "🌟",
-      step_chooseCause_title: "Choose a cause",
-      step_chooseCause_body: "Choose body",
-      step_contribute_icon: "💛",
-      step_contribute_title: "Contribute",
-      step_contribute_body: "Contribute body",
-      step_confirm_icon: "✅",
-      step_confirm_title: "Confirm & track",
-      step_confirm_body: "Confirm body",
-    };
-    return map[key] ?? key;
-  },
-}));
 
 jest.mock("@/hooks/useOnboardingTour", () => ({
   useOnboardingTour: jest.fn(),

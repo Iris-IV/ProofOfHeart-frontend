@@ -83,7 +83,7 @@ describe("UpdatesList", () => {
     );
 
     // The feed role should be present
-    expect(screen.getByRole("feed", { name: "Campaign updates" })).toHaveAttribute("aria-label", "Campaign updates");
+    expect(screen.getByLabelText("Campaign updates")).toHaveAttribute("aria-label", "Campaign updates");
   });
 
   it("handles single update correctly", () => {

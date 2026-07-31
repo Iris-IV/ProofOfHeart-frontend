@@ -1,6 +1,10 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import CommentItem from "@/components/CommentItem";
+
+jest.mock("@/components/ToastProvider", () => ({
+  useToast: () => ({ showError: jest.fn(), showSuccess: jest.fn() })
+}));
 import { useWallet } from "@/components/WalletContext";
 
 jest.mock("@/components/WalletContext", () => ({

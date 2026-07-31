@@ -12,7 +12,7 @@ interface CancelDonationBannerProps {
 export function CancelDonationBanner({
   pendingDonations,
   onCancel,
-  _onFinalize,
+  onFinalize: _onFinalize,
 }: CancelDonationBannerProps) {
   const [, setNow] = useState(Date.now());
 

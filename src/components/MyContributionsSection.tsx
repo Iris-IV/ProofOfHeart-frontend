@@ -35,6 +35,10 @@ function getStatusLabelKey(status: string): string {
       return "Cancelled";
     case "verified":
       return "Verified";
+    case "refundable":
+      return "Refundable";
+    case "revenue-claimable":
+      return "Revenue claimable";
     default:
       return "Unknown";
   }

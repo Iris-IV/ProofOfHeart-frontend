@@ -9,10 +9,6 @@ jest.mock("@/hooks/useTrendingCampaigns", () => ({
   useTrendingCampaigns: (limit: number) => mockUseTrendingCampaigns(limit),
 }));
 
-jest.mock("next-intl", () => ({
-  useLocale: () => "en",
-  useTranslations: () => (key: string) => key,
-}));
 
 jest.mock("@/hooks/useSavedCampaigns", () => ({
   useSavedCampaigns: () => ({ isSaved: () => false, toggleSaved: jest.fn() }),
