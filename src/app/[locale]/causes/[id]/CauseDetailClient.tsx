@@ -6,9 +6,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeSanitize from "rehype-sanitize";
+
 
 import CampaignTabs from "@/components/CampaignTabs";
 const RevenueSharingPanel = dynamic(() => import("@/components/RevenueSharingPanel"), { ssr: false });
@@ -325,12 +323,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 </span>
                 <CampaignStatusBadge campaign={campaign} />
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4 leading-tight">{campaign.title}</h1>
-              <CampaignDescription description={campaign.description}>
-                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
-                  {campaign.description}
-                </ReactMarkdown>
-              </CampaignDescription>
+
               {campaign.cover_image_url && (
                 <div className="relative w-full aspect-video rounded-lg overflow-hidden mb-4 bg-zinc-100 dark:bg-zinc-700">
                   <Image
