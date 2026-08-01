@@ -1,14 +1,5 @@
 "use client";
 
-import { memo, useState } from 'react';
-import { formatAddress } from '@/lib/formatAddress';
-import { Campaign, Vote, CATEGORY_LABELS } from '../types';
-import CampaignDescription from './CampaignDescription';
-import CampaignStatusBadge from './CampaignStatusBadge';
-import CancelCampaignModal from './cancelCampaignModal';
-import DeadlineCountdown from './DeadlineCountdown';
-import FundingProgressBar from './FundingProgressBar';
-import VotingComponent from './VotingComponent';
 import Image from "next/image";
 import { memo, useState } from "react";
 import { Bookmark } from "lucide-react";
@@ -27,6 +18,7 @@ import FundingProgressBar from "./FundingProgressBar";
 import { useToast } from "./ToastProvider";
 import VotingComponent from "./VotingComponent";
 import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
+import CampaignDescription from "./CampaignDescription";
 
 interface CauseCardProps {
   campaign: Campaign;
@@ -50,7 +42,6 @@ const CATEGORY_ICONS: Record<string, string> = {
 function formatDate(ts: number, locale: string) {
   return formatShortDate(ts, locale);
 }
-
 
 function CauseCard({
   campaign,
@@ -178,9 +169,6 @@ function CauseCard({
 
         {/* Description */}
         <CampaignDescription description={campaign.description} />
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3 leading-relaxed break-words h-[4.5rem]">
-          {campaign.description}
-        </p>
 
         {/* Funding progress */}
         <div className="space-y-1.5">
@@ -298,7 +286,6 @@ function CauseCard({
  * global state changes (#648). Cards are rendered in long lists, so this is
  * where an unnecessary render is most expensive.
  */
-export default memo(CauseCard);
 function causeCardPropsAreEqual(prev: CauseCardProps, next: CauseCardProps): boolean {
   const prevCampaign = prev.campaign;
   const nextCampaign = next.campaign;

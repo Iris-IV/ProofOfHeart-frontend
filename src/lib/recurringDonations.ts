@@ -49,7 +49,7 @@ export function addMonths(timestampMs: number, months: number): number {
   result.setUTCMonth(result.getUTCMonth() + months);
 
   const daysInTargetMonth = new Date(
-    Date.UTC(result.getUTCFullYear(), result.getUTCMonth() + 1, 0)
+    Date.UTC(result.getUTCFullYear(), result.getUTCMonth() + 1, 0),
   ).getUTCDate();
 
   result.setUTCDate(Math.min(targetDay, daysInTargetMonth));
@@ -112,7 +112,7 @@ export function createSchedule(input: {
   };
 
   const all = readAll().filter(
-    (s) => !(s.walletAddress === schedule.walletAddress && s.campaignId === schedule.campaignId)
+    (s) => !(s.walletAddress === schedule.walletAddress && s.campaignId === schedule.campaignId),
   );
   writeAll([...all, schedule]);
 
@@ -143,7 +143,7 @@ export function markCycleCompleted(id: string, now: number = Date.now()): void {
             nextRunAt: nextRunAfter(now, s.interval),
             cyclesCompleted: s.cyclesCompleted + 1,
           }
-        : s
-    )
+        : s,
+    ),
   );
 }

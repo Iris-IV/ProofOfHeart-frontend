@@ -70,6 +70,9 @@ test.describe("Critical User Journeys", () => {
       timeout: 10000,
     });
 
+    // Wait for wallet to re-hydrate from localStorage after page load
+    await expect(page.getByText(/Connected/i).first()).toBeVisible();
+
     // 4. Click "Fund This Cause"
     const fundButton = page.getByRole("button", { name: /Fund This Cause/i }).first();
     await expect(fundButton).toBeVisible();

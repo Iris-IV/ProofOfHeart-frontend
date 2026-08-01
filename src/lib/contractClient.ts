@@ -21,6 +21,7 @@ import {
   validateRevenueShare,
   validateAmount,
 } from "../utils/validators";
+import { ClientError } from "./clientError";
 
 // ---------------------------------------------------------------------------
 // Environment configuration
@@ -164,7 +165,8 @@ async function buildAndSubmitTransaction(
   }
 
   if (StellarSdk.rpc.Api.isSimulationError(simulated)) {
-    const simulationError = new Error(simulated.error ?? "Transaction simulation failed.");
+    const errorMsg = simulated.error ?? "Transaction simulation failed.";
+    const simulationError = new ClientError(errorMsg, { details: simulated });
     recordObservabilityFailure(classifySimulationFailure(simulationError, operation), {
       operation,
     });
@@ -208,7 +210,7 @@ async function buildAndSubmitTransaction(
       operation,
       rpcStatus: submissionResult.status,
     });
-    throw new Error("Transaction submission failed.");
+    throw new ClientError("Transaction submission failed.", { details: submissionResult });
   }
 
   const txHash = submissionResult.hash;
@@ -227,7 +229,7 @@ async function buildAndSubmitTransaction(
         rpcStatus: getResult.status,
         txHash,
       });
-      throw new Error("Transaction confirmation timed out.");
+      throw new ClientError("Transaction confirmation timed out.", { details: getResult });
     }
     await sleep(pollDelay);
     pollDelay = Math.min(Math.round(pollDelay * 1.5), 6_000);
@@ -249,7 +251,7 @@ async function buildAndSubmitTransaction(
       rpcStatus: getResult.status,
       txHash,
     });
-    throw new Error("Transaction failed on-chain.");
+    throw new ClientError("Transaction failed on-chain.", { details: getResult });
   }
 
   options?.onStatus?.({ phase: "confirmed", txHash, rpcStatus: getResult.status });
@@ -295,7 +297,8 @@ async function invokeViewMethod(
   }
 
   if (StellarSdk.rpc.Api.isSimulationError(simulated)) {
-    const simulationError = new Error(simulated.error ?? `View call ${method} failed.`);
+    const errorMsg = simulated.error ?? `View call ${method} failed.`;
+    const simulationError = new ClientError(errorMsg, { details: simulated });
     recordObservabilityFailure(classifySimulationFailure(simulationError, method), {
       operation: method,
     });
@@ -533,7 +536,7 @@ export async function getCampaignCount(): Promise<number> {
     if (!result) return 0;
     return result.u32();
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -548,7 +551,7 @@ export async function getCampaign(id: number): Promise<Campaign | null> {
   } catch (err) {
     const code = getContractErrorCode(err);
     if (code === ContractError.CampaignNotFound) return null;
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -559,7 +562,7 @@ export async function getAllCampaigns(): Promise<Campaign[]> {
     const results = await Promise.all(Array.from({ length: count }, (_, i) => getCampaign(i + 1)));
     return results.filter((c): c is Campaign => c !== null);
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -573,7 +576,7 @@ export async function getContribution(campaignId: number, contributor: string): 
     if (!result) return BigInt(0);
     return StellarSdk.scValToBigInt(result);
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -586,7 +589,7 @@ export async function getRevenuePool(campaignId: number): Promise<bigint> {
     if (!result) return BigInt(0);
     return StellarSdk.scValToBigInt(result);
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -600,7 +603,7 @@ export async function getRevenueClaimed(campaignId: number, contributor: string)
     if (!result) return BigInt(0);
     return StellarSdk.scValToBigInt(result);
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -611,7 +614,7 @@ export async function getAdmin(): Promise<string> {
     if (!result) return "";
     return StellarSdk.Address.fromScVal(result).toString();
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -628,7 +631,7 @@ export async function getVersion(): Promise<number> {
     if (!result) return 0;
     return result.u32();
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -643,7 +646,7 @@ export async function getPlatformFee(): Promise<number> {
     if (!result) return 0;
     return result.u32();
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -671,7 +674,7 @@ export async function init(
     const txResult = await buildAndSubmitTransaction(admin, op, { ...options, operation: "init" });
     return txResult.txHash;
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -754,7 +757,7 @@ export async function createCampaign(
     const error = err instanceof Error ? err : new Error(String(err));
     const errorCode = getContractErrorCode(err);
     captureTransactionError("create_campaign", 0, error, errorCode ? String(errorCode) : undefined);
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -796,7 +799,7 @@ export async function contribute(
       error,
       errorCode ? String(errorCode) : undefined,
     );
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -829,7 +832,7 @@ export async function withdrawFunds(
       error,
       errorCode ? String(errorCode) : undefined,
     );
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -863,7 +866,7 @@ export async function cancelCampaign(
       error,
       errorCode ? String(errorCode) : undefined,
     );
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -905,7 +908,7 @@ export async function claimRefund(
       error,
       errorCode ? String(errorCode) : undefined,
     );
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -930,7 +933,7 @@ export async function depositRevenue(
     });
     return txResult.txHash;
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -960,7 +963,7 @@ export async function claimRevenue(
     });
     return txResult.txHash;
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -982,7 +985,7 @@ export async function verifyCampaign(
     });
     return txResult.txHash;
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -1009,7 +1012,7 @@ export async function updatePlatformFee(
     });
     return txResult.txHash;
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -1034,7 +1037,7 @@ export async function updateAdmin(
     });
     return txResult.txHash;
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -1051,7 +1054,7 @@ export async function getApproveVotes(campaignId: number): Promise<number> {
     if (!result) return 0;
     return result.u32();
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -1064,7 +1067,7 @@ export async function getRejectVotes(campaignId: number): Promise<number> {
     if (!result) return 0;
     return result.u32();
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -1078,7 +1081,7 @@ export async function hasVoted(campaignId: number, voter: string): Promise<boole
     if (!result) return false;
     return result.b();
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -1089,7 +1092,7 @@ export async function getMinVotesQuorum(): Promise<number> {
     if (!result) return 0;
     return result.u32();
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -1100,7 +1103,7 @@ export async function getApprovalThresholdBps(): Promise<number> {
     if (!result) return 0;
     return result.u32();
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -1148,7 +1151,7 @@ export async function voteOnCampaign(
       error,
       errorCode ? String(errorCode) : undefined,
     );
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -1174,7 +1177,7 @@ export async function verifyCampaignWithVotes(
     });
     return txResult.txHash;
   } catch (err) {
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }
 
@@ -1271,6 +1274,6 @@ export async function claimReserve(
       error,
       errorCode ? String(errorCode) : undefined,
     );
-    throw new Error(parseContractError(err));
+    throw new ClientError(parseContractError(err), { details: err });
   }
 }

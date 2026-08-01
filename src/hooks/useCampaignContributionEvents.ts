@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { fetchContributionMadeEvents, sumContributionAmounts } from "../lib/sorobanEvents";
+import { isContributionMadeEvent, parseContributionAmount } from "../lib/sorobanEvents";
 import { useWindowVisibility } from "./useWindowVisibility";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWallet } from "@/components/WalletContext";
 import { invalidateQueriesForEvents } from "@/lib/cacheInvalidation";
-
-const EVENT_POLL_INTERVAL = Number(process.env.NEXT_PUBLIC_CONTRIBUTION_EVENTS_POLL_MS) || 5_000;
+import { eventSubscriber } from "../lib/eventSubscriber";
+import * as StellarSdk from "@stellar/stellar-sdk";
 
 const USE_MOCKS = typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
@@ -18,7 +18,7 @@ export interface UseCampaignContributionEventsOptions {
 }
 
 /**
- * Polls Soroban `contribution_made` events for a campaign and reports new amounts.
+ * Listens to Soroban `contribution_made` events for a campaign and reports new amounts.
  * Deduplicates by event id so reconnects do not double-count.
  */
 export function useCampaignContributionEvents({
@@ -28,7 +28,6 @@ export function useCampaignContributionEvents({
 }: UseCampaignContributionEventsOptions): void {
   const isVisible = useWindowVisibility();
   const seenEventIdsRef = useRef<Set<string>>(new Set());
-  const cursorRef = useRef<string | undefined>(undefined);
   const onContributionsRef = useRef(onContributions);
   const queryClient = useQueryClient();
   const { publicKey: currentWalletAddress } = useWallet();
@@ -39,7 +38,6 @@ export function useCampaignContributionEvents({
 
   useEffect(() => {
     seenEventIdsRef.current = new Set();
-    cursorRef.current = undefined;
   }, [campaignId]);
 
   useEffect(() => {
@@ -47,43 +45,23 @@ export function useCampaignContributionEvents({
       return;
     }
 
-    let cancelled = false;
+    eventSubscriber.start();
 
-    const poll = async () => {
-      try {
-        const result = await fetchContributionMadeEvents({
-          campaignId,
-          cursor: cursorRef.current,
-        });
-        if (!result || cancelled) return;
-
-        cursorRef.current = result.cursor;
-
-        const unseen = result.events.filter((event) => !seenEventIdsRef.current.has(event.id));
-        for (const event of unseen) {
+    const handler = (event: StellarSdk.rpc.Api.EventResponse) => {
+      if (isContributionMadeEvent(event, campaignId)) {
+        if (!seenEventIdsRef.current.has(event.id)) {
           seenEventIdsRef.current.add(event.id);
+          const delta = parseContributionAmount(event);
+          onContributionsRef.current?.(delta, 1);
+          invalidateQueriesForEvents(queryClient, [event], currentWalletAddress);
         }
-
-        if (unseen.length > 0) {
-          const delta = sumContributionAmounts(unseen);
-          onContributionsRef.current?.(delta, unseen.length);
-
-          // Invalidate relevant queries for the new events
-          invalidateQueriesForEvents(queryClient, unseen, currentWalletAddress);
-        }
-      } catch {
-        // RPC errors are non-fatal; reconciliation via get_campaign covers drift.
       }
     };
 
-    void poll();
-    const intervalId = window.setInterval(() => {
-      void poll();
-    }, EVENT_POLL_INTERVAL);
+    eventSubscriber.on("contribution_made", handler);
 
     return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
+      eventSubscriber.off("contribution_made", handler);
     };
-  }, [campaignId, enabled, isVisible]);
+  }, [campaignId, enabled, isVisible, queryClient, currentWalletAddress]);
 }
