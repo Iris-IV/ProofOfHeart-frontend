@@ -1,7 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PendingDonation } from '../hooks/useDonationGracePeriod';
+import {
+  PendingDonation,
+  useServerTimeOffset,
+} from '../hooks/useDonationGracePeriod';
 
 interface CancelDonationBannerProps {
   pendingDonations: PendingDonation[];
@@ -15,6 +18,7 @@ export function CancelDonationBanner({
   onFinalize,
 }: CancelDonationBannerProps) {
   const [, setNow] = useState(Date.now());
+  const { offsetMs } = useServerTimeOffset();
 
   useEffect(() => {
     if (pendingDonations.length === 0) return;
@@ -31,10 +35,8 @@ export function CancelDonationBanner({
       className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-md w-full px-4"
     >
       {pendingDonations.map((donation) => {
-        const remainingSeconds = Math.max(
-          0,
-          Math.ceil((donation.expiresAt - Date.now()) / 1000)
-        );
+        const serverNow = Date.now() + offsetMs;
+        const remainingSeconds = Math.max(0, Math.ceil((donation.expiresAt - serverNow) / 1000));
 
         return (
           <div
