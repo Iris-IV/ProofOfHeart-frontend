@@ -36,8 +36,6 @@ Extended pre-commit hook to run typecheck and affected tests.
   - Performance tips
   - Troubleshooting
 
-
-
 ## How It Works
 
 ### 1. Get Staged Files

@@ -1,4 +1,4 @@
-import * as StellarSdk from "@stellar/stellar-sdk";
+import { rpc } from "@stellar/stellar-sdk";
 
 const SOROBAN_RPC_URL =
   process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ??
@@ -8,10 +8,17 @@ const SOROBAN_RPC_URL =
 const CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? process.env.NEXT_PUBLIC_CONTRACT_ID ?? "";
 
-export type EventHandler = (event: StellarSdk.rpc.Api.EventResponse) => void;
+export type EventHandler = (event: rpc.Api.EventResponse) => void;
 
+/**
+ * EventSubscriber maintains a single underlying Soroban event polling stream for the contract.
+ * Multiple hooks (like useContractEvents, useCampaignContributionEvents, useCampaignVoteEvents)
+ * can subscribe to specific topics via `on()`.
+ * This deduplicates subscriptions by ensuring only one RPC polling loop runs regardless of
+ * how many consumers exist, satisfying #833.
+ */
 class EventSubscriber {
-  private server: StellarSdk.rpc.Server;
+  private server: rpc.Server | null = null;
   private cursor: string | undefined;
   private isPolling = false;
   private handlers = new Map<string, EventHandler[]>();
@@ -19,8 +26,13 @@ class EventSubscriber {
   private backoffMs = 2000;
   private maxBackoffMs = 60000;
 
-  constructor() {
-    this.server = new StellarSdk.rpc.Server(SOROBAN_RPC_URL);
+  constructor() {}
+
+  private getServer(): rpc.Server {
+    if (!this.server) {
+      this.server = new rpc.Server(SOROBAN_RPC_URL);
+    }
+    return this.server;
   }
 
   public on(topic: string, handler: EventHandler) {
@@ -84,14 +96,14 @@ class EventSubscriber {
       } else {
         // Fallback to getting latest ledger if no cursor
         try {
-          const latestLedger = await this.server.getLatestLedger();
+          const latestLedger = await this.getServer().getLatestLedger();
           requestArgs.startLedger = latestLedger.sequence;
         } catch (e) {
           // If latest ledger fails, just don't pass startLedger and wait for next tick
         }
       }
 
-      const response = await this.server.getEvents(requestArgs);
+      const response = await this.getServer().getEvents(requestArgs);
 
       if (response.events && response.events.length > 0) {
         for (const event of response.events) {

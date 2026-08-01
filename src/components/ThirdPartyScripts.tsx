@@ -44,11 +44,11 @@ export default function ThirdPartyScripts() {
         // solve. Any misconfigured entry is demoted to `lazyOnload` at runtime
         // and flagged in the dev console so it can be fixed in thirdParty.ts.
         const safeStrategy =
-          strategy === "beforeInteractive"
+          (strategy as string) === "beforeInteractive"
             ? (process.env.NODE_ENV !== "production" &&
                 console.warn(
                   `[ThirdPartyScripts] Script "${id}" uses "beforeInteractive" which blocks` +
-                    ` the main thread. Downgraded to "lazyOnload". Fix the strategy in thirdParty.ts.`
+                    ` the main thread. Downgraded to "lazyOnload". Fix the strategy in thirdParty.ts.`,
                 ),
               "lazyOnload" as const)
             : strategy;

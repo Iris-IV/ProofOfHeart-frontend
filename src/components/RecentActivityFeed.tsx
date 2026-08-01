@@ -31,7 +31,7 @@ export default function RecentActivityFeed() {
     .map((c) => ({
       id: c.id,
       label: `New cause: ${c.title}`,
-      raised: c.amount_raised ?? c.raised_amount ?? BigInt(0),
+      raised: c.amount_raised ?? BigInt(0),
     }));
 
   useEffect(() => {
@@ -75,9 +75,7 @@ export default function RecentActivityFeed() {
               aria-label={`Activity ${i + 1}`}
               onClick={() => setActiveIndex(i)}
               className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                i === activeIndex
-                  ? "bg-zinc-700 dark:bg-zinc-200"
-                  : "bg-zinc-300 dark:bg-zinc-600"
+                i === activeIndex ? "bg-zinc-700 dark:bg-zinc-200" : "bg-zinc-300 dark:bg-zinc-600"
               }`}
             />
           ))}

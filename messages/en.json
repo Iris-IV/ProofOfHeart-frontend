@@ -566,5 +566,23 @@
     "opening": "Opening secure checkout…",
     "error": "Could not open the payment provider. Please try again.",
     "poweredBy": "Powered by {provider}"
+  },
+  "Notifications": {
+    "justNow": "Just now",
+    "mAgo": "{count}m ago",
+    "hAgo": "{count}h ago",
+    "dAgo": "{count}d ago",
+    "unreadLabel": "{count} unread notifications",
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "noNotifications": "No notifications yet",
+    "connectWallet": "Connect wallet to view notifications",
+    "viewDetails": "View details",
+    "prefContributions": "Contributions",
+    "prefVerified": "Campaign Verified",
+    "prefRefundAvailable": "Refunds Available",
+    "prefRevenueDeposited": "Revenue Deposited",
+    "settingsAriaLabel": "Notification settings",
+    "settingsTitle": "Notification Preferences"
   }
 }

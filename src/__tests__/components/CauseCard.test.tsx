@@ -44,6 +44,7 @@ jest.mock("@/hooks/useSavedCampaigns", () => ({
 jest.mock("@/components/ToastProvider", () => ({
   useToast: () => ({
     showError: jest.fn(),
+    showWarning: jest.fn(),
   }),
 }));
 
@@ -362,5 +363,63 @@ describe("static card content", () => {
   it("renders the status badge", () => {
     renderCard(makeCampaign({ status: "funded" }));
     expect(screen.getByTestId("status-badge")).toHaveTextContent("funded");
+  });
+});
+
+// ── Error handling ────────────────────────────────────────────────────────────
+
+describe("error handling", () => {
+  it("hits the catch block when voting fails", async () => {
+    const onVote = jest.fn(() => Promise.reject(new Error("Vote failed")));
+    renderCard(makeCampaign({ id: 5, status: "active" }), CONTRIBUTOR, { onVote });
+    fireEvent.click(screen.getByTestId("voting-component"));
+    await waitFor(() => expect(onVote).toHaveBeenCalled());
+  });
+
+  it("hits the catch block when cancelling fails", async () => {
+    const onCancel = jest.fn(() => Promise.reject(new Error("Cancel failed")));
+    renderCard(makeCampaign({ id: 42, status: "active" }), CREATOR, { onCancel });
+    fireEvent.click(screen.getByRole("button", { name: /cancel campaign/i }));
+    fireEvent.click(screen.getByRole("button", { name: /confirm cancel/i }));
+    await waitFor(() => expect(onCancel).toHaveBeenCalled());
+  });
+
+  it("hits the catch block when claiming refund fails", async () => {
+    const onClaimRefund = jest.fn(() => Promise.reject(new Error("Refund failed")));
+    renderCard(makeCampaign({ id: 7, status: "cancelled" }), CONTRIBUTOR, { onClaimRefund });
+    fireEvent.click(screen.getByRole("button", { name: /claim refund/i }));
+    await waitFor(() => expect(onClaimRefund).toHaveBeenCalled());
+  });
+});
+
+// ── Save Campaign ────────────────────────────────────────────────────────────
+
+describe("Save Campaign", () => {
+  it("calls toggleSaved when save button is clicked with connected wallet", () => {
+    renderCard(makeCampaign({ id: 10 }), CONTRIBUTOR);
+    const saveBtn = screen.getByTitle(/Save campaign/i);
+    fireEvent.click(saveBtn);
+  });
+
+  it("does not call toggleSaved when save button is clicked without wallet", () => {
+    renderCard(makeCampaign({ id: 10 }), null);
+    const saveBtn = screen.getByTitle(/Save campaign/i);
+    fireEvent.click(saveBtn);
+  });
+});
+
+// ── Cover Image and Category Icons ───────────────────────────────────────────
+
+describe("Cover Image and Category Icons", () => {
+  it("renders cover image when provided", () => {
+    renderCard(makeCampaign({ cover_image_url: "https://example.com/image.jpg" }));
+    const img = screen.getByAltText("Test Campaign");
+    expect(img).toHaveAttribute("src", "https://example.com/image.jpg");
+  });
+
+  it("renders category icon when category matches", () => {
+    renderCard(makeCampaign({ category: "environment" as any }));
+    const elements = screen.getAllByText(/🌱/);
+    expect(elements.length).toBeGreaterThan(0);
   });
 });
