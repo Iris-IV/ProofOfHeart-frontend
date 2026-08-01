@@ -1,7 +1,27 @@
+'use client';
+
+import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import CampaignActions from '@/components/CampaignActions';
+import CampaignDescription from '@/components/CampaignDescription';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
+import CampaignStatusBadge from '@/components/CampaignStatusBadge';
+import DeadlineCountdown from '@/components/DeadlineCountdown';
+import DonationModal from '@/components/DonationModal';
+import FundingProgressBar from '@/components/FundingProgressBar';
+import RevenueSharingPanel from '@/components/RevenueSharingPanel';
+import UpdatesSection from '@/components/UpdatesSection';
+import { useToast } from '@/components/ToastProvider';
+import VotingComponent from '@/components/VotingComponent';
+import { useWallet } from '@/components/WalletContext';
+import { useCampaign } from '@/hooks/useCampaign';
+import { usePlatformFee } from '@/hooks/usePlatformFee';
 "use client";
 
 import Link from "next/link";
-import { Bookmark } from "lucide-react";
+import { Bookmark, FileText } from "lucide-react";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { useState, useEffect } from "react";
@@ -40,6 +60,21 @@ import {
   verifyCampaignWithVotes,
   getContribution,
   claimRefund,
+} from '@/lib/contractClient';
+import VotingComponent from '@/components/VotingComponent';
+import CampaignStatusBadge from '@/components/CampaignStatusBadge';
+import DeadlineCountdown from '@/components/DeadlineCountdown';
+import FundingProgressBar from '@/components/FundingProgressBar';
+import { useWallet } from '@/components/WalletContext';
+import CampaignActions from '@/components/CampaignActions';
+import RevenueSharingPanel from '@/components/RevenueSharingPanel';
+import DonationModal from '@/components/DonationModal';
+import { Campaign, Vote, CATEGORY_LABELS, stroopsToXlm } from '@/types';
+import { parseContractError } from '@/utils/contractErrors';
+
+function formatDate(ts: number) {
+  return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(ts * 1000));
+}
   cancelCampaign,
 } from "@/lib/contractClient";
 import { useTranslations, useLocale } from "next-intl";
@@ -51,6 +86,7 @@ import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncActi
 import { trackViewCampaign } from "@/lib/analytics";
 import { formatXlm, formatDate } from "@/lib/formatters";
 import { getLocalizedDescription } from "@/utils/localizedDescription";
+import { isBlankMarkdown } from "@/utils/markdownContent";
 import { isSameAddress } from "@/lib/stellar";
 const EditCampaignMetadata = dynamic(() => import("@/components/EditCampaignMetadata"), {
   ssr: false,
@@ -59,6 +95,7 @@ const EditCampaignMetadata = dynamic(() => import("@/components/EditCampaignMeta
 export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
   const tContractErrors = useTranslations("ContractErrors");
+  const tCauseDetail = useTranslations("CauseDetail");
   const locale = useLocale();
   const {
     campaign: fetchedCampaign,
@@ -278,6 +315,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
 
   const isCreator = userWalletAddress ? isSameAddress(campaign.creator, userWalletAddress) : false;
   const canEdit = isCreator && !campaign.is_verified && !campaign.is_cancelled;
+  const localizedDescription = getLocalizedDescription(campaign.description, locale);
 
   const raised = stroopsToXlmNumber(campaign.amount_raised);
   const goal = stroopsToXlmNumber(campaign.funding_goal);
@@ -325,6 +363,12 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 </span>
                 <CampaignStatusBadge campaign={campaign} />
               </div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4 leading-tight">{campaign.title}</h1>
+              <CampaignDescription description={campaign.description}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+                  {campaign.description}
+                </ReactMarkdown>
+              </CampaignDescription>
               {campaign.cover_image_url && (
                 <div className="relative w-full aspect-video rounded-lg overflow-hidden mb-4 bg-zinc-100 dark:bg-zinc-700">
                   <Image
@@ -341,30 +385,43 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 {campaign.title}
               </h1>
               <div className="relative">
-                <div
-                  className={`overflow-hidden transition-all duration-300 ${!isDescriptionExpanded ? "max-h-[250px] relative" : ""}`}
-                >
-                  <SafeMarkdown className="prose prose-zinc dark:prose-invert max-w-none break-words">
-                    {getLocalizedDescription(campaign.description, locale)}
-                  </SafeMarkdown>
-                  {!isDescriptionExpanded && (
-                    <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white dark:from-zinc-800 to-transparent pointer-events-none" />
-                  )}
-                </div>
-                {campaign.description &&
-                  getLocalizedDescription(campaign.description, locale).length > 500 && (
-                    <div className="mt-2 text-center">
-                      <button
-                        type="button"
-                        onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-3 py-1 transition-colors"
-                        aria-expanded={isDescriptionExpanded}
-                        aria-controls="campaign-description"
-                      >
-                        {isDescriptionExpanded ? "Show less" : "Read more"}
-                      </button>
+                {isBlankMarkdown(localizedDescription) ? (
+                  <div
+                    id="campaign-description"
+                    className="flex items-center gap-3 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 px-4 py-6 text-sm text-zinc-500 dark:text-zinc-400"
+                    role="status"
+                  >
+                    <FileText size={18} className="shrink-0 opacity-70" aria-hidden="true" />
+                    <span>{tCauseDetail("noDescription")}</span>
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      id="campaign-description"
+                      className={`overflow-hidden transition-all duration-300 ${!isDescriptionExpanded ? "max-h-[250px] relative" : ""}`}
+                    >
+                      <SafeMarkdown className="prose prose-zinc dark:prose-invert max-w-none break-words">
+                        {localizedDescription}
+                      </SafeMarkdown>
+                      {!isDescriptionExpanded && (
+                        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white dark:from-zinc-800 to-transparent pointer-events-none" />
+                      )}
                     </div>
-                  )}
+                    {localizedDescription.length > 500 && (
+                      <div className="mt-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                          className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-3 py-1 transition-colors"
+                          aria-expanded={isDescriptionExpanded}
+                          aria-controls="campaign-description"
+                        >
+                          {isDescriptionExpanded ? "Show less" : "Read more"}
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               {canEdit && (

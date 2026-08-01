@@ -574,5 +574,14 @@
     "prefVerified": "Campaña verificada",
     "prefRefundAvailable": "Reembolso disponible",
     "prefRevenueDeposited": "Depósitos de ingresos"
+  "CauseDetail": {
+    "noDescription": "El creador no proporcionó una descripción."
+  },
+  "FiatOnramp": {
+    "buyWithCard": "Compra XLM con tarjeta",
+    "buyWithCardDescription": "¿Nuevo en cripto? Compra XLM con tarjeta o transferencia y luego dona.",
+    "opening": "Abriendo el pago seguro…",
+    "error": "No se pudo abrir el proveedor de pago. Inténtalo de nuevo.",
+    "poweredBy": "Con la tecnología de {provider}"
   }
 }

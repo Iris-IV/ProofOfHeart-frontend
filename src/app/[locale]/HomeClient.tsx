@@ -7,6 +7,7 @@ import { Link } from "@/i18n/routing";
 import { usePlatformStats } from "@/hooks/usePlatformStats";
 import { formatAmount } from "@/lib/formatters";
 import TrendingCampaigns from "@/components/TrendingCampaigns";
+import RecentActivityFeed from "@/components/RecentActivityFeed";
 
 export default function HomeClient() {
   const t = useTranslations("Home");
@@ -79,6 +80,9 @@ export default function HomeClient() {
             </div>
           </div>
         )}
+
+        {/* Recent on-chain activity feed (#636) */}
+        <RecentActivityFeed />
 
         {/* Trending Causes Section */}
         <TrendingCampaigns userWalletAddress={publicKey} />
