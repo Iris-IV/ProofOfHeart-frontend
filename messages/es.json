@@ -566,5 +566,23 @@
     "opening": "Abriendo el pago seguro…",
     "error": "No se pudo abrir el proveedor de pago. Inténtalo de nuevo.",
     "poweredBy": "Con la tecnología de {provider}"
+  },
+  "Notifications": {
+    "justNow": "Justo ahora",
+    "mAgo": "hace {count}m",
+    "hAgo": "hace {count}h",
+    "dAgo": "hace {count}d",
+    "unreadLabel": "{count} notificaciones no leídas",
+    "title": "Notificaciones",
+    "markAllRead": "Marcar todo como leído",
+    "noNotifications": "No hay notificaciones",
+    "connectWallet": "Conecta tu billetera para ver las notificaciones",
+    "viewDetails": "Ver detalles",
+    "prefContributions": "Contribuciones",
+    "prefVerified": "Campaña verificada",
+    "prefRefundAvailable": "Reembolsos disponibles",
+    "prefRevenueDeposited": "Ingresos depositados",
+    "settingsAriaLabel": "Configuración de notificaciones",
+    "settingsTitle": "Preferencias de notificaciones"
   }
 }
