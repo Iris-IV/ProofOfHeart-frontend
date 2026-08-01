@@ -75,9 +75,7 @@ export default function RecentActivityFeed() {
               aria-label={`Activity ${i + 1}`}
               onClick={() => setActiveIndex(i)}
               className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                i === activeIndex
-                  ? "bg-zinc-700 dark:bg-zinc-200"
-                  : "bg-zinc-300 dark:bg-zinc-600"
+                i === activeIndex ? "bg-zinc-700 dark:bg-zinc-200" : "bg-zinc-300 dark:bg-zinc-600"
               }`}
             />
           ))}
