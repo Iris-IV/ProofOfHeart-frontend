@@ -3,6 +3,7 @@ import { ShieldCheck } from "lucide-react";
 import { CampaignUpdate } from "@/types";
 import SafeMarkdown from "./SafeMarkdown";
 import VerifiedIcon from "./icons/VerifiedIcon";
+import CreatorAvatar from "./CreatorAvatar";
 import { verifyUpdateSignature } from "@/lib/campaignUpdates";
 
 interface UpdateItemProps {
@@ -81,12 +82,11 @@ export default function UpdateItem({ update }: UpdateItemProps) {
       <div className="flex items-start justify-between gap-4 mb-4">
         <div className="flex items-center gap-4">
           {/* Author avatar */}
-          <div
-            className="w-12 h-12 rounded-full bg-linear-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white text-base font-bold shadow-inner ring-2 ring-white dark:ring-zinc-700"
-            aria-hidden="true"
-          >
-            {update.authorAddress.slice(1, 3).toUpperCase()}
-          </div>
+          <CreatorAvatar
+            address={update.authorAddress}
+            src={(update as { avatarUrl?: string | null }).avatarUrl}
+            size={48}
+          />
           <div>
             <div className="flex items-center flex-wrap gap-2">
               <span

@@ -557,21 +557,14 @@
     "nextXlm": "Siguiente: {amount} XLM",
     "earnedBadges": "Insignias Ganadas"
   },
-  "Notifications": {
-    "title": "Notificaciones",
-    "justNow": "Justo ahora",
-    "mAgo": "Hace {count}m",
-    "hAgo": "Hace {count}h",
-    "dAgo": "Hace {count}d",
-    "unreadLabel": "Notificaciones ({count} no leídas)",
-    "markAllRead": "Marcar todo como leído",
-    "noNotifications": "No hay notificaciones",
-    "connectWallet": "Conecta tu billetera para ver las notificaciones",
-    "viewDetails": "Ver detalles",
-    "prefContributions": "Contribuciones a mis campañas",
-    "prefVerified": "Campaña verificada",
-    "prefRefundAvailable": "Reembolsos disponibles",
-    "prefRevenueDeposited": "Ingresos depositados",
-    "settingsAriaLabel": "Configuración de notificaciones"
+  "CauseDetail": {
+    "noDescription": "El creador no proporcionó una descripción."
+  },
+  "FiatOnramp": {
+    "buyWithCard": "Compra XLM con tarjeta",
+    "buyWithCardDescription": "¿Nuevo en cripto? Compra XLM con tarjeta o transferencia y luego dona.",
+    "opening": "Abriendo el pago seguro…",
+    "error": "No se pudo abrir el proveedor de pago. Inténtalo de nuevo.",
+    "poweredBy": "Con la tecnología de {provider}"
   }
 }

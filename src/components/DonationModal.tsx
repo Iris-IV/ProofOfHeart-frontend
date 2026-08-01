@@ -18,6 +18,7 @@ const EXPLORER_BASE =
 import { type TransactionLifecyclePhase } from "../lib/contractClient";
 import { validateContributorNotCreator } from "../utils/validators";
 import { explorerTxUrl } from "../utils/explorer";
+import FiatOnrampButton from "./FiatOnrampButton";
 import {
   trackClickContribute,
   trackEnterAmount,
@@ -487,6 +488,13 @@ export default function DonationModal({
               >
                 {amountNum > 0 ? t("donateAmount", { amount: amountNum }) : t("donate")}
               </button>
+
+              {/* #637 — fiat on-ramp so non-crypto users can buy XLM to donate.
+                  Renders nothing unless a provider is configured via env vars. */}
+              <FiatOnrampButton
+                walletAddress={publicKey}
+                fiatAmount={amountNum > 0 ? amountNum : null}
+              />
             </>
           )}
 
