@@ -43,7 +43,20 @@ export default function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return intlMiddleware(req);
+  const response = intlMiddleware(req);
+
+  // #621 — Enforce HSTS on every response (including intl redirects) so that
+  // browsers always upgrade HTTP to HTTPS and preload the domain.
+  // next.config.ts sets the same header for route-level responses; middleware
+  // covers maintenance redirects and locale redirects that bypass that layer.
+  if (process.env.NODE_ENV === "production") {
+    response.headers.set(
+      "Strict-Transport-Security",
+      "max-age=63072000; includeSubDomains; preload"
+    );
+  }
+
+  return response;
 }
 
 export { MAINTENANCE_COOKIE, BYPASS_COOKIE_MAX_AGE };
