@@ -11,9 +11,18 @@ import { useToast } from "./ToastProvider";
 import { useWallet } from "./WalletContext";
 import { usePlatformFee } from "../hooks/usePlatformFee";
 import { parseContractError } from "../utils/contractErrors";
+import {
+  INTERVAL_LABELS,
+  RecurringInterval,
+  createSchedule,
+} from "../lib/recurringDonations";
+
+const EXPLORER_BASE =
+  process.env.NEXT_PUBLIC_EXPLORER_URL ?? "https://stellar.expert/explorer/testnet/tx";
 import { type TransactionLifecyclePhase } from "../lib/contractClient";
 import { validateContributorNotCreator } from "../utils/validators";
 import { explorerTxUrl } from "../utils/explorer";
+import FiatOnrampButton from "./FiatOnrampButton";
 import {
   trackClickContribute,
   trackEnterAmount,
@@ -60,6 +69,8 @@ export default function DonationModal({
   const [step, setStep] = useState<Step>("input");
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringInterval, setRecurringInterval] = useState<RecurringInterval>("monthly");
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
 
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -248,6 +259,21 @@ export default function DonationModal({
     trackReviewContribution(campaign.id);
 
     try {
+      const stroops = xlmToStroops(amountNum);
+      const hash = await contribute(campaign.id, publicKey, stroops);
+
+      // Only record the schedule once this cycle actually settled, so a failed
+      // donation never leaves a subscription behind.
+      if (isRecurring) {
+        createSchedule({
+          walletAddress: publicKey,
+          campaignId: campaign.id,
+          campaignTitle: campaign.title,
+          amountStroops: stroops,
+          interval: recurringInterval,
+        });
+      }
+
       const stroops = xlmToStroops(amountToSend);
       const hash = await contribute(campaign.id, publicKey, stroops, {
         onStatus: ({ phase }) => {
@@ -384,6 +410,49 @@ export default function DonationModal({
                 </div>
               )}
 
+              {/* Recurring donation opt-in (#671) */}
+              <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 px-4 py-3 space-y-3">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isRecurring}
+                    onChange={(e) => setIsRecurring(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-zinc-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm">
+                    <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                      Make it monthly
+                    </span>
+                    <span className="block text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                      We&apos;ll remind you when the next donation is due. Nothing is charged
+                      automatically — you sign each one.
+                    </span>
+                  </span>
+                </label>
+
+                {isRecurring && (
+                  <div>
+                    <label
+                      htmlFor="donation-interval"
+                      className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+                    >
+                      Repeat
+                    </label>
+                    <select
+                      id="donation-interval"
+                      value={recurringInterval}
+                      onChange={(e) => setRecurringInterval(e.target.value as RecurringInterval)}
+                      className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {Object.entries(INTERVAL_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
               {amountNum > 0 && (
                 <dl className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 px-4 py-3 text-sm space-y-2">
                   <div className="flex justify-between gap-4">
@@ -426,6 +495,13 @@ export default function DonationModal({
               >
                 {amountNum > 0 ? t("donateAmount", { amount: amountNum }) : t("donate")}
               </button>
+
+              {/* #637 — fiat on-ramp so non-crypto users can buy XLM to donate.
+                  Renders nothing unless a provider is configured via env vars. */}
+              <FiatOnrampButton
+                walletAddress={publicKey}
+                fiatAmount={amountNum > 0 ? amountNum : null}
+              />
             </>
           )}
 
@@ -451,6 +527,12 @@ export default function DonationModal({
                 <p className="font-semibold text-zinc-900 dark:text-zinc-50">
                   {t("donatedSuccess", { amount: amountNum })}
                 </p>
+                {isRecurring && (
+                  <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">
+                    {INTERVAL_LABELS[recurringInterval]} donation set up. We&apos;ll remind you when the
+                    next one is due.
+                  </p>
+                )}
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t("thankYou")}</p>
               </div>
               {txHash && (

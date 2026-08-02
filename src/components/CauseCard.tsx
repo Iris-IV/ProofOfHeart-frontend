@@ -1,5 +1,14 @@
 "use client";
 
+import { memo, useState } from 'react';
+import { formatAddress } from '@/lib/formatAddress';
+import { Campaign, Vote, CATEGORY_LABELS } from '../types';
+import CampaignDescription from './CampaignDescription';
+import CampaignStatusBadge from './CampaignStatusBadge';
+import CancelCampaignModal from './cancelCampaignModal';
+import DeadlineCountdown from './DeadlineCountdown';
+import FundingProgressBar from './FundingProgressBar';
+import VotingComponent from './VotingComponent';
 import Image from "next/image";
 import { memo, useState } from "react";
 import { Bookmark } from "lucide-react";
@@ -41,6 +50,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 function formatDate(ts: number, locale: string) {
   return formatShortDate(ts, locale);
 }
+
 
 function CauseCard({
   campaign,
@@ -167,6 +177,7 @@ function CauseCard({
         </h3>
 
         {/* Description */}
+        <CampaignDescription description={campaign.description} />
         <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3 leading-relaxed break-words h-[4.5rem]">
           {campaign.description}
         </p>
@@ -282,6 +293,12 @@ function CauseCard({
   );
 }
 
+/**
+ * Memoized so a list of cards does not re-render wholesale when unrelated
+ * global state changes (#648). Cards are rendered in long lists, so this is
+ * where an unnecessary render is most expensive.
+ */
+export default memo(CauseCard);
 function causeCardPropsAreEqual(prev: CauseCardProps, next: CauseCardProps): boolean {
   const prevCampaign = prev.campaign;
   const nextCampaign = next.campaign;

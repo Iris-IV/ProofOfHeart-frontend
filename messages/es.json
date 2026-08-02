@@ -177,7 +177,8 @@
     "signing": "Firmando...",
     "submitting": "Enviando...",
     "confirming": "Confirmando...",
-    "transferring": "Transfiriendo..."
+    "transferring": "Transfiriendo...",
+    "requiredWord": "CONFIRMAR"
   },
   "ContractErrors": {
     "NotAuthorized": "No estás autorizado para realizar esta acción.",
@@ -497,5 +498,73 @@
     "createdCampaigns": "Campañas creadas",
     "noSavedCampaigns": "Aún no tienes campañas guardadas.",
     "browseCauses": "Explorar causas"
+  },
+  "Onboarding": {
+    "tourLabel": "Tour de Incorporación",
+    "skip": "Omitir",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "done": "Hecho",
+    "stepProgress": "Paso {current} de {total}",
+    "step_connect_icon": "👛",
+    "step_connect_title": "Conectar Billetera",
+    "step_connect_body": "Conecta tu billetera Stellar para comenzar.",
+    "step_chooseCause_icon": "❤️",
+    "step_chooseCause_title": "Elige una Causa",
+    "step_chooseCause_body": "Explora y selecciona una causa que desees apoyar.",
+    "step_contribute_icon": "💸",
+    "step_contribute_title": "Contribuir",
+    "step_contribute_body": "Haz una donación para ayudar a la causa a alcanzar su meta.",
+    "step_confirm_icon": "🔗",
+    "step_confirm_title": "Rastrea el Impacto",
+    "step_confirm_body": "Tu contribución se registra en la blockchain de Stellar."
+  },
+  "CampaignMap": {
+    "emptyTitle": "No hay campañas con datos de ubicación",
+    "emptyBody": "Las campañas con coordenadas aparecerán en este mapa. Cambia a la vista de lista para ver todas las campañas."
+  },
+  "Gamification": {
+    "level_Bronze": "Bronce",
+    "level_Silver": "Plata",
+    "level_Gold": "Oro",
+    "level_Platinum": "Platino",
+    "level_Diamond": "Diamante",
+    "badge_early_backer_name": "Apoyador Inicial",
+    "badge_early_backer_desc": "Apoyó a ProofOfHeart en sus primeros días",
+    "badge_streak_master_name": "Maestro de Rachas",
+    "badge_streak_master_desc": "Hizo 3 o más donaciones",
+    "badge_whale_name": "Ballena",
+    "badge_whale_desc": "Donó 1,000 XLM o más en total",
+    "badge_heart_champion_name": "Campeón del Corazón",
+    "badge_heart_champion_desc": "Alcanzó el nivel Diamante (5,000+ XLM donados)",
+    "locked": "Bloqueado"
+  },
+  "ContributorLeaderboard": {
+    "title": "Principales Apoyadores",
+    "subtitle": "Tabla de clasificación",
+    "emptyMessage": "¡Sé el primer apoyador de esta causa! 💜",
+    "youBadge": "Tú",
+    "hideWallet": "Ocultar mi dirección de billetera",
+    "anonymousState": "✓ Anónimo",
+    "optOutState": "Exclusión voluntaria",
+    "optOutTooltip": "Los contribuyentes pueden excluirse en cualquier momento para permanecer anónimos.",
+    "disableAnon": "Deshabilitar modo anónimo",
+    "enableAnon": "Habilitar modo anónimo"
+  },
+  "DonatorBadges": {
+    "level": "Nivel {levelNumber}: {levelName}",
+    "totalXlm": "{amount} XLM en Total",
+    "nextXlm": "Siguiente: {amount} XLM",
+    "earnedBadges": "Insignias Ganadas"
+  },
+  "CauseDetail": {
+    "noDescription": "El creador no proporcionó una descripción."
+  },
+  "FiatOnramp": {
+    "buyWithCard": "Compra XLM con tarjeta",
+    "buyWithCardDescription": "¿Nuevo en cripto? Compra XLM con tarjeta o transferencia y luego dona.",
+    "opening": "Abriendo el pago seguro…",
+    "error": "No se pudo abrir el proveedor de pago. Inténtalo de nuevo.",
+    "poweredBy": "Con la tecnología de {provider}"
   }
 }

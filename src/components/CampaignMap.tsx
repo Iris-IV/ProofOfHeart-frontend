@@ -5,7 +5,8 @@ import L from "leaflet";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { Campaign } from "@/types";
 import { Link } from "@/i18n/routing";
-import { useMemo, memo } from "react";
+import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 
 // Fix Leaflet default marker icon (broken in bundlers)
 // https://github.com/Leaflet/Leaflet/issues/4968
@@ -64,14 +65,12 @@ interface CampaignMapProps {
   campaigns: Campaign[];
 }
 
-/**
- * Manual verification note:
- * Wrapped in React.memo to ensure that the map instance is only updated when the `campaigns` 
- * prop changes (shallow comparison). This prevents expensive teardown and rebuild of the 
- * Leaflet map on unrelated parent state changes.
- */
-const CampaignMap = memo(function CampaignMap({ campaigns }: CampaignMapProps) {
-  const validCampaigns = useMemo(() => filterByValidCoordinates(campaigns), [campaigns]);
+export default function CampaignMap({ campaigns }: CampaignMapProps) {
+  const t = useTranslations("CampaignMap");
+  const validCampaigns = useMemo(
+    () => filterByValidCoordinates(Array.isArray(campaigns) ? campaigns : []),
+    [campaigns],
+  );
 
   const center = useMemo<[number, number]>(() => {
     if (validCampaigns.length === 0) return [20, 0];
@@ -85,11 +84,10 @@ const CampaignMap = memo(function CampaignMap({ campaigns }: CampaignMapProps) {
       <div className="flex flex-col items-center justify-center min-h-[400px] p-6 text-center rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700">
         <div className="text-4xl mb-4">🗺️</div>
         <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-          No campaigns with location data
+          {t("emptyTitle")}
         </h3>
         <p className="text-zinc-600 dark:text-zinc-400 max-w-md">
-          Campaigns with coordinates will appear on this map. Switch to list view to browse all
-          campaigns.
+          {t("emptyBody")}
         </p>
       </div>
     );
