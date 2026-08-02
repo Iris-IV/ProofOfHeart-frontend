@@ -278,7 +278,7 @@
     "pageSubtitle": "Fill in the details below to launch your campaign on-chain via Freighter.",
     "walletGuard": "Connect your Freighter wallet to create a campaign.",
     "connectWallet": "Connect Wallet",
-    "connecting": "Connecting\u2026",
+    "connecting": "Connecting…",
     "labelTitle": "Campaign Title",
     "placeholderTitle": "A clear, compelling title for your campaign",
     "labelDescription": "Description",
@@ -291,7 +291,7 @@
     "creatorEmailNote": "Optional, off-chain only. Used for campaign milestone and deadline notifications.",
     "labelFundingGoal": "Funding Goal (XLM)",
     "labelDuration": "Duration (days)",
-    "placeholderDuration": "1\u2013365",
+    "placeholderDuration": "1–365",
     "labelCategory": "Category",
     "startupRevenueHint": "Revenue sharing is available for Educational Startup campaigns.",
     "revenueSharingTitle": "Revenue Sharing",
@@ -318,7 +318,7 @@
     "reviewFieldTimestamp": "Estimated Deadline Timestamp",
     "editDetails": "Edit Details",
     "confirmAndSign": "Confirm & Sign",
-    "submitting": "Submitting\u2026",
+    "submitting": "Submitting…",
     "successMessage": "Campaign \"{title}\" created successfully!",
     "emailWebhookFailed": "Campaign created, but we could not save your optional email subscription.",
     "walletRequiredError": "Please connect your Freighter wallet before creating a campaign.",
@@ -337,10 +337,15 @@
     "coverImageUploading": "Uploading…",
     "coverImageUploadSuccess": "Cover image uploaded to IPFS.",
     "coverImageUploadFailed": "Failed to upload cover image. Please try again.",
-    "coverImageHelpText": "Upload an image to IPFS or paste a URL from an allowed host."
+    "coverImageHelpText": "Upload an image to IPFS or paste a URL from an allowed host.",
+    "labelDescriptionLanguage": "Description Language",
+    "tabEnglish": "English",
+    "tabSpanish": "Spanish (optional)",
+    "placeholderDescriptionEs": "Describe tu campaña en español (opcional)",
+    "validationDescriptionEsTooLong": "Spanish description must be 1,000 characters or fewer."
   },
   "Footer": {
-    "tagline": "A decentralised launchpad where the community validates causes and contributions are accounted for on-chain.",
+    "tagline": "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
     "productHeading": "Product",
     "linksHeading": "Links",
     "home": "Home",
@@ -349,7 +354,7 @@
     "faq": "How it works & FAQ",
     "github": "GitHub",
     "stellar": "Stellar",
-    "rights": "\u00a9 {year} ProofOfHeart. All rights reserved.",
+    "rights": "© {year} ProofOfHeart. All rights reserved.",
     "builtWith": "Built with Next.js + Stellar"
   },
   "Explore": {
@@ -386,7 +391,9 @@
     "invalidAmount": "Please enter a valid amount.",
     "amountMustBePositive": "Amount must be greater than zero.",
     "invalidNumberFormat": "Invalid number format.",
-    "maxDecimalPlaces": "Maximum 7 decimal places allowed."
+    "maxDecimalPlaces": "Maximum 7 decimal places allowed.",
+    "amountExceedsRemainingGoal": "Amount exceeds the remaining funding goal.",
+    "campaignAlreadyFunded": "This cause is already fully funded."
   },
   "WithdrawFunds": {
     "withdrawalSuccessToast": "Withdrawal successful! You received {amount} XLM.",
@@ -601,7 +608,12 @@
     "prefRevenueDeposited": "Revenue deposits"
   },
   "CauseDetail": {
-    "noDescription": "No description provided by the creator."
+    "noDescription": "No description provided by the creator.",
+    "tabs": {
+      "updates": "Updates",
+      "comments": "Comments / Q&A",
+      "impact": "Impact"
+    }
   },
   "FiatOnramp": {
     "buyWithCard": "Buy XLM with card",
@@ -640,5 +652,15 @@
     "a_revenueSharing": "Startup campaigns (in the Educational Startup category) can opt in to revenue sharing when they create their campaign. The creator sets a revenue-share percentage and, after the campaign succeeds, deposits future revenue into the smart contract. Contributors can then claim their proportional share at any time through the My Contributions dashboard.",
     "q_getFreighter": "How do I get the Freighter wallet?",
     "a_getFreighter": "Freighter is a browser extension for Chrome and Firefox made by the Stellar Development Foundation. Visit <a href=\"https://freighter.app\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-blue-600 dark:text-blue-400 underline\">freighter.app</a>, install the extension, create or import a Stellar account, and then connect it to ProofOfHeart with one click. No personal information is required."
+  },
+  "ImpactReport": {
+    "title": "Campaign Impact",
+    "milestonesCompleted": "Milestones Completed",
+    "totalRaised": "Total Raised",
+    "completedMilestones": "Completed Milestones",
+    "noMilestones": "No milestones defined for this campaign yet.",
+    "noUpdates": "Impact data coming soon.",
+    "milestoneTarget": "Target: {amount} XLM",
+    "milestoneReached": "Reached"
   }
 }
