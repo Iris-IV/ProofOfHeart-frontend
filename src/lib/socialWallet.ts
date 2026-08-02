@@ -1,4 +1,4 @@
-import * as StellarSdk from "@stellar/stellar-sdk";
+import { Keypair, TransactionBuilder } from "@stellar/stellar-sdk";
 import type { WalletSigner } from "@/lib/walletSigner";
 
 /**
@@ -47,7 +47,7 @@ type AuthInstance = {
 let authInstance: AuthInstance | null = null;
 let initPromise: Promise<AuthInstance> | null = null;
 /** Held in memory only, for the lifetime of the tab. Never serialised. */
-let keypair: StellarSdk.Keypair | null = null;
+let keypair: Keypair | null = null;
 let session: SocialWalletSession | null = null;
 
 /**
@@ -113,7 +113,7 @@ async function getAuth(): Promise<AuthInstance> {
  * (seed ‖ public key) depending on the key mode in use. Stellar wants the seed,
  * which is the leading 32 bytes in both encodings.
  */
-export function deriveStellarKeypair(hex: string): StellarSdk.Keypair {
+export function deriveStellarKeypair(hex: string): Keypair {
   const normalized = hex.startsWith("0x") ? hex.slice(2) : hex;
   if (normalized.length !== 64 && normalized.length !== 128) {
     throw new Error("Social login returned an unexpected key format.");
@@ -122,7 +122,7 @@ export function deriveStellarKeypair(hex: string): StellarSdk.Keypair {
   if (seed.length !== 32) {
     throw new Error("Social login returned an unexpected key format.");
   }
-  return StellarSdk.Keypair.fromRawEd25519Seed(seed);
+  return Keypair.fromRawEd25519Seed(seed);
 }
 
 function providerFromAuthConnection(value: string | undefined): SocialLoginProvider {
@@ -214,7 +214,7 @@ export const socialSigner: WalletSigner = {
   },
   async signTransaction(xdr, { networkPassphrase }) {
     if (!keypair) throw new Error("Social wallet is not connected.");
-    const tx = StellarSdk.TransactionBuilder.fromXDR(xdr, networkPassphrase);
+    const tx = TransactionBuilder.fromXDR(xdr, networkPassphrase);
     tx.sign(keypair);
     return tx.toXDR();
   },

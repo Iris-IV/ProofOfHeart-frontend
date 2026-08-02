@@ -1,4 +1,4 @@
-import * as StellarSdk from "@stellar/stellar-sdk";
+import { rpc } from "@stellar/stellar-sdk";
 
 const SOROBAN_RPC_URL =
   process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ??
@@ -8,10 +8,10 @@ const SOROBAN_RPC_URL =
 const CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? process.env.NEXT_PUBLIC_CONTRACT_ID ?? "";
 
-export type EventHandler = (event: StellarSdk.rpc.Api.EventResponse) => void;
+export type EventHandler = (event: rpc.Api.EventResponse) => void;
 
 class EventSubscriber {
-  private server: StellarSdk.rpc.Server;
+  private server: rpc.Server;
   private cursor: string | undefined;
   private isPolling = false;
   private handlers = new Map<string, EventHandler[]>();
@@ -20,7 +20,7 @@ class EventSubscriber {
   private maxBackoffMs = 60000;
 
   constructor() {
-    this.server = new StellarSdk.rpc.Server(SOROBAN_RPC_URL);
+    this.server = new rpc.Server(SOROBAN_RPC_URL);
   }
 
   public on(topic: string, handler: EventHandler) {

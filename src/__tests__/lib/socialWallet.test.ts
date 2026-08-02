@@ -6,7 +6,7 @@
  * entirely local.
  */
 
-import * as StellarSdk from "@stellar/stellar-sdk";
+import { Keypair } from "@stellar/stellar-sdk";
 
 type SocialWalletModule = typeof import("@/lib/socialWallet");
 
@@ -47,7 +47,7 @@ describe("deriveStellarKeypair", () => {
 
   it("derives a Stellar account from a 32-byte seed", () => {
     const keypair = deriveStellarKeypair(SEED_HEX);
-    const expected = StellarSdk.Keypair.fromRawEd25519Seed(Buffer.from(SEED_HEX, "hex"));
+    const expected = Keypair.fromRawEd25519Seed(Buffer.from(SEED_HEX, "hex"));
 
     expect(keypair.publicKey()).toBe(expected.publicKey());
     expect(keypair.publicKey()).toMatch(/^G[A-Z2-7]{55}$/);
