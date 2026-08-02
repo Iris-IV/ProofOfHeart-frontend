@@ -14,28 +14,6 @@ function getCompletedMilestones(campaign: Campaign): Milestone[] {
   return campaign.milestones.filter((m) => m.targetAmount <= raised);
 }
 
-function extractOutcomeHighlights(updates: Array<{ content: string }>): string[] {
-  const highlights: string[] = [];
-  const numberPatterns = [
-    /(\d+)\s*(families|people|students|children|households|villages|communities)/gi,
-    /(\d+)\s*(classrooms|schools|wells|clinics|hospitals|centers)/gi,
-    /(\d+)\s*(tablets|laptops|computers|books|kits|meals|beds)/gi,
-    /(\d+)\s*(acres|hectares|kilometers|miles)/gi,
-    /(\d+)%/g,
-  ];
-
-  for (const update of updates) {
-    for (const pattern of numberPatterns) {
-      const matches = update.content.match(pattern);
-      if (matches) {
-        highlights.push(...matches.slice(0, 3));
-      }
-    }
-  }
-
-  return [...new Set(highlights)].slice(0, 5);
-}
-
 export default function ImpactReport({ campaign }: ImpactReportProps) {
   const t = useTranslations("ImpactReport");
   const locale = useLocale();
