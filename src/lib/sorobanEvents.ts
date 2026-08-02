@@ -1,8 +1,8 @@
-import * as StellarSdk from "@stellar/stellar-sdk";
+import { rpc, xdr, nativeToScVal, scValToNative } from "@stellar/stellar-sdk";
 
-type ApiEventResponse = StellarSdk.rpc.Api.EventResponse;
-type ApiEventFilter = StellarSdk.rpc.Api.EventFilter;
-type ApiGetEventsRequest = StellarSdk.rpc.Api.GetEventsRequest;
+type ApiEventResponse = rpc.Api.EventResponse;
+type ApiEventFilter = rpc.Api.EventFilter;
+type ApiGetEventsRequest = rpc.Api.GetEventsRequest;
 
 const USE_MOCKS = typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
@@ -16,11 +16,11 @@ const CONTRACT_ADDRESS =
 
 const VOTE_CAST_TOPIC = "campaign_vote_cast";
 
-let _server: StellarSdk.rpc.Server | null = null;
+let _server: rpc.Server | null = null;
 
-function getServer(): StellarSdk.rpc.Server {
+function getServer(): rpc.Server {
   if (!_server) {
-    _server = new StellarSdk.rpc.Server(SOROBAN_RPC_URL);
+    _server = new rpc.Server(SOROBAN_RPC_URL);
   }
   return _server;
 }
@@ -30,41 +30,41 @@ export function isEventStreamingAvailable(): boolean {
 }
 
 /** Base64 XDR segment for Soroban event topic filters. */
-export function scValToTopicSegment(value: StellarSdk.xdr.ScVal): string {
+export function scValToTopicSegment(value: xdr.ScVal): string {
   return value.toXDR().toString("base64");
 }
 
 /** Topic filter for `("campaign_vote_cast", campaign_id, *)` contract events. */
 export function voteCastTopicFilter(campaignId: number): string[][] {
-  const eventSymbol = StellarSdk.nativeToScVal(VOTE_CAST_TOPIC, { type: "symbol" });
-  const campaignTopic = StellarSdk.nativeToScVal(campaignId, { type: "u32" });
+  const eventSymbol = nativeToScVal(VOTE_CAST_TOPIC, { type: "symbol" });
+  const campaignTopic = nativeToScVal(campaignId, { type: "u32" });
   return [[scValToTopicSegment(eventSymbol), scValToTopicSegment(campaignTopic), "*"]];
 }
 
 export function isVoteCastEvent(event: ApiEventResponse, campaignId: number): boolean {
   if (event.topic.length < 2) return false;
-  const topicName = StellarSdk.scValToNative(event.topic[0]);
-  const eventCampaignId = StellarSdk.scValToNative(event.topic[1]);
+  const topicName = scValToNative(event.topic[0]);
+  const eventCampaignId = scValToNative(event.topic[1]);
   return topicName === VOTE_CAST_TOPIC && eventCampaignId === campaignId;
 }
 
 export function parseVoteCastApprove(event: ApiEventResponse): boolean {
-  return Boolean(StellarSdk.scValToNative(event.value));
+  return Boolean(scValToNative(event.value));
 }
 
 const CONTRIBUTION_MADE_TOPIC = "contribution_made";
 
 /** Topic filter for `("contribution_made", campaign_id, *)` contract events. */
 export function contributionMadeTopicFilter(campaignId: number): string[][] {
-  const eventSymbol = StellarSdk.nativeToScVal(CONTRIBUTION_MADE_TOPIC, { type: "symbol" });
-  const campaignTopic = StellarSdk.nativeToScVal(campaignId, { type: "u32" });
+  const eventSymbol = nativeToScVal(CONTRIBUTION_MADE_TOPIC, { type: "symbol" });
+  const campaignTopic = nativeToScVal(campaignId, { type: "u32" });
   return [[scValToTopicSegment(eventSymbol), scValToTopicSegment(campaignTopic), "*"]];
 }
 
 export function isContributionMadeEvent(event: ApiEventResponse, campaignId: number): boolean {
   if (event.topic.length < 2) return false;
-  const topicName = StellarSdk.scValToNative(event.topic[0]);
-  const eventCampaignId = StellarSdk.scValToNative(event.topic[1]);
+  const topicName = scValToNative(event.topic[0]);
+  const eventCampaignId = scValToNative(event.topic[1]);
   return topicName === CONTRIBUTION_MADE_TOPIC && eventCampaignId === campaignId;
 }
 
@@ -74,7 +74,7 @@ export function parseContributionAmount(event: ApiEventResponse): bigint {
     return (val as { __bigint: bigint }).__bigint;
   }
   try {
-    return BigInt(StellarSdk.scValToNative(val as never));
+    return BigInt(scValToNative(val as never));
   } catch {
     return BigInt(0);
   }

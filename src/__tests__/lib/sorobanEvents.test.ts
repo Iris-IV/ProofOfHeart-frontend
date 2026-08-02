@@ -11,7 +11,7 @@ jest.mock("@stellar/stellar-sdk", () => {
   };
 });
 
-import * as StellarSdk from "@stellar/stellar-sdk";
+import { nativeToScVal } from "@stellar/stellar-sdk";
 import {
   scValToTopicSegment,
   voteCastTopicFilter,
@@ -25,8 +25,8 @@ describe("sorobanEvents vote cast", () => {
     const topics = voteCastTopicFilter(7);
     expect(topics[0][2]).toBe("*");
 
-    const symbol = StellarSdk.nativeToScVal("campaign_vote_cast", { type: "symbol" });
-    const campaign = StellarSdk.nativeToScVal(7, { type: "u32" });
+    const symbol = nativeToScVal("campaign_vote_cast", { type: "symbol" });
+    const campaign = nativeToScVal(7, { type: "u32" });
     expect(topics[0][0]).toBe(scValToTopicSegment(symbol as never));
     expect(topics[0][1]).toBe(scValToTopicSegment(campaign as never));
   });
@@ -35,9 +35,9 @@ describe("sorobanEvents vote cast", () => {
     const event = {
       id: "evt-1",
       topic: [
-        StellarSdk.nativeToScVal("contribution_made", { type: "symbol" }),
-        StellarSdk.nativeToScVal(7, { type: "u32" }),
-        StellarSdk.nativeToScVal("GABC", { type: "address" }),
+        nativeToScVal("contribution_made", { type: "symbol" }),
+        nativeToScVal(7, { type: "u32" }),
+        nativeToScVal("GABC", { type: "address" }),
       ],
       value: { __bigint: BigInt(1_000_000) },
     } as unknown as Parameters<typeof isContributionMadeEvent>[0];

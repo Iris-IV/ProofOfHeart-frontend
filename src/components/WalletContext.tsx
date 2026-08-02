@@ -9,7 +9,7 @@ import React, {
   useState,
   ReactNode,
 } from "react";
-import * as StellarSdk from "@stellar/stellar-sdk";
+import { Keypair } from "@stellar/stellar-sdk";
 import { getAddress, getNetwork, isConnected, isAllowed } from "@stellar/freighter-api";
 import React, { createContext, useContext, useEffect, useState, useMemo, ReactNode, useRef } from "react";
 import { useToast } from "./ToastProvider";
@@ -68,7 +68,7 @@ const WalletActionsContext = createContext<WalletActions | undefined>(undefined)
   connectWithSocial: (provider: SocialLoginProvider) => Promise<void>;
 }
 
-const MOCK_PUBLIC_KEY = IS_MOCK_MODE ? StellarSdk.Keypair.random().publicKey() : null;
+const MOCK_PUBLIC_KEY = IS_MOCK_MODE ? Keypair.random().publicKey() : null;
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
