@@ -4,7 +4,7 @@ import { LOCALE_COOKIE_MAX_AGE } from "@/lib/preferences";
 
 export const routing = defineRouting({
   // A list of all locales that are supported
-  locales: ["en", "es"],
+  locales: ["en", "es", "fr", "pt"],
 
   // Used when no locale matches
   defaultLocale: "en",
