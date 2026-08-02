@@ -558,7 +558,12 @@
     "earnedBadges": "Earned Badges"
   },
   "CauseDetail": {
-    "noDescription": "No description provided by the creator."
+    "noDescription": "No description provided by the creator.",
+    "tabs": {
+      "updates": "Updates",
+      "comments": "Comments / Q&A",
+      "impact": "Impact"
+    }
   },
   "FiatOnramp": {
     "buyWithCard": "Buy XLM with card",
@@ -566,5 +571,17 @@
     "opening": "Opening secure checkout…",
     "error": "Could not open the payment provider. Please try again.",
     "poweredBy": "Powered by {provider}"
+  },
+  "ImpactReport": {
+    "title": "Campaign Impact",
+    "milestonesCompleted": "Milestones Completed",
+    "totalRaised": "Total Raised",
+    "updatesPosted": "Updates Posted",
+    "completedMilestones": "Completed Milestones",
+    "noMilestones": "No milestones defined for this campaign yet.",
+    "noUpdates": "Impact data coming soon.",
+    "milestoneTarget": "Target: {amount} XLM",
+    "milestoneReached": "Reached",
+    "outcomeHighlights": "Outcome Highlights"
   }
 }

@@ -558,7 +558,12 @@
     "earnedBadges": "Insignias Ganadas"
   },
   "CauseDetail": {
-    "noDescription": "El creador no proporcionó una descripción."
+    "noDescription": "El creador no proporcionó una descripción.",
+    "tabs": {
+      "updates": "Actualizaciones",
+      "comments": "Comentarios / Preguntas",
+      "impact": "Impacto"
+    }
   },
   "FiatOnramp": {
     "buyWithCard": "Compra XLM con tarjeta",
@@ -566,5 +571,17 @@
     "opening": "Abriendo el pago seguro…",
     "error": "No se pudo abrir el proveedor de pago. Inténtalo de nuevo.",
     "poweredBy": "Con la tecnología de {provider}"
+  },
+  "ImpactReport": {
+    "title": "Impacto de la Campaña",
+    "milestonesCompleted": "Hitos Completados",
+    "totalRaised": "Total Recaudado",
+    "updatesPosted": "Actualizaciones Publicadas",
+    "completedMilestones": "Hitos Completados",
+    "noMilestones": "Aún no se han definido hitos para esta campaña.",
+    "noUpdates": "Datos de impacto próximamente.",
+    "milestoneTarget": "Meta: {amount} XLM",
+    "milestoneReached": "Alcanzado",
+    "outcomeHighlights": "Aspectos Destacados del Impacto"
   }
 }
