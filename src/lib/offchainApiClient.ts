@@ -1,7 +1,15 @@
-import * as StellarSdk from "@stellar/stellar-sdk";
 // #649 — Freighter and the embedded social wallet both satisfy this interface.
 import { getSignerAddress, signTransactionXdr } from "./walletSigner";
 import { wrapFreighterError } from "../utils/freighterErrors";
+
+let _stellarSdk: typeof import("@stellar/stellar-sdk") | null = null;
+
+async function getStellarSdk(): Promise<typeof import("@stellar/stellar-sdk")> {
+  if (!_stellarSdk) {
+    _stellarSdk = await import("@stellar/stellar-sdk");
+  }
+  return _stellarSdk;
+}
 
 const OFFCHAIN_API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").trim().replace(/\/+$/, "");
 const NETWORK_PASSPHRASE =
@@ -78,6 +86,7 @@ export async function signOffchainPayload(
   payload: unknown,
   purpose: string,
 ): Promise<SignedOffchainPayload> {
+  const sdk = await getStellarSdk();
   const walletAddress = await getSignerAddress();
   const timestamp = Math.floor(Date.now() / 1000);
   const envelope = {
@@ -86,17 +95,17 @@ export async function signOffchainPayload(
     payload,
   };
   const payloadString = JSON.stringify(envelope);
-  const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
+  const payloadHash = sdk.hash(Buffer.from(payloadString));
 
   let signedTxXdr: string;
   try {
     signedTxXdr = await signTransactionXdr(
-      new StellarSdk.TransactionBuilder(new StellarSdk.Account(walletAddress, "0"), {
-        fee: StellarSdk.BASE_FEE,
+      new sdk.TransactionBuilder(new sdk.Account(walletAddress, "0"), {
+        fee: sdk.BASE_FEE,
         networkPassphrase: NETWORK_PASSPHRASE,
       })
         .addOperation(
-          StellarSdk.Operation.manageData({
+          sdk.Operation.manageData({
             name: `offchain_${purpose}`,
             value: payloadHash,
           }),
@@ -112,10 +121,10 @@ export async function signOffchainPayload(
     wrapFreighterError(error);
   }
 
-  const signedTx = StellarSdk.TransactionBuilder.fromXDR(
+  const signedTx = sdk.TransactionBuilder.fromXDR(
     signedTxXdr,
     NETWORK_PASSPHRASE,
-  ) as StellarSdk.Transaction;
+  ) as sdk.Transaction;
 
   const signature = signedTx.signatures[0]?.signature();
   if (!signature) {

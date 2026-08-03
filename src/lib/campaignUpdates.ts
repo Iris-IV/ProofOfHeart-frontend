@@ -1,4 +1,3 @@
-import * as StellarSdk from "@stellar/stellar-sdk";
 import { CampaignUpdate, UpdatePayload } from "../types";
 import { parseContractError } from "../utils/contractErrors";
 import {
@@ -6,6 +5,15 @@ import {
   requestOffchainJson,
   signOffchainPayload,
 } from "./offchainApiClient";
+
+let _stellarSdk: typeof import("@stellar/stellar-sdk") | null = null;
+
+async function getStellarSdk(): Promise<typeof import("@stellar/stellar-sdk")> {
+  if (!_stellarSdk) {
+    _stellarSdk = await import("@stellar/stellar-sdk");
+  }
+  return _stellarSdk;
+}
 
 // ---------------------------------------------------------------------------
 // Environment configuration
@@ -180,6 +188,7 @@ export async function verifyUpdateSignature(update: CampaignUpdate): Promise<boo
   }
 
   try {
+    const sdk = await getStellarSdk();
     // Reconstruct the payload that was signed
     const payloadString = JSON.stringify({
       campaignId: update.campaignId,
@@ -187,13 +196,11 @@ export async function verifyUpdateSignature(update: CampaignUpdate): Promise<boo
       timestamp: update.timestamp,
     });
 
-    const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
+    const payloadHash = sdk.hash(Buffer.from(payloadString));
     const signature = Buffer.from(update.signature, "hex");
-    const publicKey = StellarSdk.StrKey.decodeEd25519PublicKey(update.authorAddress);
+    const publicKey = sdk.StrKey.decodeEd25519PublicKey(update.authorAddress);
 
-    const verified = StellarSdk.verify(payloadHash, signature, publicKey);
-
-    return verified;
+    return sdk.verify(payloadHash, signature, publicKey);
   } catch {
     return false;
   }

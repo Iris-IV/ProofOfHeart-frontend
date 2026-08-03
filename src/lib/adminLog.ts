@@ -46,11 +46,17 @@ function writeAllEntries(entries: AdminAuditLogEntry[]): void {
   }
 }
 
-async function readApiEntries(adminAddress?: string): Promise<AdminAuditLogEntry[]> {
+async function readApiEntries(
+  adminAddress?: string,
+  page = 1,
+  pageSize = 20,
+): Promise<{ entries: AdminAuditLogEntry[]; total: number; hasMore: boolean }> {
   const url = new URL(API_ENDPOINT, window.location.origin);
   if (adminAddress) {
     url.searchParams.set("adminAddress", adminAddress);
   }
+  url.searchParams.set("page", String(page));
+  url.searchParams.set("pageSize", String(pageSize));
 
   const response = await fetch(url.toString(), {
     method: "GET",
@@ -61,8 +67,16 @@ async function readApiEntries(adminAddress?: string): Promise<AdminAuditLogEntry
     throw new Error("Failed to fetch admin audit log.");
   }
 
-  const payload = (await response.json()) as { entries?: AdminAuditLogEntry[] };
-  return Array.isArray(payload.entries) ? payload.entries : [];
+  const payload = (await response.json()) as {
+    entries?: AdminAuditLogEntry[];
+    total?: number;
+    hasMore?: boolean;
+  };
+  return {
+    entries: Array.isArray(payload.entries) ? payload.entries : [],
+    total: typeof payload.total === "number" ? payload.total : 0,
+    hasMore: typeof payload.hasMore === "boolean" ? payload.hasMore : false,
+  };
 }
 
 async function persistApiEntry(entry: AdminAuditLogEntry): Promise<void> {
@@ -104,12 +118,14 @@ export async function getAdminAuditLog(
   limit = 50,
 ): Promise<AdminAuditLogEntry[]> {
   const normalizedAddress = normalizeAddress(adminAddress);
+  const pageSize = Math.min(100, Math.max(1, limit));
+  const page = Math.max(1, Math.ceil(limit / pageSize));
 
   try {
-    const apiEntries = await readApiEntries(normalizedAddress);
-    if (apiEntries.length > 0) {
-      writeAllEntries(apiEntries);
-      return apiEntries.sort((a, b) => b.timestamp - a.timestamp).slice(0, Math.max(0, limit));
+    const { entries, total, hasMore } = await readApiEntries(normalizedAddress, page, pageSize);
+    if (entries.length > 0 || total > 0) {
+      writeAllEntries(entries);
+      return entries.sort((a, b) => b.timestamp - a.timestamp).slice(0, Math.max(0, limit));
     }
   } catch {
     // Fall back to local cache below.

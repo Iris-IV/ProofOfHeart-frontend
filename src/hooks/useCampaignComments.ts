@@ -47,12 +47,17 @@ export function useCampaignComments(
   const queryKey = ["campaignComments", campaignId, page];
   const allQueryKey = ["campaignComments", campaignId];
 
-  const { data, isLoading, error } = useQuery<CommentsPage, Error>({
-    queryKey,
-    queryFn: () => getCampaignComments(campaignId, page, PAGE_SIZE),
-    enabled: !!campaignId,
-    placeholderData: (prev) => prev,
-  });
+const POLL_INTERVAL_MS = 15_000;
+
+const { data, isLoading, error } = useQuery<CommentsPage, Error>({
+  queryKey,
+  queryFn: () => getCampaignComments(campaignId, page, PAGE_SIZE),
+  enabled: !!campaignId,
+  placeholderData: (prev) => prev,
+  refetchInterval: POLL_INTERVAL_MS,
+  refetchIntervalInBackground: false,
+  staleTime: 0,
+});
 
   const { mutateAsync: createMutation, isPending: isCreating } = useMutation({
     mutationFn: async ({ content, parentId }: { content: string; parentId: string | null }) => {
