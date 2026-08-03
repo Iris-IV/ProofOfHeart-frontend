@@ -9,6 +9,7 @@ interface CommentsListProps {
   isLoading: boolean;
   error: string | null;
   isCreator: boolean;
+  creatorAddress?: string;
   onReply: (content: string, parentId: string) => Promise<void>;
   onPin: (commentId: string, isPinned: boolean) => Promise<void>;
   onReport: (commentId: string) => Promise<void>;
@@ -19,6 +20,7 @@ export default function CommentsList({
   isLoading,
   error,
   isCreator,
+  creatorAddress,
   onReply,
   onPin,
   onReport,
@@ -108,6 +110,7 @@ export default function CommentsList({
           comment={comment}
           replies={repliesMap.get(comment.id) || []}
           isCreator={isCreator}
+          creatorAddress={creatorAddress}
           onReply={onReply}
           onPin={onPin}
           onReport={onReport}
