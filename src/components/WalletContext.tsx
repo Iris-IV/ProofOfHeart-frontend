@@ -9,7 +9,20 @@ import React, {
   useState,
   ReactNode,
 } from "react";
-import * as StellarSdk from "@stellar/stellar-sdk";
+let _stellarSdk: typeof import("@stellar/stellar-sdk") | null = null;
+
+async function getStellarSdk(): Promise<typeof import("@stellar/stellar-sdk")> {
+  if (!_stellarSdk) {
+    _stellarSdk = await import("@stellar/stellar-sdk");
+  }
+  return _stellarSdk;
+}
+
+async function getMockPublicKey(): Promise<string | null> {
+  if (!IS_MOCK_MODE) return null;
+  const sdk = await getStellarSdk();
+  return sdk.Keypair.random().publicKey();
+}
 import { getAddress, getNetwork, isConnected, isAllowed } from "@stellar/freighter-api";
 import React, { createContext, useContext, useEffect, useState, useMemo, ReactNode, useRef } from "react";
 import { useToast } from "./ToastProvider";
@@ -55,6 +68,8 @@ interface WalletActions {
 
 const WalletStateContext = createContext<WalletState | undefined>(undefined);
 const WalletActionsContext = createContext<WalletActions | undefined>(undefined);
+
+interface WalletContextType {
   walletNetworkWarning: string | null;
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
@@ -67,8 +82,6 @@ const WalletActionsContext = createContext<WalletActions | undefined>(undefined)
   isSocialLoginAvailable: boolean;
   connectWithSocial: (provider: SocialLoginProvider) => Promise<void>;
 }
-
-const MOCK_PUBLIC_KEY = IS_MOCK_MODE ? StellarSdk.Keypair.random().publicKey() : null;
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
@@ -269,7 +282,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       if (IS_MOCK_MODE) {
-        const mockAddress = MOCK_PUBLIC_KEY;
+        const mockAddress = await getMockPublicKey();
         if (!mockAddress) {
           throw new Error("Mock wallet initialization failed.");
         }
