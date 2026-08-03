@@ -101,7 +101,15 @@
     "donatedSuccess": "{amount} XLM donados correctamente",
     "thankYou": "Gracias por apoyar esta causa.",
     "viewExplorer": "Ver en Stellar Explorer →",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "giftCheckbox": "Dedicate this donation",
+    "giftDescription": "Send a digital card to the recipient with a personalized message.",
+    "giftRecipientLabel": "Recipient email",
+    "giftRecipientPlaceholder": "recipient@example.com",
+    "giftMessageLabel": "Message",
+    "giftMessagePlaceholder": "Write a personal message...",
+    "giftCardSent": "Gift card sent to {recipient}",
+    "giftThankYou": "Thank you for spreading kindness!"
   },
   "Admin": {
     "title": "Moderación Administrativa",

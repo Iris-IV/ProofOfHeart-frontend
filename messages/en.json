@@ -101,7 +101,15 @@
     "donatedSuccess": "{amount} XLM donated successfully",
     "thankYou": "Thank you for supporting this cause.",
     "viewExplorer": "View on Stellar Explorer →",
-    "close": "Close"
+    "close": "Close",
+    "giftCheckbox": "Dedicate this donation",
+    "giftDescription": "Send a digital card to the recipient with a personalized message.",
+    "giftRecipientLabel": "Recipient email",
+    "giftRecipientPlaceholder": "recipient@example.com",
+    "giftMessageLabel": "Message",
+    "giftMessagePlaceholder": "Write a personal message...",
+    "giftCardSent": "Gift card sent to {recipient}",
+    "giftThankYou": "Thank you for spreading kindness!"
   },
   "Admin": {
     "title": "Admin Moderation",
