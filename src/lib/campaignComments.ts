@@ -1,4 +1,3 @@
-import * as StellarSdk from "@stellar/stellar-sdk";
 import { Comment, CommentPayload } from "../types";
 import { parseContractError } from "../utils/contractErrors";
 import {
@@ -7,6 +6,15 @@ import {
   signOffchainPayload,
 } from "./offchainApiClient";
 import type { CommentsPage } from "../hooks/useCampaignComments";
+
+let _stellarSdk: typeof import("@stellar/stellar-sdk") | null = null;
+
+async function getStellarSdk(): Promise<typeof import("@stellar/stellar-sdk")> {
+  if (!_stellarSdk) {
+    _stellarSdk = await import("@stellar/stellar-sdk");
+  }
+  return _stellarSdk;
+}
 
 const USE_MOCKS = typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
@@ -232,17 +240,18 @@ export async function verifyCommentSignature(comment: Comment): Promise<boolean>
   }
 
   try {
+    const sdk = await getStellarSdk();
     const payloadString = JSON.stringify({
       campaignId: comment.campaignId,
       content: comment.content,
       timestamp: comment.timestamp,
     });
 
-    const payloadHash = StellarSdk.hash(Buffer.from(payloadString));
+    const payloadHash = sdk.hash(Buffer.from(payloadString));
     const signatureBuffer = Buffer.from(comment.signature, "hex");
-    const publicKey = StellarSdk.StrKey.decodeEd25519PublicKey(comment.authorAddress);
+    const publicKey = sdk.StrKey.decodeEd25519PublicKey(comment.authorAddress);
 
-    return StellarSdk.verify(payloadHash, signatureBuffer, publicKey);
+    return sdk.verify(payloadHash, signatureBuffer, publicKey);
   } catch {
     return false;
   }

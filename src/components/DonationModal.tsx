@@ -71,6 +71,9 @@ export default function DonationModal({
   const [error, setError] = useState<string | null>(null);
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringInterval, setRecurringInterval] = useState<RecurringInterval>("monthly");
+  const [isGift, setIsGift] = useState(false);
+  const [giftRecipient, setGiftRecipient] = useState("");
+  const [giftMessage, setGiftMessage] = useState("");
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
 
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -453,6 +456,71 @@ export default function DonationModal({
                   </div>
                 )}
               </div>
+
+              {/* Gift a donation (#673) */}
+              <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 px-4 py-3 space-y-3">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isGift}
+                    onChange={(e) => {
+                      setIsGift(e.target.checked);
+                      if (!e.target.checked) {
+                        setGiftRecipient("");
+                        setGiftMessage("");
+                      }
+                    }}
+                    className="mt-0.5 h-4 w-4 rounded border-zinc-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm">
+                    <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                      {t("giftCheckbox")}
+                    </span>
+                    <span className="block text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                      {t("giftDescription")}
+                    </span>
+                  </span>
+                </label>
+
+                {isGift && (
+                  <div className="space-y-3">
+                    <div>
+                      <label
+                        htmlFor="gift-recipient"
+                        className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+                      >
+                        {t("giftRecipientLabel")}
+                      </label>
+                      <input
+                        id="gift-recipient"
+                        type="email"
+                        value={giftRecipient}
+                        onChange={(e) => setGiftRecipient(e.target.value)}
+                        placeholder={t("giftRecipientPlaceholder")}
+                        className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="gift-message"
+                        className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+                      >
+                        {t("giftMessageLabel")}
+                      </label>
+                      <textarea
+                        id="gift-message"
+                        value={giftMessage}
+                        onChange={(e) => setGiftMessage(e.target.value)}
+                        placeholder={t("giftMessagePlaceholder")}
+                        maxLength={500}
+                        rows={3}
+                        className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {amountNum > 0 && (
                 <dl className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 px-4 py-3 text-sm space-y-2">
                   <div className="flex justify-between gap-4">
@@ -534,6 +602,11 @@ export default function DonationModal({
                   </p>
                 )}
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t("thankYou")}</p>
+                {isGift && giftRecipient && (
+                  <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                    {t("giftCardSent", { recipient: giftRecipient })}
+                  </p>
+                )}
               </div>
               {txHash && (
                 <a
