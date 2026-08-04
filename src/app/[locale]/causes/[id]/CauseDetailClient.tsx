@@ -7,12 +7,8 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations, useLocale } from "next-intl";
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeSanitize from 'rehype-sanitize';
 
 import CampaignTabs from "@/components/CampaignTabs";
-import CampaignDescription from "@/components/CampaignDescription";
 import CampaignStatusBadge from "@/components/CampaignStatusBadge";
 import DeadlineCountdown from "@/components/DeadlineCountdown";
 import FundingProgressBar from "@/components/FundingProgressBar";
@@ -28,7 +24,6 @@ import { CauseDetailSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
 
-import { useCampaign } from "@/hooks/useCampaign";
 import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
 import { useFollowedCreators } from "@/hooks/useFollowedCreators";
 import { useLiveCampaignFunding } from "@/hooks/useLiveCampaignFunding";

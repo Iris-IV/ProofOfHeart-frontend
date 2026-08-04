@@ -5,7 +5,7 @@ import L from "leaflet";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { Campaign } from "@/types";
 import { Link } from "@/i18n/routing";
-import { memo, useMemo, useEffect, useRef } from "react";
+import { memo, useMemo } from "react";
 import { useTranslations } from "next-intl";
 
 // Fix Leaflet default marker icon (broken in bundlers)
@@ -121,5 +121,7 @@ const CampaignMap = memo(({ campaigns }: CampaignMapProps) => {
     </div>
   );
 });
+
+CampaignMap.displayName = "CampaignMap";
 
 export default CampaignMap;
