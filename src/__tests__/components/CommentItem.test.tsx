@@ -4,8 +4,6 @@ import CommentItem from "@/components/CommentItem";
 import { useWallet } from "@/components/WalletContext";
 import { ToastProvider } from "@/components/ToastProvider";
 
-import { ToastProvider } from "@/components/ToastProvider";
-
 jest.mock("@/components/WalletContext", () => ({
   useWallet: jest.fn(),
 }));

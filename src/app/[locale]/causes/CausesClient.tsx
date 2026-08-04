@@ -129,14 +129,8 @@ function CausesContent() {
   >({});
   const [isVotingFor, setIsVotingFor] = useState<number | null>(null);
   const [visibleCount, setVisibleCount] = useState(CAUSES_PAGE_SIZE);
-  const [mounted, setMounted] = useState(false);
   const { publicKey: userWalletAddress } = useWallet();
   const { showError, showSuccess, showWarning } = useToast();
-
-  // Set mounted after hydration to guard SSR-sensitive rendering
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Mirror contract data into local state so optimistic updates work
   useEffect(() => {
