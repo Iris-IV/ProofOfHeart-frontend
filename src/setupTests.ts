@@ -49,3 +49,19 @@ jest.mock("next-intl", () => ({
     values?.count === 1 ? `${key}_one` : key,
   useLocale: () => "en",
 }));
+
+// jsdom does not implement window.matchMedia — stub it for components that
+// read prefers-reduced-motion or dark-mode preferences.
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: jest.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  })),
+});
