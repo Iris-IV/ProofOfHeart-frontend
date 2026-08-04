@@ -55,6 +55,10 @@ interface WalletActions {
 
 const WalletStateContext = createContext<WalletState | undefined>(undefined);
 const WalletActionsContext = createContext<WalletActions | undefined>(undefined);
+
+export interface WalletContextType {
+  publicKey: string | null;
+  isWalletConnected: boolean;
   walletNetworkWarning: string | null;
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
@@ -327,7 +331,6 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [showError, showSuccess, showWarning]);
 
-  const disconnectWallet = useCallback(() => {
   /**
    * #649 — Create or restore an embedded wallet from a Google or X account, so
    * visitors without a browser extension can still contribute.
@@ -369,7 +372,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const disconnectWallet = () => {
+  const disconnectWallet = useCallback(() => {
     const wasSocial = isSocialSessionRef.current;
 
     setPublicKey(null);
@@ -396,7 +399,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     showWarning(
       "Disconnected. To fully revoke Freighter access, open the extension and remove this site from Connected Sites.",
     );
-  }, [showWarning]);
+  }, [showWarning, showSuccess]);
 
   const state = useMemo<WalletState>(
     () => ({ publicKey, isWalletConnected, isLoading }),

@@ -60,6 +60,7 @@ import {
   verifyCampaignWithVotes,
   getContribution,
   claimRefund,
+  cancelCampaign,
 } from '@/lib/contractClient';
 import VotingComponent from '@/components/VotingComponent';
 import CampaignStatusBadge from '@/components/CampaignStatusBadge';
@@ -75,11 +76,8 @@ import { parseContractError } from '@/utils/contractErrors';
 function formatDate(ts: number) {
   return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(ts * 1000));
 }
-  cancelCampaign,
-} from "@/lib/contractClient";
 import { useTranslations, useLocale } from "next-intl";
 import { CauseDetailSkeleton } from "@/components/Skeleton";
-import { Campaign, Vote, CATEGORY_LABELS } from "@/types";
 import { stroopsToXlmNumber } from "@/lib/stellarAmount";
 import { parseContractError } from "@/utils/contractErrors";
 import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncAction";
