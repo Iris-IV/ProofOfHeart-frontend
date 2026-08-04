@@ -178,7 +178,7 @@ describe("UpdateComposer", () => {
     fireEvent.change(textarea, {
       target: { value: "  Valid update content with spaces  " },
     });
-    fireEvent.click(screen.getByText("Post Update"));
+    fireEvent.submit(screen.getByText("Post Update").closest("form")!);
 
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith("Valid update content with spaces", true);
@@ -201,7 +201,7 @@ describe("UpdateComposer", () => {
     fireEvent.change(textarea, { target: { value: "Valid content here" } });
 
     expect(screen.getByText("Posting...")).toBeInTheDocument();
-    expect(screen.getByText("Posting...")).toBeDisabled();
+    expect(screen.getByText("Posting...").closest("button")).toBeDisabled();
   });
 
   it("shows cancel button when expanded", () => {

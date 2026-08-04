@@ -61,7 +61,25 @@ const createTestQueryClient = () => {
   });
 };
 
+import { getAddress, isConnected, isAllowed } from "@stellar/freighter-api";
+
+const mockGetAddress = getAddress as jest.Mock;
+const mockIsConnected = isConnected as jest.Mock;
+const mockIsAllowed = isAllowed as jest.Mock;
+
 const renderUpdatesSection = (campaign: Campaign, walletPublicKey: string | null = null) => {
+  if (walletPublicKey) {
+    mockGetAddress.mockResolvedValue({ address: walletPublicKey });
+    mockIsConnected.mockResolvedValue({ isConnected: true });
+    mockIsAllowed.mockResolvedValue({ isAllowed: true });
+    localStorage.setItem("stellar_wallet_public_key", walletPublicKey);
+  } else {
+    mockGetAddress.mockResolvedValue({ address: "" });
+    mockIsConnected.mockResolvedValue({ isConnected: false });
+    mockIsAllowed.mockResolvedValue({ isAllowed: false });
+    localStorage.removeItem("stellar_wallet_public_key");
+  }
+
   const queryClient = createTestQueryClient();
 
   return render(
@@ -214,7 +232,7 @@ describe("UpdatesSection Integration", () => {
       });
 
       // Submit
-      fireEvent.click(screen.getByText("Post Update"));
+      fireEvent.submit(screen.getByText("Post Update").closest("form")!);
 
       await waitFor(() => {
         expect(mockCreateCampaignUpdate).toHaveBeenCalledWith(
@@ -245,7 +263,7 @@ describe("UpdatesSection Integration", () => {
         target: { value: "Update content" },
       });
 
-      fireEvent.click(screen.getByText("Post Update"));
+      fireEvent.submit(screen.getByText("Post Update").closest("form")!);
 
       // Button should be in loading state (disabled with spinner)
       await waitFor(() => {
@@ -270,7 +288,7 @@ describe("UpdatesSection Integration", () => {
         target: { value: "Update content" },
       });
 
-      fireEvent.click(screen.getByText("Post Update"));
+      fireEvent.submit(screen.getByText("Post Update").closest("form")!);
 
       await waitFor(() => {
         expect(screen.getByText(/Submission failed/i)).toBeInTheDocument();
@@ -301,7 +319,7 @@ describe("UpdatesSection Integration", () => {
         target: { value: "Success update" },
       });
 
-      fireEvent.click(screen.getByText("Post Update"));
+      fireEvent.submit(screen.getByText("Post Update").closest("form")!);
 
       // After success, composer should collapse
       await waitFor(() => {

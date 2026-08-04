@@ -19,6 +19,29 @@ import CreateCampaignPage from "@/app/[locale]/causes/new/page";
 
 const mockPush = jest.fn();
 
+import enMessages from "../../../messages/en.json";
+
+jest.mock("next-intl", () => ({
+  NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => children,
+  useTranslations:
+    (namespace?: string) => (key: string, values?: Record<string, string | number>) => {
+      const ns = namespace
+        ? (enMessages as Record<string, Record<string, string>>)[namespace]
+        : null;
+      let val = ns?.[key];
+      if (!val && values?.count !== undefined) {
+        const pluralKey = `${key}_${values.count === 1 ? "one" : "other"}`;
+        val = ns?.[pluralKey];
+      }
+      val = val ?? key;
+      if (typeof val === "string" && values) {
+        return val.replace(/\{(\w+)\}/g, (_, k) => String(values[k] ?? `{${k}}`));
+      }
+      return val;
+    },
+  useLocale: () => "en",
+}));
+
 jest.mock("@/i18n/routing", () => ({
   useRouter: () => ({ push: mockPush }),
 }));

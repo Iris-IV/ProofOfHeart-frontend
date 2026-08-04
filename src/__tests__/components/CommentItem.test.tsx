@@ -8,6 +8,10 @@ jest.mock("@/components/WalletContext", () => ({
   useWallet: jest.fn(),
 }));
 
+const renderCommentItem = (ui: React.ReactElement) => {
+  return render(<ToastProvider>{ui}</ToastProvider>);
+};
+
 jest.mock("@/lib/campaignComments", () => ({
   verifyCommentSignature: jest.fn().mockResolvedValue(true),
 }));
@@ -35,7 +39,7 @@ describe("CommentItem", () => {
   });
 
   it("renders author and content correctly", async () => {
-    render(
+    renderCommentItem(
       <CommentItem
         comment={mockComment}
         isCreator={false}
@@ -53,7 +57,7 @@ describe("CommentItem", () => {
   });
 
   it("shows pinned status", () => {
-    render(
+    renderCommentItem(
       <CommentItem
         comment={{ ...mockComment, isPinned: true }}
         isCreator={false}
@@ -66,7 +70,7 @@ describe("CommentItem", () => {
   });
 
   it("shows reported status and hides content", () => {
-    render(
+    renderCommentItem(
       <CommentItem
         comment={{ ...mockComment, isReported: true }}
         isCreator={false}
@@ -82,7 +86,7 @@ describe("CommentItem", () => {
   });
 
   it("shows pin button only for creator on top-level comments", () => {
-    const { rerender } = render(
+    const { rerender } = renderCommentItem(
       <CommentItem
         comment={mockComment}
         isCreator={true}
@@ -96,20 +100,22 @@ describe("CommentItem", () => {
 
     // Re-render as non-creator
     rerender(
-      <CommentItem
-        comment={mockComment}
-        isCreator={false}
-        onPin={mockOnPin}
-        onReply={mockOnReply}
-        onReport={mockOnReport}
-      />,
+      <ToastProvider>
+        <CommentItem
+          comment={mockComment}
+          isCreator={false}
+          onPin={mockOnPin}
+          onReply={mockOnReply}
+          onReport={mockOnReport}
+        />
+      </ToastProvider>,
     );
 
     expect(screen.queryByTitle("Pin Comment")).not.toBeInTheDocument();
   });
 
   it("calls onReport when report button is clicked", () => {
-    render(
+    renderCommentItem(
       <CommentItem
         comment={mockComment}
         isCreator={false}
@@ -146,7 +152,7 @@ describe("CommentItem", () => {
       parentId: "c1",
     };
 
-    render(
+    renderCommentItem(
       <CommentItem
         comment={mockComment}
         replies={[reply]}
@@ -166,7 +172,7 @@ describe("CommentItem", () => {
       content: '<img src=x onerror="alert(1)"><script>alert(1)</script>',
     };
 
-    const { container } = render(
+    const { container } = renderCommentItem(
       <CommentItem
         comment={xssComment}
         isCreator={false}

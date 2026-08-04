@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations } from "next-intl/server";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
@@ -18,8 +18,16 @@ import { getTextDirection } from "@/lib/direction";
 import { getThemeBlockingScript } from "@/lib/preferences";
 import "../globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
+// Self-hosted via Fontsource (@fontsource-variable/inter) so production builds
+// don't depend on fetching from fonts.gstatic.com at build time.
+const inter = localFont({
+  src: [
+    {
+      path: "../../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2",
+      weight: "100 900",
+      style: "normal",
+    },
+  ],
   display: "swap",
   variable: "--font-inter",
 });

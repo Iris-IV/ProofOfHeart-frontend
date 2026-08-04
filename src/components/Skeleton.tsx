@@ -3,7 +3,10 @@ interface SkeletonProps {
 }
 
 /** Single animated skeleton block */
-export function Skeleton({ className = "" }: SkeletonProps) {
+export function Skeleton({
+  className = "",
+  "data-testid": dataTestId = "skeleton",
+}: SkeletonProps & { "data-testid"?: string }) {
   return (
     <div
       data-testid="skeleton"
