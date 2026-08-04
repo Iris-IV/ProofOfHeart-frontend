@@ -3,6 +3,7 @@ import * as StellarSdk from "@stellar/stellar-sdk";
 import { getAddress, getNetwork, isConnected, isAllowed } from "@stellar/freighter-api";
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -374,7 +375,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     showWarning(
       "Disconnected. To fully revoke Freighter access, open the extension and remove this site from Connected Sites.",
     );
-  };
+  }, [showSuccess, showWarning]);
 
   const contextValue = useMemo(
     () => ({
