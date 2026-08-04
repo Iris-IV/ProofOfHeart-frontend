@@ -19,20 +19,53 @@ function checkRateLimit(key: string): boolean {
   return true;
 }
 
-// GET /api/reports  — admin moderation queue
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
+
+function parsePageSize(raw: string | null): number {
+  const parsed = parseInt(raw ?? String(DEFAULT_PAGE_SIZE), 10);
+  return Math.min(MAX_PAGE_SIZE, Math.max(1, Number.isFinite(parsed) ? parsed : DEFAULT_PAGE_SIZE));
+}
+
+function parsePage(raw: string | null): number {
+  const parsed = parseInt(raw ?? "1", 10);
+  return Math.max(1, Number.isFinite(parsed) ? parsed : 1);
+}
+
+function pickFields<T>(item: T, fields: string[]): Partial<T> {
+  const picked: Record<string, unknown> = {};
+  for (const field of fields) {
+    if (field in item) {
+      picked[field] = (item as Record<string, unknown>)[field];
+    }
+  }
+  return picked as Partial<T>;
+}
+
+// GET /api/reports?page=1&pageSize=20&status=all&fields=id,campaignId,status
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const status = url.searchParams.get("status") ?? "all";
+  const page = parsePage(url.searchParams.get("page"));
+  const pageSize = parsePageSize(url.searchParams.get("pageSize"));
+  const fields = url.searchParams.get("fields");
+  const requestedFields = fields ? fields.split(",").map((f) => f.trim()).filter(Boolean) : [];
 
-  const results =
+  const filtered =
     status === "pending"
       ? reportStore.filter((r) => r.status === "pending")
       : status === "reviewed"
         ? reportStore.filter((r) => r.status === "reviewed")
         : [...reportStore];
 
-  results.sort((a, b) => b.timestamp - a.timestamp);
-  return NextResponse.json(results);
+  filtered.sort((a, b) => b.timestamp - a.timestamp);
+  const total = filtered.length;
+  const start = (page - 1) * pageSize;
+  const items = filtered.slice(start, start + pageSize).map((item) =>
+    requestedFields.length > 0 ? pickFields(item, requestedFields) : item,
+  );
+
+  return NextResponse.json({ items, total, page, pageSize, hasMore: page * pageSize < total });
 }
 
 // POST /api/reports — submit a new abuse report

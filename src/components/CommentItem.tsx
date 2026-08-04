@@ -10,6 +10,7 @@ interface CommentItemProps {
   comment: Comment;
   replies?: Comment[];
   isCreator: boolean;
+  creatorAddress?: string;
   onReply: (content: string, parentId: string) => Promise<void>;
   onPin?: (commentId: string, isPinned: boolean) => Promise<void>;
   onReport: (commentId: string) => Promise<void>;
@@ -45,6 +46,7 @@ export default function CommentItem({
   comment,
   replies = [],
   isCreator,
+  creatorAddress,
   onReply,
   onPin,
   onReport,
@@ -118,6 +120,16 @@ export default function CommentItem({
                     Verified
                   </span>
                 )}
+                {creatorAddress &&
+                  comment.authorAddress.toLowerCase() ===
+                    creatorAddress.toLowerCase() && (
+                    <span
+                      className="inline-flex items-center text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 px-1.5 py-0.5 rounded-full font-bold"
+                      title="Campaign Creator"
+                    >
+                      Creator
+                    </span>
+                  )}
                 {comment.isReported && (
                   <span className="text-[10px] text-red-500 font-bold ms-1 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded-full border border-red-200 dark:border-red-800">
                     Reported

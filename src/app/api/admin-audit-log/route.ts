@@ -51,21 +51,58 @@ function normalizeAddress(address: string): string {
   return address.trim().toUpperCase();
 }
 
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
+
+function parsePageSize(raw: string | null): number {
+  const parsed = parseInt(raw ?? String(DEFAULT_PAGE_SIZE), 10);
+  return Math.min(MAX_PAGE_SIZE, Math.max(1, Number.isFinite(parsed) ? parsed : DEFAULT_PAGE_SIZE));
+}
+
+function parsePage(raw: string | null): number {
+  const parsed = parseInt(raw ?? "1", 10);
+  return Math.max(1, Number.isFinite(parsed) ? parsed : 1);
+}
+
+function pickFields<T>(item: T, fields: string[]): Partial<T> {
+  const picked: Record<string, unknown> = {};
+  for (const field of fields) {
+    if (field in item) {
+      picked[field] = (item as Record<string, unknown>)[field];
+    }
+  }
+  return picked as Partial<T>;
+}
+
+// GET /api/admin-audit-log?page=1&pageSize=20&adminAddress=...&action=...&fields=...
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const adminAddress = url.searchParams.get("adminAddress");
-  const entries = await readEntries();
+  const action = url.searchParams.get("action");
+  const page = parsePage(url.searchParams.get("page"));
+  const pageSize = parsePageSize(url.searchParams.get("pageSize"));
+  const fields = url.searchParams.get("fields");
+  const requestedFields = fields ? fields.split(",").map((f) => f.trim()).filter(Boolean) : [];
 
-  if (!adminAddress) {
-    return NextResponse.json({ entries });
+  let entries = await readEntries();
+
+  if (adminAddress) {
+    const normalized = normalizeAddress(adminAddress);
+    entries = entries.filter((entry) => normalizeAddress(entry.adminAddress) === normalized);
   }
 
-  const normalized = normalizeAddress(adminAddress);
-  return NextResponse.json({
-    entries: entries
-      .filter((entry) => normalizeAddress(entry.adminAddress) === normalized)
-      .sort((a, b) => b.timestamp - a.timestamp),
-  });
+  if (action) {
+    entries = entries.filter((entry) => entry.action === action);
+  }
+
+  entries.sort((a, b) => b.timestamp - a.timestamp);
+  const total = entries.length;
+  const start = (page - 1) * pageSize;
+  const pageEntries = entries.slice(start, start + pageSize).map((entry) =>
+    requestedFields.length > 0 ? pickFields(entry, requestedFields) : entry,
+  );
+
+  return NextResponse.json({ entries: pageEntries, total, page, pageSize, hasMore: page * pageSize < total });
 }
 
 export async function POST(request: Request) {

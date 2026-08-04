@@ -58,6 +58,7 @@ export default function CommentsSection({ campaign }: CommentsSectionProps) {
         isLoading={isLoading}
         error={error}
         isCreator={isCreator}
+        creatorAddress={campaign.creator}
         onReply={createComment}
         onPin={pinCommentMutation}
         onReport={reportCommentMutation}
