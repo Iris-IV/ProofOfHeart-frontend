@@ -1,17 +1,7 @@
 "use client";
-import { getAddress, isConnected, isAllowed } from "@stellar/freighter-api";
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  ReactNode,
-} from "react";
 import * as StellarSdk from "@stellar/stellar-sdk";
 import { getAddress, getNetwork, isConnected, isAllowed } from "@stellar/freighter-api";
-import React, { createContext, useContext, useEffect, useState, useMemo, ReactNode, useRef } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState, useMemo, ReactNode, useRef } from "react";
 import { useToast } from "./ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
 import { IS_MOCK_MODE } from "@/lib/runtimeEnv";
@@ -46,11 +36,16 @@ interface WalletState {
   publicKey: string | null;
   isWalletConnected: boolean;
   isLoading: boolean;
+  walletNetworkWarning: string | null;
+  walletKind: WalletKind | null;
+  socialProfile: SocialWalletSession | null;
+  isSocialLoginAvailable: boolean;
 }
 
 interface WalletActions {
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
+  connectWithSocial: (provider: SocialLoginProvider) => Promise<void>;
 }
 
 const WalletStateContext = createContext<WalletState | undefined>(undefined);
@@ -98,7 +93,6 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       ? "Testnet"
       : "the app network";
 
-  const checkWalletConnection = useCallback(async () => {
   useEffect(() => {
     if (IS_MOCK_MODE) {
       const storedKey =
@@ -163,7 +157,16 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     previousPublicKeyRef.current = restored.publicKey;
   };
 
-  const checkWalletConnection = async () => {
+  // Invalidate all wallet-scoped queries when account/network changes
+  const invalidateWalletQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["admin"] });
+    queryClient.invalidateQueries({ queryKey: ["contributions"] });
+    queryClient.invalidateQueries({ queryKey: ["revenue"] });
+    queryClient.invalidateQueries({ queryKey: ["stellarBalance"] });
+    // Note: campaigns query is not wallet-scoped, so we don't invalidate it
+  }, [queryClient]);
+
+  const checkWalletConnection = useCallback(async () => {
     // A social wallet owns the session; Freighter's state is irrelevant until
     // the user explicitly disconnects.
     if (isSocialSessionRef.current) return;
@@ -244,16 +247,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         previousPublicKeyRef.current = null;
       }
     }
-  };
-
-  // Invalidate all wallet-scoped queries when account/network changes
-  const invalidateWalletQueries = () => {
-    queryClient.invalidateQueries({ queryKey: ["admin"] });
-    queryClient.invalidateQueries({ queryKey: ["contributions"] });
-    queryClient.invalidateQueries({ queryKey: ["revenue"] });
-    queryClient.invalidateQueries({ queryKey: ["stellarBalance"] });
-    // Note: campaigns query is not wallet-scoped, so we don't invalidate it
-  };
+  }, [appNetworkPassphrase, appNetworkLabel, invalidateWalletQueries]);
 
   const isFreighterInstalled = async (): Promise<boolean> => {
     try {
@@ -262,7 +256,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     } catch {
       return false;
     }
-  }, []);
+  };
 
   useEffect(() => {
     // Always re-verify with Freighter rather than blindly trusting localStorage (#97)
@@ -402,13 +396,21 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   }, [showWarning, showSuccess]);
 
   const state = useMemo<WalletState>(
-    () => ({ publicKey, isWalletConnected, isLoading }),
-    [publicKey, isWalletConnected, isLoading]
+    () => ({
+      publicKey,
+      isWalletConnected,
+      isLoading,
+      walletNetworkWarning,
+      walletKind,
+      socialProfile,
+      isSocialLoginAvailable: isSocialLoginConfigured(),
+    }),
+    [publicKey, isWalletConnected, isLoading, walletNetworkWarning, walletKind, socialProfile]
   );
 
   const actions = useMemo<WalletActions>(
-    () => ({ connectWallet, disconnectWallet }),
-    [connectWallet, disconnectWallet]
+    () => ({ connectWallet, disconnectWallet, connectWithSocial }),
+    [connectWallet, disconnectWallet, connectWithSocial]
   );
 
   const contextValue = useMemo(
@@ -428,26 +430,27 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   );
 
   return (
-    <WalletStateContext.Provider value={state}>
-      <WalletActionsContext.Provider value={actions}>{children}</WalletActionsContext.Provider>
-    </WalletStateContext.Provider>
     <WalletContext.Provider value={contextValue}>
-      {children}
-      <InstallFreighterModal
-        isOpen={showInstallPrompt}
-        onClose={() => setShowInstallPrompt(false)}
-        onRetry={handleRetryInstall}
-        socialLogin={
-          isSocialLoginConfigured() ? (
-            <SocialLoginButtons
-              available
-              disabled={isLoading}
-              onSelect={connectWithSocial}
-              onConnected={() => setShowInstallPrompt(false)}
-            />
-          ) : undefined
-        }
-      />
+      <WalletStateContext.Provider value={state}>
+        <WalletActionsContext.Provider value={actions}>
+          {children}
+          <InstallFreighterModal
+            isOpen={showInstallPrompt}
+            onClose={() => setShowInstallPrompt(false)}
+            onRetry={handleRetryInstall}
+            socialLogin={
+              isSocialLoginConfigured() ? (
+                <SocialLoginButtons
+                  available
+                  disabled={isLoading}
+                  onSelect={connectWithSocial}
+                  onConnected={() => setShowInstallPrompt(false)}
+                />
+              ) : undefined
+            }
+          />
+        </WalletActionsContext.Provider>
+      </WalletStateContext.Provider>
     </WalletContext.Provider>
   );
 };

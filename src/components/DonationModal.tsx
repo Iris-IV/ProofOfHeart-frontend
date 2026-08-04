@@ -259,8 +259,15 @@ export default function DonationModal({
     trackReviewContribution(campaign.id);
 
     try {
-      const stroops = xlmToStroops(amountNum);
-      const hash = await contribute(campaign.id, publicKey, stroops);
+      const stroops = xlmToStroops(amount);
+      const hash = await contribute(campaign.id, publicKey, stroops, {
+        onStatus: ({ phase }) => {
+          setTxPhase(phase);
+          if (phase === "signing") {
+            trackSignTransaction(campaign.id);
+          }
+        },
+      });
 
       // Only record the schedule once this cycle actually settled, so a failed
       // donation never leaves a subscription behind.
@@ -273,16 +280,6 @@ export default function DonationModal({
           interval: recurringInterval,
         });
       }
-
-      const stroops = xlmToStroops(amountToSend);
-      const hash = await contribute(campaign.id, publicKey, stroops, {
-        onStatus: ({ phase }) => {
-          setTxPhase(phase);
-          if (phase === "signing") {
-            trackSignTransaction(campaign.id);
-          }
-        },
-      });
       setTxHash(hash);
       setStep("confirmed");
       trackContributionConfirmed(campaign.id);

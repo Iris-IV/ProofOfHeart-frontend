@@ -31,7 +31,7 @@ export default function RecentActivityFeed() {
     .map((c) => ({
       id: c.id,
       label: `New cause: ${c.title}`,
-      raised: c.amount_raised ?? c.raised_amount ?? BigInt(0),
+      raised: c.amount_raised ?? BigInt(0),
     }));
 
   useEffect(() => {
