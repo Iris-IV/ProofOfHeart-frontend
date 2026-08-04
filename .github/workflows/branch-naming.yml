@@ -13,13 +13,13 @@ jobs:
         env:
           BRANCH: ${{ github.head_ref }}
         run: |
-          PATTERN='^(feat|fix|docs|test|chore|refactor|perf|ci|build|revert)/.+'
+          PATTERN='^(feat|fix|docs|test|chore|refactor|perf|ci|build|revert|codex)/.+'
           if echo "$BRANCH" | grep -Eq "$PATTERN"; then
             echo "Branch name '$BRANCH' is valid."
           else
             echo "::error::Branch name '$BRANCH' does not follow the required convention."
             echo "::error::Expected pattern: <type>/<description>"
-            echo "::error::Allowed types: feat, fix, docs, test, chore, refactor, perf, ci, build, revert"
+            echo "::error::Allowed types: feat, fix, docs, test, chore, refactor, perf, ci, build, revert, codex"
             echo "::error::Examples: feat/campaign-map, fix/admin-2fa-setup"
             exit 1
           fi
