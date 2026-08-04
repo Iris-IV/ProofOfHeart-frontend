@@ -17,10 +17,15 @@ jest.mock("@/components/SafeMarkdown", () => ({
   ),
 }));
 
+jest.mock("@/lib/runtimeEnv", () => ({
+  IS_MOCK_MODE: true,
+}));
+
 // Mock the campaign updates module
 jest.mock("@/lib/campaignUpdates", () => ({
   getCampaignUpdates: jest.fn(),
   createCampaignUpdate: jest.fn(),
+  verifyUpdateSignature: jest.fn().mockResolvedValue(true),
 }));
 
 const mockGetCampaignUpdates = campaignUpdatesModule.getCampaignUpdates as jest.Mock;
@@ -57,6 +62,12 @@ const createTestQueryClient = () => {
 
 const renderUpdatesSection = (campaign: Campaign, walletPublicKey: string | null = null) => {
   const queryClient = createTestQueryClient();
+
+  if (walletPublicKey) {
+    localStorage.setItem("stellar_wallet_public_key", walletPublicKey);
+  } else {
+    localStorage.removeItem("stellar_wallet_public_key");
+  }
 
   return render(
     <QueryClientProvider client={queryClient}>
@@ -128,7 +139,7 @@ describe("UpdatesSection Integration", () => {
 
       renderUpdatesSection(mockCampaign);
 
-      expect(screen.getAllByTestId("skeleton")).toHaveLength(9);
+      expect(screen.getAllByTestId("skeleton")).toHaveLength(15);
     });
 
     it("shows error state on fetch failure", async () => {
@@ -285,7 +296,9 @@ describe("UpdatesSection Integration", () => {
 
       fireEvent.click(screen.getByText("Post Update"));
 
-      expect(screen.getByText("Posting...")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("Posting...")).toBeInTheDocument();
+      });
     });
 
     it("shows error toast on submission failure", async () => {
