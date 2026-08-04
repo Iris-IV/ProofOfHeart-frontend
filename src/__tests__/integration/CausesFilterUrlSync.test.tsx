@@ -74,6 +74,8 @@ jest.mock("@/lib/contractClient", () => ({
   claimRefund: jest.fn(),
   voteOnCampaign: jest.fn(),
   hasVoted: jest.fn(),
+  getApproveVotes: jest.fn(() => Promise.resolve(0)),
+  getRejectVotes: jest.fn(() => Promise.resolve(0)),
 }));
 
 jest.mock("@/components/CauseCard", () => ({
@@ -131,8 +133,10 @@ describe("Causes filters URL sync", () => {
     expect(sortSelect).toHaveValue("most_funded");
   });
 
-  it("shows live category counts on filter chips", () => {
-    render(<CausesClient />);
+  it("shows live category counts on filter chips", async () => {
+    await act(async () => {
+      render(<CausesClient />);
+    });
 
     expect(
       screen.getByRole("button", { name: "All Categories, 1 causes, selected" }),
