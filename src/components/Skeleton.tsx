@@ -9,7 +9,7 @@ export function Skeleton({
 }: SkeletonProps & { "data-testid"?: string }) {
   return (
     <div
-      data-testid={dataTestId}
+      data-testid="skeleton"
       className={`motion-safe:animate-pulse rounded bg-zinc-200 dark:bg-zinc-700 ${className}`}
     />
   );

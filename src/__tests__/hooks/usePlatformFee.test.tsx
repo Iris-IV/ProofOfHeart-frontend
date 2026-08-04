@@ -1,7 +1,11 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { usePlatformFee, DEFAULT_PLATFORM_FEE_BPS, PLATFORM_FEE_QUERY_KEY } from "@/hooks/usePlatformFee";
+import {
+  usePlatformFee,
+  DEFAULT_PLATFORM_FEE_BPS,
+  PLATFORM_FEE_QUERY_KEY,
+} from "@/hooks/usePlatformFee";
 
 jest.mock("@/lib/contractClient", () => ({
   getPlatformFee: jest.fn(),

@@ -2,6 +2,7 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import CommentItem from "@/components/CommentItem";
 import { useWallet } from "@/components/WalletContext";
+import { ToastProvider } from "@/components/ToastProvider";
 
 import { ToastProvider } from "@/components/ToastProvider";
 
@@ -130,13 +131,15 @@ describe("CommentItem", () => {
   });
 
   it("opens reply form when Reply is clicked", () => {
-    renderCommentItem(
-      <CommentItem
-        comment={mockComment}
-        isCreator={false}
-        onReply={mockOnReply}
-        onReport={mockOnReport}
-      />,
+    render(
+      <ToastProvider>
+        <CommentItem
+          comment={mockComment}
+          isCreator={false}
+          onReply={mockOnReply}
+          onReport={mockOnReport}
+        />
+      </ToastProvider>,
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Reply/i }));

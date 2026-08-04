@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Bell, ExternalLink } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useWallet } from "@/components/WalletContext";
+import { useTranslations } from "next-intl";
 import type { AppNotification } from "@/lib/notifications";
 
 const EVENT_ICONS: Record<AppNotification["type"], string> = {
@@ -18,18 +19,19 @@ const EVENT_ICONS: Record<AppNotification["type"], string> = {
   campaign_verified: "✅",
 };
 
-function timeAgo(ts: number): string {
-  const diff = Math.floor((Date.now() - ts) / 1000);
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-}
-
 export default function NotificationBell() {
+  const t = useTranslations("Notifications");
   const { publicKey } = useWallet();
   const { notifications, unreadCount, markAllRead, markRead } = useNotifications(publicKey);
   const [open, setOpen] = useState(false);
+
+  function timeAgo(ts: number): string {
+    const diff = Math.floor((Date.now() - ts) / 1000);
+    if (diff < 60) return t("justNow");
+    if (diff < 3600) return t("mAgo", { count: Math.floor(diff / 60) });
+    if (diff < 86400) return t("hAgo", { count: Math.floor(diff / 3600) });
+    return t("dAgo", { count: Math.floor(diff / 86400) });
+  }
   const ref = useRef<HTMLDivElement>(null);
 
   // Close on outside click
@@ -61,7 +63,7 @@ export default function NotificationBell() {
       <button
         type="button"
         onClick={handleOpen}
-        aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
+        aria-label={unreadCount > 0 ? t("unreadLabel", { count: unreadCount }) : t("title")}
         aria-haspopup="true"
         aria-expanded={open}
         className="relative flex size-9 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-950 hover:bg-black/5 dark:border-white/15 dark:bg-zinc-800 dark:text-white dark:hover:bg-white/10 transition-colors shadow-sm"
@@ -77,12 +79,12 @@ export default function NotificationBell() {
       {open && (
         <div
           role="dialog"
-          aria-label="Notifications"
+          aria-label={t("title")}
           className="absolute right-0 top-11 z-50 w-80 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-xl overflow-hidden"
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 dark:border-zinc-800">
             <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-              Notifications
+              {t("title")}
             </span>
             {unreadCount > 0 && (
               <button
@@ -90,7 +92,7 @@ export default function NotificationBell() {
                 onClick={markAllRead}
                 className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
               >
-                Mark all read
+                {t("markAllRead")}
               </button>
             )}
           </div>
@@ -98,7 +100,7 @@ export default function NotificationBell() {
           <ul className="max-h-80 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800">
             {notifications.length === 0 ? (
               <li className="px-4 py-8 text-center text-sm text-zinc-400 dark:text-zinc-500">
-                {publicKey ? "No notifications yet" : "Connect your wallet to see notifications"}
+                {publicKey ? t("noNotifications") : t("connectWallet")}
               </li>
             ) : (
               notifications.map((n) => (
@@ -121,7 +123,7 @@ export default function NotificationBell() {
                       onClick={() => void markRead(n.id)}
                       className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
                     >
-                      View details
+                      {t("viewDetails")}
                       <ExternalLink size={12} aria-hidden="true" />
                     </Link>
                   </div>

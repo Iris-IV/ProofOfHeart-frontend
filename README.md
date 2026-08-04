@@ -167,6 +167,16 @@ We welcome contributions! To maintain a clean and consistent codebase, please fo
     - Reference any related issues.
     - Ensure your code builds locally (`npm run build`).
 
+### Internationalization (i18n)
+
+To keep our translation files clean, you can run the unused keys script to find keys that exist in the English messages file but are no longer referenced in the source code:
+
+```bash
+node scripts/find-unused-i18n-keys.js
+```
+
+This script will output a report of keys present in `messages/en.json` but never referenced in `src/`.
+
 ## 🐳 Docker Support
 
 To ensure a consistent development environment, we support containerization with Docker.
