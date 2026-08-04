@@ -39,9 +39,9 @@ import {
   getContribution,
   claimRefund,
   cancelCampaign,
-} from '@/lib/contractClient';
+} from "@/lib/contractClient";
 
-import { Campaign, Vote, CATEGORY_LABELS } from '@/types';
+import { Campaign, Vote, CATEGORY_LABELS } from "@/types";
 import { parseContractError } from "@/utils/contractErrors";
 import { stroopsToXlmNumber } from "@/lib/stellarAmount";
 import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncAction";
