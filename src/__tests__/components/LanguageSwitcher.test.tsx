@@ -4,14 +4,16 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const mockReplace = jest.fn();
 
+const mockT = (key: string, values?: Record<string, string>) => {
+  if (key === "selectLanguage") return "Select language";
+  if (key === "currentLanguage") return `Current language: ${values?.language}`;
+  if (key === "languageChanged") return `Language changed to ${values?.language}`;
+  return key;
+};
+
 jest.mock("next-intl", () => ({
   useLocale: () => "en",
-  useTranslations: () => (key: string, values?: Record<string, string>) => {
-    if (key === "selectLanguage") return "Select language";
-    if (key === "currentLanguage") return `Current language: ${values?.language}`;
-    if (key === "languageChanged") return `Language changed to ${values?.language}`;
-    return key;
-  },
+  useTranslations: () => mockT,
 }));
 
 jest.mock("@/i18n/routing", () => ({
