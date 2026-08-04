@@ -234,6 +234,8 @@
     "pageSubtitle": "Explora, busca y vota por las causas que te importan.",
     "searchPlaceholder": "Buscar causas por título, descripción o categoría…",
     "labelCategory": "Categoría",
+    "listView": "Vista de lista",
+    "mapView": "Vista de mapa",
     "labelStatus": "Estado",
     "labelSortBy": "Ordenar por",
     "all": "Todas",
