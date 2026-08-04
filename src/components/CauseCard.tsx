@@ -1,6 +1,5 @@
 "use client";
 
-
 import Image from "next/image";
 import { memo, useState } from "react";
 import { Bookmark } from "lucide-react";
@@ -12,6 +11,7 @@ import { parseContractError } from "@/utils/contractErrors";
 import { Campaign, Vote, CATEGORY_LABELS, calculateFundingPercentage } from "../types";
 import Amount from "./Amount";
 import AsyncButtonContent from "./AsyncButtonContent";
+import CampaignDescription from "./CampaignDescription";
 import CampaignStatusBadge from "./CampaignStatusBadge";
 import CancelCampaignModal from "./cancelCampaignModal";
 import DeadlineCountdown from "./DeadlineCountdown";
@@ -42,7 +42,6 @@ const CATEGORY_ICONS: Record<string, string> = {
 function formatDate(ts: number, locale: string) {
   return formatShortDate(ts, locale);
 }
-
 
 function CauseCard({
   campaign,
@@ -169,9 +168,7 @@ function CauseCard({
         </h3>
 
         {/* Description */}
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3 leading-relaxed break-words h-[4.5rem]">
-          {campaign.description}
-        </p>
+        <CampaignDescription description={campaign.description} />
 
         {/* Funding progress */}
         <div className="space-y-1.5">
@@ -289,7 +286,6 @@ function CauseCard({
  * global state changes (#648). Cards are rendered in long lists, so this is
  * where an unnecessary render is most expensive.
  */
-
 function causeCardPropsAreEqual(prev: CauseCardProps, next: CauseCardProps): boolean {
   const prevCampaign = prev.campaign;
   const nextCampaign = next.campaign;

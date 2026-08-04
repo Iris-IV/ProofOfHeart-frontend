@@ -80,6 +80,8 @@ const nextConfig: NextConfig = {
     const thirdPartyOrigins = getThirdPartyScriptOrigins();
     const allow = (...origins: string[]) => origins.filter(Boolean).join(" ");
 
+    const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://proofofheart.xyz";
+
     const CSP_DIRECTIVES = [
       // Default to same-origin for everything
       "default-src 'self'",
@@ -115,6 +117,28 @@ const nextConfig: NextConfig = {
     ].join("; ");
 
     return [
+      {
+        source: "/api/:path*",
+        headers: [
+          // Restrict CORS to production origin
+          {
+            key: "Access-Control-Allow-Origin",
+            value: siteOrigin,
+          },
+          {
+            key: "Access-Control-Allow-Methods",
+            value: "GET, POST, PUT, DELETE, OPTIONS",
+          },
+          {
+            key: "Access-Control-Allow-Headers",
+            value: "Content-Type, Authorization",
+          },
+          {
+            key: "Access-Control-Max-Age",
+            value: "86400",
+          },
+        ],
+      },
       {
         source: "/:path*",
         headers: [

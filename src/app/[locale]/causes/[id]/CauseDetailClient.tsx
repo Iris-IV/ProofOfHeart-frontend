@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bookmark, FileText } from "lucide-react";
+import { Bookmark } from "lucide-react";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { useState, useEffect } from "react";
@@ -53,7 +53,6 @@ import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncActi
 import { trackViewCampaign } from "@/lib/analytics";
 import { formatXlm, formatDate } from "@/lib/formatters";
 import { getLocalizedDescription } from "@/utils/localizedDescription";
-import { isBlankMarkdown } from "@/utils/markdownContent";
 import { isSameAddress } from "@/lib/stellar";
 
 const RevenueSharingPanel = dynamic(() => import("@/components/RevenueSharingPanel"), {
@@ -70,7 +69,6 @@ const EditCampaignMetadata = dynamic(() => import("@/components/EditCampaignMeta
 export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
   const tContractErrors = useTranslations("ContractErrors");
-  const tCauseDetail = useTranslations("CauseDetail");
   const locale = useLocale();
   const {
     campaign: fetchedCampaign,
@@ -290,7 +288,6 @@ export default function CauseDetailClient({ id }: { id: string }) {
 
   const isCreator = userWalletAddress ? isSameAddress(campaign.creator, userWalletAddress) : false;
   const canEdit = isCreator && !campaign.is_verified && !campaign.is_cancelled;
-  const localizedDescription = getLocalizedDescription(campaign.description, locale);
 
   const raised = stroopsToXlmNumber(campaign.amount_raised);
   const goal = stroopsToXlmNumber(campaign.funding_goal);
@@ -338,12 +335,6 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 </span>
                 <CampaignStatusBadge campaign={campaign} />
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4 leading-tight">{campaign.title}</h1>
-              <CampaignDescription description={campaign.description}>
-                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
-                  {campaign.description}
-                </ReactMarkdown>
-              </CampaignDescription>
               {campaign.cover_image_url && (
                 <div className="relative w-full aspect-video rounded-lg overflow-hidden mb-4 bg-zinc-100 dark:bg-zinc-700">
                   <Image
@@ -360,43 +351,30 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 {campaign.title}
               </h1>
               <div className="relative">
-                {isBlankMarkdown(localizedDescription) ? (
-                  <div
-                    id="campaign-description"
-                    className="flex items-center gap-3 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 px-4 py-6 text-sm text-zinc-500 dark:text-zinc-400"
-                    role="status"
-                  >
-                    <FileText size={18} className="shrink-0 opacity-70" aria-hidden="true" />
-                    <span>{tCauseDetail("noDescription")}</span>
-                  </div>
-                ) : (
-                  <>
-                    <div
-                      id="campaign-description"
-                      className={`overflow-hidden transition-all duration-300 ${!isDescriptionExpanded ? "max-h-[250px] relative" : ""}`}
-                    >
-                      <SafeMarkdown className="prose prose-zinc dark:prose-invert max-w-none break-words">
-                        {localizedDescription}
-                      </SafeMarkdown>
-                      {!isDescriptionExpanded && (
-                        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white dark:from-zinc-800 to-transparent pointer-events-none" />
-                      )}
+                <div
+                  className={`overflow-hidden transition-all duration-300 ${!isDescriptionExpanded ? "max-h-[250px] relative" : ""}`}
+                >
+                  <SafeMarkdown className="prose prose-zinc dark:prose-invert max-w-none break-words">
+                    {getLocalizedDescription(campaign.description, locale)}
+                  </SafeMarkdown>
+                  {!isDescriptionExpanded && (
+                    <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white dark:from-zinc-800 to-transparent pointer-events-none" />
+                  )}
+                </div>
+                {campaign.description &&
+                  getLocalizedDescription(campaign.description, locale).length > 500 && (
+                    <div className="mt-2 text-center">
+                      <button
+                        type="button"
+                        onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-3 py-1 transition-colors"
+                        aria-expanded={isDescriptionExpanded}
+                        aria-controls="campaign-description"
+                      >
+                        {isDescriptionExpanded ? "Show less" : "Read more"}
+                      </button>
                     </div>
-                    {localizedDescription.length > 500 && (
-                      <div className="mt-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                          className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-3 py-1 transition-colors"
-                          aria-expanded={isDescriptionExpanded}
-                          aria-controls="campaign-description"
-                        >
-                          {isDescriptionExpanded ? "Show less" : "Read more"}
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
+                  )}
               </div>
 
               {canEdit && (
@@ -603,7 +581,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
               isVerifying={isVerifying}
             />
 
-            {campaign.is_active && !campaign.is_cancelled && (
+            {campaign.is_active && campaign.is_verified && !campaign.is_cancelled && (
               <button
                 onClick={() => {
                   if (!userWalletAddress) {
@@ -616,6 +594,25 @@ export default function CauseDetailClient({ id }: { id: string }) {
               >
                 💜 Fund This Cause
               </button>
+            )}
+
+            {campaign.is_active && !campaign.is_verified && !campaign.is_cancelled && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950/40">
+                <div className="flex items-center gap-3">
+                  <span className="text-amber-600 dark:text-amber-400 text-lg" aria-hidden="true">
+                    ⏳
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                      Pending Verification
+                    </p>
+                    <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                      This campaign is awaiting verification. Donations will be enabled once
+                      verified by the community or an admin.
+                    </p>
+                  </div>
+                </div>
+              </div>
             )}
 
             <CampaignActions campaign={campaign} onActionSuccess={refetch} />

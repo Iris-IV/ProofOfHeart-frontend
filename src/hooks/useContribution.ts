@@ -9,7 +9,7 @@ export function useContribution(campaignId: number | string, userAddress: string
   const { data, isLoading } = useQuery<bigint, Error>({
     queryKey: ["contribution", id, userAddress],
     queryFn: () => getContribution(id, userAddress!),
-    enabled: !!userAddress && !!campaignId && !isNaN(id),
+    enabled: !!userAddress && Number.isFinite(id),
     staleTime: 30_000,
   });
 

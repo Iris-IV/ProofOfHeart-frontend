@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from "react";
 
 export interface PendingDonation {
   id: string;
@@ -28,7 +28,7 @@ export function useDonationGracePeriod(gracePeriodMs: number = DEFAULT_GRACE_PER
   }, []);
 
   const startGracePeriod = useCallback(
-    (donation: Omit<PendingDonation, 'id' | 'timestamp' | 'expiresAt'>) => {
+    (donation: Omit<PendingDonation, "id" | "timestamp" | "expiresAt">) => {
       const now = Date.now();
       const newDonation: PendingDonation = {
         ...donation,
@@ -40,7 +40,7 @@ export function useDonationGracePeriod(gracePeriodMs: number = DEFAULT_GRACE_PER
       setPendingDonations((prev) => [newDonation, ...prev]);
       return newDonation;
     },
-    [gracePeriodMs]
+    [gracePeriodMs],
   );
 
   const cancelDonation = useCallback((id: string) => {

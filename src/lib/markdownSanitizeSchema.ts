@@ -26,10 +26,10 @@ export function buildMarkdownSanitizeSchema(defaultSchema: Schema): Schema {
     },
     attributes: {
       ...defaultSchema.attributes,
-      a: (defaultSchema.attributes?.a ?? []).filter((attr) =>
+      a: (defaultSchema.attributes?.a ?? []).filter((attr: string | readonly unknown[]) =>
         typeof attr === "string" ? !attr.toLowerCase().startsWith("on") : true,
       ),
-      img: (defaultSchema.attributes?.img ?? []).filter((attr) =>
+      img: (defaultSchema.attributes?.img ?? []).filter((attr: string | readonly unknown[]) =>
         typeof attr === "string" ? !attr.toLowerCase().startsWith("on") : true,
       ),
     },

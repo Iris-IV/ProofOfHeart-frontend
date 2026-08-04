@@ -99,9 +99,11 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
     ? "Creators cannot contribute to their own campaign."
     : campaign.is_cancelled
       ? "This campaign has been cancelled."
-      : !campaign.is_active || campaign.funds_withdrawn || isExpired
-        ? "This campaign is no longer accepting contributions."
-        : null;
+      : !campaign.is_verified
+        ? "This campaign is pending verification and cannot accept contributions yet."
+        : !campaign.is_active || campaign.funds_withdrawn || isExpired
+          ? "This campaign is no longer accepting contributions."
+          : null;
 
   const handleContribute = useCallback(async () => {
     const parsedAmount = Number(contributionAmount);

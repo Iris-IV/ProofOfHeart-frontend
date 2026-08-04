@@ -30,6 +30,14 @@ function readFlag(name: string, fallback: boolean): boolean {
 
 let cached: FeatureFlags | null = null;
 
+/**
+ * Reset the feature-flags cache. Intended for tests where env vars
+ * change between test cases, ensuring test isolation (see #559).
+ */
+export function resetFlagsCache(): void {
+  cached = null;
+}
+
 export function getFlags(): FeatureFlags {
   if (cached) return cached;
   cached = {

@@ -48,7 +48,7 @@ export default function ThirdPartyScripts() {
             ? (process.env.NODE_ENV !== "production" &&
                 console.warn(
                   `[ThirdPartyScripts] Script "${id}" uses "beforeInteractive" which blocks` +
-                    ` the main thread. Downgraded to "lazyOnload". Fix the strategy in thirdParty.ts.`
+                    ` the main thread. Downgraded to "lazyOnload". Fix the strategy in thirdParty.ts.`,
                 ),
               "lazyOnload" as const)
             : strategy;

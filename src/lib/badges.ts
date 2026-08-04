@@ -127,7 +127,9 @@ export function earnedBadges(donations: DonationRecord[]): Badge[] {
 
   const earned: BadgeId[] = ["first-donation"];
 
-  if (donations.some((d) => typeof d.backerRank === "number" && d.backerRank <= EARLY_BACKER_RANK)) {
+  if (
+    donations.some((d) => typeof d.backerRank === "number" && d.backerRank <= EARLY_BACKER_RANK)
+  ) {
     earned.push("early-backer");
   }
 

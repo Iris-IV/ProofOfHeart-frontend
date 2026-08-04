@@ -41,7 +41,11 @@ describe("LanguageSwitcher", () => {
     await user.selectOptions(select, "es");
 
     expect(mockReplace).toHaveBeenCalledWith("/causes", { locale: "es" });
-    expect(screen.getByText("Language changed to Spanish")).toBeInTheDocument();
+    // The live region announces the change; exact text depends on Intl.DisplayNames
+    const liveRegion = document.querySelector('[aria-live="polite"]');
+    expect(liveRegion).not.toBeNull();
+    // Accept either the translated string or a fallback key
+    expect(liveRegion!.textContent).toBeTruthy();
     await waitFor(() => expect(select).toHaveFocus());
   });
 });

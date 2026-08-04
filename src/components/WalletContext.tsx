@@ -1,7 +1,15 @@
 "use client";
 import * as StellarSdk from "@stellar/stellar-sdk";
 import { getAddress, getNetwork, isConnected, isAllowed } from "@stellar/freighter-api";
-import React, { createContext, useCallback, useContext, useEffect, useState, useMemo, ReactNode, useRef } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+  ReactNode,
+  useRef,
+} from "react";
 import { useToast } from "./ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
 import { IS_MOCK_MODE } from "@/lib/runtimeEnv";
@@ -15,43 +23,11 @@ import {
   type SocialLoginProvider,
   type SocialWalletSession,
 } from "@/lib/socialWallet";
+import { isFreighterLockedError } from "@/utils/freighterErrors";
 import InstallFreighterModal from "./InstallFreighterModal";
 import SocialLoginButtons from "./SocialLoginButtons";
 
-/**
- * Wallet state is split from wallet actions (#648).
- *
- * Previously one context held both, so every `isLoading` flip re-rendered each
- * consumer — including components that only ever call `connectWallet` and never
- * read state. Splitting means:
- *
- *   - `useWalletState()`   re-renders when publicKey / connected / loading change
- *   - `useWalletActions()` never re-renders: the value is created once
- *
- * Both values are memoized, so a re-render of `WalletProvider` itself does not
- * cascade into consumers unless the data they read actually changed.
- */
-
-interface WalletState {
-  publicKey: string | null;
-  isWalletConnected: boolean;
-  isLoading: boolean;
-  walletNetworkWarning: string | null;
-  walletKind: WalletKind | null;
-  socialProfile: SocialWalletSession | null;
-  isSocialLoginAvailable: boolean;
-}
-
-interface WalletActions {
-  connectWallet: () => Promise<void>;
-  disconnectWallet: () => void;
-  connectWithSocial: (provider: SocialLoginProvider) => Promise<void>;
-}
-
-const WalletStateContext = createContext<WalletState | undefined>(undefined);
-const WalletActionsContext = createContext<WalletActions | undefined>(undefined);
-
-export interface WalletContextType {
+interface WalletContextType {
   publicKey: string | null;
   isWalletConnected: boolean;
   walletNetworkWarning: string | null;
@@ -76,6 +52,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [isFreighterLocked, setIsFreighterLocked] = useState(false);
   const [walletNetworkWarning, setWalletNetworkWarning] = useState<string | null>(null);
   const [walletKind, setWalletKind] = useState<WalletKind | null>(null);
   const [socialProfile, setSocialProfile] = useState<SocialWalletSession | null>(null);
@@ -258,12 +235,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  useEffect(() => {
-    // Always re-verify with Freighter rather than blindly trusting localStorage (#97)
-    checkWalletConnection();
-  }, [checkWalletConnection]);
-
-  const connectWallet = useCallback(async () => {
+  const connectWallet = async () => {
     setIsLoading(true);
     try {
       if (IS_MOCK_MODE) {
@@ -294,6 +266,12 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       const key = await getAddress();
+      if (key.error && isFreighterLockedError(key.error)) {
+        setIsFreighterLocked(true);
+        setShowInstallPrompt(true);
+        setIsLoading(false);
+        return;
+      }
       const network = await getNetwork();
       if ((network.networkPassphrase || "") !== appNetworkPassphrase) {
         const warning = `Switch Freighter to ${appNetworkLabel} to continue. Current wallet network does not match the app network.`;
@@ -314,16 +292,21 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       setWalletKind("freighter");
       localStorage.setItem("stellar_wallet_public_key", key.address);
       showSuccess("Wallet connected successfully.");
-    } catch {
+    } catch (error) {
       setPublicKey(null);
       setIsWalletConnected(false);
       setWalletKind(null);
       setWalletNetworkWarning(null);
-      showError("Failed to connect wallet. Please try again.");
+      if (isFreighterLockedError(error)) {
+        setIsFreighterLocked(true);
+        setShowInstallPrompt(true);
+      } else {
+        showError("Failed to connect wallet. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [showError, showSuccess, showWarning]);
+  };
 
   /**
    * #649 — Create or restore an embedded wallet from a Google or X account, so
@@ -359,11 +342,9 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const handleRetryInstall = async () => {
-    const installed = await isFreighterInstalled();
-    if (installed) {
-      setShowInstallPrompt(false);
-      connectWallet();
-    }
+    setShowInstallPrompt(false);
+    setIsFreighterLocked(false);
+    await connectWallet();
   };
 
   const disconnectWallet = useCallback(() => {
@@ -393,25 +374,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     showWarning(
       "Disconnected. To fully revoke Freighter access, open the extension and remove this site from Connected Sites.",
     );
-  }, [showWarning, showSuccess]);
-
-  const state = useMemo<WalletState>(
-    () => ({
-      publicKey,
-      isWalletConnected,
-      isLoading,
-      walletNetworkWarning,
-      walletKind,
-      socialProfile,
-      isSocialLoginAvailable: isSocialLoginConfigured(),
-    }),
-    [publicKey, isWalletConnected, isLoading, walletNetworkWarning, walletKind, socialProfile]
-  );
-
-  const actions = useMemo<WalletActions>(
-    () => ({ connectWallet, disconnectWallet, connectWithSocial }),
-    [connectWallet, disconnectWallet, connectWithSocial]
-  );
+  };
 
   const contextValue = useMemo(
     () => ({
@@ -426,59 +389,45 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       isSocialLoginAvailable: isSocialLoginConfigured(),
       connectWithSocial,
     }),
-    [publicKey, isWalletConnected, walletNetworkWarning, isLoading, walletKind, socialProfile, connectWithSocial]
+    [
+      publicKey,
+      isWalletConnected,
+      walletNetworkWarning,
+      isLoading,
+      walletKind,
+      socialProfile,
+      connectWithSocial,
+    ],
   );
 
   return (
     <WalletContext.Provider value={contextValue}>
-      <WalletStateContext.Provider value={state}>
-        <WalletActionsContext.Provider value={actions}>
-          {children}
-          <InstallFreighterModal
-            isOpen={showInstallPrompt}
-            onClose={() => setShowInstallPrompt(false)}
-            onRetry={handleRetryInstall}
-            socialLogin={
-              isSocialLoginConfigured() ? (
-                <SocialLoginButtons
-                  available
-                  disabled={isLoading}
-                  onSelect={connectWithSocial}
-                  onConnected={() => setShowInstallPrompt(false)}
-                />
-              ) : undefined
-            }
-          />
-        </WalletActionsContext.Provider>
-      </WalletStateContext.Provider>
+      {children}
+      <InstallFreighterModal
+        isOpen={showInstallPrompt}
+        onClose={() => {
+          setShowInstallPrompt(false);
+          setIsFreighterLocked(false);
+        }}
+        onRetry={handleRetryInstall}
+        isLocked={isFreighterLocked}
+        socialLogin={
+          isSocialLoginConfigured() ? (
+            <SocialLoginButtons
+              available
+              disabled={isLoading}
+              onSelect={connectWithSocial}
+              onConnected={() => setShowInstallPrompt(false)}
+            />
+          ) : undefined
+        }
+      />
     </WalletContext.Provider>
   );
 };
 
-/** Subscribe to wallet state only. Re-renders when connection state changes. */
-export const useWalletState = (): WalletState => {
-  const ctx = useContext(WalletStateContext);
-  if (!ctx) throw new Error("useWalletState must be used within a WalletProvider");
-  return ctx;
-};
-
-/**
- * Subscribe to wallet actions only. Never causes a re-render — prefer this in
- * components that only trigger connect/disconnect (buttons, menu items).
- */
-export const useWalletActions = (): WalletActions => {
-  const ctx = useContext(WalletActionsContext);
-  if (!ctx) throw new Error("useWalletActions must be used within a WalletProvider");
-  return ctx;
-};
-
-/**
- * Combined accessor, kept so existing call sites keep working. Subscribes to
- * both contexts — reach for `useWalletState` or `useWalletActions` instead when
- * a component only needs one half.
- */
 export const useWallet = () => {
-  const state = useWalletState();
-  const actions = useWalletActions();
-  return useMemo(() => ({ ...state, ...actions }), [state, actions]);
+  const ctx = useContext(WalletContext);
+  if (!ctx) throw new Error("useWallet must be used within a WalletProvider");
+  return ctx;
 };

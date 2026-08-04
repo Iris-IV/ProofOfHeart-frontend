@@ -170,6 +170,27 @@ describe("WalletContext", () => {
     expect(screen.getByTestId("isLoading")).toHaveTextContent("false");
   });
 
+  it("connectWallet - freighter locked", async () => {
+    mockIsConnected.mockResolvedValue({ isConnected: true });
+    mockIsAllowed.mockResolvedValue({ isAllowed: true });
+    mockGetAddress.mockResolvedValue({ error: { message: "Freighter is locked" } });
+
+    renderWithProviders(
+      <WalletProvider>
+        <TestComponent />
+      </WalletProvider>,
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("Connect"));
+    });
+
+    expect(screen.getByText("Freighter Wallet Locked")).toBeInTheDocument();
+    expect(screen.queryByText("Freighter Wallet Required")).not.toBeInTheDocument();
+    expect(screen.getByText(/unlock it with your password/)).toBeInTheDocument();
+    expect(screen.getByTestId("isLoading")).toHaveTextContent("false");
+  });
+
   it("disconnectWallet", async () => {
     // Start with a connected wallet
     mockIsConnected.mockResolvedValue({ isConnected: true });
