@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import CauseCard from "@/components/CauseCard";
+import { getFlags, isEnabled, resetFlagsCache } from "@/lib/featureFlags";
 import { Campaign, Category, Vote } from "@/types";
 
 // ── Child-component mocks ────────────────────────────────────────────────────
@@ -362,5 +363,63 @@ describe("static card content", () => {
   it("renders the status badge", () => {
     renderCard(makeCampaign({ status: "funded" }));
     expect(screen.getByTestId("status-badge")).toHaveTextContent("funded");
+  });
+});
+
+describe("feature flag coverage", () => {
+  const votingKey = "NEXT_PUBLIC_FEATURE_VOTINGUI";
+  const analyticsKey = "NEXT_PUBLIC_FEATURE_ANALYTICS";
+  const embedsKey = "NEXT_PUBLIC_FEATURE_EMBEDS";
+
+  beforeEach(() => {
+    delete process.env[votingKey];
+    delete process.env[analyticsKey];
+    delete process.env[embedsKey];
+    resetFlagsCache();
+  });
+
+  afterEach(() => {
+    delete process.env[votingKey];
+    delete process.env[analyticsKey];
+    delete process.env[embedsKey];
+    resetFlagsCache();
+  });
+
+  it("returns the safe defaults when feature flags are unset", () => {
+    expect(getFlags()).toEqual({
+      votingUI: false,
+      analytics: false,
+      embeds: false,
+    });
+    expect(isEnabled("embeds")).toBe(false);
+  });
+
+  it("reads truthy feature flags from the environment", () => {
+    process.env[votingKey] = "true";
+    process.env[analyticsKey] = "1";
+    process.env[embedsKey] = "true";
+
+    resetFlagsCache();
+
+    expect(getFlags()).toEqual({
+      votingUI: true,
+      analytics: true,
+      embeds: true,
+    });
+  });
+
+  it("returns cached values until the cache is reset", () => {
+    process.env[votingKey] = "true";
+    resetFlagsCache();
+
+    expect(getFlags().votingUI).toBe(true);
+
+    process.env[votingKey] = "false";
+
+    expect(getFlags().votingUI).toBe(true);
+
+    resetFlagsCache();
+
+    expect(getFlags().votingUI).toBe(false);
   });
 });
