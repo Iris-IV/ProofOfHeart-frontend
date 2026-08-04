@@ -96,7 +96,9 @@ describe("Causes filters URL sync", () => {
 
   it("syncs category, status, sort and search to URL", async () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    render(<CausesClient />);
+    await act(async () => {
+      render(<CausesClient />);
+    });
 
     const [statusSelect, sortSelect] = screen.getAllByRole("combobox");
     await user.click(screen.getByRole("button", { name: "Learner, 1 causes" }));
@@ -121,7 +123,9 @@ describe("Causes filters URL sync", () => {
       new URLSearchParams("q=astro&category=2&status=funded&sort=most_funded"),
     );
 
-    render(<CausesClient />);
+    await act(async () => {
+      render(<CausesClient />);
+    });
     const [statusSelect, sortSelect] = screen.getAllByRole("combobox");
 
     expect(await screen.findByDisplayValue("astro")).toBeInTheDocument();
