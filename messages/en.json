@@ -234,6 +234,8 @@
     "pageSubtitle": "Browse, search, and vote on causes that matter to you.",
     "searchPlaceholder": "Search causes by title, description, or category…",
     "labelCategory": "Category",
+    "listView": "List view",
+    "mapView": "Map view",
     "labelStatus": "Status",
     "labelSortBy": "Sort by",
     "all": "All",
