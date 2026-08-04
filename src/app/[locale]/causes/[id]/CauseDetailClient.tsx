@@ -6,14 +6,9 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { useTranslations, useLocale } from "next-intl";
+
 import CampaignTabs from "@/components/CampaignTabs";
-const RevenueSharingPanel = dynamic(() => import("@/components/RevenueSharingPanel"), {
-  ssr: false,
-});
-const VestingReservePanel = dynamic(() => import("@/components/VestingReservePanel"), {
-  ssr: false,
-});
-const DonationModal = dynamic(() => import("@/components/DonationModal"), { ssr: false });
 import CampaignStatusBadge from "@/components/CampaignStatusBadge";
 import DeadlineCountdown from "@/components/DeadlineCountdown";
 import FundingProgressBar from "@/components/FundingProgressBar";
@@ -24,14 +19,17 @@ import SafeMarkdown from "@/components/SafeMarkdown";
 import ReportModal from "@/components/ReportModal";
 import CampaignActions from "@/components/CampaignActions";
 import AsyncButtonContent from "@/components/AsyncButtonContent";
-import { useToast } from "@/components/ToastProvider";
 import VotingComponent from "@/components/VotingComponent";
+import { CauseDetailSkeleton } from "@/components/Skeleton";
+import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
+
 import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
 import { useFollowedCreators } from "@/hooks/useFollowedCreators";
 import { useLiveCampaignFunding } from "@/hooks/useLiveCampaignFunding";
 import { useLiveVoteTallies } from "@/hooks/useLiveVoteTallies";
 import { usePlatformFee } from "@/hooks/usePlatformFee";
+
 import {
   voteOnCampaign,
   hasVoted,
@@ -42,16 +40,23 @@ import {
   claimRefund,
   cancelCampaign,
 } from "@/lib/contractClient";
-import { useTranslations, useLocale } from "next-intl";
-import { CauseDetailSkeleton } from "@/components/Skeleton";
+
 import { Campaign, Vote, CATEGORY_LABELS } from "@/types";
-import { stroopsToXlmNumber } from "@/lib/stellarAmount";
 import { parseContractError } from "@/utils/contractErrors";
+import { stroopsToXlmNumber } from "@/lib/stellarAmount";
 import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncAction";
 import { trackViewCampaign } from "@/lib/analytics";
 import { formatXlm, formatDate } from "@/lib/formatters";
 import { getLocalizedDescription } from "@/utils/localizedDescription";
 import { isSameAddress } from "@/lib/stellar";
+
+const RevenueSharingPanel = dynamic(() => import("@/components/RevenueSharingPanel"), {
+  ssr: false,
+});
+const VestingReservePanel = dynamic(() => import("@/components/VestingReservePanel"), {
+  ssr: false,
+});
+const DonationModal = dynamic(() => import("@/components/DonationModal"), { ssr: false });
 const EditCampaignMetadata = dynamic(() => import("@/components/EditCampaignMetadata"), {
   ssr: false,
 });

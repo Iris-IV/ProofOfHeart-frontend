@@ -3,6 +3,7 @@ import * as StellarSdk from "@stellar/stellar-sdk";
 import { getAddress, getNetwork, isConnected, isAllowed } from "@stellar/freighter-api";
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -134,7 +135,16 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     previousPublicKeyRef.current = restored.publicKey;
   };
 
-  const checkWalletConnection = async () => {
+  // Invalidate all wallet-scoped queries when account/network changes
+  const invalidateWalletQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["admin"] });
+    queryClient.invalidateQueries({ queryKey: ["contributions"] });
+    queryClient.invalidateQueries({ queryKey: ["revenue"] });
+    queryClient.invalidateQueries({ queryKey: ["stellarBalance"] });
+    // Note: campaigns query is not wallet-scoped, so we don't invalidate it
+  }, [queryClient]);
+
+  const checkWalletConnection = useCallback(async () => {
     // A social wallet owns the session; Freighter's state is irrelevant until
     // the user explicitly disconnects.
     if (isSocialSessionRef.current) return;
@@ -215,16 +225,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         previousPublicKeyRef.current = null;
       }
     }
-  };
-
-  // Invalidate all wallet-scoped queries when account/network changes
-  const invalidateWalletQueries = () => {
-    queryClient.invalidateQueries({ queryKey: ["admin"] });
-    queryClient.invalidateQueries({ queryKey: ["contributions"] });
-    queryClient.invalidateQueries({ queryKey: ["revenue"] });
-    queryClient.invalidateQueries({ queryKey: ["stellarBalance"] });
-    // Note: campaigns query is not wallet-scoped, so we don't invalidate it
-  };
+  }, [appNetworkPassphrase, appNetworkLabel, invalidateWalletQueries]);
 
   const isFreighterInstalled = async (): Promise<boolean> => {
     try {
@@ -347,7 +348,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     await connectWallet();
   };
 
-  const disconnectWallet = () => {
+  const disconnectWallet = useCallback(() => {
     const wasSocial = isSocialSessionRef.current;
 
     setPublicKey(null);
@@ -374,7 +375,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     showWarning(
       "Disconnected. To fully revoke Freighter access, open the extension and remove this site from Connected Sites.",
     );
-  };
+  }, [showSuccess, showWarning]);
 
   const contextValue = useMemo(
     () => ({
