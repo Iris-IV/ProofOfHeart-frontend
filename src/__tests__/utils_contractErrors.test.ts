@@ -1,4 +1,4 @@
-import { parseContractError } from "../utils/contractErrors";
+import { localizeContractError, parseContractError } from "../utils/contractErrors";
 
 describe("parseContractError", () => {
   it("handles Error(Contract, #n) format", () => {
@@ -31,5 +31,27 @@ describe("parseContractError", () => {
     expect(parseContractError("Just a string")).toBe("Just a string");
     expect(parseContractError({})).toBe("ContractErrors.UnexpectedError");
     expect(parseContractError(null)).toBe("ContractErrors.UnexpectedError");
+  });
+});
+
+describe("localizeContractError", () => {
+  const tContractErrors = (key: string) => `translated:${key}`;
+
+  it("strips the ContractErrors. prefix before calling the scoped t function", () => {
+    expect(localizeContractError("ContractErrors.NotAuthorized", tContractErrors)).toBe(
+      "translated:NotAuthorized",
+    );
+  });
+
+  it("leaves non-contract messages untouched", () => {
+    const message = "Some human-readable error";
+    expect(localizeContractError(message, tContractErrors)).toBe(message);
+    expect(localizeContractError("", tContractErrors)).toBe("");
+  });
+
+  it("localizes any key, not just known ones", () => {
+    expect(localizeContractError("ContractErrors.SomeNewError", tContractErrors)).toBe(
+      "translated:SomeNewError",
+    );
   });
 });
