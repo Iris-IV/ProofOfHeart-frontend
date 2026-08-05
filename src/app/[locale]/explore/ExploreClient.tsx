@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Link } from "@/i18n/routing";
 import { useTranslations, useLocale } from "next-intl";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import CampaignStatusBadge from "@/components/CampaignStatusBadge";
 import FundingProgressBar from "@/components/FundingProgressBar";
 import { CampaignRowSkeleton } from "@/components/Skeleton";
@@ -27,8 +27,15 @@ export default function ExplorePage() {
 
   // Scroll back to the top of the list whenever the category filter changes,
   // so switching categories doesn't leave the user stranded deep in the
-  // previous (now stale) scroll position.
+  // previous (now stale) scroll position. Skip the first run so this doesn't
+  // fight the browser's scroll restoration on initial mount (e.g. navigating
+  // back to /explore).
+  const isFirstRender = useRef(true);
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     window.scrollTo({ top: 0 });
   }, [activeCategory]);
 

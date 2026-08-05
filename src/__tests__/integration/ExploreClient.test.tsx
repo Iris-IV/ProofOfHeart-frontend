@@ -67,6 +67,13 @@ describe("ExploreClient category filter", () => {
     });
   });
 
+  it("does not scroll on initial mount", async () => {
+    render(<ExplorePage />);
+
+    expect(await screen.findByText("Learner campaign")).toBeInTheDocument();
+    expect(scrollToSpy).not.toHaveBeenCalled();
+  });
+
   it("scrolls back to the top when the active category changes", async () => {
     const user = userEvent.setup();
     render(<ExplorePage />);
