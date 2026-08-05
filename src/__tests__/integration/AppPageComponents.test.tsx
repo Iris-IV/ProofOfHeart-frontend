@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type React from "react";
@@ -128,6 +128,7 @@ jest.mock("@/components/cancelCampaignModal", () => ({
 }));
 
 jest.mock("@/lib/contractClient", () => ({
+  getAllCampaigns: jest.fn(() => Promise.resolve([])),
   getAdmin: jest.fn(() => Promise.resolve(ADMIN)),
   getPlatformFee: jest.fn(() => Promise.resolve(300)),
   updateAdmin: jest.fn(),
@@ -216,6 +217,24 @@ describe("app page components", () => {
 
     expect(screen.getByRole("heading", { name: "heroTitle" })).toBeInTheDocument();
     expect(mockConnectWallet).toHaveBeenCalledTimes(1);
+
+    await waitFor(() => {
+      expect(screen.getByText("statsRaised")).toBeInTheDocument();
+    });
+    expect(screen.getByText("statsCampaigns")).toBeInTheDocument();
+  });
+
+  it("shows a connecting state on the CTA while the wallet is connecting", () => {
+    mockUseWallet.mockReturnValue({
+      publicKey: null,
+      isWalletConnected: false,
+      connectWallet: mockConnectWallet,
+      isLoading: true,
+    });
+
+    render(withQueryClient(<HomeClient />));
+
+    expect(screen.getByRole("link", { name: /Connecting/i })).toBeInTheDocument();
   });
 
   it("renders the cause detail page with campaign data, voting, actions, and refund state", async () => {
