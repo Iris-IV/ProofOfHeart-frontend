@@ -255,7 +255,9 @@
     "tryDifferentSearch": "Try different search terms or clear the filters to see all causes.",
     "tryAgain": "Try again",
     "loadMore": "Load more causes",
-    "showingRange": "Showing {shown} of {total}"
+    "showingRange": "Showing {shown} of {total}",
+    "listView": "List",
+    "mapView": "Map"
   },
   "Status": {
     "active": "Active",
@@ -431,24 +433,6 @@
     "votedDownvote": "You voted to reject this cause",
     "verifyWithVotes": "✓ Verify Campaign with Votes",
     "verifying": "Verifying..."
-  },
-  "Notifications": {
-    "title": "Notifications",
-    "markAllRead": "Mark all read",
-    "noNotifications": "No notifications yet",
-    "connectWallet": "Connect your wallet to see notifications",
-    "unreadLabel": "{count} unread notifications",
-    "viewDetails": "View details",
-    "justNow": "Just now",
-    "mAgo": "{count}m ago",
-    "hAgo": "{count}h ago",
-    "dAgo": "{count}d ago",
-    "settingsAriaLabel": "Notification settings",
-    "settingsTitle": "Notification Settings",
-    "prefContributions": "Contributions to my campaign",
-    "prefVerified": "Campaign verified",
-    "prefRefundAvailable": "Refund available",
-    "prefRevenueDeposited": "Revenue deposited"
   },
   "Observability": {
     "loading": "Loading observability metrics…",
