@@ -2,6 +2,17 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import CauseCard from "@/components/CauseCard";
 import { Campaign, Category, Vote } from "@/types";
 
+const mockShowError = jest.fn();
+const mockShowWarning = jest.fn();
+const mockToggleSaved = jest.fn();
+
+jest.mock("next/image", () => ({
+  __esModule: true,
+  default: (props: { alt: string; src: string }) => (
+    <img alt={props.alt} src={props.src} data-testid="cover-image" />
+  ),
+}));
+
 // ── Child-component mocks ────────────────────────────────────────────────────
 
 jest.mock("@/components/VotingComponent", () => ({
@@ -38,12 +49,13 @@ jest.mock("@/components/DeadlineCountdown", () => ({
 }));
 
 jest.mock("@/hooks/useSavedCampaigns", () => ({
-  useSavedCampaigns: () => ({ isSaved: () => false, toggleSaved: jest.fn(), savedIds: [] }),
+  useSavedCampaigns: () => ({ isSaved: () => false, toggleSaved: mockToggleSaved, savedIds: [] }),
 }));
 
 jest.mock("@/components/ToastProvider", () => ({
   useToast: () => ({
-    showError: jest.fn(),
+    showError: mockShowError,
+    showWarning: mockShowWarning,
   }),
 }));
 
@@ -298,6 +310,28 @@ describe("vote propagation", () => {
     fireEvent.click(screen.getByTestId("voting-component"));
     await waitFor(() => expect(onVote).toHaveBeenCalledWith(5, "upvote"));
   });
+
+  it("shows an error toast when voting fails", async () => {
+    const onVote = jest.fn(() => Promise.reject(new Error("Vote rejected")));
+    renderCard(makeCampaign({ id: 5, status: "active" }), CONTRIBUTOR, { onVote });
+    fireEvent.click(screen.getByTestId("voting-component"));
+    await waitFor(() => expect(mockShowError).toHaveBeenCalled());
+  });
+
+  it("shows an error toast when cancelling fails", async () => {
+    const onCancel = jest.fn(() => Promise.reject(new Error("Cancel rejected")));
+    renderCard(makeCampaign({ id: 9, status: "active" }), CREATOR, { onCancel });
+    fireEvent.click(screen.getByRole("button", { name: /cancel campaign/i }));
+    fireEvent.click(screen.getByRole("button", { name: /confirm cancel/i }));
+    await waitFor(() => expect(mockShowError).toHaveBeenCalled());
+  });
+
+  it("shows an error toast when claiming a refund fails", async () => {
+    const onClaimRefund = jest.fn(() => Promise.reject(new Error("Refund rejected")));
+    renderCard(makeCampaign({ id: 7, status: "cancelled" }), CONTRIBUTOR, { onClaimRefund });
+    fireEvent.click(screen.getByRole("button", { name: /claim refund/i }));
+    await waitFor(() => expect(mockShowError).toHaveBeenCalled());
+  });
 });
 
 // ── Category label and icon fallback ─────────────────────────────────────────
@@ -362,5 +396,40 @@ describe("static card content", () => {
   it("renders the status badge", () => {
     renderCard(makeCampaign({ status: "funded" }));
     expect(screen.getByTestId("status-badge")).toHaveTextContent("funded");
+  });
+});
+
+// ── Cover image ───────────────────────────────────────────────────────────────
+
+describe("cover image", () => {
+  it("renders the image when cover_image_url is present", () => {
+    renderCard(makeCampaign({ cover_image_url: "https://example.com/cover.png" }));
+    expect(screen.getByTestId("cover-image")).toHaveAttribute(
+      "src",
+      "https://example.com/cover.png",
+    );
+  });
+
+  it("falls back to the placeholder icon when no cover image is set", () => {
+    renderCard(makeCampaign({ cover_image_url: undefined }));
+    expect(screen.queryByTestId("cover-image")).not.toBeInTheDocument();
+    expect(screen.getByText("💡")).toBeInTheDocument();
+  });
+});
+
+// ── Save button ───────────────────────────────────────────────────────────────
+
+describe("save button", () => {
+  it("warns when no wallet is connected", () => {
+    renderCard(makeCampaign());
+    fireEvent.click(screen.getByTitle("Save campaign"));
+    expect(mockShowWarning).toHaveBeenCalled();
+    expect(mockToggleSaved).not.toHaveBeenCalled();
+  });
+
+  it("toggles saved when a wallet is connected", () => {
+    renderCard(makeCampaign(), CREATOR);
+    fireEvent.click(screen.getByTitle("Save campaign"));
+    expect(mockToggleSaved).toHaveBeenCalledWith(1);
   });
 });
