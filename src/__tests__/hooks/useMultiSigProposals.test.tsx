@@ -44,10 +44,7 @@ describe("useMultiSigProposals", () => {
   });
 
   it("re-filters proposals when campaignId changes", () => {
-    seed([
-      proposal({ id: "1-a" }),
-      proposal({ id: "2-a", campaignId: 2 }),
-    ]);
+    seed([proposal({ id: "1-a" }), proposal({ id: "2-a", campaignId: 2 })]);
 
     const { result, rerender } = renderHook(
       ({ cid }: { cid: number }) => useMultiSigProposals(cid, WALLET),
