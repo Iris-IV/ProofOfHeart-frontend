@@ -10,6 +10,7 @@ interface UsePlatformFeeResult {
   platformFeeBps: number;
   isLoading: boolean;
   isFallback: boolean;
+  isError: boolean;
 }
 
 export function usePlatformFee(): UsePlatformFeeResult {
@@ -25,5 +26,6 @@ export function usePlatformFee(): UsePlatformFeeResult {
     platformFeeBps: data ?? DEFAULT_PLATFORM_FEE_BPS,
     isLoading,
     isFallback: isError || data === undefined,
+    isError,
   };
 }

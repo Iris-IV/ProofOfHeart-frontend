@@ -93,6 +93,7 @@
     "totalLine": "Total from your wallet",
     "donate": "Donate",
     "donateAmount": "Donate {amount} XLM",
+    "feeUnavailable": "Unable to load fee — proceeding may incur platform fees.",
     "platformFeeNote": "A platform fee of {feePercent} is deducted from funds when withdrawn by the creator. Your full donation goes toward the campaign total.",
     "networkFeeNote": "The estimated network fee covers Stellar ledger costs for this transaction. It is separate from the platform fee.",
     "waitingSignature": "Waiting for Freighter signature…",
