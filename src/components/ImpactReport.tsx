@@ -32,14 +32,9 @@ export default function ImpactReport({ campaign }: ImpactReportProps) {
       value: String(completedMilestones.length),
       cls: "text-green-600 dark:text-green-400",
     },
-    {
-      label: t("updatesPosted"),
-      value: "0",
-      cls: "text-zinc-900 dark:text-zinc-50",
-    },
   ];
 
-  if (completedMilestones.length === 0 && stats[2].value === "0") {
+  if (completedMilestones.length === 0) {
     return (
       <section className="space-y-6" aria-labelledby="impact-heading">
         <h2 id="impact-heading" className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
@@ -47,7 +42,6 @@ export default function ImpactReport({ campaign }: ImpactReportProps) {
         </h2>
         <div className="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 p-8 text-center">
           <p className="text-zinc-600 dark:text-zinc-400">{t("noMilestones")}</p>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">{t("noUpdates")}</p>
         </div>
       </section>
     );
@@ -77,9 +71,9 @@ export default function ImpactReport({ campaign }: ImpactReportProps) {
             {t("completedMilestones")}
           </h3>
           <div className="space-y-4">
-            {completedMilestones.map((milestone, index) => (
+            {completedMilestones.map((milestone) => (
               <div
-                key={index}
+                key={milestone.description}
                 className="flex items-start gap-4 p-4 bg-zinc-50 dark:bg-zinc-700/50 rounded-lg"
               >
                 <div className="shrink-0 w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
