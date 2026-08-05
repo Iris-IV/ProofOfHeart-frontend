@@ -659,7 +659,6 @@
     "totalRaised": "Total Recaudado",
     "completedMilestones": "Hitos Completados",
     "noMilestones": "Aún no se han definido hitos para esta campaña.",
-    "noUpdates": "Datos de impacto próximamente.",
     "milestoneTarget": "Meta: {amount} XLM",
     "milestoneReached": "Alcanzado"
   }

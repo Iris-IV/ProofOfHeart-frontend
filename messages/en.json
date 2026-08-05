@@ -659,7 +659,6 @@
     "totalRaised": "Total Raised",
     "completedMilestones": "Completed Milestones",
     "noMilestones": "No milestones defined for this campaign yet.",
-    "noUpdates": "Impact data coming soon.",
     "milestoneTarget": "Target: {amount} XLM",
     "milestoneReached": "Reached"
   }
