@@ -67,7 +67,10 @@ interface CampaignMapProps {
 
 export default function CampaignMap({ campaigns }: CampaignMapProps) {
   const t = useTranslations("CampaignMap");
-  const validCampaigns = useMemo(() => filterByValidCoordinates(campaigns), [campaigns]);
+  const validCampaigns = useMemo(
+    () => filterByValidCoordinates(Array.isArray(campaigns) ? campaigns : []),
+    [campaigns],
+  );
 
   const center = useMemo<[number, number]>(() => {
     if (validCampaigns.length === 0) return [20, 0];

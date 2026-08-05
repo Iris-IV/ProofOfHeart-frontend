@@ -571,7 +571,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
               isVerifying={isVerifying}
             />
 
-            {campaign.is_active && !campaign.is_cancelled && (
+            {campaign.is_active && campaign.is_verified && !campaign.is_cancelled && (
               <button
                 onClick={() => {
                   if (!userWalletAddress) {
@@ -584,6 +584,25 @@ export default function CauseDetailClient({ id }: { id: string }) {
               >
                 💜 Fund This Cause
               </button>
+            )}
+
+            {campaign.is_active && !campaign.is_verified && !campaign.is_cancelled && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950/40">
+                <div className="flex items-center gap-3">
+                  <span className="text-amber-600 dark:text-amber-400 text-lg" aria-hidden="true">
+                    ⏳
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                      Pending Verification
+                    </p>
+                    <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                      This campaign is awaiting verification. Donations will be enabled once
+                      verified by the community or an admin.
+                    </p>
+                  </div>
+                </div>
+              </div>
             )}
 
             <CampaignActions campaign={campaign} onActionSuccess={refetch} />

@@ -1,4 +1,5 @@
 import type { Schema } from "hast-util-sanitize";
+import { stripPrototypePollutionKeys } from "./rehypeNoPrototypePollution";
 
 /** Protocol and tag restrictions applied on top of rehype-sanitize defaults. */
 export const MARKDOWN_SANITIZE_OVERRIDES: Partial<Schema> = {
@@ -16,7 +17,7 @@ export const MARKDOWN_SANITIZE_OVERRIDES: Partial<Schema> = {
  * Called from SafeMarkdown at runtime so Jest can mock rehype-sanitize in integration tests.
  */
 export function buildMarkdownSanitizeSchema(defaultSchema: Schema): Schema {
-  return {
+  const schema: Schema = {
     ...defaultSchema,
     ...MARKDOWN_SANITIZE_OVERRIDES,
     protocols: {
@@ -25,12 +26,16 @@ export function buildMarkdownSanitizeSchema(defaultSchema: Schema): Schema {
     },
     attributes: {
       ...defaultSchema.attributes,
-      a: (defaultSchema.attributes?.a ?? []).filter((attr) =>
+      a: (defaultSchema.attributes?.a ?? []).filter((attr: string | readonly unknown[]) =>
         typeof attr === "string" ? !attr.toLowerCase().startsWith("on") : true,
       ),
-      img: (defaultSchema.attributes?.img ?? []).filter((attr) =>
+      img: (defaultSchema.attributes?.img ?? []).filter((attr: string | readonly unknown[]) =>
         typeof attr === "string" ? !attr.toLowerCase().startsWith("on") : true,
       ),
     },
   };
+
+  // #634 — never let a prototype-polluting key survive in the schema that is
+  // spread onto rendered nodes.
+  return stripPrototypePollutionKeys(schema);
 }

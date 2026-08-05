@@ -25,6 +25,8 @@ describe("sitemap", () => {
       {
         id: 42,
         created_at: 1_700_000_000,
+        is_active: true,
+        is_cancelled: false,
       } as Awaited<ReturnType<typeof getAllCampaigns>>[number],
     ]);
 

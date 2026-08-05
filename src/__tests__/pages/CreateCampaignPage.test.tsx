@@ -1,5 +1,16 @@
 import { render, screen, fireEvent, waitFor, act, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+
+// react-markdown ships ESM this Jest setup does not transform
+jest.mock("@/components/SafeMarkdown", () => ({
+  __esModule: true,
+  default: ({ children, className }: { children: string; className?: string }) => (
+    <div data-testid="safe-markdown" className={className}>
+      {children}
+    </div>
+  ),
+}));
+
 import CreateCampaignPage from "@/app/[locale]/causes/new/page";
 
 // ---------------------------------------------------------------------------
@@ -10,6 +21,79 @@ const mockPush = jest.fn();
 
 jest.mock("@/i18n/routing", () => ({
   useRouter: () => ({ push: mockPush }),
+}));
+
+jest.mock("next-intl", () => ({
+  useTranslations: () => (key: string, values?: Record<string, string | number>) => {
+    const map: Record<string, string> = {
+      pageTitle: "Create a Campaign",
+      pageSubtitle: "Fill in the details below to launch your campaign on-chain via Freighter.",
+      walletGuard: "Connect your Freighter wallet to create a campaign.",
+      connectWallet: "Connect Wallet",
+      connecting: "Connecting…",
+      labelTitle: "Campaign Title",
+      placeholderTitle: "A clear, compelling title for your campaign",
+      labelDescription: "Description",
+      placeholderDescription:
+        "Describe your campaign, what it aims to achieve, and how funds will be used",
+      labelCreatorEmailOptional: "Creator Email (Optional)",
+      placeholderCreatorEmail: "name@example.com",
+      creatorEmailNote:
+        "Optional, off-chain only. Used for campaign milestone and deadline notifications.",
+      labelFundingGoal: "Funding Goal (XLM)",
+      labelDuration: "Duration (days)",
+      placeholderDuration: "1–365",
+      labelCategory: "Category",
+      startupRevenueHint: "Revenue sharing is available for Educational Startup campaigns.",
+      revenueSharingTitle: "Revenue Sharing",
+      revenueSharingDesc: "Allow contributors to earn a share of future revenue.",
+      revenueSharingAriaLabel: "Revenue Sharing",
+      labelRevenueSharePct: "Revenue Share Percentage",
+      cancel: "Cancel",
+      launchCampaign: "Launch Campaign",
+      reviewTitle: "Review Campaign Before Signing",
+      reviewSubtitle:
+        "Launching is irreversible on-chain. Confirm these details before signing in Freighter.",
+      reviewFieldTitle: "Title",
+      reviewFieldCreatorEmail: "Creator Email",
+      reviewFieldFundingGoal: "Funding Goal",
+      reviewFieldDuration: "Duration",
+      reviewFieldDurationDays:
+        values?.count === 1 ? `${values.count} day` : `${values?.count} days`,
+      reviewFieldCategory: "Category",
+      reviewFieldRevenueShare: "Revenue Share",
+      reviewRevenueShareNone: "0.00% (Not enabled)",
+      reviewCreatorEmailNone: "No email provided",
+      reviewFieldEndDate: "End Date (Your Timezone)",
+      reviewFieldTimestamp: "Estimated Deadline Timestamp",
+      editDetails: "Edit Details",
+      confirmAndSign: "Confirm & Sign",
+      submitting: "Submitting…",
+      successMessage: `Campaign "${values?.title}" created successfully!`,
+      emailWebhookFailed:
+        "Campaign created, but we could not save your optional email subscription.",
+      walletRequiredError: "Please connect your Freighter wallet before creating a campaign.",
+      validationTitleRequired: "Title is required.",
+      validationTitleTooLong: "Title must be 100 characters or fewer.",
+      validationDescriptionRequired: "Description is required.",
+      validationDescriptionTooLong: "Description must be 1,000 characters or fewer.",
+      validationCreatorEmailInvalid: "Enter a valid email address or leave this field empty.",
+      validationFundingGoalInvalid: "Funding goal must be greater than 0 XLM.",
+      validationDurationInvalid: "Duration must be between 1 and 365 days.",
+      validationRevenueShareInvalid: "Revenue share must be between 0.01% and 50%.",
+      labelDescriptionLanguage: "Description Language",
+      tabEnglish: "English",
+      tabSpanish: "Spanish (optional)",
+      placeholderDescriptionEs: "Describe tu campaña en español (opcional)",
+      validationDescriptionEsTooLong: "Spanish description must be 1,000 characters or fewer.",
+      labelTags: "Tags",
+      tagsLimitTip: "max 3",
+      placeholderTags: "Add tags (press Enter)",
+      tagsHelpText: "Tags help users discover your campaign.",
+    };
+    return map[key] ?? key;
+  },
+  useLocale: () => "en",
 }));
 
 const mockShowError = jest.fn();
@@ -285,10 +369,9 @@ describe("CreateCampaignPage — revenue sharing", () => {
     await userEvent.click(screen.getByRole("switch"));
 
     const slider = await screen.findByLabelText(/revenue share percentage/i);
-    fireEvent.change(slider, { target: { value: "2500" } }); // 2500 bps = 25%
+    fireEvent.change(slider, { target: { value: "25" } }); // 25%
 
     expect(screen.getByText(/25\.00%/)).toBeInTheDocument();
-    expect(screen.getByText(/2500 bps/)).toBeInTheDocument();
   });
 
   it("hides revenue sharing section when switching away from Educational Startup", async () => {
@@ -351,7 +434,7 @@ describe("CreateCampaignPage — submission", () => {
     await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
     await userEvent.click(screen.getByRole("switch", { name: /revenue sharing/i }));
     const slider = await screen.findByLabelText(/revenue share percentage/i);
-    fireEvent.change(slider, { target: { value: "500" } }); // 5%
+    fireEvent.change(slider, { target: { value: "5" } }); // 5%
 
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
 
@@ -409,9 +492,9 @@ describe("CreateCampaignPage — submission", () => {
     await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
     await userEvent.click(screen.getByRole("switch"));
 
-    // Move slider to 500 bps (5%)
+    // Move slider to 5%
     const slider = await screen.findByLabelText(/revenue share percentage/i);
-    fireEvent.change(slider, { target: { value: "500" } });
+    fireEvent.change(slider, { target: { value: "5" } });
 
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
     await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
@@ -432,7 +515,7 @@ describe("CreateCampaignPage — submission", () => {
     await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
 
     await waitFor(() => {
-      expect(mockShowSuccess).toHaveBeenCalledWith("Campaign created successfully!");
+      expect(mockShowSuccess).toHaveBeenCalledWith(expect.stringContaining("created successfully"));
     });
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/causes/7");
@@ -459,9 +542,7 @@ describe("CreateCampaignPage — submission", () => {
     await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
 
     await waitFor(() => {
-      expect(mockShowError).toHaveBeenCalledWith(
-        expect.stringMatching(/no longer accepting contributions/i),
-      );
+      expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("CampaignNotActive"));
     });
   });
 
@@ -510,5 +591,51 @@ describe("CreateCampaignPage — character counters", () => {
     render(<CreateCampaignPage />);
     await userEvent.type(screen.getByLabelText(/description/i), "Test");
     expect(screen.getByText("4/1,000")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cover image upload
+// ---------------------------------------------------------------------------
+
+describe("CreateCampaignPage — cover image upload", () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    setWalletConnected();
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ url: "https://ipfs.io/ipfs/QmUploadedHash" }),
+    }) as typeof fetch;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it("renders an upload button for the cover image field", () => {
+    render(<CreateCampaignPage />);
+    expect(screen.getByRole("button", { name: /coverImageUpload/i })).toBeInTheDocument();
+  });
+
+  it("uploads a selected image and populates the cover URL field", async () => {
+    render(<CreateCampaignPage />);
+
+    const file = new File([new Uint8Array(512).fill(1)], "cover.png", { type: "image/png" });
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+
+    await userEvent.upload(fileInput, file);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/upload-image",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+
+    expect(
+      await screen.findByDisplayValue("https://ipfs.io/ipfs/QmUploadedHash"),
+    ).toBeInTheDocument();
+    expect(mockShowSuccess).toHaveBeenCalledWith("coverImageUploadSuccess");
   });
 });

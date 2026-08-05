@@ -136,6 +136,9 @@ export default function CommentComposer({
                     disabled={!canSubmit}
                     className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-200 dark:disabled:bg-zinc-800 disabled:text-zinc-400 text-white text-sm font-bold rounded-lg shadow-sm transition-colors cursor-pointer"
                   >
+                    {isSubmitting && (
+                      <span className="inline-block motion-safe:animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
+                    )}
                     {isSubmitting ? "Posting..." : isReply ? "Reply" : "Post"}
                   </button>
                 </div>

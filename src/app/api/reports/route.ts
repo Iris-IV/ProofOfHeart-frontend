@@ -1,23 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { reportStore } from "@/lib/reportStore";
 import { CampaignReport, ReportReason, REPORT_REASON_LABELS } from "@/lib/campaignReports";
+import { createRateLimiter, rateLimitKeyFromRequest } from "@/lib/rateLimit";
 
 const VALID_REASONS = Object.keys(REPORT_REASON_LABELS) as ReportReason[];
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX = 3;
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
-function checkRateLimit(key: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(key);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count += 1;
-  return true;
-}
+const reportRateLimiter = createRateLimiter(60_000, 3);
 
 // GET /api/reports  — admin moderation queue
 export async function GET(req: NextRequest) {
@@ -66,9 +54,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Rate limit: keyed by reporter address or IP
-  const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "anon";
-  const rateLimitKey = reporterAddress ?? ip;
-  if (!checkRateLimit(rateLimitKey)) {
+  const rateLimitKey = rateLimitKeyFromRequest(req, reporterAddress);
+  if (!reportRateLimiter.check(rateLimitKey)) {
     return NextResponse.json(
       { message: "Too many reports. Please wait before reporting again." },
       { status: 429 },
