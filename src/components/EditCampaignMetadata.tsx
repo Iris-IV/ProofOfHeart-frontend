@@ -148,7 +148,10 @@ export default function EditCampaignMetadata({
 
           {/* Title */}
           <div>
-            <label htmlFor={titleId} className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+            <label
+              htmlFor={titleId}
+              className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1"
+            >
               {t("titleLabel")}
             </label>
             <input
@@ -163,7 +166,10 @@ export default function EditCampaignMetadata({
 
           {/* Description */}
           <div>
-            <label htmlFor={descriptionId} className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+            <label
+              htmlFor={descriptionId}
+              className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1"
+            >
               {t("descriptionLabel")}
             </label>
             <textarea
@@ -177,7 +183,10 @@ export default function EditCampaignMetadata({
 
           {/* Cover image URL */}
           <div>
-            <label htmlFor={coverImageId} className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+            <label
+              htmlFor={coverImageId}
+              className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1"
+            >
               {t("coverImageUrlLabel")}
             </label>
             <input
@@ -194,7 +203,11 @@ export default function EditCampaignMetadata({
               }`}
             />
             {imageError && (
-              <p id="cover-image-error" role="alert" className="mt-1 text-xs text-red-600 dark:text-red-400">
+              <p
+                id="cover-image-error"
+                role="alert"
+                className="mt-1 text-xs text-red-600 dark:text-red-400"
+              >
                 {imageError}
               </p>
             )}
