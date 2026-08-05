@@ -9,6 +9,17 @@
  *
  * Both sides build the challenge with `buildAdminChallenge` so the bytes the
  * wallet signs are exactly the bytes the route verifies.
+ *
+ * Replay window — known and accepted. The challenge carries a client timestamp
+ * rather than a server-issued nonce, so anyone who can observe a request may
+ * repeat that exact method and path until the timestamp ages out (see
+ * `ADMIN_CHALLENGE_MAX_AGE_MS`). The client deliberately widens the exposure by
+ * reusing one signature for a run of actions, see `adminLog.ts`. For an
+ * admin-only audit log over HTTPS that trade buys a single wallet prompt per
+ * admin session, and the worst case is a replayed read or a duplicate log
+ * entry. Guarding anything more consequential with this helper — a mutating
+ * admin action, anything with an irreversible effect — needs a server-issued
+ * nonce first.
  */
 
 export const ADMIN_ADDRESS_HEADER = "x-stellar-address";

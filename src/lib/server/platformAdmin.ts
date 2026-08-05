@@ -31,13 +31,14 @@ function contractAddress(): string {
   return process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? process.env.NEXT_PUBLIC_CONTRACT_ID ?? "";
 }
 
+/**
+ * Server-only vars on purpose. A `NEXT_PUBLIC_` fallback would put the trust
+ * anchor in the client bundle, where anyone shipping a build could see which
+ * address the routes will accept — and, worse, invite the value being set in a
+ * place meant for public configuration.
+ */
 function configuredAdminAddress(): string {
-  return (
-    process.env.PLATFORM_ADMIN_ADDRESS ??
-    process.env.ADMIN_ADDRESS ??
-    process.env.NEXT_PUBLIC_ADMIN_ADDRESS ??
-    ""
-  ).trim();
+  return (process.env.PLATFORM_ADMIN_ADDRESS ?? process.env.ADMIN_ADDRESS ?? "").trim();
 }
 
 async function readAdminFromContract(): Promise<string> {

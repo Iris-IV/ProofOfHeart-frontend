@@ -6,20 +6,24 @@ globalThis.TextEncoder ??= TextEncoder;
 globalThis.TextDecoder ??= TextDecoder;
 
 // jsdom does not implement matchMedia — stub it so components that use
-// motion / framer-motion don't throw.
-Object.defineProperty(window, "matchMedia", {
-  writable: true,
-  value: jest.fn().mockImplementation((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: jest.fn(),
-    removeListener: jest.fn(),
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
-});
+// motion / framer-motion don't throw. Guarded because this setup file also runs
+// for suites that declare the node environment, where there is no window and an
+// unguarded reference stops the suite loading at all.
+if (typeof window !== "undefined") {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: jest.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  });
+}
 
 // jsdom does not implement Intl.DisplayNames — stub it so locale-aware
 // components can render their language labels in tests.
@@ -45,8 +49,11 @@ class ResizeObserverStub {
 globalThis.ResizeObserver ??= ResizeObserverStub;
 
 // jsdom doesn't implement scrollTo; the window virtualizer calls it when
-// asked to scroll to an offset.
-window.scrollTo ??= () => {};
+// asked to scroll to an offset. Guarded for the same reason as matchMedia
+// above: the node-environment suites have no window.
+if (typeof window !== "undefined") {
+  window.scrollTo ??= () => {};
+}
 
 // Global mock for Freighter API (v6.x returns objects, not primitives)
 jest.mock("@stellar/freighter-api", () => ({
