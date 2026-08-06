@@ -19,7 +19,9 @@ function flattenKeys(messages: Messages): string[] {
     if (typeof value === "object" && value !== null) {
       for (const [key, subValue] of Object.entries(value as Record<string, unknown>)) {
         if (typeof subValue === "object" && subValue !== null) {
-          for (const [subKey, _subSubValue] of Object.entries(subValue as Record<string, unknown>)) {
+          for (const [subKey, _subSubValue] of Object.entries(
+            subValue as Record<string, unknown>,
+          )) {
             keys.push(`${namespace}.${key}.${subKey}`);
           }
         } else {
@@ -45,7 +47,9 @@ function emptyKeys(target: Messages): string[] {
     if (typeof value === "object" && value !== null) {
       for (const [key, subValue] of Object.entries(value as Record<string, unknown>)) {
         if (typeof subValue === "object" && subValue !== null) {
-          for (const [_subKey, subSubValue] of Object.entries(subValue as Record<string, unknown>)) {
+          for (const [_subKey, subSubValue] of Object.entries(
+            subValue as Record<string, unknown>,
+          )) {
             if (subSubValue === "") keys.push(`${namespace}.${key}`);
           }
         } else if (subValue === "") {
