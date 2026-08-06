@@ -1,5 +1,7 @@
+import { StrKey } from "@stellar/stellar-sdk";
 import {
   validateStellarAddress,
+  isValidStellarPublicKey,
   validateAmount,
   validateFundingGoal,
   validateDuration,
@@ -17,6 +19,19 @@ describe("Validators", () => {
       new ContractErrorException(ContractError.ValidationFailed),
     );
     expect(() => validateStellarAddress("G" + "A".repeat(55))).not.toThrow();
+  });
+
+  it("isValidStellarPublicKey", () => {
+    const valid = StrKey.encodeEd25519PublicKey(Buffer.alloc(32, 7));
+    expect(isValidStellarPublicKey(valid)).toBe(true);
+    // Tolerates surrounding whitespace from copy/paste.
+    expect(isValidStellarPublicKey(`  ${valid}  `)).toBe(true);
+
+    // Wrong prefix, too short, bad checksum, and empty all fail.
+    expect(isValidStellarPublicKey("")).toBe(false);
+    expect(isValidStellarPublicKey("GABC")).toBe(false);
+    expect(isValidStellarPublicKey("G" + "A".repeat(55))).toBe(false);
+    expect(isValidStellarPublicKey("MNOTAVALIDADDRESS")).toBe(false);
   });
 
   it("validateAmount", () => {

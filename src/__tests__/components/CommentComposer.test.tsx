@@ -82,6 +82,18 @@ describe("CommentComposer", () => {
     });
   });
 
+  it("associates the character counter with the textarea via aria-describedby", () => {
+    render(
+      <CommentComposer onSubmit={mockOnSubmit} isSubmitting={false} userAddress="GABC123456" />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Ask a question or leave a comment..." }));
+    const textarea = screen.getByPlaceholderText("Ask a question or leave a comment...");
+
+    expect(textarea.getAttribute("aria-describedby")).toBe(screen.getByText(/\/ \d+/).id);
+    expect(textarea).not.toHaveAttribute("aria-invalid", "true");
+  });
+
   it("shows error if submission fails", async () => {
     mockOnSubmit.mockRejectedValueOnce(new Error("Network error"));
 

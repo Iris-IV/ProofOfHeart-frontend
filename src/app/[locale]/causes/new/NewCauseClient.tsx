@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import SafeMarkdown from "@/components/SafeMarkdown";
 import { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { validateImageFile } from "@/lib/imageValidation";
 import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
@@ -12,6 +13,7 @@ import {
   getCampaignCount,
   type TransactionLifecyclePhase,
 } from "@/lib/contractClient";
+import { invalidateCampaignsList } from "@/lib/cacheInvalidation";
 import { Category, CATEGORY_LABELS } from "@/types";
 import { xlmToStroops } from "@/lib/stellarAmount";
 import { parseContractError } from "@/utils/contractErrors";
@@ -104,6 +106,7 @@ function validateForm(
 export default function CreateCampaignPage() {
   const t = useTranslations("CreateCampaign");
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { publicKey, isWalletConnected, connectWallet, isLoading: walletLoading } = useWallet();
   const { showError, showSuccess, showWarning } = useToast();
 
@@ -321,6 +324,7 @@ export default function CreateCampaignPage() {
       }
 
       await notifyEmailOptIn(newCampaignId, reviewData.creatorEmail, reviewData.title, publicKey);
+      invalidateCampaignsList(queryClient);
 
       showSuccess(t("successMessage", { title: reviewData.title }));
       setIsReviewOpen(false);
@@ -455,6 +459,8 @@ export default function CreateCampaignPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={100}
+              required
+              aria-required="true"
               aria-invalid={Boolean(errorKeys.title)}
               aria-describedby={errorKeys.title ? "title-error" : undefined}
               placeholder={t("placeholderTitle")}
@@ -466,7 +472,7 @@ export default function CreateCampaignPage() {
             />
             <div className="flex justify-between mt-1">
               {err("title") ? (
-                <p id="title-error" className="text-xs text-red-500">
+                <p id="title-error" role="alert" className="text-xs text-red-500">
                   {err("title")}
                 </p>
               ) : (
@@ -495,7 +501,7 @@ export default function CreateCampaignPage() {
                       : "bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700"
                   }`}
                 >
-                  Write
+                  {t("tabWrite")}
                 </button>
                 <button
                   type="button"
@@ -506,7 +512,7 @@ export default function CreateCampaignPage() {
                       : "bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700"
                   }`}
                 >
-                  Preview
+                  {t("tabPreview")}
                 </button>
               </div>
               {descriptionTab === "write" ? (
@@ -516,6 +522,8 @@ export default function CreateCampaignPage() {
                   onChange={(e) => setDescription(e.target.value)}
                   maxLength={1000}
                   rows={5}
+                  required
+                  aria-required="true"
                   aria-invalid={Boolean(errorKeys.description)}
                   aria-describedby={errorKeys.description ? "description-error" : undefined}
                   placeholder={t("placeholderDescription")}
@@ -528,14 +536,14 @@ export default function CreateCampaignPage() {
                       {description}
                     </SafeMarkdown>
                   ) : (
-                    <span className="italic text-zinc-400">Nothing to preview</span>
+                    <span className="italic text-zinc-400">{t("nothingToPreview")}</span>
                   )}
                 </div>
               )}
             </div>
             <div className="flex justify-between mt-1">
               {err("description") ? (
-                <p id="description-error" className="text-xs text-red-500">
+                <p id="description-error" role="alert" className="text-xs text-red-500">
                   {err("description")}
                 </p>
               ) : (
@@ -570,7 +578,7 @@ export default function CreateCampaignPage() {
               }`}
             />
             {err("creatorEmail") ? (
-              <p id="creator-email-error" className="text-xs text-red-500 mt-1">
+              <p id="creator-email-error" role="alert" className="text-xs text-red-500 mt-1">
                 {err("creatorEmail")}
               </p>
             ) : (
@@ -601,6 +609,8 @@ export default function CreateCampaignPage() {
                   onChange={(e) => setFundingGoal(e.target.value)}
                   min="0.0000001"
                   step="any"
+                  required
+                  aria-required="true"
                   aria-invalid={Boolean(errorKeys.fundingGoal)}
                   aria-describedby={errorKeys.fundingGoal ? "funding-goal-error" : undefined}
                   placeholder="e.g. 1000"
@@ -612,7 +622,7 @@ export default function CreateCampaignPage() {
                 />
               </div>
               {err("fundingGoal") && (
-                <p id="funding-goal-error" className="text-xs text-red-500 mt-1">
+                <p id="funding-goal-error" role="alert" className="text-xs text-red-500 mt-1">
                   {err("fundingGoal")}
                 </p>
               )}
@@ -634,6 +644,8 @@ export default function CreateCampaignPage() {
                 min="1"
                 max="365"
                 step="1"
+                required
+                aria-required="true"
                 aria-invalid={Boolean(errorKeys.durationDays)}
                 aria-describedby={errorKeys.durationDays ? "duration-days-error" : undefined}
                 placeholder={t("placeholderDuration")}
@@ -644,7 +656,7 @@ export default function CreateCampaignPage() {
                 }`}
               />
               {err("durationDays") && (
-                <p id="duration-days-error" className="text-xs text-red-500 mt-1">
+                <p id="duration-days-error" role="alert" className="text-xs text-red-500 mt-1">
                   {err("durationDays")}
                 </p>
               )}
@@ -661,6 +673,8 @@ export default function CreateCampaignPage() {
             </label>
             <select
               id="category"
+              required
+              aria-required="true"
               value={category}
               onChange={(e) => handleCategoryChange(Number(e.target.value) as Category)}
               className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -739,6 +753,10 @@ export default function CreateCampaignPage() {
                     value={revenueSharePercentage}
                     onChange={(e) => setRevenueSharePercentage(parseFloat(e.target.value))}
                     aria-label={t("labelRevenueSharePct")}
+                    aria-invalid={Boolean(errorKeys.revenueSharePercentage)}
+                    aria-describedby={
+                      errorKeys.revenueSharePercentage ? "revenue-share-error" : undefined
+                    }
                     className="w-full h-2 rounded-full accent-blue-600 cursor-pointer"
                   />
                   <div className="flex justify-between text-xs text-zinc-400 mt-1">
@@ -752,7 +770,7 @@ export default function CreateCampaignPage() {
                       htmlFor="revenueShareBps"
                       className="text-xs text-zinc-500 dark:text-zinc-400 shrink-0"
                     >
-                      Exact bps:
+                      {t("labelExactBps")}
                     </label>
                     <input
                       id="revenueShareBps"
@@ -768,13 +786,19 @@ export default function CreateCampaignPage() {
                           setRevenueSharePercentage(bps / 100);
                         }
                       }}
+                      aria-invalid={Boolean(errorKeys.revenueSharePercentage)}
+                      aria-describedby={
+                        errorKeys.revenueSharePercentage ? "revenue-share-error" : undefined
+                      }
                       className="w-24 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
                     />
-                    <span className="text-xs text-zinc-400">/ 10 000</span>
+                    <span className="text-xs text-zinc-400">{t("revenueShareBpsDenominator")}</span>
                   </div>
 
                   {err("revenueSharePercentage") && (
-                    <p className="text-xs text-red-500 mt-1">{err("revenueSharePercentage")}</p>
+                    <p id="revenue-share-error" role="alert" className="text-xs text-red-500 mt-1">
+                      {err("revenueSharePercentage")}
+                    </p>
                   )}
                 </div>
               )}
@@ -783,7 +807,10 @@ export default function CreateCampaignPage() {
 
           {/* Tags */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            <label
+              htmlFor="tags-input"
+              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+            >
               {t("labelTags")}{" "}
               <span className="text-xs font-normal text-zinc-400">({t("tagsLimitTip")})</span>
             </label>
@@ -799,6 +826,7 @@ export default function CreateCampaignPage() {
                   <button
                     type="button"
                     onClick={() => setTags(tags.filter((_: string, i: number) => i !== idx))}
+                    aria-label={`Remove tag ${tag}`}
                     className="hover:text-blue-900 dark:hover:text-blue-100 transition-colors"
                   >
                     ✕
@@ -807,6 +835,7 @@ export default function CreateCampaignPage() {
               ))}
               {tags.length < 3 && (
                 <input
+                  id="tags-input"
                   type="text"
                   value={tagInput}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -879,7 +908,7 @@ export default function CreateCampaignPage() {
               {t("coverImageHelpText")}
             </p>
             {errorKeys.coverImageUrl && (
-              <p id="cover-image-error" className="text-xs text-red-500 mt-1">
+              <p id="cover-image-error" role="alert" className="text-xs text-red-500 mt-1">
                 Please enter a valid URL (must start with http:// or https://).
               </p>
             )}
@@ -923,10 +952,14 @@ export default function CreateCampaignPage() {
                   >
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-zinc-500 w-24 shrink-0">
+                        <label
+                          htmlFor={`milestone-${idx}-target`}
+                          className="text-xs font-medium text-zinc-500 w-24 shrink-0"
+                        >
                           Target (XLM)
-                        </span>
+                        </label>
                         <input
+                          id={`milestone-${idx}-target`}
                           type="number"
                           value={m.targetAmount}
                           onChange={(e) => {
@@ -941,10 +974,14 @@ export default function CreateCampaignPage() {
                         />
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-zinc-500 w-24 shrink-0">
+                        <label
+                          htmlFor={`milestone-${idx}-description`}
+                          className="text-xs font-medium text-zinc-500 w-24 shrink-0"
+                        >
                           Description
-                        </span>
+                        </label>
                         <input
+                          id={`milestone-${idx}-description`}
                           type="text"
                           value={m.description}
                           onChange={(e) => {

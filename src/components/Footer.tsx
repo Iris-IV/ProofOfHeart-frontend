@@ -15,6 +15,7 @@ export default function Footer() {
     { href: "/", label: t("home") },
     { href: "/causes", label: t("exploreCauses") },
     { href: "/about", label: t("about") },
+    { href: "/faq", label: t("faq") },
   ];
 
   return (
