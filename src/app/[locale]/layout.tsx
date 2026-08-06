@@ -72,7 +72,7 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased">
+      <body className={`${inter.variable} antialiased`}>
         <NextIntlClientProvider messages={messages} locale={locale}>
           <a
             href="#main"
