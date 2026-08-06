@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import MapErrorBoundary from "../MapErrorBoundary";
-import { hasValidCoordinates, filterByValidCoordinates } from "../CampaignMap";
+import CampaignMap, { hasValidCoordinates, filterByValidCoordinates } from "../CampaignMap";
 import { Campaign, Category } from "@/types";
 
 // Leaflet and react-leaflet use browser APIs not available in jsdom.
@@ -243,5 +243,57 @@ describe("MapErrorBoundary", () => {
     fireEvent.click(screen.getByText("Try Again"));
 
     expect(screen.getByTestId("recovered")).toHaveTextContent("Recovered");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CampaignMap loading state
+// ---------------------------------------------------------------------------
+
+describe("CampaignMap loading state", () => {
+  it("shows a loading indicator when isLoading is true", () => {
+    render(<CampaignMap campaigns={[]} isLoading={true} />);
+
+    expect(screen.getByText("loading")).toBeInTheDocument();
+  });
+
+  it("clears the loading state and renders the map when loading completes with valid campaigns", () => {
+    const { rerender } = render(
+      <CampaignMap campaigns={[]} isLoading={true} />,
+    );
+
+    expect(screen.getByText("loading")).toBeInTheDocument();
+
+    rerender(
+      <CampaignMap
+        campaigns={[
+          {
+            ...makeCampaign(),
+            id: 1,
+            latitude: 40.7128,
+            longitude: -74.006,
+          },
+        ]}
+        isLoading={false}
+      />,
+    );
+
+    expect(screen.queryByText("loading")).not.toBeInTheDocument();
+    expect(screen.getByTestId("map")).toBeInTheDocument();
+  });
+
+  it("clears the loading state and shows empty state when loading completes with no valid campaigns", () => {
+    const { rerender } = render(
+      <CampaignMap campaigns={[]} isLoading={true} />,
+    );
+
+    expect(screen.getByText("loading")).toBeInTheDocument();
+
+    rerender(
+      <CampaignMap campaigns={[]} isLoading={false} />,
+    );
+
+    expect(screen.queryByText("loading")).not.toBeInTheDocument();
+    expect(screen.getByText("emptyTitle")).toBeInTheDocument();
   });
 });

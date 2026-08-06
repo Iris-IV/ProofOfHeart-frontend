@@ -199,6 +199,8 @@ export default function UpdateComposer({
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="Share progress, milestones, or news… Markdown is supported."
                 rows={5}
+                aria-invalid={isOverLimit}
+                aria-describedby={`update-content-count-${campaignId}`}
                 className="w-full px-5 py-4 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 dark:focus:ring-purple-400/50 focus:border-purple-500/50 transition-all text-sm leading-relaxed"
                 autoFocus
               />
@@ -243,6 +245,7 @@ export default function UpdateComposer({
             {/* Character count */}
             <div className="flex items-center gap-2">
               <span
+                id={`update-content-count-${campaignId}`}
                 className={`text-[10px] font-mono tracking-tight ${
                   isOverLimit
                     ? "text-red-500"

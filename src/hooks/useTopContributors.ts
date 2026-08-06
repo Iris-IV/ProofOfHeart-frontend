@@ -5,19 +5,18 @@ import {
   aggregateCampaignContributors,
   ContributorLeaderboardItem,
 } from "@/lib/contributorLeaderboard";
-import { getWalletTransactions } from "@/lib/transactionLog";
+import { useWalletTransactions } from "./useWalletTransactions";
 
 export function useTopContributors(
   campaignId: number,
   userWalletAddress: string | null = null,
   limit = 5,
 ) {
+  const { transactions } = useWalletTransactions(userWalletAddress);
+
   const { data, isLoading, refetch } = useQuery<ContributorLeaderboardItem[]>({
     queryKey: ["top-contributors", campaignId, userWalletAddress, limit],
-    queryFn: () => {
-      const txs = userWalletAddress ? getWalletTransactions(userWalletAddress) : [];
-      return aggregateCampaignContributors(campaignId, txs, limit);
-    },
+    queryFn: () => aggregateCampaignContributors(campaignId, transactions, limit),
     staleTime: 10_000,
   });
 

@@ -37,15 +37,33 @@ jest.mock("@/components/DeadlineCountdown", () => ({
   default: () => <span data-testid="deadline-countdown" />,
 }));
 
+const mockToggleSaved = jest.fn<void, [number]>();
+const mockIsSaved = jest.fn<boolean, [number]>(() => false);
+
 jest.mock("@/hooks/useSavedCampaigns", () => ({
-  useSavedCampaigns: () => ({ isSaved: () => false, toggleSaved: jest.fn(), savedIds: [] }),
+  useSavedCampaigns: () => ({
+    isSaved: (id: number) => mockIsSaved(id),
+    toggleSaved: (id: number) => mockToggleSaved(id),
+    savedIds: [],
+  }),
 }));
+
+const mockShowError = jest.fn();
+const mockShowWarning = jest.fn();
 
 jest.mock("@/components/ToastProvider", () => ({
   useToast: () => ({
-    showError: jest.fn(),
+    showError: (msg: string) => mockShowError(msg),
+    showWarning: (msg: string) => mockShowWarning(msg),
   }),
 }));
+
+beforeEach(() => {
+  mockToggleSaved.mockClear();
+  mockIsSaved.mockClear().mockReturnValue(false);
+  mockShowError.mockClear();
+  mockShowWarning.mockClear();
+});
 
 jest.mock("@/components/cancelCampaignModal", () => ({
   __esModule: true,
@@ -362,5 +380,62 @@ describe("static card content", () => {
   it("renders the status badge", () => {
     renderCard(makeCampaign({ status: "funded" }));
     expect(screen.getByTestId("status-badge")).toHaveTextContent("funded");
+  });
+});
+
+// ── Save (bookmark) ──────────────────────────────────────────────────────────
+
+describe("save button", () => {
+  it("warns instead of toggling when no wallet is connected", () => {
+    renderCard(makeCampaign(), null);
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    expect(mockShowWarning).toHaveBeenCalled();
+    expect(mockToggleSaved).not.toHaveBeenCalled();
+  });
+
+  it("calls toggleSaved when a wallet is connected", () => {
+    renderCard(makeCampaign(), CONTRIBUTOR);
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    expect(mockToggleSaved).toHaveBeenCalledWith(1);
+  });
+});
+
+// ── Cover image ───────────────────────────────────────────────────────────────
+
+describe("cover image", () => {
+  it("renders the image when a cover image url is present", () => {
+    renderCard(makeCampaign({ cover_image_url: "/cover.png" }));
+    expect(screen.getByRole("img", { name: "Test Campaign" })).toBeInTheDocument();
+  });
+
+  it("shows a category icon fallback when no cover image url is set", () => {
+    renderCard(makeCampaign({ cover_image_url: null as unknown as string }));
+    expect(screen.queryByRole("img", { name: "Test Campaign" })).not.toBeInTheDocument();
+  });
+});
+
+// ── Async action error paths ─────────────────────────────────────────────────
+
+describe("async action error handling", () => {
+  it("shows an error toast when onVote rejects", async () => {
+    const onVote = jest.fn(() => Promise.reject(new Error("vote failed")));
+    renderCard(makeCampaign({ status: "active" }), CONTRIBUTOR, { onVote });
+    fireEvent.click(screen.getByTestId("voting-component"));
+    await waitFor(() => expect(mockShowError).toHaveBeenCalled());
+  });
+
+  it("shows an error toast when onCancel rejects", async () => {
+    const onCancel = jest.fn(() => Promise.reject(new Error("cancel failed")));
+    renderCard(makeCampaign({ status: "active" }), CREATOR, { onCancel });
+    fireEvent.click(screen.getByRole("button", { name: /cancel campaign/i }));
+    fireEvent.click(screen.getByRole("button", { name: /confirm cancel/i }));
+    await waitFor(() => expect(mockShowError).toHaveBeenCalled());
+  });
+
+  it("shows an error toast when onClaimRefund rejects", async () => {
+    const onClaimRefund = jest.fn(() => Promise.reject(new Error("refund failed")));
+    renderCard(makeCampaign({ status: "cancelled" }), CONTRIBUTOR, { onClaimRefund });
+    fireEvent.click(screen.getByRole("button", { name: /claim refund/i }));
+    await waitFor(() => expect(mockShowError).toHaveBeenCalled());
   });
 });

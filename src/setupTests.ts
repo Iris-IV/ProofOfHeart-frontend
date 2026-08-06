@@ -35,6 +35,19 @@ if (typeof Intl.DisplayNames === "undefined") {
   });
 }
 
+// jsdom has no ResizeObserver; @tanstack/react-virtual (issue #593) needs one
+// to measure rows for dynamic sizing.
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+globalThis.ResizeObserver ??= ResizeObserverStub;
+
+// jsdom doesn't implement scrollTo; the window virtualizer calls it when
+// asked to scroll to an offset.
+window.scrollTo ??= () => {};
+
 // Global mock for Freighter API (v6.x returns objects, not primitives)
 jest.mock("@stellar/freighter-api", () => ({
   isConnected: jest.fn().mockResolvedValue({ isConnected: false }),

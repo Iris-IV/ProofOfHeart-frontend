@@ -56,4 +56,13 @@ describe("sitemap", () => {
     expect(entries.some((e) => e.url === "https://example.test/en/causes")).toBe(true);
     expect(entries.filter((e) => /\/causes\/\d+$/.test(e.url))).toHaveLength(0);
   });
+
+  it("includes /faq in static routes for each locale", async () => {
+    mockedGetAllCampaigns.mockResolvedValue([]);
+
+    const entries = await sitemap();
+
+    expect(entries.some((e) => e.url === "https://example.test/en/faq")).toBe(true);
+    expect(entries.some((e) => e.url === "https://example.test/es/faq")).toBe(true);
+  });
 });

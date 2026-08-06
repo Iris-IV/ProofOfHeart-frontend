@@ -73,6 +73,75 @@ function getServer(): StellarSdk.rpc.Server {
   return _server;
 }
 
+/**
+ * Discards the cached RPC client so the next call builds a fresh one.
+ * Exported for tests and for callers that want to force a reconnect.
+ */
+export function resetRpcServer(): void {
+  _server = null;
+}
+
+const CONNECTION_ERROR_PATTERNS = [
+  "fetch failed",
+  "failed to fetch",
+  "network error",
+  "networkerror",
+  "load failed",
+  "socket hang up",
+  "econnrefused",
+  "econnreset",
+  "econnaborted",
+  "epipe",
+  "etimedout",
+  "enotfound",
+  "eai_again",
+  // These three are deliberately broad. They also match a user-cancelled abort
+  // and our own poll timeout, neither of which is a transport failure. The only
+  // consequence is an unnecessary reconnect on the next call, which is cheaper
+  // than holding on to a client that a real timeout has left unusable.
+  "timeout",
+  "timed out",
+  "aborted",
+];
+
+/**
+ * True when the failure looks like a transport problem (DNS, refused/reset
+ * connection, timeout) rather than a response the RPC node actually produced.
+ * Walks the `cause` chain because undici reports `TypeError: fetch failed`
+ * with the real syscall error nested underneath.
+ */
+function isConnectionError(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; current && depth < 5; depth += 1) {
+    if (typeof current === "object" && "code" in current) {
+      const code = String((current as { code?: unknown }).code ?? "").toLowerCase();
+      if (code && CONNECTION_ERROR_PATTERNS.includes(code)) return true;
+    }
+    const message = (current instanceof Error ? current.message : String(current)).toLowerCase();
+    if (CONNECTION_ERROR_PATTERNS.some((pattern) => message.includes(pattern))) return true;
+    current = current instanceof Error ? current.cause : null;
+  }
+  return false;
+}
+
+/**
+ * Runs an RPC call against the cached client. A transport-level failure leaves
+ * the cached client unusable for every later call, so it is dropped before the
+ * error propagates and the next call reconnects. Errors the node returned
+ * (contract errors, bad requests) keep the client in place.
+ */
+async function withRpcServer<T>(fn: (server: StellarSdk.rpc.Server) => Promise<T>): Promise<T> {
+  const server = getServer();
+  try {
+    return await fn(server);
+  } catch (error) {
+    if (isConnectionError(error)) {
+      resetRpcServer();
+    }
+    throw error;
+  }
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -96,10 +165,7 @@ const _accountCache = new Map<string, CachedAccount>();
  * ACCOUNT_CACHE_TTL_MS and the sequence number hasn't diverged.
  * On sequence mismatch the cache entry is discarded and a fresh lookup is made.
  */
-async function getCachedAccount(
-  server: StellarSdk.rpc.Server,
-  publicKey: string,
-): Promise<StellarSdk.Account> {
+async function getCachedAccount(publicKey: string): Promise<StellarSdk.Account> {
   const now = Date.now();
   const cached = _accountCache.get(publicKey);
 
@@ -115,7 +181,7 @@ async function getCachedAccount(
     _accountCache.delete(publicKey);
   }
 
-  const fresh = await server.getAccount(publicKey);
+  const fresh = await withRpcServer((server) => server.getAccount(publicKey));
   _accountCache.set(publicKey, {
     account: fresh,
     fetchedAt: now,
@@ -133,13 +199,12 @@ async function buildAndSubmitTransaction(
   contractOp: StellarSdk.xdr.Operation,
   options?: TransactionLifecycleOptions,
 ): Promise<StellarSdk.rpc.Api.GetSuccessfulTransactionResponse> {
-  const server = getServer();
   const operation = options?.operation ?? "contract_invoke";
 
   options?.onStatus?.({ phase: "building" });
   let sourceAccount;
   try {
-    sourceAccount = await getCachedAccount(server, sourcePublicKey);
+    sourceAccount = await getCachedAccount(sourcePublicKey);
   } catch (error) {
     recordObservabilityFailure(classifyRpcFailure(error, "getAccount"), { operation });
     // Evict any stale cache entry on failure.
@@ -157,7 +222,7 @@ async function buildAndSubmitTransaction(
   const builtTx = txBuilder.build();
   let simulated;
   try {
-    simulated = await server.simulateTransaction(builtTx);
+    simulated = await withRpcServer((server) => server.simulateTransaction(builtTx));
   } catch (error) {
     recordObservabilityFailure(classifyRpcFailure(error, "simulateTransaction"), { operation });
     throw error;
@@ -196,7 +261,7 @@ async function buildAndSubmitTransaction(
   options?.onStatus?.({ phase: "submitting" });
   let submissionResult;
   try {
-    submissionResult = await server.sendTransaction(signedTx);
+    submissionResult = await withRpcServer((server) => server.sendTransaction(signedTx));
   } catch (error) {
     recordObservabilityFailure(classifyRpcFailure(error, "sendTransaction"), { operation });
     throw error;
@@ -217,7 +282,16 @@ async function buildAndSubmitTransaction(
   const timeoutMs = options?.timeoutMs ?? 90_000;
   const startedAt = Date.now();
   let pollDelay = 1_000;
-  let getResult = await server.getTransaction(txHash);
+  let getResult;
+  try {
+    getResult = await withRpcServer((server) => server.getTransaction(txHash));
+  } catch (error) {
+    recordObservabilityFailure(classifyRpcFailure(error, "getTransaction"), {
+      operation,
+      txHash,
+    });
+    throw error;
+  }
 
   while (getResult.status === "NOT_FOUND" || (getResult.status as any) === "PENDING") {
     if (Date.now() - startedAt >= timeoutMs) {
@@ -232,7 +306,7 @@ async function buildAndSubmitTransaction(
     await sleep(pollDelay);
     pollDelay = Math.min(Math.round(pollDelay * 1.5), 6_000);
     try {
-      getResult = await server.getTransaction(txHash);
+      getResult = await withRpcServer((server) => server.getTransaction(txHash));
     } catch (error) {
       recordObservabilityFailure(classifyRpcFailure(error, "getTransaction"), {
         operation,
@@ -270,7 +344,6 @@ async function invokeViewMethod(
   method: string,
   args: StellarSdk.xdr.ScVal[] = [],
 ): Promise<StellarSdk.xdr.ScVal | null> {
-  const server = getServer();
   const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
 
   const zeroKeyPair = StellarSdk.Keypair.random();
@@ -286,7 +359,7 @@ async function invokeViewMethod(
   const tx = txBuilder.build();
   let simulated;
   try {
-    simulated = await server.simulateTransaction(tx);
+    simulated = await withRpcServer((server) => server.simulateTransaction(tx));
   } catch (error) {
     recordObservabilityFailure(classifyRpcFailure(error, `simulateTransaction:${method}`), {
       operation: method,
@@ -522,9 +595,86 @@ const MOCK_CAMPAIGNS: Campaign[] = [
   }),
 ];
 
+// #593 — a handful of hand-written campaigns isn't enough to exercise
+// virtual scrolling / infinite pagination in dev mode. Extend the curated
+// set with a deterministic, generated batch so `NEXT_PUBLIC_USE_MOCKS=true`
+// has 100+ campaigns to page through, same as production eventually will.
+const GENERATED_MOCK_COUNT = 114;
+const CATEGORY_CYCLE = Object.values(Category).filter((v): v is Category => typeof v === "number");
+
+for (let i = 0; i < GENERATED_MOCK_COUNT; i++) {
+  const id = MOCK_CAMPAIGNS.length + 1;
+  MOCK_CAMPAIGNS.push(
+    makeMockCampaign({
+      id,
+      title: `Community Project #${id}`,
+      description: `Generated mock campaign #${id} for exercising pagination and virtual scrolling.`,
+      creator:
+        `GMOCK${String(id).padStart(4, "0")}56789012345678901234567890123456789012345678901234567890`.slice(
+          0,
+          56,
+        ),
+      funding_goal: BigInt(10_000_000_000 + id * 1_000_000_000),
+      deadline: MOCK_TIMESTAMP_SEC + 86400 * (10 + (id % 60)),
+      amount_raised: BigInt((id % 7) * 3_000_000_000),
+      is_active: id % 11 !== 0,
+      funds_withdrawn: false,
+      is_cancelled: id % 17 === 0,
+      is_verified: id % 3 !== 0,
+      created_at: MOCK_TIMESTAMP_SEC + id,
+      category: CATEGORY_CYCLE[id % CATEGORY_CYCLE.length],
+      has_revenue_sharing: id % 4 === 0,
+      revenue_share_percentage: id % 4 === 0 ? 200 + (id % 5) * 100 : 0,
+    }),
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Public API — Read (view) functions
 // ---------------------------------------------------------------------------
+
+export const DEFAULT_CAMPAIGNS_PAGE_SIZE = 12;
+
+export interface CampaignsPage {
+  campaigns: Campaign[];
+  /** Id of the next campaign to fetch, or null once every campaign has been returned. */
+  nextCursor: number | null;
+}
+
+/**
+ * Cursor-paginated campaign listing (issue #593). The contract only exposes
+ * sequential numeric ids (`get_campaign_count` + `get_campaign(id)`), so the
+ * cursor here is simply "the next id to fetch" — opaque to the caller, which
+ * is all `useInfiniteQuery` needs.
+ */
+export async function listCampaigns({
+  cursor = 1,
+  limit = DEFAULT_CAMPAIGNS_PAGE_SIZE,
+}: { cursor?: number; limit?: number } = {}): Promise<CampaignsPage> {
+  if (USE_MOCKS) {
+    const startIndex = cursor - 1;
+    const campaigns = MOCK_CAMPAIGNS.slice(startIndex, startIndex + limit);
+    const nextCursor = startIndex + limit < MOCK_CAMPAIGNS.length ? cursor + limit : null;
+    return { campaigns, nextCursor };
+  }
+  try {
+    const count = await getCampaignCount();
+    const lastIdExclusive = Math.min(cursor + limit, count + 1);
+    const ids = Array.from({ length: Math.max(0, lastIdExclusive - cursor) }, (_, i) => cursor + i);
+    const results = await Promise.allSettled(ids.map((id) => getCampaign(id)));
+    const campaigns = results.flatMap((r) => {
+      if (r.status === "rejected") {
+        console.warn("Failed to fetch campaign for listCampaigns page", r.reason);
+        return [];
+      }
+      return r.value !== null ? [r.value] : [];
+    });
+    const nextCursor = cursor + limit <= count ? cursor + limit : null;
+    return { campaigns, nextCursor };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
 
 export async function getCampaignCount(): Promise<number> {
   if (USE_MOCKS) return MOCK_CAMPAIGNS.length;
