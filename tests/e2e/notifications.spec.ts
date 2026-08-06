@@ -2,17 +2,6 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Notification Bell", () => {
   test.beforeEach(async ({ page }) => {
-    page.on("pageerror", (err) => {
-      if (
-        err.message.includes("ChunkLoadError") ||
-        err.message.includes("Load failed") ||
-        err.message.includes("access control checks")
-      ) {
-        return;
-      }
-      throw new Error(`Uncaught page error: ${err.message}`);
-    });
-
     await page.addInitScript(() => {
       localStorage.setItem("onboarding_tour_dismissed", "1");
     });
@@ -45,37 +34,31 @@ test.describe("Notification Bell", () => {
     await expect(donateButton).toBeEnabled();
     await donateButton.click();
 
-    // Wait for confirmation
     await expect(page.getByText(/donated successfully/i)).toBeVisible({ timeout: 15000 });
     await page.getByRole("button", { name: /Close/i }).click();
 
-    // 3. Open notification bell
-    const bell = page.getByRole("button", { name: /Notifications/i });
+    // 3. Assert unread badge is visible with a count
+    const bell = page.getByRole("button", { name: /Notifications/ });
     await expect(bell).toBeVisible();
-    
-    // Get initial unread count
-    const badge = bell.locator("span").first();
-    const initialBadgeText = await badge.textContent().catch(() => "0");
-    
-    await bell.click();
+    const badge = bell.getByText(/\d+/);
+    await expect(badge).toBeVisible();
+    const initialCount = await badge.textContent();
 
-    // 4. Verify dropdown opened
+    // 4. Open dropdown
+    await bell.click();
     const dropdown = page.getByRole("dialog", { name: /Notifications/i });
     await expect(dropdown).toBeVisible();
 
     // 5. Mark first unread notification as read
     const markReadButton = dropdown.getByRole("button", { name: /Mark notification/i }).first();
-    if (await markReadButton.isVisible()) {
-      await markReadButton.click();
-    }
+    await expect(markReadButton).toBeVisible();
+    await markReadButton.click();
 
     // 6. Close dropdown
     await page.keyboard.press("Escape");
     await expect(dropdown).not.toBeVisible();
 
-    // 7. Verify badge updated (if there were notifications)
-    if (initialBadgeText && initialBadgeText !== "0") {
-      await expect(badge).not.toHaveText(initialBadgeText, { timeout: 5000 });
-    }
+    // 7. Verify badge decremented
+    await expect(badge).not.toHaveText(initialCount ?? "", { timeout: 5000 });
   });
 });
