@@ -29,12 +29,15 @@ export default function NotificationSettings() {
     [publicKey],
   );
 
-  const PREF_LABELS: Record<keyof NotificationPreferences, string> = useMemo(() => ({
-    contributions: t("prefContributions"),
-    verified: t("prefVerified"),
-    refundAvailable: t("prefRefundAvailable"),
-    revenueDeposited: t("prefRevenueDeposited"),
-  }), [t]);
+  const PREF_LABELS: Record<keyof NotificationPreferences, string> = useMemo(
+    () => ({
+      contributions: t("prefContributions"),
+      verified: t("prefVerified"),
+      refundAvailable: t("prefRefundAvailable"),
+      revenueDeposited: t("prefRevenueDeposited"),
+    }),
+    [t],
+  );
   const [localPrefs, setLocalPrefs] = useState<NotificationPreferences | null>(null);
 
   const prefs = localPrefs ?? storedPrefs;

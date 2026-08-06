@@ -48,11 +48,14 @@ jest.mock("@/i18n/routing", () => ({
   useRouter: () => mockRouter,
 }));
 
-jest.mock("@/hooks/useCampaigns", () => ({
-  useCampaigns: () => ({
+jest.mock("@/hooks/useInfiniteCampaigns", () => ({
+  useInfiniteCampaigns: () => ({
     campaigns: mockCampaigns,
     isLoading: false,
+    isFetchingNextPage: false,
+    hasNextPage: false,
     error: null,
+    fetchNextPage: jest.fn(),
     refetch: jest.fn(),
   }),
 }));
@@ -90,6 +93,13 @@ describe("Causes filters URL sync", () => {
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  it("associates the status and sort selects with their labels (issue #676)", async () => {
+    render(<CausesClient />);
+
+    expect(screen.getByLabelText("labelStatus")).toBeInTheDocument();
+    expect(screen.getByLabelText("labelSortBy")).toBeInTheDocument();
   });
 
   it("syncs category, status, sort and search to URL", async () => {

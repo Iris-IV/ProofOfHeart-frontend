@@ -1,3 +1,12 @@
+import { normalizeAddress } from "./stellar";
+import { hasOffchainApiBaseUrl, requestOffchainJson } from "./offchainApiClient";
+import {
+  readAllEntries,
+  writeAllEntries,
+  appendTimestamp,
+  filterAndSortByTimestamp,
+} from "./logUtil";
+
 export type WalletTransactionAction =
   | "contribute"
   | "claim_refund"
@@ -15,38 +24,7 @@ export interface WalletTransactionLogEntry {
   timestamp: number;
 }
 
-import { normalizeAddress } from "./stellar";
-import { hasOffchainApiBaseUrl, requestOffchainJson } from "./offchainApiClient";
-
 const STORAGE_KEY = "proof_of_heart_wallet_tx_log_v1";
-
-function canUseStorage(): boolean {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
-}
-
-function readAllEntries(): WalletTransactionLogEntry[] {
-  if (!canUseStorage()) return [];
-
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed as WalletTransactionLogEntry[];
-  } catch {
-    return [];
-  }
-}
-
-function writeAllEntries(entries: WalletTransactionLogEntry[]): void {
-  if (!canUseStorage()) return;
-
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-  } catch {
-    // Ignore localStorage write failures.
-  }
-}
 
 async function syncWalletTransaction(entry: WalletTransactionLogEntry): Promise<void> {
   if (!hasOffchainApiBaseUrl()) return;
@@ -66,21 +44,21 @@ async function syncWalletTransaction(entry: WalletTransactionLogEntry): Promise<
 }
 
 export function appendWalletTransaction(entry: Omit<WalletTransactionLogEntry, "timestamp">): void {
-  const allEntries = readAllEntries();
-  const normalizedEntry: WalletTransactionLogEntry = {
+  const normalizedEntry = appendTimestamp<WalletTransactionLogEntry>({
     ...entry,
     walletAddress: normalizeAddress(entry.walletAddress),
-    timestamp: Date.now(),
-  };
+  });
 
+  const allEntries = readAllEntries<WalletTransactionLogEntry>(STORAGE_KEY);
   allEntries.push(normalizedEntry);
-  writeAllEntries(allEntries.slice(-1000));
+  writeAllEntries(STORAGE_KEY, allEntries, 1000);
   void syncWalletTransaction(normalizedEntry);
 }
 
 export function getWalletTransactions(walletAddress: string): WalletTransactionLogEntry[] {
-  const normalizedAddress = normalizeAddress(walletAddress);
-  return readAllEntries()
-    .filter((entry) => normalizeAddress(entry.walletAddress) === normalizedAddress)
-    .sort((a, b) => b.timestamp - a.timestamp);
+  return filterAndSortByTimestamp(
+    readAllEntries<WalletTransactionLogEntry>(STORAGE_KEY),
+    "walletAddress",
+    walletAddress,
+  );
 }

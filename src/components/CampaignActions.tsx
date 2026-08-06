@@ -99,9 +99,11 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
     ? "Creators cannot contribute to their own campaign."
     : campaign.is_cancelled
       ? "This campaign has been cancelled."
-      : !campaign.is_active || campaign.funds_withdrawn || isExpired
-        ? "This campaign is no longer accepting contributions."
-        : null;
+      : !campaign.is_verified
+        ? "This campaign is pending verification and cannot accept contributions yet."
+        : !campaign.is_active || campaign.funds_withdrawn || isExpired
+          ? "This campaign is no longer accepting contributions."
+          : null;
 
   const handleContribute = useCallback(async () => {
     const parsedAmount = Number(contributionAmount);
@@ -196,6 +198,7 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
                 onChange={(e) => setContributionAmount(e.target.value)}
                 placeholder="Amount in XLM"
                 disabled={isPending("contribute", campaign.id) || !!contributionDisabledReason}
+                aria-describedby="contribution-amount-hint"
                 className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-zinc-900 outline-none transition focus:border-blue-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50"
               />
               <button
@@ -210,7 +213,7 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
                 />
               </button>
             </div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            <p id="contribution-amount-hint" className="text-xs text-zinc-500 dark:text-zinc-400">
               {contributionDisabledReason ??
                 "Contributions are made in XLM and recorded on-chain after wallet confirmation."}
             </p>
@@ -256,8 +259,12 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
               {campaign.has_revenue_sharing &&
                 (showRevenueInput ? (
                   <div className="space-y-2">
+                    <label htmlFor="revenue-deposit-amount" className="sr-only">
+                      Revenue deposit amount in XLM
+                    </label>
                     <div className="relative">
                       <input
+                        id="revenue-deposit-amount"
                         type="number"
                         min="0"
                         step="any"

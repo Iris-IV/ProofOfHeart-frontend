@@ -1,3 +1,5 @@
+import { getItem, setItem, getRawItem, setRawItem } from "./localStorageStore";
+
 export interface NotificationPreferences {
   contributions: boolean;
   verified: boolean;
@@ -15,28 +17,17 @@ const DEFAULTS: NotificationPreferences = {
 };
 
 export function getNotificationPreferences(walletAddress: string): NotificationPreferences {
-  if (typeof window === "undefined") return { ...DEFAULTS };
-  try {
-    const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${walletAddress.toLowerCase()}`);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return { ...DEFAULTS, ...parsed };
-    }
-  } catch {
-    // ignore corrupt data
-  }
-  return { ...DEFAULTS };
+  const key = `${STORAGE_KEY_PREFIX}${walletAddress.toLowerCase()}`;
+  const parsed = getItem<Partial<NotificationPreferences>>(key);
+  return { ...DEFAULTS, ...parsed };
 }
 
 export function setNotificationPreferences(
   walletAddress: string,
   prefs: NotificationPreferences,
 ): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(
-    `${STORAGE_KEY_PREFIX}${walletAddress.toLowerCase()}`,
-    JSON.stringify(prefs),
-  );
+  const key = `${STORAGE_KEY_PREFIX}${walletAddress.toLowerCase()}`;
+  setItem(key, prefs);
 }
 
 export const THEME_STORAGE_KEY = "theme";
@@ -51,20 +42,12 @@ export function isTheme(value: string | null | undefined): value is Theme {
 }
 
 export function readStoredTheme(): Theme | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const stored = localStorage.getItem(THEME_STORAGE_KEY);
+  const stored = getRawItem(THEME_STORAGE_KEY);
   return isTheme(stored) ? stored : null;
 }
 
 export function writeStoredTheme(theme: Theme): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  localStorage.setItem(THEME_STORAGE_KEY, theme);
+  setRawItem(THEME_STORAGE_KEY, theme);
 }
 
 export function resolveThemeFromSystem(): Theme {
@@ -84,20 +67,14 @@ export function hasStoredTheme(): boolean {
 }
 
 export function writeLocalePreference(locale: string): void {
-  if (typeof window === "undefined") {
-    return;
+  setRawItem(LOCALE_STORAGE_KEY, locale);
+  if (typeof document !== "undefined") {
+    document.cookie = `${LOCALE_COOKIE_NAME}=${encodeURIComponent(locale)}; path=/; max-age=${LOCALE_COOKIE_MAX_AGE}; SameSite=Lax`;
   }
-
-  localStorage.setItem(LOCALE_STORAGE_KEY, locale);
-  document.cookie = `${LOCALE_COOKIE_NAME}=${encodeURIComponent(locale)}; path=/; max-age=${LOCALE_COOKIE_MAX_AGE}; SameSite=Lax`;
 }
 
 export function readStoredLocale(): string | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  return localStorage.getItem(LOCALE_STORAGE_KEY);
+  return getRawItem(LOCALE_STORAGE_KEY);
 }
 
 /** Inline script applied before React hydrates to avoid theme FOUC. */

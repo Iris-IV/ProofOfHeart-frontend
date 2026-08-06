@@ -77,10 +77,14 @@ export function DevMockPanel() {
             <div className="space-y-3 border-t pt-3">
               {[1, 2, 3, 4, 5, 6].map((id) => (
                 <div key={id}>
-                  <label className="text-xs font-medium text-gray-700 block mb-1">
+                  <label
+                    htmlFor={`mock-campaign-scenario-${id}`}
+                    className="text-xs font-medium text-gray-700 block mb-1"
+                  >
                     Campaign {id}
                   </label>
                   <select
+                    id={`mock-campaign-scenario-${id}`}
                     value={scenarios[String(id)] || "default"}
                     onChange={(e) => handleScenarioChange(String(id), e.target.value)}
                     className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"

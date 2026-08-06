@@ -8,8 +8,9 @@ import {
   getRevenueClaimed,
   getRevenuePool,
 } from "../lib/contractClient";
-import { getWalletTransactions, WalletTransactionLogEntry } from "../lib/transactionLog";
+import { WalletTransactionLogEntry } from "../lib/transactionLog";
 import { Campaign, CampaignStatus, deriveCampaignStatus } from "../types";
+import { useWalletTransactions } from "./useWalletTransactions";
 
 export interface ContributionHistoryItem {
   campaign: Campaign;
@@ -40,7 +41,10 @@ function computeClaimableRevenue(
   return contributorShare > claimed ? contributorShare - claimed : BigInt(0);
 }
 
-async function fetchContributionHistory(walletAddress: string): Promise<ContributionHistoryItem[]> {
+export async function fetchContributionHistory(
+  walletAddress: string,
+  txLog: WalletTransactionLogEntry[],
+): Promise<ContributionHistoryItem[]> {
   const campaignCount = await getCampaignCount();
   const campaignIds = Array.from({ length: campaignCount }, (_, i) => i + 1);
 
@@ -55,7 +59,6 @@ async function fetchContributionHistory(walletAddress: string): Promise<Contribu
   );
 
   const contributedIds = campaignIds.filter((_, i) => contributionAmounts[i] > BigInt(0));
-  const txLog = getWalletTransactions(walletAddress);
 
   const campaignsData = await Promise.all(
     contributedIds.map(async (campaignId) => {
@@ -123,10 +126,11 @@ async function fetchContributionHistory(walletAddress: string): Promise<Contribu
 
 export function useContributions(walletAddress: string | null): UseContributionsResult {
   const queryClient = useQueryClient();
+  const { transactions } = useWalletTransactions(walletAddress);
 
   const { data, isLoading, isFetching, error } = useQuery<ContributionHistoryItem[], Error>({
     queryKey: ["contributions", walletAddress],
-    queryFn: () => fetchContributionHistory(walletAddress!),
+    queryFn: () => fetchContributionHistory(walletAddress!, transactions),
     enabled: !!walletAddress,
     staleTime: 60_000,
   });
@@ -138,6 +142,7 @@ export function useContributions(walletAddress: string | null): UseContributions
     error: error?.message ?? null,
     refetch: () => {
       queryClient.invalidateQueries({ queryKey: ["contributions", walletAddress] });
+      queryClient.invalidateQueries({ queryKey: ["wallet-transactions", walletAddress] });
     },
   };
 }

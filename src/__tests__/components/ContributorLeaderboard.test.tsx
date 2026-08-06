@@ -10,6 +10,7 @@ jest.mock("@/hooks/useTopContributors", () => ({
 
 jest.mock("next-intl", () => ({
   useLocale: () => "en",
+  useTranslations: () => (key: string) => key,
 }));
 
 const WALLET_1 = "GDA7X7P5H4F3R8E2M1N6K9W4L5V8Q3Z0A1B2C3D4E5F6G7H8I9J0K1L2";
@@ -30,7 +31,7 @@ describe("ContributorLeaderboard component", () => {
 
     render(<ContributorLeaderboard campaignId={1} userWalletAddress={null} />);
 
-    expect(screen.getByRole("heading", { name: "Top Supporters" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "title" })).toBeInTheDocument();
   });
 
   it("renders empty state when no contributors are returned", () => {
@@ -42,7 +43,7 @@ describe("ContributorLeaderboard component", () => {
 
     render(<ContributorLeaderboard campaignId={1} userWalletAddress={null} />);
 
-    expect(screen.getByText("Be the first supporter for this cause! 💜")).toBeInTheDocument();
+    expect(screen.getByText("emptyMessage")).toBeInTheDocument();
   });
 
   it("renders list of top supporters with rank, formatted amounts, and truncated addresses", () => {
@@ -107,12 +108,12 @@ describe("ContributorLeaderboard component", () => {
 
     render(<ContributorLeaderboard campaignId={1} userWalletAddress={WALLET_1} />);
 
-    const optOutButton = screen.getByRole("button", { name: "Enable anonymous mode" });
+    const optOutButton = screen.getByRole("button", { name: "enableAnon" });
     expect(optOutButton).toBeInTheDocument();
 
     fireEvent.click(optOutButton);
     expect(mockRefetch).toHaveBeenCalledTimes(1);
 
-    expect(screen.getByRole("button", { name: "Disable anonymous mode" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "disableAnon" })).toBeInTheDocument();
   });
 });

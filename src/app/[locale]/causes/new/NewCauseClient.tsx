@@ -2,7 +2,9 @@
 
 import { useTranslations } from "next-intl";
 import SafeMarkdown from "@/components/SafeMarkdown";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { validateImageFile } from "@/lib/imageValidation";
 import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
 import { useRouter } from "@/i18n/routing";
@@ -11,10 +13,10 @@ import {
   getCampaignCount,
   type TransactionLifecyclePhase,
 } from "@/lib/contractClient";
+import { invalidateCampaignsList } from "@/lib/cacheInvalidation";
 import { Category, CATEGORY_LABELS } from "@/types";
 import { xlmToStroops } from "@/lib/stellarAmount";
 import { parseContractError } from "@/utils/contractErrors";
-import { encodeLocalizedDescription } from "@/utils/localizedDescription";
 
 // ---------------------------------------------------------------------------
 // Validation — returns translation keys instead of hardcoded strings
@@ -23,7 +25,6 @@ import { encodeLocalizedDescription } from "@/utils/localizedDescription";
 interface FormErrorKeys {
   title?: string;
   description?: string;
-  descriptionEs?: string;
   creatorEmail?: string;
   fundingGoal?: string;
   durationDays?: string;
@@ -51,7 +52,6 @@ const IMAGE_URL_RE = /^https?:\/\/.+\..+/;
 function validateForm(
   title: string,
   description: string,
-  descriptionEs: string,
   creatorEmail: string,
   fundingGoal: string,
   durationDays: string,
@@ -72,10 +72,6 @@ function validateForm(
     errors.description = "validationDescriptionRequired";
   } else if (description.trim().length > 1000) {
     errors.description = "validationDescriptionTooLong";
-  }
-
-  if (descriptionEs.trim().length > 1000) {
-    errors.descriptionEs = "validationDescriptionEsTooLong";
   }
 
   if (creatorEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(creatorEmail.trim())) {
@@ -110,6 +106,7 @@ function validateForm(
 export default function CreateCampaignPage() {
   const t = useTranslations("CreateCampaign");
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { publicKey, isWalletConnected, connectWallet, isLoading: walletLoading } = useWallet();
   const { showError, showSuccess, showWarning } = useToast();
 
@@ -130,25 +127,21 @@ export default function CreateCampaignPage() {
   const [milestones, setMilestones] = useState<{ targetAmount: string; description: string }[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [descriptionTab, setDescriptionTab] = useState<"write" | "preview">("write");
-  const [descriptionEs, setDescriptionEs] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
 
-  const draftKey = publicKey
-    ? `proof_of_heart_draft_${publicKey}`
-    : "proof_of_heart_draft_anonymous";
-  const [hasDraft, setHasDraft] = useState(false);
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const DRAFT_KEY = "proof_of_heart_next_draft";
   const CREATOR_EMAIL_WEBHOOK_URL = process.env.NEXT_PUBLIC_CREATOR_EMAIL_WEBHOOK_URL?.trim() ?? "";
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(draftKey);
+      const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.title) setTitle(parsed.title);
         if (parsed.description) setDescription(parsed.description);
-        if (parsed.descriptionEs) setDescriptionEs(parsed.descriptionEs);
         if (parsed.creatorEmail) setCreatorEmail(parsed.creatorEmail);
         if (parsed.fundingGoal) setFundingGoal(parsed.fundingGoal);
         if (parsed.durationDays) setDurationDays(parsed.durationDays);
@@ -159,7 +152,6 @@ export default function CreateCampaignPage() {
         if (parsed.tags) setTags(parsed.tags);
         if (parsed.coverImageUrl) setCoverImageUrl(parsed.coverImageUrl);
         if (parsed.milestones) setMilestones(parsed.milestones);
-        setHasDraft(true);
       }
     } catch (e) {
       console.warn("Failed to load draft from localStorage:", e);
@@ -169,11 +161,10 @@ export default function CreateCampaignPage() {
   useEffect(() => {
     try {
       localStorage.setItem(
-        draftKey,
+        DRAFT_KEY,
         JSON.stringify({
           title,
           description,
-          descriptionEs,
           creatorEmail,
           fundingGoal,
           durationDays,
@@ -185,15 +176,12 @@ export default function CreateCampaignPage() {
           milestones,
         }),
       );
-      setLastSavedAt(Date.now());
-      setHasDraft(true);
     } catch (e) {
       console.warn("Failed to save draft to localStorage:", e);
     }
   }, [
     title,
     description,
-    descriptionEs,
     creatorEmail,
     fundingGoal,
     durationDays,
@@ -205,27 +193,6 @@ export default function CreateCampaignPage() {
     milestones,
   ]);
 
-  const handleDiscardDraft = () => {
-    try {
-      localStorage.removeItem(draftKey);
-    } catch {
-      // ignore
-    }
-    setTitle("");
-    setDescription("");
-    setCreatorEmail("");
-    setFundingGoal("");
-    setDurationDays("");
-    setCategory(Category.Learner);
-    setHasRevenueSharing(false);
-    setRevenueSharePercentage(5);
-    setTags([]);
-    setCoverImageUrl("");
-    setMilestones([]);
-    setHasDraft(false);
-    setLastSavedAt(null);
-  };
-
   const isStartup = category === Category.EducationalStartup;
 
   const handleCategoryChange = (val: Category) => {
@@ -233,6 +200,49 @@ export default function CreateCampaignPage() {
     if (val !== Category.EducationalStartup) {
       setHasRevenueSharing(false);
       setRevenueSharePercentage(1);
+    }
+  };
+
+  const handleCoverImageUpload = async (file: File) => {
+    const clientValidation = validateImageFile(file);
+    if (!clientValidation.valid) {
+      showError(clientValidation.error ?? t("coverImageUploadFailed"));
+      return;
+    }
+
+    setIsUploadingCover(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      const payload = (await response.json().catch(() => null)) as {
+        url?: string;
+        message?: string;
+      } | null;
+
+      if (!response.ok || !payload?.url) {
+        throw new Error(payload?.message ?? t("coverImageUploadFailed"));
+      }
+
+      setCoverImageUrl(payload.url);
+      setErrorKeys((prev) => {
+        const next = { ...prev };
+        delete next.coverImageUrl;
+        return next;
+      });
+      showSuccess(t("coverImageUploadSuccess"));
+    } catch (error) {
+      showError(error instanceof Error ? error.message : t("coverImageUploadFailed"));
+    } finally {
+      setIsUploadingCover(false);
+      if (coverFileInputRef.current) {
+        coverFileInputRef.current.value = "";
+      }
     }
   };
 
@@ -314,13 +324,14 @@ export default function CreateCampaignPage() {
       }
 
       await notifyEmailOptIn(newCampaignId, reviewData.creatorEmail, reviewData.title, publicKey);
+      invalidateCampaignsList(queryClient);
 
       showSuccess(t("successMessage", { title: reviewData.title }));
       setIsReviewOpen(false);
       setReviewData(null);
 
       try {
-        localStorage.removeItem(draftKey);
+        localStorage.removeItem(DRAFT_KEY);
       } catch {
         // ignore
       }
@@ -351,7 +362,6 @@ export default function CreateCampaignPage() {
     const keys = validateForm(
       title,
       description,
-      descriptionEs,
       creatorEmail,
       fundingGoal,
       durationDays,
@@ -377,13 +387,9 @@ export default function CreateCampaignPage() {
         description: m.description.trim(),
       }));
 
-    const encodedDescription = descriptionEs.trim()
-      ? encodeLocalizedDescription({ en: description.trim(), es: descriptionEs.trim() })
-      : description.trim();
-
     setReviewData({
       title: title.trim(),
-      description: encodedDescription,
+      description: description.trim(),
       creatorEmail: creatorEmail.trim(),
       fundingGoalXlm: parsedGoal,
       durationDays: parsedDays,
@@ -416,27 +422,6 @@ export default function CreateCampaignPage() {
           </h1>
           <p className="text-zinc-600 dark:text-zinc-400 text-sm">{t("pageSubtitle")}</p>
         </div>
-
-        {/* Draft indicator */}
-        {hasDraft && (
-          <div className="mb-4 flex items-center justify-between rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-2.5 text-xs text-zinc-600 dark:text-zinc-400">
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2 w-2 rounded-full bg-green-500" aria-hidden="true" />
-              {lastSavedAt
-                ? Date.now() - lastSavedAt < 60_000
-                  ? "Draft saved · Saved a moment ago"
-                  : `Draft saved · ${new Date(lastSavedAt).toLocaleString()}`
-                : "Draft restored"}
-            </span>
-            <button
-              type="button"
-              onClick={handleDiscardDraft}
-              className="ml-4 font-medium text-red-500 hover:text-red-600 transition-colors"
-            >
-              Discard draft
-            </button>
-          </div>
-        )}
 
         {/* Wallet guard banner */}
         {!isWalletConnected && (
@@ -474,6 +459,8 @@ export default function CreateCampaignPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={100}
+              required
+              aria-required="true"
               aria-invalid={Boolean(errorKeys.title)}
               aria-describedby={errorKeys.title ? "title-error" : undefined}
               placeholder={t("placeholderTitle")}
@@ -485,7 +472,7 @@ export default function CreateCampaignPage() {
             />
             <div className="flex justify-between mt-1">
               {err("title") ? (
-                <p id="title-error" className="text-xs text-red-500">
+                <p id="title-error" role="alert" className="text-xs text-red-500">
                   {err("title")}
                 </p>
               ) : (
@@ -514,7 +501,7 @@ export default function CreateCampaignPage() {
                       : "bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700"
                   }`}
                 >
-                  Write
+                  {t("tabWrite")}
                 </button>
                 <button
                   type="button"
@@ -525,7 +512,7 @@ export default function CreateCampaignPage() {
                       : "bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700"
                   }`}
                 >
-                  Preview
+                  {t("tabPreview")}
                 </button>
               </div>
               {descriptionTab === "write" ? (
@@ -535,6 +522,8 @@ export default function CreateCampaignPage() {
                   onChange={(e) => setDescription(e.target.value)}
                   maxLength={1000}
                   rows={5}
+                  required
+                  aria-required="true"
                   aria-invalid={Boolean(errorKeys.description)}
                   aria-describedby={errorKeys.description ? "description-error" : undefined}
                   placeholder={t("placeholderDescription")}
@@ -547,55 +536,20 @@ export default function CreateCampaignPage() {
                       {description}
                     </SafeMarkdown>
                   ) : (
-                    <span className="italic text-zinc-400">Nothing to preview</span>
+                    <span className="italic text-zinc-400">{t("nothingToPreview")}</span>
                   )}
                 </div>
               )}
             </div>
             <div className="flex justify-between mt-1">
               {err("description") ? (
-                <p id="description-error" className="text-xs text-red-500">
+                <p id="description-error" role="alert" className="text-xs text-red-500">
                   {err("description")}
                 </p>
               ) : (
                 <span />
               )}
               <span className="text-xs text-zinc-400 ms-auto">{description.length}/1,000</span>
-            </div>
-          </div>
-
-          {/* Spanish Description (optional) */}
-          <div>
-            <label
-              htmlFor="description-es"
-              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
-            >
-              {t("tabSpanish")}
-            </label>
-            <textarea
-              id="description-es"
-              value={descriptionEs}
-              onChange={(e) => setDescriptionEs(e.target.value)}
-              maxLength={1000}
-              rows={4}
-              aria-invalid={Boolean(errorKeys.descriptionEs)}
-              aria-describedby={errorKeys.descriptionEs ? "description-es-error" : undefined}
-              placeholder={t("placeholderDescriptionEs")}
-              className={`w-full px-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors resize-y ${
-                errorKeys.descriptionEs
-                  ? "border-red-400 dark:border-red-500"
-                  : "border-zinc-200 dark:border-zinc-600"
-              }`}
-            />
-            <div className="flex justify-between mt-1">
-              {errorKeys.descriptionEs ? (
-                <p id="description-es-error" className="text-xs text-red-500">
-                  {t(errorKeys.descriptionEs as Parameters<typeof t>[0])}
-                </p>
-              ) : (
-                <span />
-              )}
-              <span className="text-xs text-zinc-400 ms-auto">{descriptionEs.length}/1,000</span>
             </div>
           </div>
 
@@ -624,7 +578,7 @@ export default function CreateCampaignPage() {
               }`}
             />
             {err("creatorEmail") ? (
-              <p id="creator-email-error" className="text-xs text-red-500 mt-1">
+              <p id="creator-email-error" role="alert" className="text-xs text-red-500 mt-1">
                 {err("creatorEmail")}
               </p>
             ) : (
@@ -655,6 +609,8 @@ export default function CreateCampaignPage() {
                   onChange={(e) => setFundingGoal(e.target.value)}
                   min="0.0000001"
                   step="any"
+                  required
+                  aria-required="true"
                   aria-invalid={Boolean(errorKeys.fundingGoal)}
                   aria-describedby={errorKeys.fundingGoal ? "funding-goal-error" : undefined}
                   placeholder="e.g. 1000"
@@ -666,7 +622,7 @@ export default function CreateCampaignPage() {
                 />
               </div>
               {err("fundingGoal") && (
-                <p id="funding-goal-error" className="text-xs text-red-500 mt-1">
+                <p id="funding-goal-error" role="alert" className="text-xs text-red-500 mt-1">
                   {err("fundingGoal")}
                 </p>
               )}
@@ -688,6 +644,8 @@ export default function CreateCampaignPage() {
                 min="1"
                 max="365"
                 step="1"
+                required
+                aria-required="true"
                 aria-invalid={Boolean(errorKeys.durationDays)}
                 aria-describedby={errorKeys.durationDays ? "duration-days-error" : undefined}
                 placeholder={t("placeholderDuration")}
@@ -698,7 +656,7 @@ export default function CreateCampaignPage() {
                 }`}
               />
               {err("durationDays") && (
-                <p id="duration-days-error" className="text-xs text-red-500 mt-1">
+                <p id="duration-days-error" role="alert" className="text-xs text-red-500 mt-1">
                   {err("durationDays")}
                 </p>
               )}
@@ -715,6 +673,8 @@ export default function CreateCampaignPage() {
             </label>
             <select
               id="category"
+              required
+              aria-required="true"
               value={category}
               onChange={(e) => handleCategoryChange(Number(e.target.value) as Category)}
               className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -793,6 +753,10 @@ export default function CreateCampaignPage() {
                     value={revenueSharePercentage}
                     onChange={(e) => setRevenueSharePercentage(parseFloat(e.target.value))}
                     aria-label={t("labelRevenueSharePct")}
+                    aria-invalid={Boolean(errorKeys.revenueSharePercentage)}
+                    aria-describedby={
+                      errorKeys.revenueSharePercentage ? "revenue-share-error" : undefined
+                    }
                     className="w-full h-2 rounded-full accent-blue-600 cursor-pointer"
                   />
                   <div className="flex justify-between text-xs text-zinc-400 mt-1">
@@ -806,7 +770,7 @@ export default function CreateCampaignPage() {
                       htmlFor="revenueShareBps"
                       className="text-xs text-zinc-500 dark:text-zinc-400 shrink-0"
                     >
-                      Exact bps:
+                      {t("labelExactBps")}
                     </label>
                     <input
                       id="revenueShareBps"
@@ -822,13 +786,19 @@ export default function CreateCampaignPage() {
                           setRevenueSharePercentage(bps / 100);
                         }
                       }}
+                      aria-invalid={Boolean(errorKeys.revenueSharePercentage)}
+                      aria-describedby={
+                        errorKeys.revenueSharePercentage ? "revenue-share-error" : undefined
+                      }
                       className="w-24 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
                     />
-                    <span className="text-xs text-zinc-400">/ 10 000</span>
+                    <span className="text-xs text-zinc-400">{t("revenueShareBpsDenominator")}</span>
                   </div>
 
                   {err("revenueSharePercentage") && (
-                    <p className="text-xs text-red-500 mt-1">{err("revenueSharePercentage")}</p>
+                    <p id="revenue-share-error" role="alert" className="text-xs text-red-500 mt-1">
+                      {err("revenueSharePercentage")}
+                    </p>
                   )}
                 </div>
               )}
@@ -837,7 +807,10 @@ export default function CreateCampaignPage() {
 
           {/* Tags */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            <label
+              htmlFor="tags-input"
+              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+            >
               {t("labelTags")}{" "}
               <span className="text-xs font-normal text-zinc-400">({t("tagsLimitTip")})</span>
             </label>
@@ -853,6 +826,7 @@ export default function CreateCampaignPage() {
                   <button
                     type="button"
                     onClick={() => setTags(tags.filter((_: string, i: number) => i !== idx))}
+                    aria-label={`Remove tag ${tag}`}
                     className="hover:text-blue-900 dark:hover:text-blue-100 transition-colors"
                   >
                     ✕
@@ -861,6 +835,7 @@ export default function CreateCampaignPage() {
               ))}
               {tags.length < 3 && (
                 <input
+                  id="tags-input"
                   type="text"
                   value={tagInput}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -890,24 +865,50 @@ export default function CreateCampaignPage() {
               htmlFor="coverImageUrl"
               className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
             >
-              Cover Image URL <span className="text-xs font-normal text-zinc-400">(optional)</span>
+              {t("labelCoverImage")}{" "}
+              <span className="text-xs font-normal text-zinc-400">({t("optional")})</span>
             </label>
-            <input
-              id="coverImageUrl"
-              type="url"
-              value={coverImageUrl}
-              onChange={(e) => setCoverImageUrl(e.target.value)}
-              placeholder="https://ipfs.io/ipfs/... or https://i.imgur.com/..."
-              aria-invalid={Boolean(errorKeys.coverImageUrl)}
-              aria-describedby={errorKeys.coverImageUrl ? "cover-image-error" : undefined}
-              className={`w-full px-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                errorKeys.coverImageUrl
-                  ? "border-red-400 dark:border-red-500"
-                  : "border-zinc-200 dark:border-zinc-600"
-              }`}
-            />
+            <div className="flex gap-2">
+              <input
+                id="coverImageUrl"
+                type="url"
+                value={coverImageUrl}
+                onChange={(e) => setCoverImageUrl(e.target.value)}
+                placeholder={t("placeholderCoverImage")}
+                aria-invalid={Boolean(errorKeys.coverImageUrl)}
+                aria-describedby={errorKeys.coverImageUrl ? "cover-image-error" : undefined}
+                className={`flex-1 min-w-0 px-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+                  errorKeys.coverImageUrl
+                    ? "border-red-400 dark:border-red-500"
+                    : "border-zinc-200 dark:border-zinc-600"
+                }`}
+              />
+              <input
+                ref={coverFileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+                className="hidden"
+                aria-hidden="true"
+                tabIndex={-1}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleCoverImageUpload(file);
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => coverFileInputRef.current?.click()}
+                disabled={isUploadingCover}
+                className="shrink-0 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-sm font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isUploadingCover ? t("coverImageUploading") : t("coverImageUpload")}
+              </button>
+            </div>
+            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1">
+              {t("coverImageHelpText")}
+            </p>
             {errorKeys.coverImageUrl && (
-              <p id="cover-image-error" className="text-xs text-red-500 mt-1">
+              <p id="cover-image-error" role="alert" className="text-xs text-red-500 mt-1">
                 Please enter a valid URL (must start with http:// or https://).
               </p>
             )}
@@ -951,10 +952,14 @@ export default function CreateCampaignPage() {
                   >
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-zinc-500 w-24 shrink-0">
+                        <label
+                          htmlFor={`milestone-${idx}-target`}
+                          className="text-xs font-medium text-zinc-500 w-24 shrink-0"
+                        >
                           Target (XLM)
-                        </span>
+                        </label>
                         <input
+                          id={`milestone-${idx}-target`}
                           type="number"
                           value={m.targetAmount}
                           onChange={(e) => {
@@ -969,10 +974,14 @@ export default function CreateCampaignPage() {
                         />
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-zinc-500 w-24 shrink-0">
+                        <label
+                          htmlFor={`milestone-${idx}-description`}
+                          className="text-xs font-medium text-zinc-500 w-24 shrink-0"
+                        >
                           Description
-                        </span>
+                        </label>
                         <input
+                          id={`milestone-${idx}-description`}
                           type="text"
                           value={m.description}
                           onChange={(e) => {
@@ -1013,7 +1022,10 @@ export default function CreateCampaignPage() {
               disabled={isSubmitting || !isWalletConnected}
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {t("launchCampaign")}
+              {isSubmitting && (
+                <span className="inline-block motion-safe:animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+              )}
+              {isSubmitting ? t("submitting") : t("launchCampaign")}
             </button>
           </div>
         </form>

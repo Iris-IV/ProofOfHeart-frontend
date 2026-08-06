@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ingestObservabilityEvent } from "@/lib/observability/metricsStore";
 import type { ObservabilityEvent } from "@/lib/observability/types";
+import { createRateLimiter, rateLimitKeyFromRequest } from "@/lib/rateLimit";
+
+const observabilityRateLimiter = createRateLimiter(60_000, 10);
 
 export async function POST(req: NextRequest) {
+  const rateLimitKey = rateLimitKeyFromRequest(req);
+  if (!observabilityRateLimiter.check(rateLimitKey)) {
+    return NextResponse.json({ message: "Too many requests. Please slow down." }, { status: 429 });
+  }
+
   let body: ObservabilityEvent;
   try {
     body = await req.json();

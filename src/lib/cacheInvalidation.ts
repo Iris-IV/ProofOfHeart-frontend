@@ -88,8 +88,12 @@ function invalidateAdminQueries(queryClient: QueryClient): void {
 
 /**
  * Invalidates the campaigns list when a campaign is created or verified.
+ * `["campaigns"]` is a prefix of every list query key in use — both the
+ * full-set `useCampaigns` key and the paginated `useInfiniteCampaigns` key
+ * (`["campaigns", "infinite", pageSize]`) — so React Query's default
+ * prefix matching invalidates both from this one call.
  */
-function invalidateCampaignsList(queryClient: QueryClient): void {
+export function invalidateCampaignsList(queryClient: QueryClient): void {
   queryClient.invalidateQueries({ queryKey: ["campaigns"] });
 }
 
