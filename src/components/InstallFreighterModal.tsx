@@ -41,6 +41,65 @@ export default function InstallFreighterModal({
     [isOpen],
   );
   const [checking, setChecking] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousActiveElementRef = useRef<HTMLElement | null>(null);
+
+  // #807 — Focus management for keyboard-only users
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Save the element that was focused before the modal opened
+    previousActiveElementRef.current = document.activeElement as HTMLElement;
+
+    // On next frame, focus the first interactive element inside the modal
+    const raf = requestAnimationFrame(() => {
+      const firstFocusable = modalRef.current?.querySelector<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      firstFocusable?.focus();
+    });
+
+    // Focus trap & Escape key handler
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (e.key !== "Tab") return;
+
+      const focusableElements = modalRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusableElements || focusableElements.length === 0) return;
+
+      const first = focusableElements[0];
+      const last = focusableElements[focusableElements.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last?.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first?.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      document.removeEventListener("keydown", handleKeyDown);
+      // Restore focus to the trigger element when the modal closes
+      previousActiveElementRef.current?.focus();
+      previousActiveElementRef.current = null;
+    };
+  }, [isOpen, onClose]);
 
   const handleRetry = async () => {
     setChecking(true);

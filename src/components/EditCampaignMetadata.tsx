@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { validateImageUrl } from "@/lib/imageValidation";
 
 interface Props {
   campaignId: number;
@@ -31,6 +32,7 @@ export default function EditCampaignMetadata({
   const [description, setDescription] = useState(initialDescription);
   const [coverImageUrl, setCoverImageUrl] = useState(initialCoverImageUrl);
   const [override, setOverride] = useState<MetaOverride | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -48,6 +50,16 @@ export default function EditCampaignMetadata({
   }, [storageKey]);
 
   const handleSave = () => {
+    // Validate the cover image URL before saving
+    if (coverImageUrl) {
+      const { valid, error } = validateImageUrl(coverImageUrl);
+      if (!valid) {
+        setImageError(error || "Invalid image URL");
+        return;
+      }
+    }
+    setImageError(null);
+
     const data: MetaOverride = {
       title,
       description,
@@ -69,9 +81,22 @@ export default function EditCampaignMetadata({
       // ignore
     }
     setOverride(null);
+    setImageError(null);
     setTitle(initialTitle);
     setDescription(initialDescription);
     setCoverImageUrl(initialCoverImageUrl);
+  };
+
+  const titleId = `edit-title-${campaignId}`;
+  const descriptionId = `edit-description-${campaignId}`;
+  const coverImageId = `edit-cover-image-url-${campaignId}`;
+
+  const handleImageUrlChange = (url: string) => {
+    setCoverImageUrl(url);
+    // Clear error when the user starts typing
+    if (imageError) {
+      setImageError(null);
+    }
   };
 
   return (
@@ -168,15 +193,31 @@ export default function EditCampaignMetadata({
               id={`edit-meta-cover-${campaignId}`}
               type="url"
               value={coverImageUrl}
-              onChange={(e) => setCoverImageUrl(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-sm text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => handleImageUrlChange(e.target.value)}
+              aria-invalid={imageError ? true : undefined}
+              aria-describedby={imageError ? "cover-image-error" : undefined}
+              className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+                imageError
+                  ? "border-red-400 bg-red-50 dark:border-red-700 dark:bg-red-900/20 text-red-900 dark:text-red-200"
+                  : "border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50"
+              }`}
             />
+            {imageError && (
+              <p
+                id="cover-image-error"
+                role="alert"
+                className="mt-1 text-xs text-red-600 dark:text-red-400"
+              >
+                {imageError}
+              </p>
+            )}
           </div>
 
           <button
             type="button"
             onClick={handleSave}
-            className="self-start px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+            disabled={!!imageError}
+            className="self-start px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {t("saveButton")}
           </button>
