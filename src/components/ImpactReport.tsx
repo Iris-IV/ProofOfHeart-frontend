@@ -1,7 +1,8 @@
 "use client";
 
 import { Campaign, Milestone } from "@/types";
-import { formatXlm, stroopsToXlmNumber } from "@/lib/formatters";
+import { formatXlm } from "@/lib/formatters";
+import { stroopsToXlmNumber } from "@/lib/stellarAmount";
 import { useTranslations, useLocale } from "next-intl";
 
 interface ImpactReportProps {

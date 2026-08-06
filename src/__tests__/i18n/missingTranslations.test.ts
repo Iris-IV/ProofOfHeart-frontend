@@ -10,29 +10,51 @@
 import en from "../../../messages/en.json";
 import es from "../../../messages/es.json";
 
-type Messages = Record<string, Record<string, string>>;
+type Messages = Record<string, unknown>;
 
 /** Flatten a nested messages object into dot-separated keys, e.g. "Admin.title" */
 function flattenKeys(messages: Messages): string[] {
-  return Object.entries(messages).flatMap(([namespace, keys]) =>
-    Object.keys(keys).map((key) => `${namespace}.${key}`),
-  );
+  const keys: string[] = [];
+  for (const [namespace, value] of Object.entries(messages)) {
+    if (typeof value === "object" && value !== null) {
+      for (const [key, subValue] of Object.entries(value as Record<string, unknown>)) {
+        if (typeof subValue === "object" && subValue !== null) {
+          for (const [subKey, _subSubValue] of Object.entries(subValue as Record<string, unknown>)) {
+            keys.push(`${namespace}.${key}.${subKey}`);
+          }
+        } else {
+          keys.push(`${namespace}.${key}`);
+        }
+      }
+    }
+  }
+  return keys;
 }
 
 /** Collect keys present in `reference` but missing from `target` */
 function missingKeys(reference: Messages, target: Messages): string[] {
-  return flattenKeys(reference).filter((dotKey) => {
-    const [namespace, key] = dotKey.split(".");
-    return target[namespace]?.[key] === undefined;
-  });
+  const refKeys = flattenKeys(reference);
+  const targetKeys = flattenKeys(target);
+  return refKeys.filter((dotKey) => !targetKeys.includes(dotKey));
 }
 
 /** Collect keys whose value is an empty string in `target` */
 function emptyKeys(target: Messages): string[] {
-  return flattenKeys(target).filter((dotKey) => {
-    const [namespace, key] = dotKey.split(".");
-    return target[namespace]?.[key] === "";
-  });
+  const keys: string[] = [];
+  for (const [namespace, value] of Object.entries(target)) {
+    if (typeof value === "object" && value !== null) {
+      for (const [key, subValue] of Object.entries(value as Record<string, unknown>)) {
+        if (typeof subValue === "object" && subValue !== null) {
+          for (const [_subKey, subSubValue] of Object.entries(subValue as Record<string, unknown>)) {
+            if (subSubValue === "") keys.push(`${namespace}.${key}`);
+          }
+        } else if (subValue === "") {
+          keys.push(`${namespace}.${key}`);
+        }
+      }
+    }
+  }
+  return keys;
 }
 
 const locales: Array<{ name: string; messages: Messages }> = [
