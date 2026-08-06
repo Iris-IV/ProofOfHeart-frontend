@@ -55,6 +55,9 @@ import { isSameAddress } from "@/lib/stellar";
 const EditCampaignMetadata = dynamic(() => import("@/components/EditCampaignMetadata"), {
   ssr: false,
 });
+const CampaignTransferPanel = dynamic(() => import("@/components/CampaignTransferPanel"), {
+  ssr: false,
+});
 
 export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
@@ -608,6 +611,12 @@ export default function CauseDetailClient({ id }: { id: string }) {
             <CampaignActions campaign={campaign} onActionSuccess={refetch} />
 
             <VestingReservePanel campaign={campaign} onActionSuccess={refetch} />
+
+            <CampaignTransferPanel
+              campaignId={campaign.id}
+              creator={campaign.creator}
+              onTransferComplete={refetch}
+            />
 
             <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">

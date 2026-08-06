@@ -43,6 +43,8 @@ export default function ThirdPartyScripts() {
         // thread before hydration — exactly the problem this component exists to
         // solve. Any misconfigured entry is demoted to `lazyOnload` at runtime
         // and flagged in the dev console so it can be fixed in thirdParty.ts.
+        // `ScriptStrategy` already excludes it, so the compare is widened to
+        // `string` to keep the runtime check for config that bypasses the type.
         const safeStrategy =
           (strategy as string) === "beforeInteractive"
             ? (process.env.NODE_ENV !== "production" &&
