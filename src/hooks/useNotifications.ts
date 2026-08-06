@@ -10,28 +10,48 @@ import {
 
 const POLL_INTERVAL_MS = 30_000;
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
+}
+
 export function useNotifications(walletAddress: string | null) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
-  const refresh = useCallback(async () => {
-    if (!walletAddress) {
-      setNotifications([]);
-      return;
-    }
+  const refresh = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!walletAddress) {
+        setNotifications([]);
+        return;
+      }
 
-    const nextNotifications = await fetchNotifications(walletAddress);
-    setNotifications(nextNotifications);
-  }, [walletAddress]);
+      try {
+        const nextNotifications = await fetchNotifications(walletAddress, { signal });
+        if (signal?.aborted) return;
+        setNotifications(nextNotifications);
+      } catch (error) {
+        // Inflight fetch aborted on unmount / remount — do not touch state.
+        if (signal?.aborted || isAbortError(error)) return;
+      }
+    },
+    [walletAddress],
+  );
 
   useEffect(() => {
-    void refresh();
-    if (!walletAddress) return;
+    const controller = new AbortController();
+
+    void refresh(controller.signal);
+    if (!walletAddress) {
+      return () => controller.abort();
+    }
 
     const id = setInterval(() => {
-      void refresh();
+      void refresh(controller.signal);
     }, POLL_INTERVAL_MS);
 
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      controller.abort();
+    };
   }, [refresh, walletAddress]);
 
   const unreadCount = notifications.filter((notification) => !notification.read).length;
@@ -55,5 +75,9 @@ export function useNotifications(walletAddress: string | null) {
     [walletAddress],
   );
 
-  return { notifications, unreadCount, markAllRead, markRead, refresh };
+  const refreshManual = useCallback(async () => {
+    await refresh();
+  }, [refresh]);
+
+  return { notifications, unreadCount, markAllRead, markRead, refresh: refreshManual };
 }
