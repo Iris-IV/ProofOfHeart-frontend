@@ -389,13 +389,13 @@ export default function DonationModal({
                   <div className="flex justify-between gap-4">
                     <dt className="text-zinc-600 dark:text-zinc-400">{t("contributionLine")}</dt>
                     <dd className="font-medium text-zinc-900 dark:text-zinc-50 tabular-nums">
-                      {amountNum.toLocaleString(undefined, { maximumFractionDigits: 7 })} XLM
+                      {formatAmount(xlmToStroops(amountNum.toString()), locale, { maximumFractionDigits: 7 })} XLM
                     </dd>
                   </div>
                   <div className="flex justify-between gap-4">
                     <dt className="text-zinc-600 dark:text-zinc-400">{t("networkFeeLine")}</dt>
                     <dd className="font-medium text-zinc-900 dark:text-zinc-50 tabular-nums">
-                      {estimatedNetworkFeeXlm.toLocaleString(undefined, {
+                      {formatAmount(xlmToStroops(estimatedNetworkFeeXlm.toString()), locale, {
                         maximumFractionDigits: 7,
                       })}{" "}
                       XLM
@@ -406,7 +406,7 @@ export default function DonationModal({
                       {t("totalLine")}
                     </dt>
                     <dd className="font-semibold text-zinc-900 dark:text-zinc-50 tabular-nums">
-                      {totalWalletCost.toLocaleString(undefined, { maximumFractionDigits: 7 })} XLM
+                      {formatAmount(xlmToStroops(totalWalletCost.toString()), locale, { maximumFractionDigits: 7 })} XLM
                     </dd>
                   </div>
                 </dl>
