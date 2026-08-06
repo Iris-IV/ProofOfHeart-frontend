@@ -264,8 +264,8 @@
     "tryAgain": "Intentar de nuevo",
     "loadMore": "Cargar más causas",
     "showingRange": "Mostrando {shown} de {total}",
-    "listView": "Vista de lista",
-    "mapView": "Vista de mapa"
+    "listView": "List",
+    "mapView": "Map"
   },
   "Status": {
     "active": "Activa",

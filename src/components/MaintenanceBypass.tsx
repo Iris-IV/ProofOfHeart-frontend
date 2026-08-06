@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { useWallet } from "@/components/WalletContext";
-import { MAINTENANCE_COOKIE, BYPASS_COOKIE_MAX_AGE } from "@/middleware";
+import { MAINTENANCE_COOKIE, BYPASS_COOKIE_MAX_AGE } from "@/lib/maintenanceConfig";
 
 const ALLOWLIST = (process.env.NEXT_PUBLIC_MAINTENANCE_ALLOWLIST ?? "")
   .split(",")
