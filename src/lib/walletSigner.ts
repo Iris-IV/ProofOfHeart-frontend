@@ -1,4 +1,4 @@
-import { getAddress, signTransaction } from "@stellar/freighter-api";
+import { getAddress, signMessage, signTransaction } from "@stellar/freighter-api";
 
 /**
  * The single place that decides *how* a transaction gets signed.
@@ -22,6 +22,13 @@ export interface WalletSigner {
   getAddress(): Promise<string>;
   /** Sign a transaction envelope, returning the signed XDR. */
   signTransaction(xdr: string, options: { networkPassphrase: string }): Promise<string>;
+  /**
+   * Sign an arbitrary message, returning the base64 ed25519 signature.
+   *
+   * Used to prove address ownership to the off-chain API routes, which have no
+   * session of their own to check.
+   */
+  signMessage(message: string): Promise<string>;
 }
 
 /**
@@ -38,6 +45,16 @@ export const freighterSigner: WalletSigner = {
   async signTransaction(xdr, options) {
     const { signedTxXdr } = await signTransaction(xdr, options);
     return signedTxXdr;
+  },
+  async signMessage(message) {
+    const { signedMessage } = await signMessage(message);
+    if (!signedMessage) {
+      throw new Error("Freighter returned no signature for the message.");
+    }
+    // Freighter v3 hands back a Buffer, v4 a base64 string.
+    return typeof signedMessage === "string"
+      ? signedMessage
+      : Buffer.from(signedMessage).toString("base64");
   },
 };
 
@@ -70,4 +87,9 @@ export function signTransactionXdr(
   options: { networkPassphrase: string },
 ): Promise<string> {
   return activeSigner.signTransaction(xdr, options);
+}
+
+/** Sign a plain message with the active wallet, returning a base64 signature. */
+export function signWalletMessage(message: string): Promise<string> {
+  return activeSigner.signMessage(message);
 }

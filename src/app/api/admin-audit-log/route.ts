@@ -1,6 +1,8 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
+import { requirePlatformAdmin } from "@/lib/server/adminAuth";
+import { isSameAddress } from "@/lib/stellar";
 
 export const runtime = "nodejs";
 
@@ -52,6 +54,9 @@ function normalizeAddress(address: string): string {
 }
 
 export async function GET(request: Request) {
+  const auth = await requirePlatformAdmin(request);
+  if (!auth.ok) return auth.response;
+
   const url = new URL(request.url);
   const adminAddress = url.searchParams.get("adminAddress");
   const entries = await readEntries();
@@ -69,13 +74,31 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as Partial<AdminAuditLogEntry>;
+  const auth = await requirePlatformAdmin(request);
+  if (!auth.ok) return auth.response;
+
+  let body: Partial<AdminAuditLogEntry>;
+  try {
+    body = (await request.json()) as Partial<AdminAuditLogEntry>;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+
   if (!body.adminAddress || !body.action || !body.txHash) {
     return NextResponse.json({ error: "Invalid audit entry." }, { status: 400 });
   }
 
+  // The entry is attributed to the authenticated caller, not to whatever the
+  // body claims, so the trail cannot be written on someone else's behalf.
+  if (!isSameAddress(body.adminAddress, auth.address)) {
+    return NextResponse.json(
+      { error: "Audit entry address does not match the authenticated admin." },
+      { status: 403 },
+    );
+  }
+
   const nextEntry: AdminAuditLogEntry = {
-    adminAddress: normalizeAddress(body.adminAddress),
+    adminAddress: normalizeAddress(auth.address),
     action: body.action,
     txHash: body.txHash,
     timestamp: typeof body.timestamp === "number" ? body.timestamp : Date.now(),

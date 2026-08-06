@@ -3,7 +3,7 @@
  * wallet serve the same call sites in `contractClient` / `offchainApiClient`.
  */
 
-import { getAddress, signTransaction } from "@stellar/freighter-api";
+import { getAddress, signMessage, signTransaction } from "@stellar/freighter-api";
 import {
   freighterSigner,
   getActiveWalletKind,
@@ -11,6 +11,7 @@ import {
   getSignerAddress,
   setActiveWalletSigner,
   signTransactionXdr,
+  signWalletMessage,
   type WalletSigner,
 } from "@/lib/walletSigner";
 
@@ -21,10 +22,12 @@ jest.mock("@stellar/freighter-api", () => ({
   getAddress: jest.fn(),
   getNetwork: jest.fn().mockResolvedValue({ network: "", networkPassphrase: "" }),
   signTransaction: jest.fn(),
+  signMessage: jest.fn(),
 }));
 
 const mockGetAddress = getAddress as jest.Mock;
 const mockSignTransaction = signTransaction as jest.Mock;
+const mockSignMessage = signMessage as jest.Mock;
 
 const OPTIONS = { networkPassphrase: "Test SDF Network ; September 2015" };
 
@@ -33,6 +36,7 @@ function fakeSigner(): WalletSigner {
     kind: "social",
     getAddress: jest.fn().mockResolvedValue("GSOCIAL"),
     signTransaction: jest.fn().mockResolvedValue("social-signed-xdr"),
+    signMessage: jest.fn().mockResolvedValue("social-signature"),
   };
 }
 
@@ -77,6 +81,42 @@ describe("walletSigner", () => {
 
     expect(getActiveWalletKind()).toBe("freighter");
     await expect(signTransactionXdr("raw-xdr", OPTIONS)).resolves.toBe("freighter-signed-xdr");
+  });
+
+  it("normalises Freighter's v4 base64 message signature", async () => {
+    mockSignMessage.mockResolvedValue({
+      signedMessage: "c2lnbmF0dXJl",
+      signerAddress: "GFREIGHTER",
+    });
+
+    await expect(signWalletMessage("challenge")).resolves.toBe("c2lnbmF0dXJl");
+    expect(mockSignMessage).toHaveBeenCalledWith("challenge");
+  });
+
+  it("normalises Freighter's v3 Buffer message signature to base64", async () => {
+    mockSignMessage.mockResolvedValue({
+      signedMessage: Buffer.from("signature", "utf8"),
+      signerAddress: "GFREIGHTER",
+    });
+
+    await expect(signWalletMessage("challenge")).resolves.toBe(
+      Buffer.from("signature", "utf8").toString("base64"),
+    );
+  });
+
+  it("throws when Freighter declines to sign the message", async () => {
+    mockSignMessage.mockResolvedValue({ signedMessage: null, signerAddress: "GFREIGHTER" });
+
+    await expect(signWalletMessage("challenge")).rejects.toThrow(/no signature/i);
+  });
+
+  it("routes message signing to the installed signer", async () => {
+    const social = fakeSigner();
+    setActiveWalletSigner(social);
+
+    await expect(signWalletMessage("challenge")).resolves.toBe("social-signature");
+    expect(social.signMessage).toHaveBeenCalledWith("challenge");
+    expect(mockSignMessage).not.toHaveBeenCalled();
   });
 
   it("propagates signer rejections so callers can detect user cancellation", async () => {
