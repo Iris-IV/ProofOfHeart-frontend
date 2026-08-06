@@ -4,6 +4,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import React, { useMemo, useState } from "react";
+import ClaimableRevenueSection from "@/components/ClaimableRevenueSection";
 import MyContributionsSection from "@/components/MyContributionsSection";
 import TransactionHistorySection from "@/components/TransactionHistorySection";
 import { Spinner, DashboardSkeleton } from "@/components/Skeleton";
@@ -94,6 +95,8 @@ export default function DashboardPage() {
 
       {/* Overview tab */}
       <TabPanel tabId="overview" idPrefix="dashboard" active={activeTab === "overview"}>
+        <ClaimableRevenueSection walletAddress={publicKey} />
+
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-2">{t("walletBalance")}</h2>
           {balanceLoading ? (
