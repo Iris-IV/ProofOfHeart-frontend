@@ -1059,6 +1059,144 @@ export async function claimRefund(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Campaign ownership transfer — 2-step process (initiate → accept)
+// ---------------------------------------------------------------------------
+
+/**
+ * View function: get the pending transfer recipient for a campaign (if any).
+ * Returns the recipient address string, or null if no transfer is pending.
+ */
+export async function getCampaignTransfer(campaignId: number): Promise<string | null> {
+  if (USE_MOCKS) return null;
+  try {
+    const result = await invokeViewMethod("get_campaign_transfer", [
+      StellarSdk.nativeToScVal(campaignId, { type: "u32" }),
+    ]);
+    if (!result) return null;
+    return StellarSdk.Address.fromScVal(result).toString();
+  } catch (err) {
+    const code = getContractErrorCode(err);
+    // No pending transfer is treated as null, not an error
+    if (code !== null) return null;
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Initiate a two-step campaign ownership transfer (creator only).
+ * Starts a transfer to `newOwner`; the recipient must call
+ * `acceptCampaignTransfer` to finalise.
+ */
+export async function initiateCampaignTransfer(
+  campaignId: number,
+  newOwner: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(newOwner);
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_initiate_campaign_transfer", options);
+
+  const callerAddress = await getSignerAddress();
+  const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    "initiate_campaign_transfer",
+    StellarSdk.nativeToScVal(campaignId, { type: "u32" }),
+    new StellarSdk.Address(newOwner).toScVal(),
+  );
+
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "initiate_campaign_transfer",
+    });
+    return txResult.txHash;
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    const errorCode = getContractErrorCode(err);
+    captureTransactionError(
+      "initiate_campaign_transfer",
+      campaignId,
+      error,
+      errorCode ? String(errorCode) : undefined,
+    );
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Accept a pending campaign ownership transfer (recipient only).
+ * Must be called by the address that was set as the new owner during
+ * `initiateCampaignTransfer`.
+ */
+export async function acceptCampaignTransfer(
+  campaignId: number,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_accept_campaign_transfer", options);
+
+  const callerAddress = await getSignerAddress();
+  const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    "accept_campaign_transfer",
+    StellarSdk.nativeToScVal(campaignId, { type: "u32" }),
+  );
+
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "accept_campaign_transfer",
+    });
+    return txResult.txHash;
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    const errorCode = getContractErrorCode(err);
+    captureTransactionError(
+      "accept_campaign_transfer",
+      campaignId,
+      error,
+      errorCode ? String(errorCode) : undefined,
+    );
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Cancel a pending campaign ownership transfer (creator only).
+ * The current creator can cancel an outstanding transfer before the
+ * recipient accepts it.
+ */
+export async function cancelCampaignTransfer(
+  campaignId: number,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_cancel_campaign_transfer", options);
+
+  const callerAddress = await getSignerAddress();
+  const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    "cancel_campaign_transfer",
+    StellarSdk.nativeToScVal(campaignId, { type: "u32" }),
+  );
+
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "cancel_campaign_transfer",
+    });
+    return txResult.txHash;
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    const errorCode = getContractErrorCode(err);
+    captureTransactionError(
+      "cancel_campaign_transfer",
+      campaignId,
+      error,
+      errorCode ? String(errorCode) : undefined,
+    );
+    throw new Error(parseContractError(err));
+  }
+}
+
 export async function depositRevenue(
   campaignId: number,
   amount: bigint,

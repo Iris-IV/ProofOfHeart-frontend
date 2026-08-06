@@ -168,7 +168,10 @@ function CauseCard({
         </h3>
 
         {/* Description */}
-        <CampaignDescription description={campaign.description} />
+        <CampaignDescription
+          description={campaign.description}
+          className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3 leading-relaxed break-words h-[4.5rem]"
+        />
 
         {/* Funding progress */}
         <div className="space-y-1.5">

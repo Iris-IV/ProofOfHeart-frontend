@@ -371,6 +371,23 @@ describe("static card content", () => {
     expect(screen.getByText("Helping the world.")).toBeInTheDocument();
   });
 
+  it("trims surrounding whitespace from the description", () => {
+    renderCard(makeCampaign({ description: "   Helping the world.\n" }));
+    expect(screen.getByTestId("campaign-description")).toHaveTextContent("Helping the world.");
+  });
+
+  // #645 — a description that renders as blank space leaves the same awkward
+  // gap as a missing one, so both fall back to the placeholder.
+  it.each([
+    ["empty", ""],
+    ["whitespace only", "   \n\t "],
+    ["markdown punctuation with no words", "---"],
+  ])("shows the fallback when the description is %s", (_label, description) => {
+    renderCard(makeCampaign({ description }));
+    expect(screen.getByTestId("campaign-description-fallback")).toBeInTheDocument();
+    expect(screen.queryByTestId("campaign-description")).not.toBeInTheDocument();
+  });
+
   it("renders a truncated creator address", () => {
     renderCard(makeCampaign({ creator: "GABCDE123456789WXYZ" }));
     // formatAddress keeps first 6 and last 4 chars
@@ -380,6 +397,66 @@ describe("static card content", () => {
   it("renders the status badge", () => {
     renderCard(makeCampaign({ status: "funded" }));
     expect(screen.getByTestId("status-badge")).toHaveTextContent("funded");
+  });
+
+  it("renders the cover image when the campaign has one", () => {
+    renderCard(makeCampaign({ cover_image_url: "https://example.com/cover.png", title: "Cover" }));
+    expect(screen.getByAltText("Cover")).toBeInTheDocument();
+  });
+
+  it("falls back to the category icon when there is no cover image", () => {
+    renderCard(makeCampaign({ cover_image_url: "", category: Category.Learner }));
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+});
+
+// ── Save button ───────────────────────────────────────────────────────────────
+
+describe("save button", () => {
+  it("warns instead of saving when no wallet is connected", () => {
+    renderCard(makeCampaign(), null);
+    fireEvent.click(screen.getByTitle("Save campaign"));
+    expect(mockShowWarning).toHaveBeenCalledWith("Please connect your wallet to save campaigns.");
+    expect(mockToggleSaved).not.toHaveBeenCalled();
+  });
+
+  it("toggles the campaign when a wallet is connected", () => {
+    renderCard(makeCampaign({ id: 7 }), "GSOMEWALLET");
+    fireEvent.click(screen.getByTitle("Save campaign"));
+    expect(mockToggleSaved).toHaveBeenCalledWith(7);
+    expect(mockShowWarning).not.toHaveBeenCalled();
+  });
+
+  it('reads "Remove from saved" once the campaign is saved', () => {
+    mockIsSaved.mockReturnValue(true);
+    renderCard(makeCampaign(), "GSOMEWALLET");
+    expect(screen.getByTitle("Remove from saved")).toBeInTheDocument();
+  });
+});
+
+// ── Async action failures ─────────────────────────────────────────────────────
+
+describe("action error handling", () => {
+  it("surfaces an error when voting fails", async () => {
+    const onVote = jest.fn(() => Promise.reject(new Error("vote exploded")));
+    renderCard(makeCampaign({ status: "active" }), CONTRIBUTOR, { onVote });
+    fireEvent.click(screen.getByTestId("voting-component"));
+    await waitFor(() => expect(mockShowError).toHaveBeenCalled());
+  });
+
+  it("surfaces an error when cancelling fails", async () => {
+    const onCancel = jest.fn(() => Promise.reject(new Error("cancel exploded")));
+    renderCard(makeCampaign({ status: "active" }), CREATOR, { onCancel });
+    fireEvent.click(screen.getByRole("button", { name: /cancel campaign/i }));
+    fireEvent.click(screen.getByRole("button", { name: /confirm cancel/i }));
+    await waitFor(() => expect(mockShowError).toHaveBeenCalled());
+  });
+
+  it("surfaces an error when claiming a refund fails", async () => {
+    const onClaimRefund = jest.fn(() => Promise.reject(new Error("refund exploded")));
+    renderCard(makeCampaign({ status: "cancelled" }), CONTRIBUTOR, { onClaimRefund });
+    fireEvent.click(screen.getByRole("button", { name: /claim refund/i }));
+    await waitFor(() => expect(mockShowError).toHaveBeenCalled());
   });
 });
 
