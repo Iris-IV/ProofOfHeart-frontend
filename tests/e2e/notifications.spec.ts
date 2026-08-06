@@ -10,13 +10,11 @@ test.describe("Notification Bell", () => {
   });
 
   test("should open notification dropdown, mark one read, and decrement unread count", async ({ page }) => {
-    // 1. Connect wallet
     const connectButton = page.getByRole("button", { name: /Connect Wallet/i }).first();
     await expect(connectButton).toBeVisible();
     await connectButton.click();
     await expect(page.getByText(/Connected/i).first()).toBeVisible();
 
-    // 2. Make a contribution to generate a notification
     await page.goto("/en/causes/1");
     await expect(page.getByRole("heading", { name: /Clean Water/i })).toBeVisible({ timeout: 10000 });
 
@@ -32,33 +30,29 @@ test.describe("Notification Bell", () => {
 
     const donateButton = dialog.getByRole("button", { name: /Donate 10 XLM/i });
     await expect(donateButton).toBeEnabled();
+    await donateButton.scrollIntoViewIfNeeded();
     await donateButton.click();
 
     await expect(page.getByText(/donated successfully/i)).toBeVisible({ timeout: 15000 });
     await page.getByRole("button", { name: /Close/i }).click();
 
-    // 3. Assert unread badge is visible with a count
     const bell = page.getByRole("button", { name: /Notifications/ });
     await expect(bell).toBeVisible();
     const badge = bell.getByText(/\d+/);
     await expect(badge).toBeVisible();
     const initialCount = await badge.textContent();
 
-    // 4. Open dropdown
     await bell.click();
     const dropdown = page.getByRole("dialog", { name: /Notifications/i });
     await expect(dropdown).toBeVisible();
 
-    // 5. Mark first unread notification as read
     const markReadButton = dropdown.getByRole("button", { name: /Mark notification/i }).first();
     await expect(markReadButton).toBeVisible();
     await markReadButton.click();
 
-    // 6. Close dropdown
     await page.keyboard.press("Escape");
     await expect(dropdown).not.toBeVisible();
 
-    // 7. Verify badge decremented
     await expect(badge).not.toHaveText(initialCount ?? "", { timeout: 5000 });
   });
 });
