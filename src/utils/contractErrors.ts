@@ -165,3 +165,22 @@ export function parseContractError(error: unknown): string {
 
   return FALLBACK_KEY;
 }
+
+/**
+ * Resolves a contract error message through the provided i18n `t` function.
+ *
+ * The `t` function is expected to be scoped to the `ContractErrors` namespace
+ * (i.e. created via `useTranslations("ContractErrors")`), so the
+ * `ContractErrors.` prefix is stripped before looking up the translation.
+ * Non-contract messages (already-localized text, generic errors) pass through
+ * unchanged.
+ */
+export function localizeContractError(
+  message: string,
+  tContractErrors: (key: string) => string,
+): string {
+  const CONTRACT_ERRORS_PREFIX = "ContractErrors.";
+  return message.startsWith(CONTRACT_ERRORS_PREFIX)
+    ? tContractErrors(message.slice(CONTRACT_ERRORS_PREFIX.length))
+    : message;
+}

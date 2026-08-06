@@ -8,7 +8,7 @@ import { formatNumber } from "@/lib/formatters";
 import { stroopsToXlmNumber } from "@/lib/stellarAmount";
 import { useToast } from "./ToastProvider";
 import { isSameAddress } from "../lib/stellar";
-import { parseContractError } from "../utils/contractErrors";
+import { parseContractError, localizeContractError } from "../utils/contractErrors";
 import { explorerTxUrl } from "../utils/explorer";
 import {
   type TransactionLifecyclePhase,
@@ -39,9 +39,6 @@ export default function WithdrawFunds({
   const { showError, showSuccess } = useToast();
   const { invoke, isPending } = useWriteGuard();
   const isWithdrawing = isPending("withdrawFunds", campaign.id);
-
-  const localizeContractError = (message: string) =>
-    message.startsWith("ContractErrors.") ? tContractErrors(message) : message;
 
   const isCreator = isSameAddress(userWalletAddress, campaign.creator);
 
@@ -86,7 +83,7 @@ export default function WithdrawFunds({
         showSuccess(t("withdrawalSuccessToast", { amount: formatXlm(creatorAmount) }));
         onWithdrawSuccess?.();
       } catch (err) {
-        showError(localizeContractError(parseContractError(err)));
+        showError(localizeContractError(parseContractError(err), tContractErrors));
         throw err;
       } finally {
         setShowConfirm(false);

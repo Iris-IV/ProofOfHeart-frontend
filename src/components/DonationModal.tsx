@@ -11,7 +11,7 @@ import { formatAmount } from "@/lib/formatters";
 import { useToast } from "./ToastProvider";
 import { useWallet } from "./WalletContext";
 import { usePlatformFee } from "../hooks/usePlatformFee";
-import { parseContractError } from "../utils/contractErrors";
+import { parseContractError, localizeContractError } from "../utils/contractErrors";
 import { downloadTaxReceipt } from "../lib/taxReceipt";
 import { INTERVAL_LABELS, RecurringInterval, createSchedule } from "../lib/recurringDonations";
 
@@ -96,12 +96,9 @@ export default function DonationModal({
     };
   }, [campaign.id]);
 
-  const localizeContractError = (message: string) =>
-    message.startsWith("ContractErrors.") ? tContractErrors(message) : message;
-
   const formatError = (message: string) =>
     message.startsWith("ContractErrors.")
-      ? localizeContractError(message)
+      ? localizeContractError(message, tContractErrors)
       : tModal(message as DonationValidationKey);
 
   useEffect(() => {
@@ -239,7 +236,7 @@ export default function DonationModal({
       onSuccess();
     } catch (err) {
       const msg = parseContractError(err);
-      const localized = localizeContractError(msg);
+      const localized = localizeContractError(msg, tContractErrors);
       showError(localized);
       setError(msg);
       setStep("input");

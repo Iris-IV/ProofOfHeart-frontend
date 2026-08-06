@@ -2,6 +2,17 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import CauseCard from "@/components/CauseCard";
 import { Campaign, Category, Vote } from "@/types";
 
+const mockShowError = jest.fn();
+const mockShowWarning = jest.fn();
+const mockToggleSaved = jest.fn();
+
+jest.mock("next/image", () => ({
+  __esModule: true,
+  default: (props: { alt: string; src: string }) => (
+    <img alt={props.alt} src={props.src} data-testid="cover-image" />
+  ),
+}));
+
 // ── Child-component mocks ────────────────────────────────────────────────────
 
 jest.mock("@/components/VotingComponent", () => ({
@@ -315,6 +326,28 @@ describe("vote propagation", () => {
     renderCard(makeCampaign({ id: 5, status: "active" }), CONTRIBUTOR, { onVote });
     fireEvent.click(screen.getByTestId("voting-component"));
     await waitFor(() => expect(onVote).toHaveBeenCalledWith(5, "upvote"));
+  });
+
+  it("shows an error toast when voting fails", async () => {
+    const onVote = jest.fn(() => Promise.reject(new Error("Vote rejected")));
+    renderCard(makeCampaign({ id: 5, status: "active" }), CONTRIBUTOR, { onVote });
+    fireEvent.click(screen.getByTestId("voting-component"));
+    await waitFor(() => expect(mockShowError).toHaveBeenCalled());
+  });
+
+  it("shows an error toast when cancelling fails", async () => {
+    const onCancel = jest.fn(() => Promise.reject(new Error("Cancel rejected")));
+    renderCard(makeCampaign({ id: 9, status: "active" }), CREATOR, { onCancel });
+    fireEvent.click(screen.getByRole("button", { name: /cancel campaign/i }));
+    fireEvent.click(screen.getByRole("button", { name: /confirm cancel/i }));
+    await waitFor(() => expect(mockShowError).toHaveBeenCalled());
+  });
+
+  it("shows an error toast when claiming a refund fails", async () => {
+    const onClaimRefund = jest.fn(() => Promise.reject(new Error("Refund rejected")));
+    renderCard(makeCampaign({ id: 7, status: "cancelled" }), CONTRIBUTOR, { onClaimRefund });
+    fireEvent.click(screen.getByRole("button", { name: /claim refund/i }));
+    await waitFor(() => expect(mockShowError).toHaveBeenCalled());
   });
 });
 

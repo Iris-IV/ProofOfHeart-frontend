@@ -46,7 +46,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { CauseDetailSkeleton } from "@/components/Skeleton";
 import { Campaign, Vote, CATEGORY_LABELS } from "@/types";
 import { stroopsToXlmNumber } from "@/lib/stellarAmount";
-import { parseContractError } from "@/utils/contractErrors";
+import { parseContractError, localizeContractError } from "@/utils/contractErrors";
 import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncAction";
 import { trackViewCampaign } from "@/lib/analytics";
 import { formatXlm, formatDate } from "@/lib/formatters";
@@ -96,9 +96,6 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const [isClaimingRefund, setIsClaimingRefund] = useState(false);
   const [refundTxHash, setRefundTxHash] = useState<string | null>(null);
   const [alreadyRefunded, setAlreadyRefunded] = useState(false);
-
-  const localizeContractError = (message: string) =>
-    message.startsWith("ContractErrors.") ? tContractErrors(message) : message;
 
   useEffect(() => {
     if (fetchedCampaign) setCampaign(fetchedCampaign);
@@ -187,7 +184,12 @@ export default function CauseDetailClient({ id }: { id: string }) {
       void reconcileVoteTallies();
       refetch();
     } catch (error) {
-      showError(getAsyncActionErrorMessage(error, parseContractError));
+      showError(
+        localizeContractError(
+          getAsyncActionErrorMessage(error, parseContractError),
+          tContractErrors,
+        ),
+      );
     } finally {
       setIsVoting(false);
     }
@@ -200,7 +202,12 @@ export default function CauseDetailClient({ id }: { id: string }) {
       showSuccess("Campaign verified successfully via community vote!");
       refetch();
     } catch (error) {
-      showError(getAsyncActionErrorMessage(error, parseContractError));
+      showError(
+        localizeContractError(
+          getAsyncActionErrorMessage(error, parseContractError),
+          tContractErrors,
+        ),
+      );
     } finally {
       setIsVerifying(false);
     }
@@ -216,7 +223,12 @@ export default function CauseDetailClient({ id }: { id: string }) {
       showSuccess("Campaign cancelled. Contributors can now claim full refunds.");
       refetch();
     } catch (error) {
-      showError(getAsyncActionErrorMessage(error, parseContractError));
+      showError(
+        localizeContractError(
+          getAsyncActionErrorMessage(error, parseContractError),
+          tContractErrors,
+        ),
+      );
     }
   };
 
@@ -234,7 +246,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
         setAlreadyRefunded(true);
         showWarning("Refund already claimed or no funds to refund.");
       } else {
-        showError(localizeContractError(msg));
+        showError(localizeContractError(msg, tContractErrors));
       }
     } finally {
       setIsClaimingRefund(false);

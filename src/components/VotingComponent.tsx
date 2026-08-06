@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Campaign, Vote } from "../types";
 import AsyncButtonContent from "./AsyncButtonContent";
 import { useToast } from "./ToastProvider";
-import { parseContractError } from "../utils/contractErrors";
+import { parseContractError, localizeContractError } from "../utils/contractErrors";
 import { getAsyncActionErrorMessage, withActionTimeout } from "../utils/asyncAction";
 
 interface VotingComponentProps {
@@ -46,9 +46,6 @@ export default function VotingComponent({
   );
   const { showError, showWarning } = useToast();
 
-  const localizeContractError = (message: string) =>
-    message.startsWith("ContractErrors.") ? tContractErrors(message) : message;
-
   const hasAlreadyVoted = !!userVote || !!localVote;
   const voteDisabled = isVoting || !userWalletAddress || !isTokenHolder || hasAlreadyVoted;
 
@@ -71,7 +68,12 @@ export default function VotingComponent({
       setLocalVote(voteType);
     } catch (error) {
       console.error("Voting failed:", error);
-      showError(localizeContractError(getAsyncActionErrorMessage(error, parseContractError)));
+      showError(
+        localizeContractError(
+          getAsyncActionErrorMessage(error, parseContractError),
+          tContractErrors,
+        ),
+      );
     }
   };
 
