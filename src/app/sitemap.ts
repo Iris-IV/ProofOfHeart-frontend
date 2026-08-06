@@ -6,7 +6,7 @@ import { routing } from "@/i18n/routing";
 // Static routes to include in the sitemap.
 // All paths are relative — the sitemap builder prepends /${locale} for each locale.
 // Do NOT include non-localized bare paths here; canonical URLs are locale-prefixed.
-const STATIC_ROUTES = ["", "/causes", "/causes/new", "/about", "/dashboard"];
+const STATIC_ROUTES = ["", "/causes", "/causes/new", "/about", "/faq", "/dashboard"];
 
 /** Caps dynamic URLs so sitemap generation stays bounded as campaign count grows. */
 const MAX_CAMPAIGN_SITEMAP_URLS = 10_000;

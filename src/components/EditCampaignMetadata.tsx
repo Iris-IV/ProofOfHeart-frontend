@@ -123,10 +123,14 @@ export default function EditCampaignMetadata({
 
           {/* Title */}
           <div>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+            <label
+              htmlFor={`edit-meta-title-${campaignId}`}
+              className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1"
+            >
               {t("titleLabel")}
             </label>
             <input
+              id={`edit-meta-title-${campaignId}`}
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -137,10 +141,14 @@ export default function EditCampaignMetadata({
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+            <label
+              htmlFor={`edit-meta-description-${campaignId}`}
+              className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1"
+            >
               {t("descriptionLabel")}
             </label>
             <textarea
+              id={`edit-meta-description-${campaignId}`}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
@@ -150,10 +158,14 @@ export default function EditCampaignMetadata({
 
           {/* Cover image URL */}
           <div>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+            <label
+              htmlFor={`edit-meta-cover-${campaignId}`}
+              className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1"
+            >
               {t("coverImageUrlLabel")}
             </label>
             <input
+              id={`edit-meta-cover-${campaignId}`}
               type="url"
               value={coverImageUrl}
               onChange={(e) => setCoverImageUrl(e.target.value)}
