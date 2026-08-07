@@ -867,6 +867,38 @@ export async function cancelCampaign(
   }
 }
 
+export async function extendCampaignDeadline(
+  campaignId: number,
+  additionalDays: number,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_extend_campaign_deadline", options);
+  const callerAddress = await getSignerAddress();
+  const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    "extend_campaign_deadline",
+    StellarSdk.nativeToScVal(campaignId, { type: "u32" }),
+    StellarSdk.nativeToScVal(additionalDays, { type: "u32" }),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "extend_campaign_deadline",
+    });
+    return txResult.txHash;
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    const errorCode = getContractErrorCode(err);
+    captureTransactionError(
+      "extend_campaign_deadline",
+      campaignId,
+      error,
+      errorCode ? String(errorCode) : undefined,
+    );
+    throw new Error(parseContractError(err));
+  }
+}
+
 /**
  * Claim a refund from a cancelled or failed campaign.
  * Returns the transaction hash on success.

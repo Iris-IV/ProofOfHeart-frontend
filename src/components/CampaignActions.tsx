@@ -25,6 +25,9 @@ import { parseContractError } from "../utils/contractErrors";
 import { getAsyncActionErrorMessage, withActionTimeout } from "../utils/asyncAction";
 import type { TransactionLifecyclePhase, TransactionLifecycleOptions } from "../lib/contractClient";
 import { useWriteGuard } from "../hooks/useWriteGuard";
+import dynamic from "next/dynamic";
+
+const ExtendDeadlineModal = dynamic(() => import("./ExtendDeadlineModal"), { ssr: false });
 
 interface CampaignActionsProps {
   campaign: Campaign;
@@ -43,6 +46,7 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
   const [contributionAmount, setContributionAmount] = useState("");
   const [revenueAmount, setRevenueAmount] = useState("");
   const [showRevenueInput, setShowRevenueInput] = useState(false);
+  const [showExtendModal, setShowExtendModal] = useState(false);
 
   const isCreator = isSameAddress(publicKey, campaign.creator);
   const isAdmin = isSameAddress(publicKey, admin);
@@ -232,6 +236,13 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
             </h3>
             <div className="flex flex-col gap-3">
               <button
+                onClick={() => setShowExtendModal(true)}
+                disabled={!campaign.is_active || campaign.is_cancelled || campaign.funds_withdrawn}
+                className="w-full py-3 min-h-[44px] bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                Extend Deadline
+              </button>
+              <button
                 onClick={() =>
                   handleAction(
                     "cancelCampaign",
@@ -304,6 +315,14 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
                 ))}
             </div>
           </div>
+          {showExtendModal && (
+            <ExtendDeadlineModal
+              campaignId={campaign.id}
+              currentDeadline={campaign.deadline}
+              onClose={() => setShowExtendModal(false)}
+              onSuccess={onActionSuccess}
+            />
+          )}
         </>
       )}
 

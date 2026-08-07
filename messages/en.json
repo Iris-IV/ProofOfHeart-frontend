@@ -497,5 +497,17 @@
     "createdCampaigns": "Created Campaigns",
     "noSavedCampaigns": "No saved campaigns yet.",
     "browseCauses": "Browse causes"
+  },
+  "ExtendDeadline": {
+    "title": "Extend Deadline",
+    "description": "Extend your campaign deadline by up to 30 days. Note that campaigns can only be extended once.",
+    "labelDays": "Additional Days (1-30)",
+    "previewLabel": "New Deadline Preview:",
+    "warning": "Warning: Make sure this extension does not exceed your category's maximum duration cap, or the transaction will fail.",
+    "cancel": "Cancel",
+    "submit": "Extend Deadline",
+    "submitting": "Extending...",
+    "validationError": "Extension must be between 1 and 30 days.",
+    "successMessage": "Deadline extended successfully."
   }
 }

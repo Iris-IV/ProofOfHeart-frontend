@@ -497,5 +497,17 @@
     "createdCampaigns": "Campañas creadas",
     "noSavedCampaigns": "Aún no tienes campañas guardadas.",
     "browseCauses": "Explorar causas"
+  },
+  "ExtendDeadline": {
+    "title": "Extender fecha límite",
+    "description": "Extiende la fecha límite de tu campaña hasta por 30 días. Ten en cuenta que las campañas solo se pueden extender una vez.",
+    "labelDays": "Días adicionales (1-30)",
+    "previewLabel": "Nueva fecha límite (Vista previa):",
+    "warning": "Advertencia: Asegúrate de que esta extensión no supere la duración máxima de tu categoría, o la transacción fallará.",
+    "cancel": "Cancelar",
+    "submit": "Extender fecha límite",
+    "submitting": "Extendiendo...",
+    "validationError": "La extensión debe ser entre 1 y 30 días.",
+    "successMessage": "Fecha límite extendida exitosamente."
   }
 }
