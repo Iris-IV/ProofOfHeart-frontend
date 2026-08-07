@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { buildMarkdownSanitizeSchema } from "@/lib/markdownSanitizeSchema";
+import { rehypeNoPrototypePollution } from "@/lib/rehypeNoPrototypePollution";
 
 const markdownSanitizeSchema = buildMarkdownSanitizeSchema(defaultSchema);
 
@@ -20,7 +21,7 @@ export default function SafeMarkdown({ children, className }: SafeMarkdownProps)
     <div className={className}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[[rehypeSanitize, markdownSanitizeSchema]]}
+        rehypePlugins={[[rehypeSanitize, markdownSanitizeSchema], rehypeNoPrototypePollution]}
       >
         {children}
       </ReactMarkdown>

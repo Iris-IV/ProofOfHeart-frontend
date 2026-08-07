@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useToast } from "@/components/ToastProvider";
 
 interface CommentComposerProps {
@@ -26,6 +26,8 @@ export default function CommentComposer({
   const [content, setContent] = useState("");
   const [isExpanded, setIsExpanded] = useState(isReply);
   const { showError, showSuccess } = useToast();
+  const contentId = useId();
+  const countId = useId();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,20 +100,23 @@ export default function CommentComposer({
               {userAddress?.slice(1, 3).toUpperCase() || "?"}
             </div>
             <div className="flex-1 space-y-2">
-              <label htmlFor="comment-content" className="sr-only">
+              <label htmlFor={contentId} className="sr-only">
                 Comment content
               </label>
               <textarea
-                id="comment-content"
+                id={contentId}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder={placeholder}
                 rows={Math.max(2, Math.min(5, content.split("\n").length))}
+                aria-invalid={isOverLimit}
+                aria-describedby={countId}
                 className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all text-sm leading-relaxed resize-none"
                 autoFocus={isExpanded || isReply}
               />
               <div className="flex justify-between items-center px-1">
                 <span
+                  id={countId}
                   className={`text-[10px] font-mono ${
                     isOverLimit
                       ? "text-red-500"
@@ -136,6 +141,9 @@ export default function CommentComposer({
                     disabled={!canSubmit}
                     className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-200 dark:disabled:bg-zinc-800 disabled:text-zinc-400 text-white text-sm font-bold rounded-lg shadow-sm transition-colors cursor-pointer"
                   >
+                    {isSubmitting && (
+                      <span className="inline-block motion-safe:animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
+                    )}
                     {isSubmitting ? "Posting..." : isReply ? "Reply" : "Post"}
                   </button>
                 </div>

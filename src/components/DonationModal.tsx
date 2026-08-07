@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
+import Modal from "./ui/Modal";
 import { contribute, getCampaign } from "../lib/contractClient";
 import { getEstimatedContributeNetworkFeeXlm } from "../lib/networkFee";
 import { Campaign, basisPointsToPercentage } from "../types";
@@ -11,9 +12,13 @@ import { useToast } from "./ToastProvider";
 import { useWallet } from "./WalletContext";
 import { usePlatformFee } from "../hooks/usePlatformFee";
 import { parseContractError } from "../utils/contractErrors";
+import { downloadTaxReceipt } from "../lib/taxReceipt";
+import { INTERVAL_LABELS, RecurringInterval, createSchedule } from "../lib/recurringDonations";
+
 import { type TransactionLifecyclePhase } from "../lib/contractClient";
 import { validateContributorNotCreator } from "../utils/validators";
 import { explorerTxUrl } from "../utils/explorer";
+import FiatOnrampButton from "./FiatOnrampButton";
 import {
   trackClickContribute,
   trackEnterAmount,
@@ -60,10 +65,9 @@ export default function DonationModal({
   const [step, setStep] = useState<Step>("input");
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringInterval, setRecurringInterval] = useState<RecurringInterval>("monthly");
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
-
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   const [liveCampaign, setLiveCampaign] = useState<Campaign>(campaign);
 
@@ -100,51 +104,9 @@ export default function DonationModal({
       ? localizeContractError(message)
       : tModal(message as DonationValidationKey);
 
-  // Body scroll lock + focus restoration
   useEffect(() => {
-    previousFocusRef.current = document.activeElement as HTMLElement;
-    document.body.style.overflow = "hidden";
-
     trackClickContribute(campaign.id);
-
-    return () => {
-      document.body.style.overflow = "";
-      previousFocusRef.current?.focus();
-    };
   }, [campaign.id]);
-
-  // ESC to close + focus trap
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && step !== "pending") {
-        onClose();
-        return;
-      }
-      if (e.key === "Tab" && dialogRef.current) {
-        const focusable = Array.from(
-          dialogRef.current.querySelectorAll<HTMLElement>(
-            'button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
-          ),
-        );
-        if (focusable.length === 0) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (e.shiftKey) {
-          if (document.activeElement === first) {
-            e.preventDefault();
-            last.focus();
-          }
-        } else {
-          if (document.activeElement === last) {
-            e.preventDefault();
-            first.focus();
-          }
-        }
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [step, onClose]);
 
   // Poll live funding data while the user is filling in the amount so the
   // progress bar reflects concurrent donations from other users.
@@ -207,13 +169,14 @@ export default function DonationModal({
 
   const validation = validateAmount(amount);
   const isFullyFunded = raised >= goal;
-  const amountError =
-    error ||
-    (isFullyFunded
-      ? "campaignAlreadyFunded"
-      : amount.trim() && !validation.valid
-        ? validation.errorKey || "Please enter a valid amount."
-        : null);
+  // Always a translation key so formatError() can resolve it through next-intl —
+  // never a hard-coded English sentence.
+  const validationErrorKey: DonationValidationKey | null = isFullyFunded
+    ? "campaignAlreadyFunded"
+    : amount.trim() && !validation.valid
+      ? (validation.errorKey ?? "invalidAmount")
+      : null;
+  const amountError = error || validationErrorKey;
   const amountNum = validation.amount || 0;
   const newRaised = raised + amountNum;
   const newPct = goal > 0 ? Math.min(100, Math.round((newRaised / goal) * 100)) : 0;
@@ -258,6 +221,19 @@ export default function DonationModal({
         },
       });
       setTxHash(hash);
+
+      // Only record the schedule once this cycle actually settled, so a failed
+      // donation never leaves a subscription behind.
+      if (isRecurring) {
+        createSchedule({
+          walletAddress: publicKey,
+          campaignId: campaign.id,
+          campaignTitle: campaign.title,
+          amountStroops: stroops,
+          interval: recurringInterval,
+        });
+      }
+
       setStep("confirmed");
       trackContributionConfirmed(campaign.id);
       onSuccess();
@@ -279,181 +255,256 @@ export default function DonationModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      role="presentation"
-      onClick={(e) => e.target === e.currentTarget && step !== "pending" && onClose()}
-      onKeyDown={(e) => {
-        if (e.key === "Escape" && step !== "pending") {
-          onClose();
-        }
-      }}
+    <Modal
+      isOpen
+      onClose={onClose}
+      closeOnEscape={step !== "pending"}
+      closeOnOverlayClick={step !== "pending"}
+      ariaLabelledBy="donation-modal-title"
     >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="donation-modal-title"
-        className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-md border border-zinc-200 dark:border-zinc-700 overflow-hidden"
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
-          <h2
-            id="donation-modal-title"
-            className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+      <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
+        <h2
+          id="donation-modal-title"
+          className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+        >
+          {step === "confirmed" ? t("confirmedTitle") : t("title")}
+        </h2>
+        {step !== "pending" && (
+          <button
+            onClick={onClose}
+            aria-label={t("closeAriaLabel")}
+            className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors text-2xl leading-none"
           >
-            {step === "confirmed" ? t("confirmedTitle") : t("title")}
-          </h2>
-          {step !== "pending" && (
-            <button
-              onClick={onClose}
-              aria-label={t("closeAriaLabel")}
-              className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors text-2xl leading-none"
-            >
-              ×
-            </button>
-          )}
+            ×
+          </button>
+        )}
+      </div>
+
+      <div className="px-6 py-5 space-y-5">
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2">{campaign.title}</p>
+
+        <div>
+          <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+            <span>{t("percentFunded", { percent: currentPct })}</span>
+            <span>
+              {formatAmount(liveCampaign.amount_raised, locale, { maximumFractionDigits: 2 })} /{" "}
+              {formatAmount(liveCampaign.funding_goal, locale, { maximumFractionDigits: 2 })} XLM
+            </span>
+          </div>
+          <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
+            <div
+              className="bg-linear-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
+              style={{ width: `${step === "confirmed" ? newPct : currentPct}%` }}
+            />
+          </div>
         </div>
 
-        <div className="px-6 py-5 space-y-5">
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2">{campaign.title}</p>
-
-          <div>
-            <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
-              <span>{t("percentFunded", { percent: currentPct })}</span>
-              <span>
-                {formatAmount(liveCampaign.amount_raised, locale, { maximumFractionDigits: 2 })} /{" "}
-                {formatAmount(liveCampaign.funding_goal, locale, { maximumFractionDigits: 2 })} XLM
-              </span>
+        {step === "input" && (
+          <>
+            <div>
+              <label
+                htmlFor="donation-amount"
+                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+              >
+                {t("amountLabel")}
+              </label>
+              <div className="relative">
+                <input
+                  id="donation-amount"
+                  type="number"
+                  min="0.0000001"
+                  step="any"
+                  value={amount}
+                  aria-describedby={amountError ? "donation-amount-error" : undefined}
+                  aria-invalid={amountError ? "true" : "false"}
+                  disabled={isFullyFunded}
+                  onChange={(e) => {
+                    setAmount(e.target.value);
+                    setError(null);
+                    if (e.target.value && parseFloat(e.target.value) > 0) {
+                      trackEnterAmount(campaign.id);
+                    }
+                  }}
+                  placeholder={t("amountPlaceholder")}
+                  className="w-full px-4 py-3 pr-16 rounded-xl border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-zinc-400">
+                  XLM
+                </span>
+              </div>
+              {amountError && (
+                <p id="donation-amount-error" role="alert" className="mt-1 text-xs text-red-500">
+                  {formatError(amountError)}
+                </p>
+              )}
             </div>
-            <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
-              <div
-                className="bg-linear-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
-                style={{ width: `${step === "confirmed" ? newPct : currentPct}%` }}
-              />
-            </div>
-          </div>
 
-          {step === "input" && (
-            <>
-              <div>
-                <label
-                  htmlFor="donation-amount"
-                  className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
-                >
-                  {t("amountLabel")}
-                </label>
-                <div className="relative">
-                  <input
-                    id="donation-amount"
-                    type="number"
-                    min="0.0000001"
-                    step="any"
-                    value={amount}
-                    aria-describedby={amountError ? "donation-amount-error" : undefined}
-                    aria-invalid={amountError ? "true" : "false"}
-                    disabled={isFullyFunded}
-                    onChange={(e) => {
-                      setAmount(e.target.value);
-                      setError(null);
-                      if (e.target.value && parseFloat(e.target.value) > 0) {
-                        trackEnterAmount(campaign.id);
-                      }
-                    }}
-                    placeholder={t("amountPlaceholder")}
-                    className="w-full px-4 py-3 pr-16 rounded-xl border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-zinc-400">
-                    XLM
+            {amountNum > 0 && (
+              <div className="rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
+                {t("afterDonation", { percent: newPct })}
+                {newRaised >= goal && (
+                  <span className="ml-2 font-semibold text-green-600 dark:text-green-400">
+                    🎉 {t("goalReached")}
                   </span>
-                </div>
-                {amountError && (
-                  <p id="donation-amount-error" role="alert" className="mt-1 text-xs text-red-500">
-                    {formatError(amountError)}
-                  </p>
                 )}
               </div>
+            )}
 
-              {amountNum > 0 && (
-                <div className="rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
-                  {t("afterDonation", { percent: newPct })}
-                  {newRaised >= goal && (
-                    <span className="ml-2 font-semibold text-green-600 dark:text-green-400">
-                      🎉 {t("goalReached")}
-                    </span>
-                  )}
+            {amountNum > 0 && (
+              <dl className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 px-4 py-3 text-sm space-y-2">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-zinc-600 dark:text-zinc-400">{t("contributionLine")}</dt>
+                  <dd className="font-medium text-zinc-900 dark:text-zinc-50 tabular-nums">
+                    {amountNum.toLocaleString(undefined, { maximumFractionDigits: 7 })} XLM
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-zinc-600 dark:text-zinc-400">{t("networkFeeLine")}</dt>
+                  <dd className="font-medium text-zinc-900 dark:text-zinc-50 tabular-nums">
+                    {estimatedNetworkFeeXlm.toLocaleString(undefined, {
+                      maximumFractionDigits: 7,
+                    })}{" "}
+                    XLM
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4 border-t border-zinc-200 dark:border-zinc-600 pt-2">
+                  <dt className="font-semibold text-zinc-900 dark:text-zinc-50">
+                    {t("totalLine")}
+                  </dt>
+                  <dd className="font-semibold text-zinc-900 dark:text-zinc-50 tabular-nums">
+                    {totalWalletCost.toLocaleString(undefined, { maximumFractionDigits: 7 })} XLM
+                  </dd>
+                </div>
+              </dl>
+            )}
+
+            {/* Recurring donation opt-in (#671) */}
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 px-4 py-3 space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isRecurring}
+                  onChange={(e) => setIsRecurring(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-zinc-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm">
+                  <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                    Make it monthly
+                  </span>
+                  <span className="block text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    We&apos;ll remind you when the next donation is due. Nothing is charged
+                    automatically — you sign each one.
+                  </span>
+                </span>
+              </label>
+
+              {isRecurring && (
+                <div>
+                  <label
+                    htmlFor="donation-interval"
+                    className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+                  >
+                    Repeat
+                  </label>
+                  <select
+                    id="donation-interval"
+                    value={recurringInterval}
+                    onChange={(e) => setRecurringInterval(e.target.value as RecurringInterval)}
+                    className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {Object.entries(INTERVAL_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
-
-              {amountNum > 0 && (
-                <dl className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 px-4 py-3 text-sm space-y-2">
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-zinc-600 dark:text-zinc-400">{t("contributionLine")}</dt>
-                    <dd className="font-medium text-zinc-900 dark:text-zinc-50 tabular-nums">
-                      {amountNum.toLocaleString(undefined, { maximumFractionDigits: 7 })} XLM
-                    </dd>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-zinc-600 dark:text-zinc-400">{t("networkFeeLine")}</dt>
-                    <dd className="font-medium text-zinc-900 dark:text-zinc-50 tabular-nums">
-                      {estimatedNetworkFeeXlm.toLocaleString(undefined, {
-                        maximumFractionDigits: 7,
-                      })}{" "}
-                      XLM
-                    </dd>
-                  </div>
-                  <div className="flex justify-between gap-4 border-t border-zinc-200 dark:border-zinc-600 pt-2">
-                    <dt className="font-semibold text-zinc-900 dark:text-zinc-50">
-                      {t("totalLine")}
-                    </dt>
-                    <dd className="font-semibold text-zinc-900 dark:text-zinc-50 tabular-nums">
-                      {totalWalletCost.toLocaleString(undefined, { maximumFractionDigits: 7 })} XLM
-                    </dd>
-                  </div>
-                </dl>
-              )}
-
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                {t("platformFeeNote", { feePercent: basisPointsToPercentage(platformFeeBps) })}
-              </p>
-              {amountNum > 0 && (
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("networkFeeNote")}</p>
-              )}
-
-              <button
-                onClick={handleDonate}
-                disabled={!publicKey || !validation.valid}
-                className="w-full py-3 bg-linear-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200"
-              >
-                {amountNum > 0 ? t("donateAmount", { amount: amountNum }) : t("donate")}
-              </button>
-            </>
-          )}
-
-          {step === "pending" && (
-            <div className="flex flex-col items-center gap-4 py-6">
-              <div className="w-12 h-12 rounded-full border-4 border-blue-500 border-t-transparent motion-safe:animate-spin" />
-              <p className="text-zinc-600 dark:text-zinc-400 text-sm text-center">
-                {txPhase === "signing"
-                  ? t("waitingSignature")
-                  : txPhase === "confirming"
-                    ? t("waitingConfirmation")
-                    : t("submitting")}
-              </p>
             </div>
-          )}
+            {amountNum > 0 && (
+              <dl className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 px-4 py-3 text-sm space-y-2">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-zinc-600 dark:text-zinc-400">{t("contributionLine")}</dt>
+                  <dd className="font-medium text-zinc-900 dark:text-zinc-50 tabular-nums">
+                    {amountNum.toLocaleString(undefined, { maximumFractionDigits: 7 })} XLM
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-zinc-600 dark:text-zinc-400">{t("networkFeeLine")}</dt>
+                  <dd className="font-medium text-zinc-900 dark:text-zinc-50 tabular-nums">
+                    {estimatedNetworkFeeXlm.toLocaleString(undefined, {
+                      maximumFractionDigits: 7,
+                    })}{" "}
+                    XLM
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4 border-t border-zinc-200 dark:border-zinc-600 pt-2">
+                  <dt className="font-semibold text-zinc-900 dark:text-zinc-50">
+                    {t("totalLine")}
+                  </dt>
+                  <dd className="font-semibold text-zinc-900 dark:text-zinc-50 tabular-nums">
+                    {totalWalletCost.toLocaleString(undefined, { maximumFractionDigits: 7 })} XLM
+                  </dd>
+                </div>
+              </dl>
+            )}
 
-          {step === "confirmed" && (
-            <div className="flex flex-col items-center gap-4 py-4 text-center">
-              <div className="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-3xl">
-                ✓
-              </div>
-              <div>
-                <p className="font-semibold text-zinc-900 dark:text-zinc-50">
-                  {t("donatedSuccess", { amount: amountNum })}
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              {t("platformFeeNote", { feePercent: basisPointsToPercentage(platformFeeBps) })}
+            </p>
+            {amountNum > 0 && (
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("networkFeeNote")}</p>
+            )}
+
+            <button
+              onClick={handleDonate}
+              disabled={!publicKey || !validation.valid}
+              className="w-full py-3 bg-linear-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200"
+            >
+              {amountNum > 0 ? t("donateAmount", { amount: amountNum }) : t("donate")}
+            </button>
+
+            {/* #637 — fiat on-ramp so non-crypto users can buy XLM to donate.
+                Renders nothing unless a provider is configured via env vars. */}
+            <FiatOnrampButton
+              walletAddress={publicKey}
+              fiatAmount={amountNum > 0 ? amountNum : null}
+            />
+          </>
+        )}
+
+        {step === "pending" && (
+          <div className="flex flex-col items-center gap-4 py-6">
+            <div className="w-12 h-12 rounded-full border-4 border-blue-500 border-t-transparent motion-safe:animate-spin" />
+            <p className="text-zinc-600 dark:text-zinc-400 text-sm text-center">
+              {txPhase === "signing"
+                ? t("waitingSignature")
+                : txPhase === "confirming"
+                  ? t("waitingConfirmation")
+                  : t("submitting")}
+            </p>
+          </div>
+        )}
+
+        {step === "confirmed" && (
+          <div className="flex flex-col items-center gap-4 py-4 text-center">
+            <div className="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-3xl">
+              ✓
+            </div>
+            <div>
+              <p className="font-semibold text-zinc-900 dark:text-zinc-50">
+                {t("donatedSuccess", { amount: amountNum })}
+              </p>
+              {isRecurring && (
+                <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">
+                  {INTERVAL_LABELS[recurringInterval]} donation set up. We&apos;ll remind you when
+                  the next one is due.
                 </p>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t("thankYou")}</p>
-              </div>
-              {txHash && (
+              )}
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t("thankYou")}</p>
+            </div>
+            {txHash && (
+              <>
                 <a
                   href={explorerTxUrl(txHash)}
                   target="_blank"
@@ -462,17 +513,31 @@ export default function DonationModal({
                 >
                   {t("viewExplorer")}
                 </a>
-              )}
-              <button
-                onClick={onClose}
-                className="w-full py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-medium rounded-xl transition-colors"
-              >
-                {t("close")}
-              </button>
-            </div>
-          )}
-        </div>
+                <button
+                  onClick={() =>
+                    downloadTaxReceipt({
+                      transactionHash: txHash,
+                      campaignTitle: campaign.title,
+                      amountXlm: amountNum.toString(),
+                      donorAddress: publicKey ?? "",
+                      donationDate: new Date().toISOString(),
+                    })
+                  }
+                  className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors"
+                >
+                  {t("downloadReceipt")}
+                </button>
+              </>
+            )}
+            <button
+              onClick={onClose}
+              className="w-full py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-medium rounded-xl transition-colors"
+            >
+              {t("close")}
+            </button>
+          </div>
+        )}
       </div>
-    </div>
+    </Modal>
   );
 }

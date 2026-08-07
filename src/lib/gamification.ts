@@ -9,7 +9,7 @@ export interface Badge {
 }
 
 export interface UserGamificationProfile {
-  level: string;
+  levelId: string;
   levelNumber: number;
   totalDonated: number;
   donationCount: number;
@@ -19,11 +19,11 @@ export interface UserGamificationProfile {
 }
 
 export const LEVEL_THRESHOLDS = [
-  { level: "Bronze", levelNumber: 1, min: 0, max: 100 },
-  { level: "Silver", levelNumber: 2, min: 100, max: 500 },
-  { level: "Gold", levelNumber: 3, min: 500, max: 2000 },
-  { level: "Platinum", levelNumber: 4, min: 2000, max: 5000 },
-  { level: "Diamond", levelNumber: 5, min: 5000, max: Infinity },
+  { levelId: "Bronze", levelNumber: 1, min: 0, max: 100 },
+  { levelId: "Silver", levelNumber: 2, min: 100, max: 500 },
+  { levelId: "Gold", levelNumber: 3, min: 500, max: 2000 },
+  { levelId: "Platinum", levelNumber: 4, min: 2000, max: 5000 },
+  { levelId: "Diamond", levelNumber: 5, min: 5000, max: Infinity },
 ];
 
 export function calculateGamificationProfile(
@@ -52,32 +52,32 @@ export function calculateGamificationProfile(
   const badges: Badge[] = [
     {
       id: "early_backer",
-      name: "Early Backer",
-      description: "Supported ProofOfHeart in its early days",
+      name: "badge_early_backer_name",
+      description: "badge_early_backer_desc",
       icon: "🌱",
       color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30",
       unlocked: isEarlyBacker || donationCount > 0,
     },
     {
       id: "streak_master",
-      name: "Streak Master",
-      description: "Made 3 or more donations",
+      name: "badge_streak_master_name",
+      description: "badge_streak_master_desc",
       icon: "🔥",
       color: "bg-amber-500/10 text-amber-500 border-amber-500/30",
       unlocked: donationCount >= 3,
     },
     {
       id: "whale",
-      name: "Whale",
-      description: "Donated 1,000 XLM or more in total",
+      name: "badge_whale_name",
+      description: "badge_whale_desc",
       icon: "🐋",
       color: "bg-blue-500/10 text-blue-500 border-blue-500/30",
       unlocked: totalDonated >= 1000,
     },
     {
       id: "heart_champion",
-      name: "Heart Champion",
-      description: "Reached Diamond level (5,000+ XLM donated)",
+      name: "badge_heart_champion_name",
+      description: "badge_heart_champion_desc",
       icon: "💎",
       color: "bg-purple-500/10 text-purple-500 border-purple-500/30",
       unlocked: totalDonated >= 5000,
@@ -85,7 +85,7 @@ export function calculateGamificationProfile(
   ];
 
   return {
-    level: currentLevel.level,
+    levelId: currentLevel.levelId,
     levelNumber: currentLevel.levelNumber,
     totalDonated,
     donationCount,

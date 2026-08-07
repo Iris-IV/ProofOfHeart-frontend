@@ -20,14 +20,14 @@ export async function generateMetadata({ params }: Props) {
 
     const description = campaign.description.slice(0, 160);
 
-    // #642 — `images` is deliberately omitted here. It used to point at
-    // `campaign.cover_image_url` while declaring a hard-coded 1200x630, but cover
-    // images are arbitrary user uploads on IPFS/Arweave: wrong aspect ratio, often
-    // SVG or WebP, and behind a gateway Apple's scraper frequently cannot fetch
-    // within its timeout. iMessage drops the preview when the bytes disagree with
-    // the declared dimensions. Letting the sibling `opengraph-image.tsx` /
-    // `twitter-image.tsx` conventions supply the tags guarantees a self-hosted
-    // 1200x630 PNG with matching `og:image:width`/`height`/`type`.
+    // #642 — Deliberately no `openGraph.images` / `twitter.images` here. This
+    // route ships `opengraph-image.tsx` / `twitter-image.tsx`, whose file
+    // conventions make Next emit og:image:type/width/height that match the
+    // delivered 1200x630 PNG. A literal entry instead points scrapers at the raw
+    // creator-uploaded cover — no declared dimensions, arbitrary format — which
+    // is exactly the failure mode #642 ruled out (Apple drops such previews).
+    // The cover still appears in shares: the generated renderer fetches it and
+    // embeds it into the card.
     return {
       title: `${campaign.title} | ProofOfHeart`,
       description,

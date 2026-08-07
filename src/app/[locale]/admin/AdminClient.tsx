@@ -637,15 +637,20 @@ export default function AdminDashboard() {
             </p>
             <form onSubmit={handleUpdateFee} className="space-y-6">
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-3">
+                <label
+                  htmlFor="platform-fee-input"
+                  className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-3"
+                >
                   {t("feeInBasisPoints")}
                 </label>
                 <input
+                  id="platform-fee-input"
                   type="number"
                   value={feeInput}
                   onChange={(e) => setFeeInput(e.target.value)}
                   min="0"
                   max="10000"
+                  aria-describedby={Number(feeInput) > 1000 ? "platform-fee-warning" : undefined}
                   className="w-full bg-zinc-50 dark:bg-zinc-800 border-2 border-zinc-100 dark:border-zinc-700 rounded-2xl px-5 py-4 font-bold text-zinc-900 dark:text-zinc-50 focus:border-amber-500 focus:outline-none transition group-hover:border-amber-200"
                 />
                 {feeInput && (
@@ -654,8 +659,12 @@ export default function AdminDashboard() {
                       = {(Number(feeInput) / 100).toFixed(2)}%
                     </p>
                     {Number(feeInput) > 1000 && (
-                      <p className="text-sm font-medium text-amber-600 dark:text-amber-400 flex items-center gap-2">
-                        <span>⚠️</span>
+                      <p
+                        id="platform-fee-warning"
+                        role="alert"
+                        className="text-sm font-medium text-amber-600 dark:text-amber-400 flex items-center gap-2"
+                      >
+                        <span aria-hidden="true">⚠️</span>
                         <span>{t("feeWarning")}</span>
                       </p>
                     )}
@@ -682,10 +691,14 @@ export default function AdminDashboard() {
             </p>
             <form onSubmit={handleTransferAdmin} className="space-y-6">
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-red-400 mb-3">
+                <label
+                  htmlFor="new-admin-address-input"
+                  className="block text-[10px] font-black uppercase tracking-[0.2em] text-red-400 mb-3"
+                >
                   {t("newAdminAddress")}
                 </label>
                 <input
+                  id="new-admin-address-input"
                   type="text"
                   placeholder="G..."
                   value={newAdminInput}
@@ -863,7 +876,7 @@ export default function AdminDashboard() {
         title={t("confirmTransferTitle")}
         body={t("confirmTransferBody")}
         confirmLabel={t("typeConfirm")}
-        typeConfirmPlaceholder="CONFIRM"
+        typeConfirmPlaceholder={t("requiredWord")}
         cancelLabel={t("cancel")}
         confirmButtonLabel={t("confirmTransfer")}
       />
@@ -878,7 +891,7 @@ export default function AdminDashboard() {
         title={t("confirmHighFeeTitle")}
         body={t("confirmHighFeeBody")}
         confirmLabel={t("confirmFeeContinue")}
-        typeConfirmPlaceholder="CONFIRM"
+        typeConfirmPlaceholder={t("requiredWord")}
         cancelLabel={t("cancel")}
         confirmButtonLabel={t("updateFee")}
       />

@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { getWalletTransactions, type WalletTransactionLogEntry } from "../lib/transactionLog";
+import { type WalletTransactionLogEntry } from "../lib/transactionLog";
 import { explorerTxUrl } from "../utils/explorer";
+import { useWalletTransactions } from "../hooks/useWalletTransactions";
 
 interface TransactionHistorySectionProps {
   walletAddress: string;
@@ -67,14 +68,12 @@ export default function TransactionHistorySection({
   walletAddress,
   campaignTitleMap,
 }: TransactionHistorySectionProps) {
-  const [entries, setEntries] = useState<WalletTransactionLogEntry[]>([]);
   const [isMounted, setIsMounted] = useState(false);
+  const { transactions: entries, isLoading } = useWalletTransactions(walletAddress);
 
-  // Read from localStorage only on the client side.
   useEffect(() => {
-    setEntries(getWalletTransactions(walletAddress));
     setIsMounted(true);
-  }, [walletAddress]);
+  }, []);
 
   const [filterAction, setFilterAction] = useState<WalletTransactionLogEntry["action"] | "all">(
     "all",
@@ -85,7 +84,7 @@ export default function TransactionHistorySection({
     return entries.filter((e) => e.action === filterAction);
   }, [entries, filterAction]);
 
-  if (!isMounted) return null;
+  if (!isMounted || isLoading) return null;
 
   const actionOptions: Array<WalletTransactionLogEntry["action"] | "all"> = [
     "all",

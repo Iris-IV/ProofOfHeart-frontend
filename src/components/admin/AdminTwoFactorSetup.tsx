@@ -273,9 +273,15 @@ export default function AdminTwoFactorSetup({ adminAddress }: Props) {
             placeholder="000000"
             className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-4 py-3 text-center text-2xl font-mono tracking-[0.5em] text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             aria-label="One-time password"
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? "totp-code-error" : undefined}
             autoComplete="one-time-code"
           />
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && (
+            <p id="totp-code-error" role="alert" className="text-sm text-red-500">
+              {error}
+            </p>
+          )}
           <div className="flex gap-3">
             <button
               type="button"
