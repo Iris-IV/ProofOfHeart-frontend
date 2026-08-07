@@ -236,6 +236,7 @@
     "faq4A": "Los administradores de la plataforma revisan las solicitudes antes de que salgan en vivo. La comunidad luego vota para señalar una confianza más amplia."
   },
   "Causes": {
+    "listView": "Causas",
     "pageTitle": "Causas Comunitarias",
     "pageSubtitle": "Explora, busca y vota por las causas que te importan.",
     "searchPlaceholder": "Buscar causas por título, descripción o categoría…",

@@ -236,6 +236,7 @@
     "faq4A": "Platform administrators review submissions before they go live. The community then votes to signal broader trust."
   },
   "Causes": {
+    "listView": "Causes",
     "pageTitle": "Community Causes",
     "pageSubtitle": "Browse, search, and vote on causes that matter to you.",
     "searchPlaceholder": "Search causes by title, description, or category…",
@@ -263,9 +264,7 @@
     "tryDifferentSearch": "Try different search terms or clear the filters to see all causes.",
     "tryAgain": "Try again",
     "loadMore": "Load more causes",
-    "showingRange": "Showing {shown} of {total}",
-    "listView": "List",
-    "mapView": "Map"
+    "showingRange": "Showing {shown} of {total}"
   },
   "Status": {
     "active": "Active",

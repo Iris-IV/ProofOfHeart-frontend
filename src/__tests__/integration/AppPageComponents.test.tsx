@@ -10,7 +10,9 @@ import { Category, type Campaign } from "@/types";
 function withQueryClient(element: React.ReactElement) {
   return (
     <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false, queryFn: jest.fn() } } })
+      }
     >
       {element}
     </QueryClientProvider>

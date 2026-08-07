@@ -50,7 +50,6 @@ export default function CreateCampaignPage() {
   const [milestones, setMilestones] = useState<{ targetAmount: string; description: string }[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [descriptionTab, setDescriptionTab] = useState<"write" | "preview">("write");
-  const [descriptionEs, setDescriptionEs] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const coverFileInputRef = useRef<HTMLInputElement>(null);
@@ -100,7 +99,6 @@ export default function CreateCampaignPage() {
   }, [
     title,
     description,
-    descriptionEs,
     creatorEmail,
     fundingGoal,
     durationDays,
@@ -307,7 +305,6 @@ export default function CreateCampaignPage() {
     const keys = validateForm(
       title,
       description,
-      descriptionEs,
       creatorEmail,
       fundingGoal,
       durationDays,
@@ -332,13 +329,9 @@ export default function CreateCampaignPage() {
         description: m.description.trim(),
       }));
 
-    const encodedDescription = descriptionEs.trim()
-      ? encodeLocalizedDescription({ en: description.trim(), es: descriptionEs.trim() })
-      : description.trim();
-
     setReviewData({
       title: title.trim(),
-      description: encodedDescription,
+      description: description.trim(),
       creatorEmail: creatorEmail.trim(),
       fundingGoalXlm: parsedGoal,
       durationDays: parsedDays,
@@ -368,27 +361,6 @@ export default function CreateCampaignPage() {
           </h1>
           <p className="text-zinc-600 dark:text-zinc-400 text-sm">{t("pageSubtitle")}</p>
         </div>
-
-        {/* Draft indicator */}
-        {hasDraft && (
-          <div className="mb-4 flex items-center justify-between rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-2.5 text-xs text-zinc-600 dark:text-zinc-400">
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2 w-2 rounded-full bg-green-500" aria-hidden="true" />
-              {lastSavedAt
-                ? Date.now() - lastSavedAt < 60_000
-                  ? "Draft saved · Saved a moment ago"
-                  : `Draft saved · ${new Date(lastSavedAt).toLocaleString()}`
-                : "Draft restored"}
-            </span>
-            <button
-              type="button"
-              onClick={handleDiscardDraft}
-              className="ml-4 font-medium text-red-500 hover:text-red-600 transition-colors"
-            >
-              Discard draft
-            </button>
-          </div>
-        )}
 
         {/* Wallet guard banner */}
         {!isWalletConnected && (
@@ -989,7 +961,10 @@ export default function CreateCampaignPage() {
               disabled={isSubmitting || !isWalletConnected}
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {t("launchCampaign")}
+              {isSubmitting && (
+                <span className="inline-block motion-safe:animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+              )}
+              {isSubmitting ? t("submitting") : t("launchCampaign")}
             </button>
           </div>
         </form>
