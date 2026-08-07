@@ -14,6 +14,8 @@ import { useStellarBalance } from "@/hooks/useStellarBalance";
 import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
 import { isSameAddress } from "@/lib/stellar";
 
+const SUBMITTED_PAGE_SIZE = 5;
+
 // Pulls in the contract client and the proposal store; only creators with a
 // funded campaign ever open this tab, so keep it out of the dashboard bundle.
 const MultiSigWithdrawalPanel = dynamic(() => import("@/components/MultiSigWithdrawalPanel"), {
@@ -36,6 +38,8 @@ export default function DashboardPage() {
     "overview" | "contributions" | "history" | "withdrawals"
   >("overview");
 
+  const [visibleSubmittedLimit, setVisibleSubmittedLimit] = useState(SUBMITTED_PAGE_SIZE);
+
   const savedCampaigns = useMemo(
     () => campaigns.filter((c) => savedIds.includes(c.id)),
     [campaigns, savedIds],
@@ -44,6 +48,11 @@ export default function DashboardPage() {
   const submittedCampaigns = useMemo(
     () => campaigns.filter((c) => isSameAddress(c.creator, publicKey)),
     [campaigns, publicKey],
+  );
+
+  const visibleSubmittedCampaigns = useMemo(
+    () => submittedCampaigns.slice(0, visibleSubmittedLimit),
+    [submittedCampaigns, visibleSubmittedLimit],
   );
 
   const campaignTitleMap = useMemo(
@@ -134,28 +143,48 @@ export default function DashboardPage() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold mb-2">{t("submittedCampaigns")}</h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xl font-semibold">{t("submittedCampaigns")}</h2>
+            {submittedCampaigns.length > 0 && (
+              <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                Showing {visibleSubmittedCampaigns.length} of {submittedCampaigns.length} campaigns
+              </span>
+            )}
+          </div>
           {submittedCampaigns.length === 0 ? (
             <span className="text-zinc-500 dark:text-zinc-400">{t("noSubmittedCampaigns")}</span>
           ) : (
-            <ul className="space-y-2">
-              {submittedCampaigns.map((campaign) => (
-                <li
-                  key={campaign.id}
-                  className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 min-h-[60px]"
-                >
-                  <Link
-                    href={`/causes/${campaign.id}`}
-                    className="font-medium text-zinc-900 dark:text-zinc-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            <>
+              <ul className="space-y-2 mb-4">
+                {visibleSubmittedCampaigns.map((campaign) => (
+                  <li
+                    key={campaign.id}
+                    className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 min-h-[60px]"
                   >
-                    {campaign.title}
-                  </Link>
-                  <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
-                    {campaign.description}
-                  </div>
-                </li>
-              ))}
-            </ul>
+                    <Link
+                      href={`/causes/${campaign.id}`}
+                      className="font-medium text-zinc-900 dark:text-zinc-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                    >
+                      {campaign.title}
+                    </Link>
+                    <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
+                      {campaign.description}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {visibleSubmittedLimit < submittedCampaigns.length && (
+                <div className="flex justify-center mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setVisibleSubmittedLimit((prev) => prev + SUBMITTED_PAGE_SIZE)}
+                    className="px-5 py-2.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-xl transition-colors border border-blue-200 dark:border-blue-800"
+                  >
+                    Load more
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </section>
       </TabPanel>
