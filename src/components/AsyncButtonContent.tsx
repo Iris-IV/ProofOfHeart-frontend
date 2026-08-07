@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { Spinner } from "./Skeleton";
 import type { ReactNode } from "react";
 
@@ -14,13 +15,36 @@ export default function AsyncButtonContent({
   pendingLabel = "Processing...",
   spinnerClassName,
 }: AsyncButtonContentProps) {
-  if (!isPending) return <>{idleLabel}</>;
+  const liveRegionId = useId();
+
+  if (!isPending) {
+    return (
+      <>
+        {idleLabel}
+        <span
+          id={liveRegionId}
+          aria-live="polite"
+          aria-atomic="true"
+          className="sr-only"
+        >
+          Ready
+        </span>
+      </>
+    );
+  }
 
   return (
     <>
-      <Spinner className={spinnerClassName} />
+      <span
+        id={liveRegionId}
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {pendingLabel}
+      </span>
+      <Spinner className={spinnerClassName} aria-hidden="true" />
       <span>{pendingLabel}</span>
-      <span className="sr-only">Processing request</span>
     </>
   );
 }

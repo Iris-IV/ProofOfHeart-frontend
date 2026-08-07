@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Settings2 } from "lucide-react";
 import { useWallet } from "./WalletContext";
 import { useTranslations } from "next-intl";
+import { useToast } from "@/components/ToastProvider";
 import {
   type NotificationPreferences,
   getNotificationPreferences,
@@ -20,7 +21,9 @@ const ALL_EVENTS: (keyof NotificationPreferences)[] = [
 export default function NotificationSettings() {
   const t = useTranslations("Notifications");
   const { publicKey } = useWallet();
+  const { showSuccess, showError } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const storedPrefs = useMemo(
     () => (publicKey ? getNotificationPreferences(publicKey) : null),
     [publicKey],
@@ -41,10 +44,17 @@ export default function NotificationSettings() {
 
   if (!publicKey || !prefs) return null;
 
-  const toggle = (key: keyof NotificationPreferences) => {
+  const toggle = async (key: keyof NotificationPreferences) => {
     const next = { ...prefs, [key]: !prefs[key] };
     setLocalPrefs(next);
-    setNotificationPreferences(publicKey, next);
+    setSaveError(null);
+    try {
+      setNotificationPreferences(publicKey, next);
+      showSuccess(t("saveSuccess"));
+    } catch {
+      setSaveError(t("saveError"));
+      showError(t("saveError"));
+    }
   };
 
   return (
@@ -53,6 +63,7 @@ export default function NotificationSettings() {
         onClick={() => setIsOpen(!isOpen)}
         className="flex size-9 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-950 hover:bg-black/5 dark:border-white/15 dark:bg-zinc-800 dark:text-white dark:hover:bg-white/10 transition-colors shadow-sm"
         aria-label={t("settingsAriaLabel")}
+        aria-expanded={isOpen}
       >
         <Settings2 size={16} />
       </button>
@@ -65,6 +76,14 @@ export default function NotificationSettings() {
             </h3>
           </div>
           <div className="p-2">
+            {saveError && (
+              <div
+                role="alert"
+                className="mb-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+              >
+                {saveError}
+              </div>
+            )}
             {ALL_EVENTS.map((key) => (
               <label
                 key={key}
