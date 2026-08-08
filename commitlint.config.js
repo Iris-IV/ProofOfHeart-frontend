@@ -35,6 +35,8 @@ module.exports = {
     "header-max-length": [2, "always", 100],
     "body-leading-blank": [2, "always"],
     "footer-leading-blank": [2, "always"],
+    // Git trailers such as Co-authored-by may legitimately exceed the subject/body limit.
+    "footer-max-line-length": [0, "always", 100],
   },
   prompt: {
     settings: {},

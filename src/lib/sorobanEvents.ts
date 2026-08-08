@@ -142,6 +142,96 @@ export async function fetchContributionMadeEvents(
   };
 }
 
+const DEFAULT_CONTRIBUTION_STREAM_IDLE_MS = 2_000;
+const DEFAULT_CONTRIBUTION_STREAM_MAX_BACKOFF_MS = 60_000;
+const CONTRIBUTION_EVENT_BATCH_LIMIT = 100;
+
+export interface SubscribeContributionMadeEventsOptions {
+  campaignId: number;
+  onEvents: (result: FetchVoteCastEventsResult) => void;
+  onError?: (error: unknown) => void;
+  /** Delay between polls when no new events (default 2000ms). */
+  idleIntervalMs?: number;
+}
+
+export interface ContributionEventSubscription {
+  unsubscribe: () => void;
+}
+
+/**
+ * Cursor-based Soroban event stream for `contribution_made` on a campaign.
+ * Uses chained getEvents calls instead of a fixed setInterval poll loop.
+ */
+export function subscribeContributionMadeEvents(
+  options: SubscribeContributionMadeEventsOptions,
+): ContributionEventSubscription | null {
+  if (!isEventStreamingAvailable()) {
+    return null;
+  }
+
+  const {
+    campaignId,
+    onEvents,
+    onError,
+    idleIntervalMs = Number(process.env.NEXT_PUBLIC_CONTRIBUTION_EVENTS_POLL_MS) ||
+      DEFAULT_CONTRIBUTION_STREAM_IDLE_MS,
+  } = options;
+
+  let cancelled = false;
+  let cursor: string | undefined;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  let backoffMs = idleIntervalMs;
+
+  const schedule = (delayMs: number) => {
+    if (cancelled) return;
+    timeoutId = setTimeout(() => {
+      timeoutId = null;
+      void poll();
+    }, delayMs);
+  };
+
+  const poll = async () => {
+    if (cancelled) return;
+
+    try {
+      const result = await fetchContributionMadeEvents({
+        campaignId,
+        cursor,
+        limit: CONTRIBUTION_EVENT_BATCH_LIMIT,
+      });
+      if (!result || cancelled) return;
+
+      cursor = result.cursor;
+
+      if (result.events.length > 0) {
+        onEvents(result);
+        backoffMs = idleIntervalMs;
+        schedule(result.events.length >= CONTRIBUTION_EVENT_BATCH_LIMIT ? 0 : idleIntervalMs);
+        return;
+      }
+
+      backoffMs = idleIntervalMs;
+      schedule(idleIntervalMs);
+    } catch (error) {
+      onError?.(error);
+      backoffMs = Math.min(Math.round(backoffMs * 1.5), DEFAULT_CONTRIBUTION_STREAM_MAX_BACKOFF_MS);
+      schedule(backoffMs);
+    }
+  };
+
+  void poll();
+
+  return {
+    unsubscribe: () => {
+      cancelled = true;
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+    },
+  };
+}
+
 /**
  * Poll Soroban RPC for `campaign_vote_cast` events on the configured contract.
  */

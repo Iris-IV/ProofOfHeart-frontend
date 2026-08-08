@@ -71,9 +71,20 @@ jobs:
           src/__tests__/integration/AppPageComponents.test.tsx
           src/__tests__/integration/CausesFilterUrlSync.test.tsx
           src/__tests__/components/CauseCard.test.tsx
+          src/__tests__/hooks/useCampaignEvents.test.ts
 
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v7
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-proofofheart
+          fail_ci_if_error: false
+
+      - name: Upload coverage report artifact
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: jest-coverage

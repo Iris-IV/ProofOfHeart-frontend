@@ -37,6 +37,27 @@ Each maps to a Tailwind palette step, so `bg-brand`, `text-brand`,
 | `rounded-control` | 0.75rem | Buttons, inputs |
 | `rounded-surface` | 1rem    | Cards, panels   |
 
+### Typography
+
+Named for role, not size — `text-heading` survives a type-scale change the
+same way `bg-brand` survives a rebrand.
+
+| Token             | Value              | Applies to                   |
+| ----------------- | ------------------ | ---------------------------- |
+| `text-heading`    | 1.125rem / 1.75rem | Card and section titles      |
+| `text-heading-lg` | 1.5rem / 2rem      | Page-level titles            |
+| `font-heading`    | 600                | Pairs with `text-heading`    |
+| `font-heading-lg` | 700                | Pairs with `text-heading-lg` |
+
+### Spacing
+
+| Token          | Value   | Applies to                           |
+| -------------- | ------- | ------------------------------------ |
+| `gap-card-gap` | 0.75rem | Gap between a card header's elements |
+
+`--spacing-card-gap` extends Tailwind's spacing scale, so it also works as
+`p-card-gap`, `mb-card-gap`, etc. — anywhere a spacing utility is accepted.
+
 ### Motion
 
 `--duration-fast` (150ms) for state changes such as hover and focus;
@@ -140,6 +161,16 @@ one sweep — a repo-wide restyle would be unreviewable. Migrated so far:
 - Campaign updates / Q&A tabs → `Tabs` / `TabPanel`
 - Update composer actions → `Button`
 - Dashboard withdrawal cards → `Card`
+- `CardTitle` / `CardHeader` → typography and spacing tokens
+
+A short, reviewed allowlist of files keep a literal hex colour instead of a
+token: server-rendered OG/icon images (`@vercel/og` renders outside the DOM,
+so a CSS custom property never resolves there), `app/manifest.ts` (static
+JSON, not CSS), the standalone `app/maintenance/page.tsx` (deliberately has no
+dependency on `globals.css`, so it still renders if the CSS build is what
+broke), and the official multi-colour Google logomark in
+`SocialLoginButtons.tsx`. `src/__tests__/unit/designTokens.test.ts` enforces
+that list — a new hardcoded hex colour anywhere else fails CI.
 
 The remaining screens should migrate opportunistically: when you touch a
 component, swap its bespoke button, card or field for the primitive.

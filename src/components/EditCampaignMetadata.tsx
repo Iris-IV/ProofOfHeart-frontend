@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 
 interface Props {
   campaignId: number;
@@ -22,6 +23,7 @@ export default function EditCampaignMetadata({
   initialDescription,
   initialCoverImageUrl,
 }: Props) {
+  const t = useTranslations("EditCampaignMetadata");
   const storageKey = `poh_meta_override_${campaignId}`;
 
   const [open, setOpen] = useState(false);
@@ -97,7 +99,7 @@ export default function EditCampaignMetadata({
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
           </svg>
-          Edit metadata
+          {t("editMetadata")}
         </span>
         <svg
           width="14"
@@ -116,16 +118,19 @@ export default function EditCampaignMetadata({
       {open && (
         <div className="px-4 pb-4 flex flex-col gap-4">
           <p className="text-xs text-zinc-500 dark:text-zinc-400 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-3 py-2">
-            Note: title, description, and cover image are display-only — stored locally until the
-            campaign is verified on-chain.
+            {t("note")}
           </p>
 
           {/* Title */}
           <div>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
-              Title
+            <label
+              htmlFor={`edit-meta-title-${campaignId}`}
+              className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1"
+            >
+              {t("titleLabel")}
             </label>
             <input
+              id={`edit-meta-title-${campaignId}`}
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -136,10 +141,14 @@ export default function EditCampaignMetadata({
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
-              Description
+            <label
+              htmlFor={`edit-meta-description-${campaignId}`}
+              className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1"
+            >
+              {t("descriptionLabel")}
             </label>
             <textarea
+              id={`edit-meta-description-${campaignId}`}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
@@ -149,10 +158,14 @@ export default function EditCampaignMetadata({
 
           {/* Cover image URL */}
           <div>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
-              Cover Image URL
+            <label
+              htmlFor={`edit-meta-cover-${campaignId}`}
+              className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1"
+            >
+              {t("coverImageUrlLabel")}
             </label>
             <input
+              id={`edit-meta-cover-${campaignId}`}
               type="url"
               value={coverImageUrl}
               onChange={(e) => setCoverImageUrl(e.target.value)}
@@ -165,14 +178,14 @@ export default function EditCampaignMetadata({
             onClick={handleSave}
             className="self-start px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
           >
-            Save
+            {t("saveButton")}
           </button>
 
           {/* Audit trail */}
           {override && (
             <div className="flex items-center justify-between rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-xs text-zinc-500 dark:text-zinc-400">
               <span>
-                Last edited:{" "}
+                {t("lastEdited")}{" "}
                 <time dateTime={override.editedAt}>
                   {new Date(override.editedAt).toLocaleString()}
                 </time>
@@ -182,7 +195,7 @@ export default function EditCampaignMetadata({
                 onClick={handleClear}
                 className="ml-4 text-red-500 hover:text-red-600 font-medium transition-colors"
               >
-                Clear edits
+                {t("clearEdits")}
               </button>
             </div>
           )}

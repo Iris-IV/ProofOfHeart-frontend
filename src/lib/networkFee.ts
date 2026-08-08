@@ -3,7 +3,12 @@ import { STROOPS_PER_XLM } from "@/lib/stellarAmount";
 
 /**
  * Conservative default for a single Soroban `contribute` invocation (stroops).
- * Real fees come from simulation during `assembleTransaction`; this is a pre-sign UI estimate.
+ * Serves as the RPC-failure fallback: when the dynamic fee-estimation call is
+ * unavailable, this value is used for the pre-sign UI estimate.
+ *
+ * Once issue #618 is resolved (dynamic fee via RPC), this fallback is expected
+ * to change or become a true RPC-failure fallback.
+ *
  * Override via NEXT_PUBLIC_ESTIMATED_CONTRIBUTE_NETWORK_FEE_STROOPS when fee-bump strategy changes.
  */
 export const DEFAULT_CONTRIBUTE_NETWORK_FEE_STROOPS = 100_000n;

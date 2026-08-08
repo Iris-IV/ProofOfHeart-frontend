@@ -1,3 +1,4 @@
+import { StrKey } from "@stellar/stellar-sdk";
 import { ContractError, ContractErrorException } from "./contractErrors";
 
 export function validateStellarAddress(
@@ -7,6 +8,18 @@ export function validateStellarAddress(
   if (!address || address.length !== 56 || !address.startsWith("G")) {
     throw new ContractErrorException(errorToThrow);
   }
+}
+
+/**
+ * Non-throwing check that `address` is a syntactically valid Stellar ed25519
+ * public key — starts with `G`, has the correct length, and a valid StrKey
+ * checksum. Intended for client-side form validation where an inline error is
+ * shown rather than an exception thrown (see TransferAdminModal). Unlike
+ * {@link validateStellarAddress}, this verifies the checksum, not just the
+ * length and prefix.
+ */
+export function isValidStellarPublicKey(address: string): boolean {
+  return typeof address === "string" && StrKey.isValidEd25519PublicKey(address.trim());
 }
 
 export function validateAmount(amount: number | bigint): void {
