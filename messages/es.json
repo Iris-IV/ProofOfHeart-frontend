@@ -239,6 +239,8 @@
     "pageTitle": "Causas Comunitarias",
     "pageSubtitle": "Explora, busca y vota por las causas que te importan.",
     "searchPlaceholder": "Buscar causas por título, descripción o categoría…",
+    "listView": "Vista de Lista",
+    "mapView": "Vista de Mapa",
     "labelCategory": "Categoría",
     "labelStatus": "Estado",
     "labelSortBy": "Ordenar por",
@@ -339,7 +341,11 @@
     "coverImageUploading": "Subiendo\u2026",
     "coverImageUploadSuccess": "Imagen de portada subida a IPFS.",
     "coverImageUploadFailed": "No se pudo subir la imagen de portada. Int\u00e9ntalo de nuevo.",
-    "coverImageHelpText": "Sube una imagen a IPFS o pega una URL de un host permitido."
+    "coverImageHelpText": "Sube una imagen a IPFS o pega una URL de un host permitido.",
+    "labelTags": "Etiquetas",
+    "tagsLimitTip": "hasta 5",
+    "placeholderTags": "Añade una etiqueta y pulsa Enter",
+    "tagsHelpText": "Las etiquetas ayudan a otros a descubrir tu campaña."
   },
   "Footer": {
     "tagline": "Una plataforma de lanzamiento descentralizada donde la comunidad valida causas y las contribuciones se registran en la cadena.",

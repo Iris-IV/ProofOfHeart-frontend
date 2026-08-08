@@ -239,6 +239,8 @@
     "pageTitle": "Community Causes",
     "pageSubtitle": "Browse, search, and vote on causes that matter to you.",
     "searchPlaceholder": "Search causes by title, description, or category…",
+    "listView": "List View",
+    "mapView": "Map View",
     "labelCategory": "Category",
     "labelStatus": "Status",
     "labelSortBy": "Sort by",
@@ -339,7 +341,11 @@
     "coverImageUploading": "Uploading…",
     "coverImageUploadSuccess": "Cover image uploaded to IPFS.",
     "coverImageUploadFailed": "Failed to upload cover image. Please try again.",
-    "coverImageHelpText": "Upload an image to IPFS or paste a URL from an allowed host."
+    "coverImageHelpText": "Upload an image to IPFS or paste a URL from an allowed host.",
+    "labelTags": "Tags",
+    "tagsLimitTip": "up to 5",
+    "placeholderTags": "Add a tag and press Enter",
+    "tagsHelpText": "Tags help others discover your campaign."
   },
   "Footer": {
     "tagline": "A decentralised launchpad where the community validates causes and contributions are accounted for on-chain.",
