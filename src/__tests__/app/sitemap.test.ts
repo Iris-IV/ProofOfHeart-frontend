@@ -66,4 +66,3 @@ describe("sitemap", () => {
     expect(entries.some((e) => e.url === "https://example.test/es/faq")).toBe(true);
   });
 });
-

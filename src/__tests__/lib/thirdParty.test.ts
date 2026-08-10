@@ -134,6 +134,41 @@ describe("thirdParty script registry", () => {
     }
   });
 
+  it("invokes a configured onError and warns when one is missing", () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const mod = loadWithEnv({
+        NEXT_PUBLIC_ANALYTICS_PROVIDER: "plausible",
+        NEXT_PUBLIC_ANALYTICS_DOMAIN: "proofofheart.xyz",
+      });
+
+      // Script configs returned by the registry have no onError by default, so
+      // handleScriptError surfaces the failure instead of swallowing it.
+      const [script] = mod.getThirdPartyScripts();
+      mod.handleScriptError(script);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining(script.id));
+
+      // When a consumer wires onError, handleScriptError invokes it instead.
+      const onError = jest.fn();
+      mod.handleScriptError({ ...script, onError });
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("does not return duplicate script ids", () => {
+    const mod = loadWithEnv({
+      NEXT_PUBLIC_ANALYTICS_PROVIDER: "plausible",
+      NEXT_PUBLIC_ANALYTICS_DOMAIN: "proofofheart.xyz",
+      NEXT_PUBLIC_SUPPORT_WIDGET_SRC: "https://widget.example.com/w.js",
+    });
+
+    const ids = mod.getThirdPartyScripts().map((s) => s.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
   it("derives CSP origins from the configured scripts", () => {
     const mod = loadWithEnv({
       NEXT_PUBLIC_ANALYTICS_PROVIDER: "plausible",

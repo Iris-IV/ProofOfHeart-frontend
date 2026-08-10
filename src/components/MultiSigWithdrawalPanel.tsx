@@ -317,43 +317,58 @@ export default function MultiSigWithdrawalPanel({
           </div>
 
           <ul className="space-y-1.5">
-            {activeProposal.signers.map((signer) => (
-              <li key={signer.address} className="flex items-center gap-2 text-xs">
-                {signer.signedAt ? (
-                  <svg
-                    className="w-3.5 h-3.5 text-green-500 shrink-0"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-600 shrink-0"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
-                <span className="font-mono text-zinc-600 dark:text-zinc-400 break-all">
-                  {signer.address.slice(0, 8)}…{signer.address.slice(-6)}
-                </span>
-                {signer.signedAt && (
-                  <span className="text-zinc-400 dark:text-zinc-500">
-                    {new Date(signer.signedAt * 1000).toLocaleDateString()}
+            {activeProposal.signers.map((signer) => {
+              const isMe = isSameAddress(signer.address, walletAddress);
+              return (
+                <li
+                  key={signer.address}
+                  className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${
+                    isMe
+                      ? "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
+                      : ""
+                  }`}
+                >
+                  {signer.signedAt ? (
+                    <svg
+                      className="w-3.5 h-3.5 text-green-500 shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-600 shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  )}
+                  <span className="font-mono text-zinc-600 dark:text-zinc-400 break-all">
+                    {signer.address.slice(0, 8)}…{signer.address.slice(-6)}
                   </span>
-                )}
-              </li>
-            ))}
+                  {isMe && (
+                    <span className="ml-auto text-xs font-medium text-blue-600 dark:text-blue-400 shrink-0">
+                      {t("you")}
+                    </span>
+                  )}
+                  {signer.signedAt && (
+                    <span className="text-zinc-400 dark:text-zinc-500 shrink-0">
+                      {new Date(signer.signedAt * 1000).toLocaleDateString()}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
 
           <div className="flex flex-col sm:flex-row gap-2">

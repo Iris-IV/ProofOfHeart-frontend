@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import Modal from "./ui/Modal";
+import { isValidStellarPublicKey } from "@/utils/validators";
 
 interface TransferAdminModalProps {
   newAdminAddress?: string;
@@ -45,7 +46,11 @@ export default function TransferAdminModal({
   const [confirmInput, setConfirmInput] = useState("");
 
   const requiredWord = t("requiredWord");
-  const canConfirm = confirmInput.trim() === requiredWord;
+  // When an address is supplied, it must be a well-formed Stellar public key
+  // before submit is allowed. This catches invalid input client-side instead of
+  // failing only after a Freighter signature prompt and a wasted transaction.
+  const isAddressValid = !newAdminAddress || isValidStellarPublicKey(newAdminAddress);
+  const canConfirm = confirmInput.trim() === requiredWord && isAddressValid;
 
   // Reset input when modal opens
   useEffect(() => {
@@ -75,6 +80,11 @@ export default function TransferAdminModal({
             {newAdminAddress}
           </p>
         </div>
+      ) : null}
+      {newAdminAddress && !isAddressValid ? (
+        <p role="alert" className="text-sm font-medium text-red-600 dark:text-red-400">
+          {t("invalidAddress")}
+        </p>
       ) : null}
       <div>
         <label

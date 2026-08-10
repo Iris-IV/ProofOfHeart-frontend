@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useMemo, useState, useCallback } from "react";
 import { Download } from "lucide-react";
+import { useLocale } from "next-intl";
 import { claimRefund, claimRevenue } from "../lib/contractClient";
 import { getStellarExplorerTxUrl } from "../lib/stellarExplorer";
 import { useContributions } from "../hooks/useContributions";
-import { stroopsToXlmNumber } from "../lib/stellarAmount";
+import { formatAmount } from "../lib/formatters";
 import { useToast } from "./ToastProvider";
 import { parseContractError } from "../utils/contractErrors";
 import { exportContributionHistoryCsv } from "../utils/exportCsv";
@@ -17,10 +18,8 @@ interface MyContributionsSectionProps {
 
 type ClaimStatus = "idle" | "pending" | "success" | "failed";
 
-function formatXlmAmount(value: bigint): string {
-  return stroopsToXlmNumber(value).toLocaleString(undefined, {
-    maximumFractionDigits: 7,
-  });
+function formatXlmAmount(value: bigint, locale: string): string {
+  return formatAmount(value, locale, { maximumFractionDigits: 7 });
 }
 
 function getStatusLabelKey(status: string): string {
@@ -75,6 +74,7 @@ function claimKey(campaignId: number, type: "refund" | "revenue"): ClaimKey {
 }
 
 export default function MyContributionsSection({ walletAddress }: MyContributionsSectionProps) {
+  const locale = useLocale();
   const { showError, showSuccess, showWarning } = useToast();
   const [pendingCampaignId, setPendingCampaignId] = useState<number | null>(null);
   const [claimStatuses, setClaimStatuses] = useState<Map<ClaimKey, ClaimStatus>>(new Map());
@@ -215,7 +215,7 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
           <div className="text-sm text-zinc-500 dark:text-zinc-400">
             {contributions.length} campaign
             {contributions.length === 1 ? "" : "s"} contributed ·{" "}
-            {formatXlmAmount(totalContributed)} XLM total
+            {formatXlmAmount(totalContributed, locale)} XLM total
           </div>
         </div>
       </div>
@@ -259,7 +259,7 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                       {item.campaign.title}
                     </p>
                     <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                      Contributed {formatXlmAmount(item.contribution)} XLM
+                      Contributed {formatXlmAmount(item.contribution, locale)} XLM
                     </p>
                   </div>
                   <span
@@ -319,7 +319,7 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                           ? "Failed ✗"
                           : revenueStatus === "pending"
                             ? "Claiming..."
-                            : `Claim Revenue (${formatXlmAmount(item.claimableRevenue)} XLM)`}
+                            : `Claim Revenue (${formatXlmAmount(item.claimableRevenue, locale)} XLM)`}
                     </button>
                   )}
                 </div>

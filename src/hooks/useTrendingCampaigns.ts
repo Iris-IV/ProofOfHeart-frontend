@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useCampaigns } from "./useCampaigns";
 import { getTrendingCampaigns } from "@/lib/trendingHeuristic";
 import { Campaign } from "@/types";
@@ -14,7 +15,10 @@ interface UseTrendingCampaignsResult {
 export function useTrendingCampaigns(limit = 3): UseTrendingCampaignsResult {
   const { campaigns, isLoading, error, refetch } = useCampaigns();
 
-  const trendingCampaigns = getTrendingCampaigns(campaigns, limit);
+  const trendingCampaigns = useMemo(
+    () => getTrendingCampaigns(campaigns, limit),
+    [campaigns, limit],
+  );
 
   return {
     trendingCampaigns,

@@ -441,7 +441,8 @@
     "processing": "Procesando…",
     "withdrawalSuccess": "¡Retiro exitoso! Recibiste {amount} XLM.",
     "errorNoSigners": "Por favor agrega al menos una dirección de co-firmante.",
-    "errorInvalidThreshold": "Las firmas requeridas deben estar entre 1 y el número de co-firmantes."
+    "errorInvalidThreshold": "Las firmas requeridas deben estar entre 1 y el número de co-firmantes.",
+    "you": "Tú"
   },
   "EditCampaignMetadata": {
     "editMetadata": "Editar metadatos",
@@ -548,7 +549,8 @@
   },
   "CampaignMap": {
     "emptyTitle": "No hay campañas con datos de ubicación",
-    "emptyBody": "Las campañas con coordenadas aparecerán en este mapa. Cambia a la vista de lista para ver todas las campañas."
+    "emptyBody": "Las campañas con coordenadas aparecerán en este mapa. Cambia a la vista de lista para ver todas las campañas.",
+    "loading": "Cargando mapa…"
   },
   "Gamification": {
     "level_Bronze": "Bronce",
@@ -642,5 +644,24 @@
     "a_revenueSharing": "Las campañas de startups (en la categoría de Startup Educativa) pueden optar por la participación en ingresos al crear su campaña. El creador establece un porcentaje de participación y, tras el éxito de la campaña, deposita ingresos futuros en el contrato inteligente. Los contribuyentes pueden reclamar su parte proporcional en cualquier momento a través del panel Mis Contribuciones.",
     "q_getFreighter": "¿Cómo obtengo la wallet Freighter?",
     "a_getFreighter": "Freighter es una extensión de navegador para Chrome y Firefox desarrollada por la Stellar Development Foundation. Visita <a href=\"https://freighter.app\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-blue-600 dark:text-blue-400 underline\">freighter.app</a>, instala la extensión, crea o importa una cuenta Stellar y conéctala a ProofOfHeart con un solo clic. No se requiere información personal."
+  },
+  "PersonalCap": {
+    "title": "Límite de Contribución Personal",
+    "description": "Establece una cantidad máxima que quieres contribuir a esta campaña.",
+    "loading": "Cargando tu límite personal…",
+    "currentCapLabel": "Límite actual:",
+    "contributedSoFar": "Has contribuido {amount} XLM hasta ahora.",
+    "noCapSet": "No hay límite personal establecido. Puedes contribuir cualquier cantidad.",
+    "currentContributionLabel": "Has contribuido:",
+    "amountPlaceholder": "Introduce cantidad en XLM",
+    "amountAriaLabel": "Cantidad del límite personal en XLM",
+    "setCap": "Establecer Límite",
+    "setting": "Estableciendo…",
+    "capBelowContribution": "Este límite está por debajo de tu contribución actual de {amount} XLM.",
+    "removeCap": "Quitar Límite",
+    "removing": "Quitando…",
+    "positiveAmountWarning": "El límite debe ser una cantidad positiva.",
+    "capSetSuccess": "Límite personal establecido en {amount} XLM.",
+    "capRemovedSuccess": "Límite personal eliminado."
   }
 }

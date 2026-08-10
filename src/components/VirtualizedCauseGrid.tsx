@@ -126,6 +126,7 @@ export default function VirtualizedCauseGrid({
                 <CauseCard
                   key={campaign.id}
                   campaign={campaign}
+                  priority={virtualRow.index === 0}
                   userWalletAddress={userWalletAddress}
                   onVote={onVote}
                   onCancel={onCancel}

@@ -404,6 +404,11 @@ function decodeCampaign(val: StellarSdk.xdr.ScVal): Campaign {
   let rawDescription = fields["description"].str().toString();
   let cover_image_url: string | undefined = undefined;
   let milestones: any[] | undefined = undefined;
+  // Contract fields carry no `tags`; fall back to that key only for older/mock
+  // records that may have stored it directly, otherwise default to [].
+  let tags: string[] = fields["tags"]
+    ? (fields["tags"] as any).vec().map((v: any) => v.str().toString())
+    : [];
 
   const EXT_MARKER = "\n\n===POH_EXT===\n";
   const extIndex = rawDescription.indexOf(EXT_MARKER);
@@ -416,6 +421,9 @@ function decodeCampaign(val: StellarSdk.xdr.ScVal): Campaign {
           targetAmount: BigInt(m.targetAmount),
           description: m.description,
         }));
+      }
+      if (extData.tags && Array.isArray(extData.tags)) {
+        tags = extData.tags;
       }
     } catch (e) {
       console.warn("Failed to parse campaign extension data", e);
@@ -448,7 +456,7 @@ function decodeCampaign(val: StellarSdk.xdr.ScVal): Campaign {
     category: fields["category"].u32() as Category,
     has_revenue_sharing: fields["has_revenue_sharing"].b(),
     revenue_share_percentage: fields["revenue_share_percentage"].u32(),
-    tags: fields["tags"] ? (fields["tags"] as any).vec().map((v: any) => v.str().toString()) : [],
+    tags,
     cover_image_url,
     milestones,
   };
@@ -727,6 +735,24 @@ export async function getContribution(campaignId: number, contributor: string): 
   }
 }
 
+/**
+ * Fetch the personal contribution cap for a contributor on a specific campaign.
+ * Returns the cap in stroops, or 0 if no cap is set (unlimited).
+ */
+export async function getPersonalCap(campaignId: number, contributor: string): Promise<bigint> {
+  if (USE_MOCKS) return BigInt(0);
+  try {
+    const result = await invokeViewMethod("get_personal_cap", [
+      StellarSdk.nativeToScVal(campaignId, { type: "u32" }),
+      new StellarSdk.Address(contributor).toScVal(),
+    ]);
+    if (!result) return BigInt(0);
+    return StellarSdk.scValToBigInt(result);
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
 export async function getRevenuePool(campaignId: number): Promise<bigint> {
   if (USE_MOCKS) return BigInt(0);
   try {
@@ -844,11 +870,20 @@ export async function createCampaign(
     validateRevenueShare(revenueSharePercentage);
   }
 
+  // `tags`, `coverImageUrl`, and `milestones` have no equivalent contract
+  // parameter — the contract only accepts the fields passed to contract.call()
+  // below. They're encoded into this off-chain blob (appended to the
+  // description) instead, and parsed back out by decodeCampaign().
   let finalDescription = description;
-  if (options?.coverImageUrl || (options?.milestones && options.milestones.length > 0)) {
+  if (
+    options?.coverImageUrl ||
+    (options?.milestones && options.milestones.length > 0) ||
+    tags.length > 0
+  ) {
     const ext = {
-      coverImageUrl: options.coverImageUrl,
-      milestones: options.milestones?.map((m) => ({
+      tags,
+      coverImageUrl: options?.coverImageUrl,
+      milestones: options?.milestones?.map((m) => ({
         targetAmount: m.targetAmount.toString(),
         description: m.description,
       })),
@@ -1388,6 +1423,52 @@ export async function getApprovalThresholdBps(): Promise<number> {
     if (!result) return 0;
     return result.u32();
   } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Set or update a personal contribution cap for a campaign.
+ * Pass BigInt(0) to remove the cap (unlimited).
+ * Returns the transaction hash on success.
+ */
+export async function setPersonalCap(
+  campaignId: number,
+  contributor: string,
+  capAmount: bigint,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(contributor);
+
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_set_personal_cap", options);
+  const contract = new StellarSdk.Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    "set_personal_cap",
+    StellarSdk.nativeToScVal(campaignId, { type: "u32" }),
+    new StellarSdk.Address(contributor).toScVal(),
+    StellarSdk.nativeToScVal(capAmount, { type: "i128" }),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(contributor, op, {
+      ...options,
+      operation: "set_personal_cap",
+    });
+    appendWalletTransaction({
+      walletAddress: contributor,
+      campaignId,
+      action: "set_personal_cap",
+      txHash: txResult.txHash,
+    });
+    return txResult.txHash;
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    const errorCode = getContractErrorCode(err);
+    captureTransactionError(
+      "set_personal_cap",
+      campaignId,
+      error,
+      errorCode ? String(errorCode) : undefined,
+    );
     throw new Error(parseContractError(err));
   }
 }

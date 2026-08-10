@@ -55,7 +55,7 @@ NEXT_PUBLIC_NETWORK_PASSPHRASE=Public Global Stellar Network ; September 2015
 Store in your deployment platform's staging environment:
 
 - `NEXT_PUBLIC_CONTRACT_ADDRESS` (testnet)
-- `NEXT_PUBLIC_CREATOR_EMAIL_WEBHOOK_URL` (optional)
+- `CREATOR_EMAIL_WEBHOOK_URL` (optional, server-side only)
 - `NEXT_PUBLIC_ERROR_TRACKING_DSN` (optional, staging instance)
 
 ### Production Secrets
@@ -63,7 +63,7 @@ Store in your deployment platform's staging environment:
 Store in your deployment platform's production environment:
 
 - `NEXT_PUBLIC_CONTRACT_ADDRESS` (mainnet)
-- `NEXT_PUBLIC_CREATOR_EMAIL_WEBHOOK_URL` (optional)
+- `CREATOR_EMAIL_WEBHOOK_URL` (optional, server-side only)
 - `NEXT_PUBLIC_ERROR_TRACKING_DSN` (production instance)
 
 **Security Notes:**

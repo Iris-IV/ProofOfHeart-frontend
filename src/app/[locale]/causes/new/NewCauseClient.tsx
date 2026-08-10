@@ -2,7 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import SafeMarkdown from "@/components/SafeMarkdown";
-import { useState, useEffect, useRef } from "react";
+import CampaignReviewModal from "@/components/CampaignReviewModal";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { validateImageFile } from "@/lib/imageValidation";
 import { useToast } from "@/components/ToastProvider";
@@ -17,87 +18,9 @@ import { invalidateCampaignsList } from "@/lib/cacheInvalidation";
 import { Category, CATEGORY_LABELS } from "@/types";
 import { xlmToStroops } from "@/lib/stellarAmount";
 import { parseContractError } from "@/utils/contractErrors";
-
-// ---------------------------------------------------------------------------
-// Validation — returns translation keys instead of hardcoded strings
-// ---------------------------------------------------------------------------
-
-interface FormErrorKeys {
-  title?: string;
-  description?: string;
-  creatorEmail?: string;
-  fundingGoal?: string;
-  durationDays?: string;
-  revenueSharePercentage?: string;
-  coverImageUrl?: string;
-}
-
-interface ReviewData {
-  title: string;
-  description: string;
-  creatorEmail: string;
-  fundingGoalXlm: number;
-  durationDays: number;
-  category: Category;
-  hasRevenueSharing: boolean;
-  revenueSharePercentage: number;
-  estimatedDeadlineTimestamp: number;
-  tags: string[];
-  coverImageUrl: string;
-  milestones: { targetAmount: bigint; description: string }[];
-}
-
-const IMAGE_URL_RE = /^https?:\/\/.+\..+/;
-
-function validateForm(
-  title: string,
-  description: string,
-  creatorEmail: string,
-  fundingGoal: string,
-  durationDays: string,
-  hasRevenueSharing: boolean,
-  revenueSharePercentage: number,
-  tags: string[],
-  coverImageUrl: string,
-): FormErrorKeys {
-  const errors: FormErrorKeys = {};
-
-  if (title.trim().length < 1) {
-    errors.title = "validationTitleRequired";
-  } else if (title.trim().length > 100) {
-    errors.title = "validationTitleTooLong";
-  }
-
-  if (description.trim().length < 1) {
-    errors.description = "validationDescriptionRequired";
-  } else if (description.trim().length > 1000) {
-    errors.description = "validationDescriptionTooLong";
-  }
-
-  if (creatorEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(creatorEmail.trim())) {
-    errors.creatorEmail = "validationCreatorEmailInvalid";
-  }
-
-  const goal = parseFloat(fundingGoal);
-  if (!fundingGoal || isNaN(goal) || goal <= 0) {
-    errors.fundingGoal = "validationFundingGoalInvalid";
-  }
-
-  const days = parseInt(durationDays, 10);
-  if (!durationDays || isNaN(days) || days < 1 || days > 365) {
-    errors.durationDays = "validationDurationInvalid";
-  }
-
-  if (hasRevenueSharing && (revenueSharePercentage < 0.01 || revenueSharePercentage > 50)) {
-    errors.revenueSharePercentage = "validationRevenueShareInvalid";
-  }
-
-  if (coverImageUrl.trim() && !IMAGE_URL_RE.test(coverImageUrl.trim())) {
-    errors.coverImageUrl = "validationCoverImageInvalid";
-  }
-
-  return errors;
-}
+import { encodeLocalizedDescription } from "@/utils/localizedDescription";
+import { useCampaignFormDraft } from "@/hooks/useCampaignFormDraft";
+import { validateForm, type FormErrorKeys, type ReviewData } from "@/lib/campaignValidation";
 
 // ---------------------------------------------------------------------------
 // Component
@@ -110,6 +33,7 @@ export default function CreateCampaignPage() {
   const { publicKey, isWalletConnected, connectWallet, isLoading: walletLoading } = useWallet();
   const { showError, showSuccess, showWarning } = useToast();
 
+  // ── Form state ──
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [creatorEmail, setCreatorEmail] = useState("");
@@ -117,7 +41,6 @@ export default function CreateCampaignPage() {
   const [durationDays, setDurationDays] = useState("");
   const [category, setCategory] = useState<Category>(Category.Learner);
   const [hasRevenueSharing, setHasRevenueSharing] = useState(false);
-  // #110 — default 5 % (500 bps); state is percent, converted to bps at submit
   const [revenueSharePercentage, setRevenueSharePercentage] = useState(5);
   const [errorKeys, setErrorKeys] = useState<FormErrorKeys>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -127,61 +50,57 @@ export default function CreateCampaignPage() {
   const [milestones, setMilestones] = useState<{ targetAmount: string; description: string }[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [descriptionTab, setDescriptionTab] = useState<"write" | "preview">("write");
+  const [descriptionEs, setDescriptionEs] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const coverFileInputRef = useRef<HTMLInputElement>(null);
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
 
-  const DRAFT_KEY = "proof_of_heart_next_draft";
   const CREATOR_EMAIL_WEBHOOK_URL = process.env.NEXT_PUBLIC_CREATOR_EMAIL_WEBHOOK_URL?.trim() ?? "";
 
+  // ── Draft management hook ──
+  const { hasDraft, lastSavedAt, restoreDraft, saveDraft, discardDraft, clearDraft } =
+    useCampaignFormDraft({ publicKey });
+
+  // Restore draft on mount
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(DRAFT_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.title) setTitle(parsed.title);
-        if (parsed.description) setDescription(parsed.description);
-        if (parsed.creatorEmail) setCreatorEmail(parsed.creatorEmail);
-        if (parsed.fundingGoal) setFundingGoal(parsed.fundingGoal);
-        if (parsed.durationDays) setDurationDays(parsed.durationDays);
-        if (parsed.category !== undefined) setCategory(parsed.category);
-        if (parsed.hasRevenueSharing !== undefined) setHasRevenueSharing(parsed.hasRevenueSharing);
-        if (parsed.revenueSharePercentage !== undefined)
-          setRevenueSharePercentage(parsed.revenueSharePercentage);
-        if (parsed.tags) setTags(parsed.tags);
-        if (parsed.coverImageUrl) setCoverImageUrl(parsed.coverImageUrl);
-        if (parsed.milestones) setMilestones(parsed.milestones);
-      }
-    } catch (e) {
-      console.warn("Failed to load draft from localStorage:", e);
-    }
+    restoreDraft({
+      setTitle,
+      setDescription,
+      setDescriptionEs,
+      setCreatorEmail,
+      setFundingGoal,
+      setDurationDays,
+      setCategory,
+      setHasRevenueSharing,
+      setRevenueSharePercentage,
+      setTags,
+      setCoverImageUrl,
+      setMilestones,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Persist draft whenever form state changes
   useEffect(() => {
-    try {
-      localStorage.setItem(
-        DRAFT_KEY,
-        JSON.stringify({
-          title,
-          description,
-          creatorEmail,
-          fundingGoal,
-          durationDays,
-          category,
-          hasRevenueSharing,
-          revenueSharePercentage,
-          tags,
-          coverImageUrl,
-          milestones,
-        }),
-      );
-    } catch (e) {
-      console.warn("Failed to save draft to localStorage:", e);
-    }
+    saveDraft({
+      title,
+      description,
+      descriptionEs,
+      creatorEmail,
+      fundingGoal,
+      durationDays,
+      category,
+      hasRevenueSharing,
+      revenueSharePercentage,
+      tags,
+      coverImageUrl,
+      milestones,
+    });
   }, [
     title,
     description,
+    descriptionEs,
     creatorEmail,
     fundingGoal,
     durationDays,
@@ -191,8 +110,27 @@ export default function CreateCampaignPage() {
     tags,
     coverImageUrl,
     milestones,
+    saveDraft,
   ]);
 
+  const handleDiscardDraft = () => {
+    discardDraft({
+      setTitle,
+      setDescription,
+      setDescriptionEs,
+      setCreatorEmail,
+      setFundingGoal,
+      setDurationDays,
+      setCategory,
+      setHasRevenueSharing,
+      setRevenueSharePercentage,
+      setTags,
+      setCoverImageUrl,
+      setMilestones,
+    });
+  };
+
+  // ── Derived state ──
   const isStartup = category === Category.EducationalStartup;
 
   const handleCategoryChange = (val: Category) => {
@@ -203,6 +141,7 @@ export default function CreateCampaignPage() {
     }
   };
 
+  // ── Helpers ──
   const handleCoverImageUpload = async (file: File) => {
     const clientValidation = validateImageFile(file);
     if (!clientValidation.valid) {
@@ -256,36 +195,38 @@ export default function CreateCampaignPage() {
       timeZoneName: "short",
     }).format(new Date(timestamp * 1000));
 
-  const notifyEmailOptIn = async (
-    campaignId: number | null,
-    email: string,
-    campaignTitle: string,
-    creatorAddress: string,
-  ) => {
-    if (!CREATOR_EMAIL_WEBHOOK_URL || !email) return;
+  const notifyEmailOptIn = useCallback(
+    async (
+      campaignId: number | null,
+      email: string,
+      campaignTitle: string,
+      creatorAddress: string,
+    ) => {
+      if (!CREATOR_EMAIL_WEBHOOK_URL || !email) return;
+      try {
+        await fetch(CREATOR_EMAIL_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event: "campaign_creator_email_opt_in",
+            email,
+            campaignId,
+            campaignTitle,
+            creatorAddress,
+            source: "proof_of_heart_frontend",
+            timestamp: new Date().toISOString(),
+          }),
+        });
+      } catch {
+        showWarning(t("emailWebhookFailed"));
+      }
+    },
+    [CREATOR_EMAIL_WEBHOOK_URL, showWarning, t],
+  );
 
-    try {
-      await fetch(CREATOR_EMAIL_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          event: "campaign_creator_email_opt_in",
-          email,
-          campaignId,
-          campaignTitle,
-          creatorAddress,
-          source: "proof_of_heart_frontend",
-          timestamp: new Date().toISOString(),
-        }),
-      });
-    } catch {
-      showWarning(t("emailWebhookFailed"));
-    }
-  };
-
-  const handleConfirmAndSign = async () => {
+  // ── Submission handlers ──
+  const handleConfirmAndSign = useCallback(async () => {
     if (!reviewData) return;
-
     if (!isWalletConnected || !publicKey) {
       showError(t("walletRequiredError"));
       return;
@@ -312,6 +253,7 @@ export default function CreateCampaignPage() {
         {
           onStatus: ({ phase }) => setTxPhase(phase),
           coverImageUrl: reviewData.coverImageUrl,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           milestones: reviewData.milestones as any,
         },
       );
@@ -320,7 +262,7 @@ export default function CreateCampaignPage() {
       try {
         newCampaignId = await getCampaignCount();
       } catch {
-        // Ignore count lookup failures and continue with a generic redirect.
+        // Ignore count lookup failures
       }
 
       await notifyEmailOptIn(newCampaignId, reviewData.creatorEmail, reviewData.title, publicKey);
@@ -329,27 +271,30 @@ export default function CreateCampaignPage() {
       showSuccess(t("successMessage", { title: reviewData.title }));
       setIsReviewOpen(false);
       setReviewData(null);
-
-      try {
-        localStorage.removeItem(DRAFT_KEY);
-      } catch {
-        // ignore
-      }
+      clearDraft();
 
       if (newCampaignId !== null) {
         router.push(`/causes/${newCampaignId}`);
       } else {
         router.push("/causes");
       }
-      // Keep isSubmitting true so the form stays disabled during navigation.
-      // The component will unmount before this matters on the success path.
       return;
     } catch (err) {
       showError(parseContractError(err));
     }
     setIsSubmitting(false);
     setTxPhase(null);
-  };
+  }, [
+    reviewData,
+    isWalletConnected,
+    publicKey,
+    showError,
+    showSuccess,
+    t,
+    notifyEmailOptIn,
+    clearDraft,
+    router,
+  ]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -362,12 +307,12 @@ export default function CreateCampaignPage() {
     const keys = validateForm(
       title,
       description,
+      descriptionEs,
       creatorEmail,
       fundingGoal,
       durationDays,
       hasRevenueSharing,
       revenueSharePercentage,
-      tags,
       coverImageUrl,
     );
 
@@ -387,9 +332,13 @@ export default function CreateCampaignPage() {
         description: m.description.trim(),
       }));
 
+    const encodedDescription = descriptionEs.trim()
+      ? encodeLocalizedDescription({ en: description.trim(), es: descriptionEs.trim() })
+      : description.trim();
+
     setReviewData({
       title: title.trim(),
-      description: description.trim(),
+      description: encodedDescription,
       creatorEmail: creatorEmail.trim(),
       fundingGoalXlm: parsedGoal,
       durationDays: parsedDays,
@@ -404,14 +353,11 @@ export default function CreateCampaignPage() {
     setIsReviewOpen(true);
   };
 
-  // Resolve a key to a translated string (or undefined)
+  // Resolve error key to translated string
   const err = (key: keyof FormErrorKeys) =>
     errorKeys[key] ? t(errorKeys[key] as Parameters<typeof t>[0]) : undefined;
 
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
-
+  // ── Render ──
   return (
     <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
       <main className="container mx-auto px-4 py-10 max-w-2xl">
@@ -422,6 +368,27 @@ export default function CreateCampaignPage() {
           </h1>
           <p className="text-zinc-600 dark:text-zinc-400 text-sm">{t("pageSubtitle")}</p>
         </div>
+
+        {/* Draft indicator */}
+        {hasDraft && (
+          <div className="mb-4 flex items-center justify-between rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-4 py-2.5 text-xs text-zinc-600 dark:text-zinc-400">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-2 w-2 rounded-full bg-green-500" aria-hidden="true" />
+              {lastSavedAt
+                ? Date.now() - lastSavedAt < 60_000
+                  ? "Draft saved · Saved a moment ago"
+                  : `Draft saved · ${new Date(lastSavedAt).toLocaleString()}`
+                : "Draft restored"}
+            </span>
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              className="ml-4 font-medium text-red-500 hover:text-red-600 transition-colors"
+            >
+              Discard draft
+            </button>
+          </div>
+        )}
 
         {/* Wallet guard banner */}
         {!isWalletConnected && (
@@ -459,8 +426,6 @@ export default function CreateCampaignPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={100}
-              required
-              aria-required="true"
               aria-invalid={Boolean(errorKeys.title)}
               aria-describedby={errorKeys.title ? "title-error" : undefined}
               placeholder={t("placeholderTitle")}
@@ -472,7 +437,7 @@ export default function CreateCampaignPage() {
             />
             <div className="flex justify-between mt-1">
               {err("title") ? (
-                <p id="title-error" role="alert" className="text-xs text-red-500">
+                <p id="title-error" className="text-xs text-red-500">
                   {err("title")}
                 </p>
               ) : (
@@ -522,8 +487,6 @@ export default function CreateCampaignPage() {
                   onChange={(e) => setDescription(e.target.value)}
                   maxLength={1000}
                   rows={5}
-                  required
-                  aria-required="true"
                   aria-invalid={Boolean(errorKeys.description)}
                   aria-describedby={errorKeys.description ? "description-error" : undefined}
                   placeholder={t("placeholderDescription")}
@@ -536,14 +499,14 @@ export default function CreateCampaignPage() {
                       {description}
                     </SafeMarkdown>
                   ) : (
-                    <span className="italic text-zinc-400">{t("nothingToPreview")}</span>
+                    <span className="italic text-zinc-400">Nothing to preview</span>
                   )}
                 </div>
               )}
             </div>
             <div className="flex justify-between mt-1">
               {err("description") ? (
-                <p id="description-error" role="alert" className="text-xs text-red-500">
+                <p id="description-error" className="text-xs text-red-500">
                   {err("description")}
                 </p>
               ) : (
@@ -553,7 +516,42 @@ export default function CreateCampaignPage() {
             </div>
           </div>
 
-          {/* Optional creator email (off-chain only) */}
+          {/* Spanish Description (optional) */}
+          <div>
+            <label
+              htmlFor="description-es"
+              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+            >
+              {t("tabSpanish")}
+            </label>
+            <textarea
+              id="description-es"
+              value={descriptionEs}
+              onChange={(e) => setDescriptionEs(e.target.value)}
+              maxLength={1000}
+              rows={4}
+              aria-invalid={Boolean(errorKeys.descriptionEs)}
+              aria-describedby={errorKeys.descriptionEs ? "description-es-error" : undefined}
+              placeholder={t("placeholderDescriptionEs")}
+              className={`w-full px-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors resize-y ${
+                errorKeys.descriptionEs
+                  ? "border-red-400 dark:border-red-500"
+                  : "border-zinc-200 dark:border-zinc-600"
+              }`}
+            />
+            <div className="flex justify-between mt-1">
+              {errorKeys.descriptionEs ? (
+                <p id="description-es-error" className="text-xs text-red-500">
+                  {t(errorKeys.descriptionEs as Parameters<typeof t>[0])}
+                </p>
+              ) : (
+                <span />
+              )}
+              <span className="text-xs text-zinc-400 ms-auto">{descriptionEs.length}/1,000</span>
+            </div>
+          </div>
+
+          {/* Optional creator email */}
           <div>
             <label
               htmlFor="creatorEmail"
@@ -578,7 +576,7 @@ export default function CreateCampaignPage() {
               }`}
             />
             {err("creatorEmail") ? (
-              <p id="creator-email-error" role="alert" className="text-xs text-red-500 mt-1">
+              <p id="creator-email-error" className="text-xs text-red-500 mt-1">
                 {err("creatorEmail")}
               </p>
             ) : (
@@ -590,7 +588,6 @@ export default function CreateCampaignPage() {
 
           {/* Funding Goal + Duration */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Funding Goal */}
             <div>
               <label
                 htmlFor="fundingGoal"
@@ -609,8 +606,6 @@ export default function CreateCampaignPage() {
                   onChange={(e) => setFundingGoal(e.target.value)}
                   min="0.0000001"
                   step="any"
-                  required
-                  aria-required="true"
                   aria-invalid={Boolean(errorKeys.fundingGoal)}
                   aria-describedby={errorKeys.fundingGoal ? "funding-goal-error" : undefined}
                   placeholder="e.g. 1000"
@@ -622,13 +617,12 @@ export default function CreateCampaignPage() {
                 />
               </div>
               {err("fundingGoal") && (
-                <p id="funding-goal-error" role="alert" className="text-xs text-red-500 mt-1">
+                <p id="funding-goal-error" className="text-xs text-red-500 mt-1">
                   {err("fundingGoal")}
                 </p>
               )}
             </div>
 
-            {/* Duration */}
             <div>
               <label
                 htmlFor="durationDays"
@@ -644,8 +638,6 @@ export default function CreateCampaignPage() {
                 min="1"
                 max="365"
                 step="1"
-                required
-                aria-required="true"
                 aria-invalid={Boolean(errorKeys.durationDays)}
                 aria-describedby={errorKeys.durationDays ? "duration-days-error" : undefined}
                 placeholder={t("placeholderDuration")}
@@ -656,7 +648,7 @@ export default function CreateCampaignPage() {
                 }`}
               />
               {err("durationDays") && (
-                <p id="duration-days-error" role="alert" className="text-xs text-red-500 mt-1">
+                <p id="duration-days-error" className="text-xs text-red-500 mt-1">
                   {err("durationDays")}
                 </p>
               )}
@@ -673,8 +665,6 @@ export default function CreateCampaignPage() {
             </label>
             <select
               id="category"
-              required
-              aria-required="true"
               value={category}
               onChange={(e) => handleCategoryChange(Number(e.target.value) as Category)}
               className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -723,10 +713,6 @@ export default function CreateCampaignPage() {
               </div>
 
               {hasRevenueSharing && (
-                // #110 — slider now models percent directly (0.5 % steps) so
-                // round percentages are easy to hit. A companion bps input lets
-                // users enter exact values when they need them. Submitted value
-                // is still converted to bps at submit time.
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label
@@ -743,7 +729,6 @@ export default function CreateCampaignPage() {
                     </span>
                   </div>
 
-                  {/* Slider — operates in percent, 0.5 % steps (#110) */}
                   <input
                     id="revenueShareSlider"
                     type="range"
@@ -753,10 +738,6 @@ export default function CreateCampaignPage() {
                     value={revenueSharePercentage}
                     onChange={(e) => setRevenueSharePercentage(parseFloat(e.target.value))}
                     aria-label={t("labelRevenueSharePct")}
-                    aria-invalid={Boolean(errorKeys.revenueSharePercentage)}
-                    aria-describedby={
-                      errorKeys.revenueSharePercentage ? "revenue-share-error" : undefined
-                    }
                     className="w-full h-2 rounded-full accent-blue-600 cursor-pointer"
                   />
                   <div className="flex justify-between text-xs text-zinc-400 mt-1">
@@ -764,7 +745,6 @@ export default function CreateCampaignPage() {
                     <span>50%</span>
                   </div>
 
-                  {/* Precise bps input for exact values (#110) */}
                   <div className="flex items-center gap-2 mt-2">
                     <label
                       htmlFor="revenueShareBps"
@@ -786,19 +766,13 @@ export default function CreateCampaignPage() {
                           setRevenueSharePercentage(bps / 100);
                         }
                       }}
-                      aria-invalid={Boolean(errorKeys.revenueSharePercentage)}
-                      aria-describedby={
-                        errorKeys.revenueSharePercentage ? "revenue-share-error" : undefined
-                      }
                       className="w-24 rounded-lg border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
                     />
                     <span className="text-xs text-zinc-400">{t("revenueShareBpsDenominator")}</span>
                   </div>
 
                   {err("revenueSharePercentage") && (
-                    <p id="revenue-share-error" role="alert" className="text-xs text-red-500 mt-1">
-                      {err("revenueSharePercentage")}
-                    </p>
+                    <p className="text-xs text-red-500 mt-1">{err("revenueSharePercentage")}</p>
                   )}
                 </div>
               )}
@@ -807,10 +781,7 @@ export default function CreateCampaignPage() {
 
           {/* Tags */}
           <div className="space-y-2">
-            <label
-              htmlFor="tags-input"
-              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-            >
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
               {t("labelTags")}{" "}
               <span className="text-xs font-normal text-zinc-400">({t("tagsLimitTip")})</span>
             </label>
@@ -826,7 +797,6 @@ export default function CreateCampaignPage() {
                   <button
                     type="button"
                     onClick={() => setTags(tags.filter((_: string, i: number) => i !== idx))}
-                    aria-label={`Remove tag ${tag}`}
                     className="hover:text-blue-900 dark:hover:text-blue-100 transition-colors"
                   >
                     ✕
@@ -835,7 +805,6 @@ export default function CreateCampaignPage() {
               ))}
               {tags.length < 3 && (
                 <input
-                  id="tags-input"
                   type="text"
                   value={tagInput}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -909,11 +878,11 @@ export default function CreateCampaignPage() {
             </p>
             {errorKeys.coverImageUrl && (
               <p id="cover-image-error" role="alert" className="text-xs text-red-500 mt-1">
-                Please enter a valid URL (must start with http:// or https://).
+                {t("invalidCoverImageUrl")}
               </p>
             )}
             {coverImageUrl && !errorKeys.coverImageUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, @next/next/no-img-element
               <img
                 src={coverImageUrl}
                 alt="Cover preview"
@@ -956,10 +925,9 @@ export default function CreateCampaignPage() {
                           htmlFor={`milestone-${idx}-target`}
                           className="text-xs font-medium text-zinc-500 w-24 shrink-0"
                         >
-                          Target (XLM)
+                          {t("milestoneTarget")}
                         </label>
                         <input
-                          id={`milestone-${idx}-target`}
                           type="number"
                           value={m.targetAmount}
                           onChange={(e) => {
@@ -978,10 +946,9 @@ export default function CreateCampaignPage() {
                           htmlFor={`milestone-${idx}-description`}
                           className="text-xs font-medium text-zinc-500 w-24 shrink-0"
                         >
-                          Description
+                          {t("milestoneDescription")}
                         </label>
                         <input
-                          id={`milestone-${idx}-description`}
                           type="text"
                           value={m.description}
                           onChange={(e) => {
@@ -1022,176 +989,21 @@ export default function CreateCampaignPage() {
               disabled={isSubmitting || !isWalletConnected}
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isSubmitting && (
-                <span className="inline-block motion-safe:animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-              )}
-              {isSubmitting ? t("submitting") : t("launchCampaign")}
+              {t("launchCampaign")}
             </button>
           </div>
         </form>
 
+        {/* Review modal */}
         {isReviewOpen && reviewData && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="campaign-review-title"
-            onClick={(e) => {
-              if (e.target === e.currentTarget && !isSubmitting) {
-                setIsReviewOpen(false);
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Escape" && !isSubmitting) {
-                setIsReviewOpen(false);
-              }
-            }}
-          >
-            <div className="w-full max-w-xl rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-2xl overflow-hidden">
-              <div className="px-6 py-5 border-b border-zinc-200 dark:border-zinc-700">
-                <h2
-                  id="campaign-review-title"
-                  className="text-xl font-semibold text-zinc-900 dark:text-zinc-50"
-                >
-                  {t("reviewTitle")}
-                </h2>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                  {t("reviewSubtitle")}
-                </p>
-              </div>
-
-              <dl className="px-6 py-5 space-y-4">
-                <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
-                  <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                    {t("reviewFieldTitle")}
-                  </dt>
-                  <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mt-1">
-                    {reviewData.title}
-                  </dd>
-                </div>
-
-                <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
-                  <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                    {t("reviewFieldCreatorEmail")}
-                  </dt>
-                  <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mt-1">
-                    {reviewData.creatorEmail || t("reviewCreatorEmailNone")}
-                  </dd>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
-                    <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                      {t("reviewFieldFundingGoal")}
-                    </dt>
-                    <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mt-1">
-                      {reviewData.fundingGoalXlm.toLocaleString(undefined, {
-                        maximumFractionDigits: 7,
-                      })}{" "}
-                      XLM
-                    </dd>
-                  </div>
-
-                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
-                    <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                      {t("reviewFieldDuration")}
-                    </dt>
-                    <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mt-1">
-                      {t("reviewFieldDurationDays", { count: reviewData.durationDays })}
-                    </dd>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
-                    <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                      {t("reviewFieldCategory")}
-                    </dt>
-                    <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mt-1">
-                      {CATEGORY_LABELS[reviewData.category]}
-                    </dd>
-                  </div>
-
-                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
-                    <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                      {t("reviewFieldRevenueShare")}
-                    </dt>
-                    <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mt-1">
-                      {reviewData.hasRevenueSharing
-                        ? `${reviewData.revenueSharePercentage.toFixed(2)}%`
-                        : t("reviewRevenueShareNone")}
-                    </dd>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
-                  <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                    {t("reviewFieldEndDate")}
-                  </dt>
-                  <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mt-1">
-                    {formatReviewDate(reviewData.estimatedDeadlineTimestamp)}
-                  </dd>
-                </div>
-
-                {reviewData.tags.length > 0 && (
-                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
-                    <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                      {t("reviewFieldTags")}
-                    </dt>
-                    <dd className="flex flex-wrap gap-2 mt-1.5">
-                      {reviewData.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold border border-zinc-300 dark:border-zinc-600"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                    </dd>
-                  </div>
-                )}
-
-                <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
-                  <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                    {t("reviewFieldTimestamp")}
-                  </dt>
-                  <dd className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mt-1 tabular-nums">
-                    {reviewData.estimatedDeadlineTimestamp}
-                  </dd>
-                </div>
-              </dl>
-
-              <div className="px-6 py-5 border-t border-zinc-200 dark:border-zinc-700 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsReviewOpen(false)}
-                  disabled={isSubmitting}
-                  className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {t("editDetails")}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmAndSign}
-                  disabled={isSubmitting || !isWalletConnected}
-                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {isSubmitting && (
-                    <span className="inline-block motion-safe:animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                  )}
-                  {isSubmitting
-                    ? txPhase === "building"
-                      ? t("submitting")
-                      : txPhase === "signing"
-                        ? "Signing…"
-                        : txPhase === "confirming"
-                          ? "Confirming…"
-                          : t("submitting")
-                    : t("confirmAndSign")}
-                </button>
-              </div>
-            </div>
-          </div>
+          <CampaignReviewModal
+            reviewData={reviewData}
+            isSubmitting={isSubmitting}
+            txPhase={txPhase}
+            onClose={() => setIsReviewOpen(false)}
+            onConfirm={handleConfirmAndSign}
+            formatReviewDate={formatReviewDate}
+          />
         )}
       </main>
     </div>

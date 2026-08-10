@@ -33,6 +33,8 @@ export interface ThirdPartyScript {
   strategy: ScriptStrategy;
   /** Extra DOM attributes, e.g. Plausible's `data-domain`. */
   attributes?: Record<string, string>;
+  /** Called when the script fails to load. */
+  onError?: () => void;
 }
 
 /** Supported privacy-first analytics vendors. */
@@ -124,10 +126,16 @@ export function getSupportWidgetScript(): ThirdPartyScript | null {
   };
 }
 
-/** Every configured third-party script, in load order. */
+/** Every configured third-party script, in load order (deduplicated by id). */
 export function getThirdPartyScripts(): ThirdPartyScript[] {
+  const seen = new Set<string>();
   return [getAnalyticsScript(), getSupportWidgetScript()].filter(
-    (script): script is ThirdPartyScript => script !== null,
+    (script): script is ThirdPartyScript => {
+      if (script === null) return false;
+      if (seen.has(script.id)) return false;
+      seen.add(script.id);
+      return true;
+    },
   );
 }
 
@@ -154,4 +162,24 @@ export function getThirdPartyScriptOrigins(): string[] {
 /** The analytics vendor in use, for the runtime event dispatcher. */
 export function getAnalyticsProvider(): AnalyticsProvider | null {
   return getAnalyticsScript() ? readProvider() : null;
+}
+
+/**
+ * Handle a script that failed to load.
+ *
+ * Runs the script's own `onError` handler when one is configured. A missing
+ * handler would otherwise leave the failure silent — a blocked CDN or a CSP
+ * rejection — so in development a warning naming the script is emitted instead.
+ */
+export function handleScriptError(script: ThirdPartyScript): void {
+  if (script.onError) {
+    script.onError();
+    return;
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    console.warn(
+      `[thirdParty] Script "${script.id}" failed to load (${script.src}) and has no onError handler configured.`,
+    );
+  }
 }

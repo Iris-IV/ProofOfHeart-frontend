@@ -1,20 +1,3 @@
-export type WalletTransactionAction =
-  | "contribute"
-  | "claim_refund"
-  | "claim_revenue"
-  | "claim_reserve"
-  | "deposit_revenue"
-  | "withdraw"
-  | "vote";
-
-export interface WalletTransactionLogEntry {
-  walletAddress: string;
-  campaignId: number;
-  action: WalletTransactionAction;
-  txHash: string;
-  timestamp: number;
-}
-
 import { normalizeAddress } from "./stellar";
 import { hasOffchainApiBaseUrl, requestOffchainJson } from "./offchainApiClient";
 import {
@@ -23,6 +6,24 @@ import {
   appendTimestamp,
   filterAndSortByTimestamp,
 } from "./logUtil";
+
+export type WalletTransactionAction =
+  | "contribute"
+  | "claim_refund"
+  | "claim_revenue"
+  | "claim_reserve"
+  | "deposit_revenue"
+  | "withdraw"
+  | "vote"
+  | "set_personal_cap";
+
+export interface WalletTransactionLogEntry {
+  walletAddress: string;
+  campaignId: number;
+  action: WalletTransactionAction;
+  txHash: string;
+  timestamp: number;
+}
 
 const STORAGE_KEY = "proof_of_heart_wallet_tx_log_v1";
 

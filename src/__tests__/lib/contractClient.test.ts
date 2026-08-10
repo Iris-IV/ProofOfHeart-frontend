@@ -325,6 +325,74 @@ describe("contractClient", () => {
     expect(decoded.tags).toEqual(["education", "impact"]);
   });
 
+  it("createCampaign encodes tags into the off-chain POH_EXT blob on the non-mock path", async () => {
+    const { module, mockServer } = await loadClient({ useMocks: false });
+
+    await module.createCampaign(
+      TEST_USER,
+      "On-chain campaign",
+      "Description",
+      BigInt(1_000_000_000),
+      30,
+      Category.Learner,
+      false,
+      0,
+      ["alpha", "beta"],
+    );
+
+    const createCall = mockServer.simulateTransaction.mock.calls.find(
+      ([tx]: [{ ops?: Array<{ method?: string }> }]) => tx.ops?.[0]?.method === "create_campaign",
+    );
+    expect(createCall).toBeDefined();
+
+    const [tx] = createCall as [{ ops: Array<{ args: unknown[] }> }];
+    const descriptionScVal = tx.ops[0].args[2] as { str: () => { toString: () => string } };
+    const finalDescription = descriptionScVal.str().toString();
+
+    expect(finalDescription).toContain("===POH_EXT===");
+    const ext = JSON.parse(finalDescription.split("===POH_EXT===\n")[1]);
+    expect(ext.tags).toEqual(["alpha", "beta"]);
+
+    // The contract itself never receives tags as a direct argument — it only
+    // accepts the 8 fields the issue's schema lists.
+    expect(tx.ops[0].args).toHaveLength(8);
+  });
+
+  it("decodeCampaign parses tags from the off-chain POH_EXT blob when the contract map has no tags field", async () => {
+    const { module } = await loadClient({ useMocks: true });
+    const scVal = makeScValHelpers();
+
+    const description = `Real description\n\n===POH_EXT===\n${JSON.stringify({
+      tags: ["water", "rural"],
+      coverImageUrl: "https://example.com/cover.png",
+    })}`;
+
+    const fixtureWithoutContractTags = scVal.map({
+      id: scVal.u32(9),
+      creator: scVal.address(TEST_ADMIN),
+      title: scVal.str("No-tags-field campaign"),
+      description: scVal.str(description),
+      funding_goal: scVal.bigint(500_000_000),
+      deadline: scVal.u64(1_900_000_000),
+      amount_raised: scVal.bigint(0),
+      is_active: scVal.bool(true),
+      created_at: scVal.u64(1_800_000_000),
+      funds_withdrawn: scVal.bool(false),
+      is_cancelled: scVal.bool(false),
+      is_verified: scVal.bool(false),
+      category: scVal.u32(Category.Publisher),
+      has_revenue_sharing: scVal.bool(false),
+      revenue_share_percentage: scVal.u32(0),
+      // Deliberately no `tags` field, matching the real contract's schema.
+    });
+
+    const decoded = module.__testUtils.decodeCampaign(fixtureWithoutContractTags as never);
+
+    expect(decoded.tags).toEqual(["water", "rural"]);
+    expect(decoded.cover_image_url).toBe("https://example.com/cover.png");
+    expect(decoded.description).toBe("Real description");
+  });
+
   it("parseContractError maps Contract error strings", () => {
     expect(parseContractError(new Error("Error(Contract, #3)"))).toBe(
       "ContractErrors.CampaignNotActive",

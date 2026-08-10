@@ -1,6 +1,7 @@
 import createIntlMiddleware from "next-intl/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { routing } from "./i18n/routing";
+import { buildCspHeader, CSP_NONCE_HEADER, generateCspNonce } from "./lib/csp";
 
 const intlMiddleware = createIntlMiddleware(routing);
 
@@ -43,7 +44,54 @@ export default function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // #569 — Generate a per-request CSP nonce so inline scripts (the theme
+  // blocking script in <head>) can be allow-listed without `'unsafe-inline'`.
+  const nonce = generateCspNonce();
+  const isDev = process.env.NODE_ENV !== "production";
+  // Dev adapts the policy for the Report-Only context: `eval` is allowed (the
+  // Turbopack dev runtime evaluates RSC code with it), `frame-ancestors` is
+  // dropped (ignored in Report-Only; WebKit logs a console error about it),
+  // and `report-to` is added (WebKit warns that a Report-Only policy without
+  // it has no effect). This keeps the local console — and the e2e
+  // console-error assertions — noise-free while genuine violations still
+  // surface.
+  const cspHeader = buildCspHeader(nonce, { development: isDev });
+
+  // Propagate the nonce to the layout via a request header so it can attach the
+  // same value to the <script nonce="…"> attribute.
+  req.headers.set(CSP_NONCE_HEADER, nonce);
+
+  // #569 — Next.js only applies the nonce to its own framework-injected inline
+  // scripts (the self.__next_f flight-payload bootstrap) when it can see the
+  // Content-Security-Policy header on the *incoming request* headers. Mirror
+  // the header on the request (pattern from the Next.js CSP docs) so hydration
+  // scripts carry a matching nonce; the response header below is what the
+  // browser enforces. Set on the request in both environments so the nonce
+  // plumbing is exercised locally too.
+  req.headers.set("Content-Security-Policy", cspHeader);
+
   const response = intlMiddleware(req);
+
+  // #569 — Apply strict CSP with the nonce. Next.js merges headers from
+  // middleware with those from next.config.ts; setting it here overrides the
+  // static value.
+  //
+  // Production enforces the policy. Development ships the same policy as
+  // Content-Security-Policy-Report-Only (plus `'unsafe-eval'`, which the
+  // Turbopack dev runtime needs), so the header is only enforced where it is
+  // safe — but Report-Only still surfaces genuine policy violations in the
+  // local console, so a break like the nonce-propagation issue above shows up
+  // in dev instead of only after deploy.
+  if (isDev) {
+    response.headers.set("Content-Security-Policy-Report-Only", cspHeader);
+    // WebKit only treats Report-Only policies that name a reporting group as
+    // effective. No collector exists locally, but declaring the endpoint (the
+    // group referenced by the `report-to` directive above) silences the
+    // "policy will have no effect" console error.
+    response.headers.set("Reporting-Endpoints", 'csp-endpoint="/api/csp-report"');
+  } else {
+    response.headers.set("Content-Security-Policy", cspHeader);
+  }
 
   // #621 — Enforce HSTS on every response (including intl redirects) so that
   // browsers always upgrade HTTP to HTTPS and preload the domain.

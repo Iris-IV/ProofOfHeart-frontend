@@ -10,8 +10,17 @@
  */
 
 export interface FeatureFlags {
+  /** Controls whether the voting UI is shown on cause detail pages.
+   *  Environment variable: `NEXT_PUBLIC_FEATURE_VOTINGUI`
+   *  Default: `false` */
   votingUI: boolean;
+  /** Controls whether analytics event tracking is enabled.
+   *  Environment variable: `NEXT_PUBLIC_FEATURE_ANALYTICS`
+   *  Default: `false` */
   analytics: boolean;
+  /** Controls whether embedded content (e.g. social media embeds) is enabled.
+   *  Environment variable: `NEXT_PUBLIC_FEATURE_EMBEDS`
+   *  Default: `false` */
   embeds: boolean;
 }
 
@@ -28,6 +37,11 @@ function readFlag(name: string, fallback: boolean): boolean {
   return raw === "true" || raw === "1";
 }
 
+/** Module-level cache populated once at first access.
+ *  Environment variables read during initialization are not re-evaluated
+ *  when they change at runtime. Restart the dev server after modifying
+ *  any `NEXT_PUBLIC_FEATURE_*` variable.
+ *  @see https://github.com/Iris-IV/ProofOfHeart-frontend/issues/559 */
 let cached: FeatureFlags | null = null;
 
 /**

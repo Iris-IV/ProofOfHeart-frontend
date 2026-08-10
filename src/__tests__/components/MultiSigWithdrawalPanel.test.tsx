@@ -12,6 +12,7 @@ jest.mock("next-intl", () => ({
 
 jest.mock("@/hooks/useMultiSigProposals", () => ({
   useMultiSigProposals: () => ({
+    proposals: [],
     activeProposal: null,
     createProposal: jest.fn(),
     signProposal: jest.fn(),

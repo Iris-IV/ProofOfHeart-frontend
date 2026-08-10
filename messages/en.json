@@ -264,8 +264,8 @@
     "tryAgain": "Try again",
     "loadMore": "Load more causes",
     "showingRange": "Showing {shown} of {total}",
-    "listView": "List view",
-    "mapView": "Map view"
+    "listView": "List",
+    "mapView": "Map"
   },
   "Status": {
     "active": "Active",
@@ -441,7 +441,8 @@
     "processing": "Processing…",
     "withdrawalSuccess": "Withdrawal successful! You received {amount} XLM.",
     "errorNoSigners": "Please add at least one co-signer address.",
-    "errorInvalidThreshold": "Required signatures must be between 1 and the number of co-signers."
+    "errorInvalidThreshold": "Required signatures must be between 1 and the number of co-signers.",
+    "you": "You"
   },
   "EditCampaignMetadata": {
     "editMetadata": "Edit metadata",
@@ -548,7 +549,8 @@
   },
   "CampaignMap": {
     "emptyTitle": "No campaigns with location data",
-    "emptyBody": "Campaigns with coordinates will appear on this map. Switch to list view to browse all campaigns."
+    "emptyBody": "Campaigns with coordinates will appear on this map. Switch to list view to browse all campaigns.",
+    "loading": "Loading map…"
   },
   "Gamification": {
     "level_Bronze": "Bronze",
@@ -642,5 +644,24 @@
     "a_revenueSharing": "Startup campaigns (in the Educational Startup category) can opt in to revenue sharing when they create their campaign. The creator sets a revenue-share percentage and, after the campaign succeeds, deposits future revenue into the smart contract. Contributors can then claim their proportional share at any time through the My Contributions dashboard.",
     "q_getFreighter": "How do I get the Freighter wallet?",
     "a_getFreighter": "Freighter is a browser extension for Chrome and Firefox made by the Stellar Development Foundation. Visit <a href=\"https://freighter.app\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-blue-600 dark:text-blue-400 underline\">freighter.app</a>, install the extension, create or import a Stellar account, and then connect it to ProofOfHeart with one click. No personal information is required."
+  },
+  "PersonalCap": {
+    "title": "Personal Contribution Cap",
+    "description": "Set a maximum amount you want to contribute to this campaign.",
+    "loading": "Loading your personal cap…",
+    "currentCapLabel": "Current cap:",
+    "contributedSoFar": "You have contributed {amount} XLM so far.",
+    "noCapSet": "No personal cap set. You can contribute any amount.",
+    "currentContributionLabel": "You have contributed:",
+    "amountPlaceholder": "Enter XLM amount",
+    "amountAriaLabel": "Personal cap amount in XLM",
+    "setCap": "Set Cap",
+    "setting": "Setting…",
+    "capBelowContribution": "This cap is below your current contribution of {amount} XLM.",
+    "removeCap": "Remove Cap",
+    "removing": "Removing…",
+    "positiveAmountWarning": "Cap must be a positive amount.",
+    "capSetSuccess": "Personal cap set to {amount} XLM.",
+    "capRemovedSuccess": "Personal cap removed."
   }
 }

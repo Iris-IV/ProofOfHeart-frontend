@@ -1,32 +1,14 @@
+import { getArray, setArray, canUseStorage } from "./localStorageStore";
 import { normalizeAddress } from "./stellar";
 
-export function canUseStorage(): boolean {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
-}
+export { canUseStorage };
 
 export function readAllEntries<T>(storageKey: string): T[] {
-  if (!canUseStorage()) return [];
-
-  try {
-    const raw = window.localStorage.getItem(storageKey);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed as T[];
-  } catch {
-    return [];
-  }
+  return getArray<T>(storageKey);
 }
 
 export function writeAllEntries<T>(storageKey: string, entries: T[], maxEntries?: number): void {
-  if (!canUseStorage()) return;
-
-  try {
-    const toStore = maxEntries != null ? entries.slice(-maxEntries) : entries;
-    window.localStorage.setItem(storageKey, JSON.stringify(toStore));
-  } catch {
-    // Ignore localStorage write failures.
-  }
+  setArray(storageKey, entries, maxEntries);
 }
 
 export function appendTimestamp<T extends object>(
