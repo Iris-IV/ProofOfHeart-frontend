@@ -27,11 +27,13 @@ function parse(description: string): LocalizedMap | null {
 /**
  * Returns the description text for the given locale, falling back to English,
  * then to the raw description string if no language markers are present.
+ * A requested locale whose translation is missing or empty falls back to the
+ * default locale (English).
  */
 export function getLocalizedDescription(description: string, locale: string): string {
   const map = parse(description);
   if (!map) return description;
-  return map[locale] ?? map["en"] ?? description;
+  return map[locale] || map["en"] || description;
 }
 
 /**

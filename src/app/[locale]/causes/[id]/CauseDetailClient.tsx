@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bookmark } from "lucide-react";
+import { Bookmark, FileText } from "lucide-react";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { useState, useEffect } from "react";
@@ -23,6 +23,7 @@ import ShareButtons from "@/components/ShareButtons";
 import SafeMarkdown from "@/components/SafeMarkdown";
 import ReportModal from "@/components/ReportModal";
 import CampaignActions from "@/components/CampaignActions";
+import PersonalCap from "@/components/PersonalCap";
 import AsyncButtonContent from "@/components/AsyncButtonContent";
 import { useToast } from "@/components/ToastProvider";
 import VotingComponent from "@/components/VotingComponent";
@@ -51,6 +52,7 @@ import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncActi
 import { trackViewCampaign } from "@/lib/analytics";
 import { formatXlm, formatDate } from "@/lib/formatters";
 import { getLocalizedDescription } from "@/utils/localizedDescription";
+import { isBlankMarkdown } from "@/utils/markdownContent";
 import { isSameAddress } from "@/lib/stellar";
 const EditCampaignMetadata = dynamic(() => import("@/components/EditCampaignMetadata"), {
   ssr: false,
@@ -59,6 +61,7 @@ const EditCampaignMetadata = dynamic(() => import("@/components/EditCampaignMeta
 export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
   const tContractErrors = useTranslations("ContractErrors");
+  const tCauseDetail = useTranslations("CauseDetail");
   const locale = useLocale();
   const {
     campaign: fetchedCampaign,
@@ -287,6 +290,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const voteBreakdownApprovePct = voteCounts.totalVotes > 0 ? approvalRate : 50;
   const voteBreakdownRejectPct = 100 - voteBreakdownApprovePct;
   const categoryLabel = CATEGORY_LABELS[campaign.category] ?? "Other";
+  const localizedDescription = getLocalizedDescription(campaign.description, locale);
   const platformFeePercent = platformFeeBps / 100;
   const estimatedFeeAmount = raised * (platformFeeBps / 10000);
   const estimatedCreatorReceives = raised - estimatedFeeAmount;
@@ -341,30 +345,43 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 {campaign.title}
               </h1>
               <div className="relative">
-                <div
-                  className={`overflow-hidden transition-all duration-300 ${!isDescriptionExpanded ? "max-h-[250px] relative" : ""}`}
-                >
-                  <SafeMarkdown className="prose prose-zinc dark:prose-invert max-w-none break-words">
-                    {getLocalizedDescription(campaign.description, locale)}
-                  </SafeMarkdown>
-                  {!isDescriptionExpanded && (
-                    <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white dark:from-zinc-800 to-transparent pointer-events-none" />
-                  )}
-                </div>
-                {campaign.description &&
-                  getLocalizedDescription(campaign.description, locale).length > 500 && (
-                    <div className="mt-2 text-center">
-                      <button
-                        type="button"
-                        onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-3 py-1 transition-colors"
-                        aria-expanded={isDescriptionExpanded}
-                        aria-controls="campaign-description"
-                      >
-                        {isDescriptionExpanded ? "Show less" : "Read more"}
-                      </button>
+                {isBlankMarkdown(localizedDescription) ? (
+                  <div
+                    id="campaign-description"
+                    className="flex items-center gap-3 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 px-4 py-6 text-sm text-zinc-500 dark:text-zinc-400"
+                    role="status"
+                  >
+                    <FileText size={18} className="shrink-0 opacity-70" aria-hidden="true" />
+                    <span>{tCauseDetail("noDescription")}</span>
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      id="campaign-description"
+                      className={`overflow-hidden transition-all duration-300 ${!isDescriptionExpanded ? "max-h-[250px] relative" : ""}`}
+                    >
+                      <SafeMarkdown className="prose prose-zinc dark:prose-invert max-w-none break-words">
+                        {localizedDescription}
+                      </SafeMarkdown>
+                      {!isDescriptionExpanded && (
+                        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white dark:from-zinc-800 to-transparent pointer-events-none" />
+                      )}
                     </div>
-                  )}
+                    {localizedDescription.length > 500 && (
+                      <div className="mt-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                          className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-3 py-1 transition-colors"
+                          aria-expanded={isDescriptionExpanded}
+                          aria-controls="campaign-description"
+                        >
+                          {isDescriptionExpanded ? "Show less" : "Read more"}
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               {canEdit && (
@@ -608,6 +625,8 @@ export default function CauseDetailClient({ id }: { id: string }) {
             <CampaignActions campaign={campaign} onActionSuccess={refetch} />
 
             <VestingReservePanel campaign={campaign} onActionSuccess={refetch} />
+
+            <PersonalCap campaignId={campaign.id} />
 
             <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">

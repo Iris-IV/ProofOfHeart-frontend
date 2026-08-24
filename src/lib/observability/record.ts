@@ -63,26 +63,10 @@ async function postToBackend(event: ObservabilityEvent): Promise<void> {
   }
 }
 
-async function postToWebhook(event: ObservabilityEvent): Promise<void> {
-  const webhookUrl = process.env.NEXT_PUBLIC_OBSERVABILITY_WEBHOOK_URL;
-  if (!webhookUrl || typeof window === "undefined") return;
-  try {
-    await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(event),
-      keepalive: true,
-    });
-  } catch {
-    // Optional external logging backend.
-  }
-}
-
-/** Record a structured observability event (console, API ingest, optional webhook). */
+/** Record a structured observability event (console, API ingest; webhook is forwarded server-side by /api/observability/events). */
 export function recordObservabilityEvent(event: ObservabilityEvent): void {
   logStructured(event);
   void postToBackend(event);
-  void postToWebhook(event);
 }
 
 export function recordObservabilityFailure(

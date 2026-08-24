@@ -3,6 +3,7 @@ import createNextIntlPlugin from "next-intl/plugin";
 import type { NextConfig } from "next";
 import withBundleAnalyzer from "@next/bundle-analyzer";
 import { getThirdPartyScriptOrigins } from "./src/lib/thirdParty";
+import { ALLOWED_CAMPAIGN_IMAGE_HOSTS } from "./src/lib/campaignMedia";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const withAnalyzer = withBundleAnalyzer({
@@ -28,22 +29,13 @@ const nextConfig: NextConfig = {
     // 3. Next.js Image Optimization would require caching optimized images, which adds complexity
     // 4. Users upload images directly to IPFS/Arweave, not through our server
     unoptimized: true,
-    // Constrained remotePatterns for campaign media only
-    // Removed broad wildcards to prevent SSRF attacks
-    remotePatterns: [
-      // IPFS gateways (for decentralized campaign images)
-      { protocol: "https", hostname: "ipfs.io" },
-      { protocol: "https", hostname: "cloudflare-ipfs.com" },
-      { protocol: "https", hostname: "ipfs.dweb.link" },
-      // Arweave (for permanent campaign storage)
-      { protocol: "https", hostname: "arweave.net" },
-      // GitHub user content (for creator avatars, limited to raw.githubusercontent.com)
-      { protocol: "https", hostname: "raw.githubusercontent.com" },
-      // Imgur (legacy support, consider migrating to IPFS)
-      { protocol: "https", hostname: "i.imgur.com" },
-      // Unsplash (for placeholder/demo images only)
-      { protocol: "https", hostname: "images.unsplash.com" },
-    ],
+    // Constrained remotePatterns for campaign media only. Derived from the same
+    // allow-list that gates server-side cover fetches (see src/lib/campaignMedia)
+    // so the two can never drift — broad wildcards were removed to prevent SSRF.
+    remotePatterns: ALLOWED_CAMPAIGN_IMAGE_HOSTS.map((hostname) => ({
+      protocol: "https",
+      hostname,
+    })),
   },
   async redirects() {
     return [
@@ -142,11 +134,6 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: [
-          // Content Security Policy
-          {
-            key: "Content-Security-Policy",
-            value: CSP_DIRECTIVES,
-          },
           // Prevent clickjacking
           {
             key: "X-Frame-Options",

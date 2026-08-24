@@ -30,8 +30,6 @@ import {
   sumContributionAmounts,
 } from "@/lib/sorobanEvents";
 
-const mockGetEvents = (StellarSdk as unknown as { __mockGetEvents: jest.Mock }).__mockGetEvents;
-
 function makeContributionEvent(id: string, campaignId: number, amount: bigint) {
   return {
     id,
@@ -99,9 +97,27 @@ describe("subscribeContributionMadeEvents", () => {
     process.env = originalEnv;
   });
 
-  async function loadSubscribe() {
+  /**
+   * `jest.resetModules()` (in beforeEach) re-runs the stellar-sdk mock factory,
+   * so the freshly imported sorobanEvents module holds NEW mock instances. Grab
+   * the subscribe fn AND the live mocks from the same fresh module graph.
+   */
+  async function loadFreshSorobanModule() {
     const mod = await import("@/lib/sorobanEvents");
-    return mod.subscribeContributionMadeEvents;
+    const sdk = (await import("@stellar/stellar-sdk")) as unknown as {
+      __mockGetEvents: jest.Mock;
+    };
+    return {
+      subscribeContributionMadeEvents: mod.subscribeContributionMadeEvents,
+      mockGetEvents: sdk.__mockGetEvents,
+    };
+  }
+
+  /** Drain the full async chain (getLatestLedger → getEvents → onEvents). */
+  async function flushMicrotasks(times = 10) {
+    for (let i = 0; i < times; i++) {
+      await Promise.resolve();
+    }
   }
 
   it("returns null when event streaming is unavailable", async () => {
@@ -111,7 +127,7 @@ describe("subscribeContributionMadeEvents", () => {
     };
     jest.resetModules();
 
-    const subscribeContributionMadeEvents = await loadSubscribe();
+    const { subscribeContributionMadeEvents } = await loadFreshSorobanModule();
     const subscription = subscribeContributionMadeEvents({
       campaignId: 1,
       onEvents: jest.fn(),
@@ -122,6 +138,7 @@ describe("subscribeContributionMadeEvents", () => {
 
   it("streams events via cursor and idles between empty polls", async () => {
     const onEvents = jest.fn();
+    const { subscribeContributionMadeEvents, mockGetEvents } = await loadFreshSorobanModule();
     mockGetEvents
       .mockResolvedValueOnce({
         events: [makeContributionEvent("evt-1", 7, BigInt(1_000_000))],
@@ -134,14 +151,13 @@ describe("subscribeContributionMadeEvents", () => {
         latestLedger: 1000,
       });
 
-    const subscribeContributionMadeEvents = await loadSubscribe();
     const subscription = subscribeContributionMadeEvents({
       campaignId: 7,
       onEvents,
       idleIntervalMs: 5000,
     });
 
-    await Promise.resolve();
+    await flushMicrotasks();
     expect(onEvents).toHaveBeenCalledTimes(1);
     expect(onEvents.mock.calls[0][0].events).toHaveLength(1);
 
@@ -152,13 +168,13 @@ describe("subscribeContributionMadeEvents", () => {
   });
 
   it("unsubscribes and stops further getEvents calls", async () => {
+    const { subscribeContributionMadeEvents, mockGetEvents } = await loadFreshSorobanModule();
     mockGetEvents.mockResolvedValue({
       events: [],
       cursor: "cursor-1",
       latestLedger: 1000,
     });
 
-    const subscribeContributionMadeEvents = await loadSubscribe();
     const subscription = subscribeContributionMadeEvents({
       campaignId: 7,
       onEvents: jest.fn(),

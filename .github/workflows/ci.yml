@@ -72,6 +72,7 @@ jobs:
           src/__tests__/integration/CausesFilterUrlSync.test.tsx
           src/__tests__/components/CauseCard.test.tsx
           src/__tests__/lib/observability.test.ts
+          src/__tests__/hooks/useCampaignEvents.test.ts
 
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v4

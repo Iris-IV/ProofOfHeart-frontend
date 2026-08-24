@@ -116,17 +116,21 @@ export default function EditCampaignMetadata({
       </button>
 
       {open && (
-        <div className="px-4 pb-4 flex flex-col gap-4">
+        <div data-testid="edit-metadata-panel" className="px-4 pb-4 flex flex-col gap-4">
           <p className="text-xs text-zinc-500 dark:text-zinc-400 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-3 py-2">
             {t("note")}
           </p>
 
           {/* Title */}
           <div>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+            <label
+              htmlFor={`edit-meta-title-${campaignId}`}
+              className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1"
+            >
               {t("titleLabel")}
             </label>
             <input
+              id={`edit-meta-title-${campaignId}`}
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -137,10 +141,14 @@ export default function EditCampaignMetadata({
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+            <label
+              htmlFor={`edit-meta-description-${campaignId}`}
+              className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1"
+            >
               {t("descriptionLabel")}
             </label>
             <textarea
+              id={`edit-meta-description-${campaignId}`}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
@@ -150,10 +158,14 @@ export default function EditCampaignMetadata({
 
           {/* Cover image URL */}
           <div>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+            <label
+              htmlFor={`edit-meta-cover-${campaignId}`}
+              className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1"
+            >
               {t("coverImageUrlLabel")}
             </label>
             <input
+              id={`edit-meta-cover-${campaignId}`}
               type="url"
               value={coverImageUrl}
               onChange={(e) => setCoverImageUrl(e.target.value)}

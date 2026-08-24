@@ -59,6 +59,8 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const { showError, showWarning, showSuccess } = useToast();
   const queryClient = useQueryClient();
   const previousPublicKeyRef = useRef<string | null>(null);
+  /** #560 — Tracks whether the install prompt was already surfaced by polling. */
+  const installPromptSurfacedRef = useRef(false);
   // #649 — The Freighter poll below runs on a timer and would tear down a social
   // session the moment it saw the extension reporting "not connected". A ref
   // rather than the state value because the poll closes over its first render.
@@ -160,6 +162,9 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       const { isConnected: connected } = await isConnected();
       const { isAllowed: allowed } = await isAllowed();
       if (connected && allowed) {
+        // Freighter is present and authorised — dismiss any lingering install prompt.
+        setShowInstallPrompt(false);
+        installPromptSurfacedRef.current = false;
         const key = await getAddress();
         const network = await getNetwork();
         const walletNetworkPassphrase = network.networkPassphrase || "";
@@ -213,6 +218,19 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       if (previousPublicKeyRef.current !== null) {
         invalidateWalletQueries();
         previousPublicKeyRef.current = null;
+      }
+
+      // #560 — the Freighter API throws when the extension is not installed.
+      // Surface the install prompt so the user gets a clear CTA instead of
+      // silently staying disconnected. A ref (not state) guards against
+      // redundant checks because checkWalletConnection is stable-closured.
+      if (!isSocialSessionRef.current && !installPromptSurfacedRef.current) {
+        void isFreighterInstalled().then((installed) => {
+          if (!installed) {
+            installPromptSurfacedRef.current = true;
+            setShowInstallPrompt(true);
+          }
+        });
       }
     }
   };

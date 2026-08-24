@@ -85,10 +85,10 @@ async function loadClient(options: LoadClientOptions) {
   let txCounter = 0;
 
   const mockServer = {
-    getAccount: jest.fn().mockResolvedValue({
-      accountId: () => TEST_ADMIN,
+    getAccount: jest.fn().mockImplementation(async (publicKey: string) => ({
+      accountId: () => publicKey,
       sequenceNumber: () => "1",
-    }),
+    })),
     simulateTransaction: jest
       .fn()
       .mockImplementation((tx: { ops?: Array<{ method?: string }> }) => {
@@ -123,8 +123,11 @@ async function loadClient(options: LoadClientOptions) {
     })),
   };
 
+  const serverUrls: string[] = [];
+
   class MockServer {
-    constructor() {
+    constructor(url: string) {
+      serverUrls.push(url);
       return mockServer;
     }
   }
@@ -234,7 +237,7 @@ async function loadClient(options: LoadClientOptions) {
   }));
 
   const module = await import("../../lib/contractClient");
-  return { module, mockServer, stellarSdkMock };
+  return { module, mockServer, stellarSdkMock, serverUrls };
 }
 
 describe("contractClient", () => {
@@ -322,6 +325,74 @@ describe("contractClient", () => {
     expect(decoded.tags).toEqual(["education", "impact"]);
   });
 
+  it("createCampaign encodes tags into the off-chain POH_EXT blob on the non-mock path", async () => {
+    const { module, mockServer } = await loadClient({ useMocks: false });
+
+    await module.createCampaign(
+      TEST_USER,
+      "On-chain campaign",
+      "Description",
+      BigInt(1_000_000_000),
+      30,
+      Category.Learner,
+      false,
+      0,
+      ["alpha", "beta"],
+    );
+
+    const createCall = mockServer.simulateTransaction.mock.calls.find(
+      ([tx]: [{ ops?: Array<{ method?: string }> }]) => tx.ops?.[0]?.method === "create_campaign",
+    );
+    expect(createCall).toBeDefined();
+
+    const [tx] = createCall as [{ ops: Array<{ args: unknown[] }> }];
+    const descriptionScVal = tx.ops[0].args[2] as { str: () => { toString: () => string } };
+    const finalDescription = descriptionScVal.str().toString();
+
+    expect(finalDescription).toContain("===POH_EXT===");
+    const ext = JSON.parse(finalDescription.split("===POH_EXT===\n")[1]);
+    expect(ext.tags).toEqual(["alpha", "beta"]);
+
+    // The contract itself never receives tags as a direct argument — it only
+    // accepts the 8 fields the issue's schema lists.
+    expect(tx.ops[0].args).toHaveLength(8);
+  });
+
+  it("decodeCampaign parses tags from the off-chain POH_EXT blob when the contract map has no tags field", async () => {
+    const { module } = await loadClient({ useMocks: true });
+    const scVal = makeScValHelpers();
+
+    const description = `Real description\n\n===POH_EXT===\n${JSON.stringify({
+      tags: ["water", "rural"],
+      coverImageUrl: "https://example.com/cover.png",
+    })}`;
+
+    const fixtureWithoutContractTags = scVal.map({
+      id: scVal.u32(9),
+      creator: scVal.address(TEST_ADMIN),
+      title: scVal.str("No-tags-field campaign"),
+      description: scVal.str(description),
+      funding_goal: scVal.bigint(500_000_000),
+      deadline: scVal.u64(1_900_000_000),
+      amount_raised: scVal.bigint(0),
+      is_active: scVal.bool(true),
+      created_at: scVal.u64(1_800_000_000),
+      funds_withdrawn: scVal.bool(false),
+      is_cancelled: scVal.bool(false),
+      is_verified: scVal.bool(false),
+      category: scVal.u32(Category.Publisher),
+      has_revenue_sharing: scVal.bool(false),
+      revenue_share_percentage: scVal.u32(0),
+      // Deliberately no `tags` field, matching the real contract's schema.
+    });
+
+    const decoded = module.__testUtils.decodeCampaign(fixtureWithoutContractTags as never);
+
+    expect(decoded.tags).toEqual(["water", "rural"]);
+    expect(decoded.cover_image_url).toBe("https://example.com/cover.png");
+    expect(decoded.description).toBe("Real description");
+  });
+
   it("parseContractError maps Contract error strings", () => {
     expect(parseContractError(new Error("Error(Contract, #3)"))).toBe(
       "ContractErrors.CampaignNotActive",
@@ -338,6 +409,30 @@ describe("contractClient", () => {
     });
 
     await expect(module.getCampaignCount()).rejects.toThrow("fetch failed");
+  });
+
+  it("listCampaigns drops a page member whose fetch rejects instead of failing the whole page", async () => {
+    const { module, mockServer, stellarSdkMock } = await loadClient({ useMocks: false });
+    const scVal = makeScValHelpers();
+
+    mockServer.simulateTransaction.mockImplementation(
+      (tx: { ops?: Array<{ method?: string; args?: unknown[] }> }) => {
+        const op = tx.ops?.[0];
+        if (op?.method === "get_campaign_count") return { result: { retval: scVal.u32(3) } };
+        if (op?.method === "get_campaign") {
+          const id = (op.args?.[0] as { u32: () => number }).u32();
+          if (id === 2) throw new Error("simulated RPC blip for campaign 2");
+          return { result: { retval: stellarSdkMock.__campaignFixture } };
+        }
+        return { result: { retval: null } };
+      },
+    );
+
+    const page = await module.listCampaigns({ cursor: 1, limit: 3 });
+
+    expect(page.campaigns.map((c) => c.id)).toEqual([7, 7]);
+    expect(page.campaigns).toHaveLength(2);
+    expect(page.nextCursor).toBeNull();
   });
 
   it("non-mock branch runs core read/write flows with mocked SDK", async () => {
@@ -387,5 +482,76 @@ describe("contractClient", () => {
     expect(await module.updateAdmin(TEST_NEW_ADMIN)).toMatch(/^hash-/);
     expect(await module.voteOnCampaign(1, TEST_USER, true)).toMatch(/^hash-/);
     expect(await module.verifyCampaignWithVotes(1)).toMatch(/^hash-/);
+  });
+
+  describe("RPC server lifecycle", () => {
+    it("reuses one server across successful calls", async () => {
+      const { module, serverUrls } = await loadClient({ useMocks: false });
+
+      await module.getAdmin();
+      await module.getPlatformFee();
+      await module.getCampaignCount();
+
+      expect(serverUrls).toEqual(["https://example-rpc.invalid"]);
+    });
+
+    it("reconnects on the next call after a transport failure", async () => {
+      const { module, mockServer, serverUrls } = await loadClient({ useMocks: false });
+
+      await module.getAdmin();
+      expect(serverUrls).toHaveLength(1);
+
+      const transportError = new TypeError("fetch failed");
+      transportError.cause = Object.assign(new Error("connect ECONNREFUSED"), {
+        code: "ECONNREFUSED",
+      });
+      mockServer.simulateTransaction.mockImplementationOnce(() => {
+        throw transportError;
+      });
+
+      await expect(module.getAdmin()).rejects.toThrow();
+
+      // The stale client is dropped, so the retry builds a fresh one and works.
+      await expect(module.getAdmin()).resolves.toBe(TEST_ADMIN);
+      expect(serverUrls).toHaveLength(2);
+    });
+
+    it("reconnects after a timeout", async () => {
+      const { module, mockServer, serverUrls } = await loadClient({ useMocks: false });
+
+      await module.getAdmin();
+      mockServer.simulateTransaction.mockImplementationOnce(() => {
+        throw new Error("Request timed out after 30000ms");
+      });
+
+      await expect(module.getAdmin()).rejects.toThrow();
+      await expect(module.getAdmin()).resolves.toBe(TEST_ADMIN);
+      expect(serverUrls).toHaveLength(2);
+    });
+
+    it("keeps the server when the node returns an application error", async () => {
+      const { module, mockServer, serverUrls } = await loadClient({ useMocks: false });
+
+      await module.getAdmin();
+      mockServer.simulateTransaction.mockImplementationOnce(() => {
+        throw new Error("Error(Contract, #6)");
+      });
+
+      await expect(module.getAdmin()).rejects.toThrow();
+      await expect(module.getAdmin()).resolves.toBe(TEST_ADMIN);
+      expect(serverUrls).toHaveLength(1);
+    });
+
+    it("resetRpcServer() forces a reconnect", async () => {
+      const { module, serverUrls } = await loadClient({ useMocks: false });
+
+      await module.getAdmin();
+      expect(serverUrls).toHaveLength(1);
+
+      module.resetRpcServer();
+      await module.getAdmin();
+
+      expect(serverUrls).toHaveLength(2);
+    });
   });
 });

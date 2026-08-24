@@ -33,13 +33,13 @@ NEXT_PUBLIC_USE_MOCKS=true
 NEXT_PUBLIC_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 NEXT_PUBLIC_CONTRACT_ADDRESS=
 NEXT_PUBLIC_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
-NEXT_PUBLIC_CREATOR_EMAIL_WEBHOOK_URL=
+CREATOR_EMAIL_WEBHOOK_URL=
 ```
 
 Notes:
 
 - Keep `NEXT_PUBLIC_USE_MOCKS=true` for local development unless you are testing against a live contract.
-- `NEXT_PUBLIC_CREATOR_EMAIL_WEBHOOK_URL` is optional and used only for off-chain creator email opt-in events.
+- `CREATOR_EMAIL_WEBHOOK_URL` is optional and used only for off-chain creator email opt-in events (server-side only, read by `/api/email-opt-in`).
 - Never commit `.env.local`.
 
 ## 3) Development Commands

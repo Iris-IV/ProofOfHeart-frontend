@@ -37,6 +37,8 @@ jest.mock("next-intl", () => ({
       title: "Fund This Cause",
       confirmedTitle: "Donation Confirmed",
       amountLabel: "Amount (XLM)",
+      amountPlaceholder: "e.g. 10",
+      closeAriaLabel: "Close",
       percentFunded: `${values?.percent}% funded`,
       afterDonation: `After your donation: ${values?.percent}% funded`,
       goalReached: "Goal reached!",
@@ -53,6 +55,7 @@ jest.mock("next-intl", () => ({
       donatedSuccess: `${values?.amount} XLM donated successfully`,
       thankYou: "Thank you for supporting this cause.",
       viewExplorer: "View on Stellar Explorer →",
+      downloadReceipt: "Download Tax Receipt (PDF)",
       close: "Close",
       scientificNotation: "Scientific notation is not allowed.",
       invalidNumber: "Please enter a valid number.",
@@ -63,7 +66,9 @@ jest.mock("next-intl", () => ({
       amountExceedsRemainingGoal: "Amount exceeds the remaining funding goal.",
       campaignAlreadyFunded: "This cause is already fully funded.",
     };
-    return map[key] ?? key;
+    // Surface anything that is not a known message key so hard-coded English
+    // strings reaching the translator fail loudly instead of passing through.
+    return map[key] ?? `MISSING(${key})`;
   },
 }));
 
@@ -148,6 +153,22 @@ describe("DonationModal", () => {
     expect(error).toHaveAttribute("role", "alert");
     expect(input).toHaveAttribute("aria-invalid", "true");
     expect(input).toHaveAttribute("aria-describedby", "donation-amount-error");
+  });
+
+  it.each([
+    ["1e5", "Scientific notation is not allowed."],
+    ["-5", "Amount must be greater than zero."],
+    ["1.12345678", "Maximum 7 decimal places allowed."],
+    ["9999", "Amount exceeds the remaining funding goal."],
+  ])("renders a translated message for %s instead of an untranslated string", (value, expected) => {
+    render(<DonationModal {...defaultProps} />);
+
+    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value } });
+
+    const error = screen.getByRole("alert");
+    expect(error).toHaveTextContent(expected);
+    expect(error.textContent).not.toMatch(/^MISSING\(/);
+    expect(error.textContent).not.toBe("undefined");
   });
 
   it("renders the platform fee explanation", () => {

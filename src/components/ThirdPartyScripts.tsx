@@ -2,7 +2,7 @@
 
 import Script from "next/script";
 import { useEffect, useState } from "react";
-import { getAnalyticsScript, getThirdPartyScripts } from "@/lib/thirdParty";
+import { getAnalyticsScript, getThirdPartyScripts, handleScriptError } from "@/lib/thirdParty";
 import { flushAnalyticsQueue, hasOptedOutOfAnalytics } from "@/lib/analytics";
 
 /**
@@ -38,7 +38,8 @@ export default function ThirdPartyScripts() {
 
   return (
     <>
-      {scripts.map(({ id, src, strategy, attributes }) => {
+      {scripts.map((script) => {
+        const { id, src, strategy, attributes } = script;
         // #647 — Guard: `beforeInteractive` runs during SSR and blocks the main
         // thread before hydration — exactly the problem this component exists to
         // solve. Any misconfigured entry is demoted to `lazyOnload` at runtime
@@ -59,6 +60,10 @@ export default function ThirdPartyScripts() {
             id={id}
             src={src}
             strategy={safeStrategy}
+            // Route load failures through handleScriptError so a script without
+            // a dedicated onError still surfaces the failure instead of being
+            // silently swallowed.
+            onError={() => handleScriptError(script)}
             // Funnel events fired during hydration are buffered by `analytics.ts`
             // until the vendor global exists; this is where they get drained.
             onLoad={id === analyticsId ? flushAnalyticsQueue : undefined}
