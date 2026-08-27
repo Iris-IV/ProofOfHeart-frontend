@@ -16,7 +16,7 @@ ProofOfHeart empowers everyday people to rally behind the causes they believe in
 - **Permissionless Participation**: Anyone can propose, support, or challenge a cause.
 - **Trust Through Code**: Smart contracts enforce the rules, removing the need for intermediaries.
 
-## 🛠 Tech Stack!
+## 🛠 Tech Stack
 
 | Layer          | Technology                                     |
 | -------------- | ---------------------------------------------- |
