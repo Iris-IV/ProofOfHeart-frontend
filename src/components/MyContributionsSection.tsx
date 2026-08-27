@@ -127,6 +127,8 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
   };
 
   const handleClaimAll = async () => {
+    // Batch claim queues Freighter signatures sequentially so each transaction
+    // can be reviewed individually; failures are isolated per campaign.
     setIsBatchClaiming(true);
     const statusMap = new Map<ClaimKey, ClaimStatus>();
     contributions.forEach((item) => {
@@ -207,7 +209,9 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
             <button
               onClick={handleClaimAll}
               disabled={isBatchClaiming}
-              className="rounded-full bg-indigo-600 px-4 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-zinc-400"
+              aria-label={`Claim all refunds — ${claimableCount} pending, each will prompt a Freighter signature`}
+              aria-busy={isBatchClaiming}
+              className="rounded-full bg-indigo-600 px-4 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             >
               {isBatchClaiming ? "Claiming all..." : `Claim All (${claimableCount})`}
             </button>

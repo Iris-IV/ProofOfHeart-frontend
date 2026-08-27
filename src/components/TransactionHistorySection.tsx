@@ -98,8 +98,8 @@ export default function TransactionHistorySection({
   ];
 
   return (
-    <section className="mb-8">
-      <h2 className="text-xl font-semibold mb-4">Transaction History</h2>
+    <section className="mb-8" aria-labelledby="tx-history-heading">
+      <h2 id="tx-history-heading" className="text-xl font-semibold mb-4">Transaction History</h2>
 
       {entries.length === 0 ? (
         <p className="text-zinc-500 dark:text-zinc-400">
@@ -162,18 +162,22 @@ export default function TransactionHistorySection({
                       </time>
                     </div>
 
-                    <div className="mt-2 flex items-center gap-1.5">
-                      <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400 truncate max-w-[180px] sm:max-w-[300px]">
-                        {entry.txHash}
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                      <span className="text-zinc-500 dark:text-zinc-400">Date: {formatTimestamp(entry.timestamp)}</span>
+                      <span className="text-zinc-400">·</span>
+                      <span className="text-zinc-500 dark:text-zinc-400">Type: {getActionLabel(entry.action)}</span>
+                      <span className="text-zinc-400">·</span>
+                      <span className="font-mono text-zinc-500 dark:text-zinc-400 truncate max-w-[140px] sm:max-w-[200px]" title={entry.txHash}>
+                        {entry.txHash.slice(0, 8)}…{entry.txHash.slice(-6)}
                       </span>
                       <a
                         href={explorerTxUrl(entry.txHash)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        aria-label={`View transaction ${entry.txHash} on Stellar Explorer`}
-                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline shrink-0"
+                        aria-label={`View transaction ${entry.txHash} for ${campaignTitle} on Stellar Explorer`}
+                        className="text-blue-600 dark:text-blue-400 hover:underline shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded px-1"
                       >
-                        ↗ Explorer
+                        View on Explorer ↗
                       </a>
                     </div>
                   </li>
