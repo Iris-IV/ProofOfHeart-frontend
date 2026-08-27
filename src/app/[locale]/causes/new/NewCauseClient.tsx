@@ -183,8 +183,9 @@ export default function CreateCampaignPage() {
     }
   };
 
-  const formatReviewDate = (timestamp: number) =>
-    new Intl.DateTimeFormat(undefined, {
+  const formatReviewDate = (timestamp: number) => {
+    const locale = typeof navigator !== 'undefined' ? navigator.language : 'en-US';
+    return new Intl.DateTimeFormat(locale, {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -192,6 +193,7 @@ export default function CreateCampaignPage() {
       minute: "2-digit",
       timeZoneName: "short",
     }).format(new Date(timestamp * 1000));
+  };
 
   const notifyEmailOptIn = useCallback(
     async (
