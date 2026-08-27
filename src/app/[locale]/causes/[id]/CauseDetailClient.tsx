@@ -23,6 +23,7 @@ import ShareButtons from "@/components/ShareButtons";
 import SafeMarkdown from "@/components/SafeMarkdown";
 import ReportModal from "@/components/ReportModal";
 import CampaignActions from "@/components/CampaignActions";
+import ImpactMetricsCard from "@/components/ImpactMetricsCard";
 import PersonalCap from "@/components/PersonalCap";
 import AsyncButtonContent from "@/components/AsyncButtonContent";
 import { useToast } from "@/components/ToastProvider";
@@ -621,6 +622,8 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 </div>
               </div>
             )}
+
+            <ImpactMetricsCard campaign={campaign} />
 
             <CampaignActions campaign={campaign} onActionSuccess={refetch} />
 

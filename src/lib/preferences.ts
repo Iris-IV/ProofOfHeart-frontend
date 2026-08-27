@@ -1,10 +1,15 @@
 import { getItem, setItem, getRawItem, setRawItem } from "./localStorageStore";
 
+export type NotificationFrequency = "instant" | "daily" | "weekly";
+export type NotificationChannel = "inApp" | "email";
+
 export interface NotificationPreferences {
   contributions: boolean;
   verified: boolean;
   refundAvailable: boolean;
   revenueDeposited: boolean;
+  frequency: NotificationFrequency;
+  channels: NotificationChannel[];
 }
 
 const STORAGE_KEY_PREFIX = "notif_prefs_";
@@ -14,12 +19,14 @@ const DEFAULTS: NotificationPreferences = {
   verified: true,
   refundAvailable: true,
   revenueDeposited: true,
+  frequency: "instant",
+  channels: ["inApp"],
 };
 
 export function getNotificationPreferences(walletAddress: string): NotificationPreferences {
   const key = `${STORAGE_KEY_PREFIX}${walletAddress.toLowerCase()}`;
   const parsed = getItem<Partial<NotificationPreferences>>(key);
-  return { ...DEFAULTS, ...parsed };
+  return { ...DEFAULTS, ...parsed, channels: parsed?.channels ?? DEFAULTS.channels };
 }
 
 export function setNotificationPreferences(

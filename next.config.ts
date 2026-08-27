@@ -22,6 +22,16 @@ const nextConfig: NextConfig = {
   output: "standalone",
   reactCompiler: true,
   outputFileTracingRoot: path.join(__dirname),
+  experimental: {
+    turbo: {
+      rules: {
+        "*.svg": {
+          loaders: ["@svgr/webpack"],
+          as: "*.js",
+        },
+      },
+    },
+  },
   images: {
     // Image Optimization is disabled because:
     // 1. output: "standalone" requires minimal server dependencies

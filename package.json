@@ -8,10 +8,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "node ./scripts/validate-production-build.mjs && next build",
+    "build:analyze": "node ./scripts/optimize-build.mjs && node ./scripts/validate-production-build.mjs && NEXT_PRIVATE_COMPILATION_CACHE=1 next build",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "start": "next start",
     "lint": "eslint",
+    "prepare": "husky",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
