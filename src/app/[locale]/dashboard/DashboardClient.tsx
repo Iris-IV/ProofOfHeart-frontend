@@ -7,6 +7,7 @@ import React, { useMemo, useState } from "react";
 import MyContributionsSection from "@/components/MyContributionsSection";
 import TransactionHistorySection from "@/components/TransactionHistorySection";
 import { Spinner, DashboardSkeleton } from "@/components/Skeleton";
+import CreatorDashboard from "@/components/CreatorDashboard";
 import { useWallet } from "@/components/WalletContext";
 import { Tabs, TabPanel, Card } from "@/components/ui";
 import { useCampaigns } from "@/hooks/useCampaigns";
@@ -33,7 +34,7 @@ export default function DashboardPage() {
   const { savedIds } = useSavedCampaigns();
 
   const [activeTab, setActiveTab] = useState<
-    "overview" | "contributions" | "history" | "withdrawals"
+    "overview" | "contributions" | "history" | "withdrawals" | "creator"
   >("overview");
 
   const savedCampaigns = useMemo(
@@ -76,6 +77,7 @@ export default function DashboardPage() {
     { id: "contributions", label: "My Contributions" },
     { id: "history", label: "Transaction History" },
     { id: "withdrawals", label: t("withdrawalsTab"), count: submittedCampaigns.length },
+    { id: "creator", label: "Creator Dashboard" },
   ];
 
   return (
@@ -202,6 +204,10 @@ export default function DashboardPage() {
             ))
           )}
         </section>
+      </TabPanel>
+
+      <TabPanel tabId="creator" idPrefix="dashboard" active={activeTab === "creator"}>
+        <CreatorDashboard campaigns={campaigns} creatorAddress={publicKey ?? ""} />
       </TabPanel>
     </div>
   );

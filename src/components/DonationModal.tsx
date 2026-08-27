@@ -9,6 +9,7 @@ import { Campaign, basisPointsToPercentage } from "../types";
 import { xlmToStroops, stroopsToXlmNumber } from "@/lib/stellarAmount";
 import { formatAmount } from "@/lib/formatters";
 import { useToast } from "./ToastProvider";
+import { SUPPORTED_TOKENS, getEnabledTokens, type TokenSymbol } from "@/lib/supportedTokens";
 import { useWallet } from "./WalletContext";
 import { usePlatformFee } from "../hooks/usePlatformFee";
 import { parseContractError } from "../utils/contractErrors";
@@ -62,6 +63,7 @@ export default function DonationModal({
   const estimatedNetworkFeeXlm = useMemo(() => getEstimatedContributeNetworkFeeXlm(), []);
 
   const [amount, setAmount] = useState("");
+  const [selectedToken, setSelectedToken] = useState<TokenSymbol>("USDC");
   const [step, setStep] = useState<Step>("input");
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -314,6 +316,25 @@ export default function DonationModal({
                   type="number"
                   min="0.0000001"
                   step="any"
+            {/* Multi-token donation selector */}
+            <div className="mb-4">
+              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">Donation Token</label>
+              <div className="flex gap-2 flex-wrap">
+                {getEnabledTokens().map((tok) => (
+                  <button
+                    key={tok.symbol}
+                    type="button"
+                    onClick={() => setSelectedToken(tok.symbol)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${selectedToken === tok.symbol ? "bg-blue-600 text-white border-blue-600" : "bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-600 hover:border-blue-300"}`}
+                    aria-pressed={selectedToken === tok.symbol}
+                  >
+                    <span className="mr-1">{tok.icon}</span>{tok.symbol}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-zinc-500 mt-1">Donate in {selectedToken}. Support for multiple Stellar tokens.</p>
+            </div>
+
                   value={amount}
                   aria-describedby={amountError ? "donation-amount-error" : undefined}
                   aria-invalid={amountError ? "true" : "false"}
