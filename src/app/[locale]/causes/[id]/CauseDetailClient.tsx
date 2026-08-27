@@ -14,6 +14,7 @@ const VestingReservePanel = dynamic(() => import("@/components/VestingReservePan
   ssr: false,
 });
 const DonationModal = dynamic(() => import("@/components/DonationModal"), { ssr: false });
+const ExtendDeadlineModal = dynamic(() => import("@/components/ExtendDeadline/ExtendDeadlineModal"), { ssr: false });
 import CampaignStatusBadge from "@/components/CampaignStatusBadge";
 import DeadlineCountdown from "@/components/DeadlineCountdown";
 import FundingProgressBar from "@/components/FundingProgressBar";
@@ -84,6 +85,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
     enabled: Number(id) > 0,
   });
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
+  const [isExtendModalOpen, setIsExtendModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const { showError, showSuccess, showWarning } = useToast();
@@ -392,6 +394,14 @@ export default function CauseDetailClient({ id }: { id: string }) {
                   initialDescription={campaign.description}
                   initialCoverImageUrl={campaign.cover_image_url ?? ""}
                 />
+              )}
+              {isCreator && !campaign.is_cancelled && (
+                <button
+                  onClick={() => setIsExtendModalOpen(true)}
+                  style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)' }}
+                >
+                  Extend Deadline
+                </button>
               )}
 
               {/* Share + Report toolbar */}
@@ -721,6 +731,14 @@ export default function CauseDetailClient({ id }: { id: string }) {
         />
       </main>
 
+      {isExtendModalOpen && (
+        <ExtendDeadlineModal
+          campaignId={campaign.id}
+          currentDeadline={campaign.deadline}
+          onClose={() => setIsExtendModalOpen(false)}
+          onSuccess={() => window.location.reload()}
+        />
+      )}
       {isDonationModalOpen && (
         <DonationModal
           campaign={campaign}

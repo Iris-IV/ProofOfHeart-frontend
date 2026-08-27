@@ -780,6 +780,25 @@ export async function getRevenueClaimed(campaignId: number, contributor: string)
   }
 }
 
+export async function extendCampaignDeadline(campaignId: number, additionalDays: number): Promise<string> {
+  if (additionalDays < 1 || additionalDays > 30) throw new Error('additionalDays must be 1..30');
+  const contract = new Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    "extend_campaign_deadline",
+    nativeToScVal(campaignId, { type: "u32" }),
+    nativeToScVal(additionalDays, { type: "u32" }),
+  );
+  // Caller must be campaign creator; retrieve from wallet context if needed
+  // For now use a placeholder — the UI layer should pass the connected wallet address via options
+  const caller = typeof window !== 'undefined' ? (window as any).__walletPublicKey || "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF" : "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF";
+  try {
+    const result = await buildAndSubmitTransaction(caller, op, { operation: "extend_campaign_deadline" } as any);
+    return result.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
 export async function getAdmin(): Promise<string> {
   if (USE_MOCKS) return "GADMIN123456789012345678901234567890123456789012345678901234567890";
   try {
