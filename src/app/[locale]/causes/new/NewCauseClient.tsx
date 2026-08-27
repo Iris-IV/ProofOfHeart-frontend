@@ -55,7 +55,7 @@ export default function CreateCampaignPage() {
   const coverFileInputRef = useRef<HTMLInputElement>(null);
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
 
-  const CREATOR_EMAIL_WEBHOOK_URL = process.env.NEXT_PUBLIC_CREATOR_EMAIL_WEBHOOK_URL?.trim() ?? "";
+  // Creator email webhook URL is server-only — client calls /api/notify-creator instead
 
   // ── Draft management hook ──
   const { hasDraft, lastSavedAt, restoreDraft, saveDraft, discardDraft, clearDraft } =
@@ -200,26 +200,27 @@ export default function CreateCampaignPage() {
       campaignTitle: string,
       creatorAddress: string,
     ) => {
-      if (!CREATOR_EMAIL_WEBHOOK_URL || !email) return;
+      if (!email) return;
       try {
-        await fetch(CREATOR_EMAIL_WEBHOOK_URL, {
+        const res = await fetch("/api/notify-creator", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            event: "campaign_creator_email_opt_in",
             email,
             campaignId,
             campaignTitle,
             creatorAddress,
-            source: "proof_of_heart_frontend",
-            timestamp: new Date().toISOString(),
           }),
         });
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          if (data?.error) throw new Error(data.error);
+        }
       } catch {
         showWarning(t("emailWebhookFailed"));
       }
     },
-    [CREATOR_EMAIL_WEBHOOK_URL, showWarning, t],
+    [showWarning, t],
   );
 
   // ── Submission handlers ──
