@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { MapIcon, ListIcon } from "lucide-react";
 import { CauseCardSkeleton } from "@/components/Skeleton";
 import MapErrorBoundary from "@/components/MapErrorBoundary";
@@ -133,11 +133,25 @@ function CausesContent() {
   const [mounted, setMounted] = useState(false);
   const { publicKey: userWalletAddress } = useWallet();
   const { showError, showSuccess, showWarning } = useToast();
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const isFirstFilterRun = useRef(true);
 
   // Set mounted after hydration to guard SSR-sensitive rendering
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Scroll back to the top of the results whenever a search/filter changes
+  // (issue #1107) — otherwise a shrunk result set can leave the page scrolled
+  // past its own content, and the visible page ends up "stuck" wherever the
+  // user last scrolled to under the previous filter.
+  useEffect(() => {
+    if (isFirstFilterRun.current) {
+      isFirstFilterRun.current = false;
+      return;
+    }
+    resultsRef.current?.scrollIntoView?.({ block: "start" });
+  }, [debouncedSearch, category, status, sort, tag]);
 
   // Mirror contract data into local state so optimistic updates work
   useEffect(() => {
@@ -650,7 +664,7 @@ function CausesContent() {
 
         {/* Results */}
         {!isLoading && !error && mounted && (
-          <>
+          <div ref={resultsRef}>
             {/* List view */}
             {viewMode === "list" && (
               <>
@@ -727,7 +741,7 @@ function CausesContent() {
                 <CampaignMap campaigns={filteredCampaigns} />
               </MapErrorBoundary>
             )}
-          </>
+          </div>
         )}
       </main>
     </div>
