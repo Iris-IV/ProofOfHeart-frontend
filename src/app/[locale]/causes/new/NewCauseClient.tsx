@@ -36,6 +36,7 @@ export default function CreateCampaignPage() {
   // ── Form state ──
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [descriptionEs, setDescriptionEs] = useState("");
   const [creatorEmail, setCreatorEmail] = useState("");
   const [fundingGoal, setFundingGoal] = useState("");
   const [durationDays, setDurationDays] = useState("");
@@ -99,6 +100,7 @@ export default function CreateCampaignPage() {
   }, [
     title,
     description,
+    descriptionEs,
     creatorEmail,
     fundingGoal,
     durationDays,
@@ -308,6 +310,7 @@ export default function CreateCampaignPage() {
     const keys = validateForm(
       title,
       description,
+      descriptionEs,
       creatorEmail,
       fundingGoal,
       durationDays,
