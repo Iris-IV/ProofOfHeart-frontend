@@ -316,25 +316,8 @@ export default function DonationModal({
                   type="number"
                   min="0.0000001"
                   step="any"
-            {/* Multi-token donation selector */}
-            <div className="mb-4">
-              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">Donation Token</label>
-              <div className="flex gap-2 flex-wrap">
-                {getEnabledTokens().map((tok) => (
-                  <button
-                    key={tok.symbol}
-                    type="button"
-                    onClick={() => setSelectedToken(tok.symbol)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${selectedToken === tok.symbol ? "bg-blue-600 text-white border-blue-600" : "bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-600 hover:border-blue-300"}`}
-                    aria-pressed={selectedToken === tok.symbol}
-                  >
-                    <span className="mr-1">{tok.icon}</span>{tok.symbol}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-zinc-500 mt-1">Donate in {selectedToken}. Support for multiple Stellar tokens.</p>
-            </div>
-
+                  inputMode="decimal"
+                  enterKeyHint="done"
                   value={amount}
                   aria-describedby={amountError ? "donation-amount-error" : undefined}
                   aria-invalid={amountError ? "true" : "false"}
@@ -346,6 +329,11 @@ export default function DonationModal({
                       trackEnterAmount(campaign.id);
                     }
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.currentTarget.blur();
+                    }
+                  }}
                   placeholder={t("amountPlaceholder")}
                   className="w-full px-4 py-3 pr-16 rounded-xl border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 />
@@ -353,7 +341,25 @@ export default function DonationModal({
                   XLM
                 </span>
               </div>
-              {amountError && (
+
+              {/* Multi-token donation selector */}
+              <div className="mb-4 mt-4">
+                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">Donation Token</label>
+                <div className="flex gap-2 flex-wrap">
+                  {getEnabledTokens().map((tok) => (
+                    <button
+                      key={tok.symbol}
+                      type="button"
+                      onClick={() => setSelectedToken(tok.symbol)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${selectedToken === tok.symbol ? "bg-blue-600 text-white border-blue-600" : "bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-600 hover:border-blue-300"}`}
+                      aria-pressed={selectedToken === tok.symbol}
+                    >
+                      <span className="mr-1">{tok.icon}</span>{tok.symbol}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-zinc-500 mt-1">Donate in {selectedToken}. Support for multiple Stellar tokens.</p>
+              </div>{amountError && (
                 <p id="donation-amount-error" role="alert" className="mt-1 text-xs text-red-500">
                   {formatError(amountError)}
                 </p>
