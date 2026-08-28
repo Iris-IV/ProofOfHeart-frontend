@@ -1,15 +1,11 @@
 #!/usr/bin/env node
 
-import { execSync } from "child_process";
+import { typecheckStagedFiles } from "./typecheckStagedFiles.mjs";
 
-const files = process.argv.slice(2).filter((f) => /\.(ts|tsx)$/.test(f));
+const files = process.argv.slice(2);
+const { ok, output } = typecheckStagedFiles(files);
 
-if (files.length === 0) {
-  process.exit(0);
-}
-
-try {
-  execSync(`npx tsc --noEmit --pretty ${files.join(" ")}`, { stdio: "inherit" });
-} catch {
+if (!ok) {
+  console.error(output);
   process.exit(1);
 }

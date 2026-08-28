@@ -85,7 +85,10 @@ function walletActionToNotification(
   }
 }
 
-async function fetchRemoteNotifications(walletAddress: string): Promise<AppNotification[] | null> {
+async function fetchRemoteNotifications(
+  walletAddress: string,
+  signal?: AbortSignal,
+): Promise<AppNotification[] | null> {
   try {
     const url = new URL(REMOTE_FEED_ENDPOINT, window.location.origin);
     url.searchParams.set("walletAddress", walletAddress);
@@ -95,6 +98,7 @@ async function fetchRemoteNotifications(walletAddress: string): Promise<AppNotif
         Accept: "application/json",
       },
       cache: "no-store",
+      signal,
     });
 
     if (!response.ok) {
@@ -134,11 +138,14 @@ function deriveLocalNotifications(walletAddress: string): AppNotification[] {
     .filter(Boolean) as AppNotification[];
 }
 
-export async function fetchNotifications(walletAddress: string): Promise<AppNotification[]> {
+export async function fetchNotifications(
+  walletAddress: string,
+  signal?: AbortSignal,
+): Promise<AppNotification[]> {
   const normalizedWallet = normalizeAddress(walletAddress);
   if (!normalizedWallet) return [];
 
-  const remoteNotifications = await fetchRemoteNotifications(normalizedWallet);
+  const remoteNotifications = await fetchRemoteNotifications(normalizedWallet, signal);
   const notifications = remoteNotifications ?? deriveLocalNotifications(normalizedWallet);
   const readIds = readNotificationIds(normalizedWallet);
 
