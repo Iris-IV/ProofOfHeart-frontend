@@ -194,8 +194,14 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
                 min="0"
                 step="0.1"
                 inputMode="decimal"
+                enterKeyHint="done"
                 value={contributionAmount}
                 onChange={(e) => setContributionAmount(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.currentTarget.blur();
+                  }
+                }}
                 placeholder="Amount in XLM"
                 disabled={isPending("contribute", campaign.id) || !!contributionDisabledReason}
                 aria-describedby="contribution-amount-hint"
@@ -268,8 +274,15 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
                         type="number"
                         min="0"
                         step="any"
+                        inputMode="decimal"
+                        enterKeyHint="done"
                         value={revenueAmount}
                         onChange={(e) => setRevenueAmount(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.currentTarget.blur();
+                          }
+                        }}
                         placeholder="Amount in XLM"
                         className="w-full px-4 py-3 pr-16 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                       />
