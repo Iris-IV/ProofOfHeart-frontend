@@ -130,16 +130,31 @@ function isConnectionError(error: unknown): boolean {
  * error propagates and the next call reconnects. Errors the node returned
  * (contract errors, bad requests) keep the client in place.
  */
+const RPC_RETRY_DELAYS_MS = [500, 1_000, 2_000];
+
 async function withRpcServer<T>(fn: (server: rpc.Server) => Promise<T>): Promise<T> {
-  const server = getServer();
-  try {
-    return await fn(server);
-  } catch (error) {
-    if (isConnectionError(error)) {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= RPC_RETRY_DELAYS_MS.length; attempt += 1) {
+    const server = getServer();
+    try {
+      return await fn(server);
+    } catch (error) {
+      lastError = error;
+      if (!isConnectionError(error)) {
+        throw error;
+      }
+
       resetRpcServer();
+      const retryDelay = RPC_RETRY_DELAYS_MS[attempt];
+      if (retryDelay === undefined) {
+        throw error;
+      }
+      await sleep(retryDelay);
     }
-    throw error;
   }
+
+  throw lastError;
 }
 
 function sleep(ms: number): Promise<void> {
