@@ -74,6 +74,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const { platformFeeBps, isLoading: isPlatformFeeLoading, isFallback } = usePlatformFee();
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [isEditFormDirty, setIsEditFormDirty] = useState(false);
   const [userVote, setUserVote] = useState<Vote | undefined>(undefined);
   const [isVoting, setIsVoting] = useState(false);
   const {
@@ -116,6 +117,38 @@ export default function CauseDetailClient({ id }: { id: string }) {
       trackViewCampaign(campaign.id);
     }
   }, [campaign]);
+
+  // Warn the user before leaving while the campaign edit form has unsaved changes.
+  useEffect(() => {
+    if (!isEditFormDirty) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    const handleDocumentClick = (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      const anchor = (e.target as Element).closest("a");
+      if (!anchor) return;
+
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("#") || anchor.target === "_blank") return;
+
+      if (!window.confirm("You have unsaved changes. Are you sure you want to leave?")) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("click", handleDocumentClick, true);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("click", handleDocumentClick, true);
+    };
+  }, [isEditFormDirty]);
 
   // Load quorum config whenever campaign is available
   useEffect(() => {
@@ -399,6 +432,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                   initialTitle={campaign.title}
                   initialDescription={campaign.description}
                   initialCoverImageUrl={campaign.cover_image_url ?? ""}
+                  onDirtyChange={setIsEditFormDirty}
                 />
               )}
               {isCreator && !campaign.is_cancelled && (
