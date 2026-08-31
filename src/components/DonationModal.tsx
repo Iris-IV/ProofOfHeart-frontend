@@ -183,6 +183,12 @@ export default function DonationModal({
   const newRaised = raised + amountNum;
   const newPct = goal > 0 ? Math.min(100, Math.round((newRaised / goal) * 100)) : 0;
   const currentPct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
+  const displayedPct = step === "confirmed" ? newPct : currentPct;
+  const displayRaised = formatAmount(liveCampaign.amount_raised, locale, { maximumFractionDigits: 2 });
+  const displayGoal = formatAmount(liveCampaign.funding_goal, locale, { maximumFractionDigits: 2 });
+  const fundingProgressText = `${t("percentFunded", {
+    percent: displayedPct,
+  })}, ${displayRaised} / ${displayGoal} XLM`;
   const totalWalletCost =
     amountNum > 0 ? amountNum + estimatedNetworkFeeXlm : estimatedNetworkFeeXlm;
 
@@ -287,18 +293,29 @@ export default function DonationModal({
 
         <div>
           <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
-            <span>{t("percentFunded", { percent: currentPct })}</span>
+            <span>{t("percentFunded", { percent: displayedPct })}</span>
             <span>
-              {formatAmount(liveCampaign.amount_raised, locale, { maximumFractionDigits: 2 })} /{" "}
-              {formatAmount(liveCampaign.funding_goal, locale, { maximumFractionDigits: 2 })} XLM
+              {displayRaised} / {displayGoal} XLM
             </span>
           </div>
-          <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
+          <div
+            role="progressbar"
+            aria-label={t("percentFunded", { percent: displayedPct })}
+            aria-valuenow={displayedPct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuetext={fundingProgressText}
+            className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2"
+          >
             <div
+              aria-hidden="true"
               className="bg-linear-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
-              style={{ width: `${step === "confirmed" ? newPct : currentPct}%` }}
+              style={{ width: `${displayedPct}%` }}
             />
           </div>
+          <span className="sr-only" aria-live="polite" aria-atomic="true">
+            {fundingProgressText}
+          </span>
         </div>
 
         {step === "input" && (
@@ -319,6 +336,7 @@ export default function DonationModal({
                   inputMode="decimal"
                   enterKeyHint="done"
                   value={amount}
+                  aria-label={t("amountLabel")}
                   aria-describedby={amountError ? "donation-amount-error" : undefined}
                   aria-invalid={amountError ? "true" : "false"}
                   disabled={isFullyFunded}
