@@ -970,7 +970,7 @@ export default function CreateCampaignPage() {
               {isSubmitting && (
                 <span className="inline-block motion-safe:animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
               )}
-              {isSubmitting ? t("submitting") : t("launchCampaign")}
+              {isSubmitting ? t("submitting") : t("createCause")}
             </button>
           </div>
         </form>
