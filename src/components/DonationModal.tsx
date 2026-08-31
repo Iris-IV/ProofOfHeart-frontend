@@ -358,7 +358,7 @@ export default function DonationModal({
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-zinc-500 mt-1">Donate in {selectedToken}. Support for multiple Stellar tokens.</p>
+                <p className="text-xs text-zinc-500 mt-1">Donate in {SUPPORTED_TOKENS.find((t) => t.symbol === selectedToken)?.name ?? selectedToken}. Support for multiple Stellar tokens.</p>
               </div>
               {amountError && (
                 <p id="donation-amount-error" role="alert" className="mt-1 text-xs text-red-500">
