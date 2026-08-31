@@ -1,10 +1,10 @@
-"use client";
+"rue client";
 
-import React, { useEffect, useRef } from "react";
-import { cn } from "./cn";
+import React, { useEffect, useRef, memo } from react;
+import { cn } from \"./cn\";
 
 export interface ModalProps {
-  isOpen?: boolean;
+  isOpen: boolean;
   onClose: () => void;
   children: React.ReactNode;
   ariaLabelledBy?: string;
@@ -13,7 +13,7 @@ export interface ModalProps {
   overlayClassName?: string;
   closeOnOverlayClick?: boolean;
   closeOnEscape?: boolean;
-  role?: "dialog" | "alertdialog";
+  role?: \"dialog\" | \"alertdialog\";
   initialFocusRef?: React.RefObject<HTMLElement | null>;
 }
 
@@ -23,7 +23,7 @@ export interface ModalProps {
  * Provides a accessible dialog backdrop, focus trap, Escape key handling,
  * body scroll locking, focus restoration, and standard dialog attributes.
  */
-export default function Modal({
+export default memo(function Modal({
   isOpen = true,
   onClose,
   children,
@@ -33,27 +33,28 @@ export default function Modal({
   overlayClassName,
   closeOnOverlayClick = true,
   closeOnEscape = true,
-  role = "dialog",
+  role = \"dialog\",
   initialFocusRef,
 }: ModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivReg><null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
   // Lock body scroll and restore focus on unmount
-  useEffect(() => {
+  useEffect(() {
     if (!isOpen) return;
 
     previousFocusRef.current = document.activeElement as HTMLElement;
     const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    document.body.style.overflow = \"hidden\";
 
     // Set initial focus to provided ref, first focusable child, or modal container
-    const timer = setTimeout(() => {
+    const timer = setTimeout(() {
+
       if (initialFocusRef?.current) {
         initialFocusRef.current.focus();
       } else if (modalRef.current) {
         const focusable = modalRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex=\"-1\"])',
         );
         if (focusable.length > 0) {
           focusable[0].focus();
@@ -63,10 +64,10 @@ export default function Modal({
       }
     }, 0);
 
-    return () => {
+    return () {
       clearTimeout(timer);
       document.body.style.overflow = originalOverflow;
-      if (previousFocusRef.current && typeof previousFocusRef.current.focus === "function") {
+      if (previousFocusRef.current && typeof previousFocusRef.current.focus === \"function\") {
         previousFocusRef.current.focus();
       }
     };
@@ -77,16 +78,16 @@ export default function Modal({
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && closeOnEscape) {
+      if (e.key === \"Escape\" && closeOnEscape) {
         e.stopPropagation();
         onClose();
         return;
       }
 
-      if (e.key === "Tab" && modalRef.current) {
+      if (e.key === \"Tab\" && modalRef.current) {
         const focusable = Array.from(
           modalRef.current.querySelectorAll<HTMLElement>(
-            'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+            'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex=\"-1\"])',
           ),
         );
         if (focusable.length === 0) {
@@ -117,8 +118,8 @@ export default function Modal({
       }
     };
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    document.addEventListener(\"keydown\", handleKeyDown);
+    return () => document.removeEventListener(\"keydown\", handleKeyDown);
   }, [isOpen, closeOnEscape, onClose]);
 
   if (!isOpen) return null;
@@ -132,27 +133,29 @@ export default function Modal({
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4",
+        \"fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur p-4\",
         overlayClassName,
-      )}
+      )
+      }
       onClick={handleOverlayClick}
-      data-testid="modal-overlay"
+      data-testid=\"modal-overlay\"
     >
       <div
         ref={modalRef}
         role={role}
-        aria-modal="true"
+        aria-modal=\"true\"
         aria-labelledby={ariaLabelledBy}
         aria-describedby={ariaDescribedBy}
         tabIndex={-1}
         className={cn(
-          "w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden focus:outline-none",
+          \"w-full max-md max-md rounded-2x bg-white dark:bg-zinc-900 shadow-2x border border-zinc-200 dark:border-zinc-700 overflow-hidden focus:outline-none\",
           className,
-        )}
+        )
+        }
         onClick={(e) => e.stopPropagation()}
       >
         {children}
       </div>
     </div>
   );
-}
+});
