@@ -7,7 +7,7 @@ const mockGetCampaign = jest.fn();
 
 jest.mock("@/lib/contractClient", () => ({
   contribute: jest.fn(),
-  getCampaign: (...args: any[]) => mockGetCampaign(...args),
+  getCampaign: (...args: unknown[]) => mockGetCampaign(...args),
 }));
 
 jest.mock("@/components/ToastProvider", () => ({

@@ -219,7 +219,7 @@ async function buildAndSubmitTransaction(
   let pollDelay = 1_000;
   let getResult = await server.getTransaction(txHash);
 
-  while (getResult.status === "NOT_FOUND" || (getResult.status as any) === "PENDING") {
+  while (getResult.status === "NOT_FOUND") {
     if (Date.now() - startedAt >= timeoutMs) {
       options?.onStatus?.({ phase: "failed", txHash, rpcStatus: getResult.status });
       recordObservabilityKind("confirmation_timeout", "Transaction confirmation timed out.", {
@@ -330,7 +330,7 @@ function decodeCampaign(val: StellarSdk.xdr.ScVal): Campaign {
 
   let rawDescription = fields["description"].str().toString();
   let cover_image_url: string | undefined = undefined;
-  let milestones: any[] | undefined = undefined;
+  let milestones: Milestone[] | undefined = undefined;
 
   const EXT_MARKER = "\n\n===POH_EXT===\n";
   const extIndex = rawDescription.indexOf(EXT_MARKER);
@@ -339,7 +339,7 @@ function decodeCampaign(val: StellarSdk.xdr.ScVal): Campaign {
       const extData = JSON.parse(rawDescription.substring(extIndex + EXT_MARKER.length));
       cover_image_url = extData.coverImageUrl;
       if (extData.milestones && Array.isArray(extData.milestones)) {
-        milestones = extData.milestones.map((m: any) => ({
+        milestones = extData.milestones.map((m: { targetAmount: string | number; description: string }) => ({
           targetAmount: BigInt(m.targetAmount),
           description: m.description,
         }));
@@ -375,7 +375,11 @@ function decodeCampaign(val: StellarSdk.xdr.ScVal): Campaign {
     category: fields["category"].u32() as Category,
     has_revenue_sharing: fields["has_revenue_sharing"].b(),
     revenue_share_percentage: fields["revenue_share_percentage"].u32(),
-    tags: fields["tags"] ? (fields["tags"] as any).vec().map((v: any) => v.str().toString()) : [],
+    tags: fields["tags"]
+      ? (fields["tags"] as StellarSdk.xdr.ScVal)
+          .vec()
+          ?.map((v: StellarSdk.xdr.ScVal) => v.str().toString()) ?? []
+      : [],
     cover_image_url,
     milestones,
   };

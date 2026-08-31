@@ -302,7 +302,7 @@ export default function CreateCampaignPage() {
         {
           onStatus: ({ phase }) => setTxPhase(phase),
           coverImageUrl: reviewData.coverImageUrl,
-          milestones: reviewData.milestones as any,
+          milestones: reviewData.milestones,
         },
       );
 
