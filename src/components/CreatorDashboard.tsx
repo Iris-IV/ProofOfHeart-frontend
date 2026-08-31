@@ -115,7 +115,7 @@ export default function CreatorDashboard({ campaigns, creatorAddress }: CreatorD
                   </div>
                   <Link
                     href={`/causes/${c.id}`}
-                    className="text-sm text-blue-600 hover:underline shrink-0"
+                    className="text-sm text-blue-600 hover:underline shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800 rounded"
                   >
                     Manage
                   </Link>
