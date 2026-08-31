@@ -1,25 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Comment } from "@/types";
 import { commentStore } from "@/lib/commentStore";
+import { createRateLimiter } from "@/lib/rateLimit";
 
 const PAGE_SIZE = 20;
 const MAX_CONTENT_LENGTH = 2000;
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX = 5;
 
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(key: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(key);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count += 1;
-  return true;
-}
+const commentRateLimiter = createRateLimiter(60_000, 5);
 
 // GET /api/campaigns/[campaignId]/comments?page=1&pageSize=20
 export async function GET(
@@ -89,7 +76,7 @@ export async function POST(
   }
 
   const rateLimitKey = `${authorAddress}:${campaignId}`;
-  if (!checkRateLimit(rateLimitKey)) {
+  if (!commentRateLimiter.check(rateLimitKey)) {
     return NextResponse.json(
       { message: "Too many requests. Please wait before posting again." },
       { status: 429 },

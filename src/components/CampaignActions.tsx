@@ -99,9 +99,11 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
     ? "Creators cannot contribute to their own campaign."
     : campaign.is_cancelled
       ? "This campaign has been cancelled."
-      : !campaign.is_active || campaign.funds_withdrawn || isExpired
-        ? "This campaign is no longer accepting contributions."
-        : null;
+      : !campaign.is_verified
+        ? "This campaign is pending verification and cannot accept contributions yet."
+        : !campaign.is_active || campaign.funds_withdrawn || isExpired
+          ? "This campaign is no longer accepting contributions."
+          : null;
 
   const handleContribute = useCallback(async () => {
     const parsedAmount = Number(contributionAmount);
@@ -192,10 +194,17 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
                 min="0"
                 step="0.1"
                 inputMode="decimal"
+                enterKeyHint="done"
                 value={contributionAmount}
                 onChange={(e) => setContributionAmount(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.currentTarget.blur();
+                  }
+                }}
                 placeholder="Amount in XLM"
                 disabled={isPending("contribute", campaign.id) || !!contributionDisabledReason}
+                aria-describedby="contribution-amount-hint"
                 className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-zinc-900 outline-none transition focus:border-blue-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50"
               />
               <button
@@ -210,7 +219,7 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
                 />
               </button>
             </div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            <p id="contribution-amount-hint" className="text-xs text-zinc-500 dark:text-zinc-400">
               {contributionDisabledReason ??
                 "Contributions are made in XLM and recorded on-chain after wallet confirmation."}
             </p>
@@ -256,13 +265,24 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
               {campaign.has_revenue_sharing &&
                 (showRevenueInput ? (
                   <div className="space-y-2">
+                    <label htmlFor="revenue-deposit-amount" className="sr-only">
+                      Revenue deposit amount in XLM
+                    </label>
                     <div className="relative">
                       <input
+                        id="revenue-deposit-amount"
                         type="number"
                         min="0"
                         step="any"
+                        inputMode="decimal"
+                        enterKeyHint="done"
                         value={revenueAmount}
                         onChange={(e) => setRevenueAmount(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.currentTarget.blur();
+                          }
+                        }}
                         placeholder="Amount in XLM"
                         className="w-full px-4 py-3 pr-16 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                       />

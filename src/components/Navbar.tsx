@@ -228,7 +228,7 @@ export default function Navbar() {
                 {isLoading ? t("connecting") : t("connectWallet")}
               </button>
             ) : (
-              <div className="flex items-center gap-3 pl-2">
+              <div className="flex items-center gap-3 ps-2">
                 <Link
                   href="/causes/new"
                   className="inline-flex items-center gap-1.5 h-9 px-3 lg:px-4 rounded-full bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/20"

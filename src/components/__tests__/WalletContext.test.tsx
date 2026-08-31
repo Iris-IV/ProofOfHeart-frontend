@@ -170,6 +170,27 @@ describe("WalletContext", () => {
     expect(screen.getByTestId("isLoading")).toHaveTextContent("false");
   });
 
+  it("connectWallet - freighter locked", async () => {
+    mockIsConnected.mockResolvedValue({ isConnected: true });
+    mockIsAllowed.mockResolvedValue({ isAllowed: true });
+    mockGetAddress.mockResolvedValue({ error: { message: "Freighter is locked" } });
+
+    renderWithProviders(
+      <WalletProvider>
+        <TestComponent />
+      </WalletProvider>,
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("Connect"));
+    });
+
+    expect(screen.getByText("Freighter Wallet Locked")).toBeInTheDocument();
+    expect(screen.queryByText("Freighter Wallet Required")).not.toBeInTheDocument();
+    expect(screen.getByText(/unlock it with your password/)).toBeInTheDocument();
+    expect(screen.getByTestId("isLoading")).toHaveTextContent("false");
+  });
+
   it("disconnectWallet", async () => {
     // Start with a connected wallet
     mockIsConnected.mockResolvedValue({ isConnected: true });
@@ -235,6 +256,45 @@ describe("WalletContext", () => {
     expect(screen.getByTestId("isConnected")).toHaveTextContent("false");
     expect(screen.getByTestId("publicKey")).toHaveTextContent("");
     expect(localStorage.getItem("stellar_wallet_public_key")).toBeNull();
+  });
+
+  it("does not reopen the install prompt after the user dismisses it", async () => {
+    // #560 regression — the poll surfaces the install prompt exactly once, but a
+    // manual dismissal must stick: the very next poll tick must not re-open it.
+    // installPromptSurfacedRef is only reset once Freighter is actually detected
+    // as connected, never on close.
+    mockIsConnected.mockRejectedValue(new Error("Freighter is not installed"));
+
+    // try/finally guarantees real timers are restored even if an assertion
+    // fails mid-test, so fake timers can't leak into the rest of the suite.
+    jest.useFakeTimers();
+    try {
+      await act(async () => {
+        renderWithProviders(
+          <WalletProvider>
+            <TestComponent />
+          </WalletProvider>,
+        );
+      });
+
+      // The initial poll detects Freighter is missing and surfaces the prompt.
+      expect(screen.getByText("Freighter Wallet Required")).toBeInTheDocument();
+
+      // User dismisses the prompt.
+      fireEvent.click(screen.getByText("Not now"));
+      expect(screen.queryByText("Freighter Wallet Required")).not.toBeInTheDocument();
+
+      // The next poll tick (POLL_INTERVAL_MS is 5000 in WalletContext) must
+      // keep it dismissed.
+      await act(async () => {
+        jest.advanceTimersByTime(5000);
+      });
+      await act(async () => {});
+
+      expect(screen.queryByText("Freighter Wallet Required")).not.toBeInTheDocument();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it("detects account switch and invalidates queries", async () => {

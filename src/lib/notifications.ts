@@ -2,6 +2,7 @@
 
 import { getWalletTransactions, type WalletTransactionLogEntry } from "./transactionLog";
 import { normalizeAddress } from "./stellar";
+import { getArray, setArray } from "./localStorageStore";
 
 export type NotificationEventType =
   | "contribution_confirmed"
@@ -31,33 +32,15 @@ export interface NotificationFeedResponse {
 const REMOTE_FEED_ENDPOINT = "/api/notifications";
 const READ_STATE_KEY_PREFIX = "proof_of_heart_notifications_read_v1";
 
-function canUseStorage(): boolean {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
-}
-
 function readNotificationIds(walletAddress: string): string[] {
-  if (!canUseStorage()) return [];
-  try {
-    const key = `${READ_STATE_KEY_PREFIX}:${normalizeAddress(walletAddress)}`;
-    const raw = window.localStorage.getItem(key);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed)
-      ? parsed.filter((value): value is string => typeof value === "string")
-      : [];
-  } catch {
-    return [];
-  }
+  const key = `${READ_STATE_KEY_PREFIX}:${normalizeAddress(walletAddress)}`;
+  const ids = getArray<string>(key);
+  return ids.filter((value): value is string => typeof value === "string");
 }
 
 function writeNotificationIds(walletAddress: string, ids: string[]): void {
-  if (!canUseStorage()) return;
-  try {
-    const key = `${READ_STATE_KEY_PREFIX}:${normalizeAddress(walletAddress)}`;
-    window.localStorage.setItem(key, JSON.stringify(ids.slice(-250)));
-  } catch {
-    // Ignore localStorage write failures.
-  }
+  const key = `${READ_STATE_KEY_PREFIX}:${normalizeAddress(walletAddress)}`;
+  setArray(key, ids, 250);
 }
 
 function walletActionToNotification(
@@ -102,7 +85,10 @@ function walletActionToNotification(
   }
 }
 
-async function fetchRemoteNotifications(walletAddress: string): Promise<AppNotification[] | null> {
+async function fetchRemoteNotifications(
+  walletAddress: string,
+  signal?: AbortSignal,
+): Promise<AppNotification[] | null> {
   try {
     const url = new URL(REMOTE_FEED_ENDPOINT, window.location.origin);
     url.searchParams.set("walletAddress", walletAddress);
@@ -112,6 +98,7 @@ async function fetchRemoteNotifications(walletAddress: string): Promise<AppNotif
         Accept: "application/json",
       },
       cache: "no-store",
+      signal,
     });
 
     if (!response.ok) {
@@ -151,11 +138,14 @@ function deriveLocalNotifications(walletAddress: string): AppNotification[] {
     .filter(Boolean) as AppNotification[];
 }
 
-export async function fetchNotifications(walletAddress: string): Promise<AppNotification[]> {
+export async function fetchNotifications(
+  walletAddress: string,
+  signal?: AbortSignal,
+): Promise<AppNotification[]> {
   const normalizedWallet = normalizeAddress(walletAddress);
   if (!normalizedWallet) return [];
 
-  const remoteNotifications = await fetchRemoteNotifications(normalizedWallet);
+  const remoteNotifications = await fetchRemoteNotifications(normalizedWallet, signal);
   const notifications = remoteNotifications ?? deriveLocalNotifications(normalizedWallet);
   const readIds = readNotificationIds(normalizedWallet);
 

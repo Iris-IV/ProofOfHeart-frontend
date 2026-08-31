@@ -1,5 +1,6 @@
 import { formatAddress } from "./formatAddress";
 import { normalizeAddress } from "./stellar";
+import { getArray, setArray } from "./localStorageStore";
 
 export interface ContributorLeaderboardItem {
   walletAddress: string;
@@ -18,42 +19,28 @@ const ANON_PREFERENCE_KEY = "proof_of_heart_anon_preference_v1";
  * - Wallet addresses are masked and not exposed in public lists when opted out.
  */
 export function isWalletAnonymous(walletAddress: string): boolean {
-  if (typeof window === "undefined" || !window.localStorage) return false;
-  try {
-    const raw = window.localStorage.getItem(ANON_PREFERENCE_KEY);
-    if (!raw) return false;
-    const anonWallets = JSON.parse(raw);
-    if (Array.isArray(anonWallets)) {
-      return anonWallets.includes(normalizeAddress(walletAddress));
-    }
-    return false;
-  } catch {
-    return false;
-  }
+  const anonWallets = getArray<string>(ANON_PREFERENCE_KEY);
+  return anonWallets.includes(normalizeAddress(walletAddress));
 }
 
 /**
  * Toggle or set the anonymity / opt-out setting for a connected wallet.
  */
 export function setWalletAnonymous(walletAddress: string, isAnon: boolean): void {
-  if (typeof window === "undefined" || !window.localStorage) return;
-  try {
-    const normalized = normalizeAddress(walletAddress);
-    const raw = window.localStorage.getItem(ANON_PREFERENCE_KEY);
-    let anonWallets: string[] = [];
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) anonWallets = parsed;
+  const normalized = normalizeAddress(walletAddress);
+  const anonWallets = getArray<string>(ANON_PREFERENCE_KEY);
+
+  if (isAnon) {
+    if (!anonWallets.includes(normalized)) {
+      anonWallets.push(normalized);
     }
-    if (isAnon) {
-      if (!anonWallets.includes(normalized)) anonWallets.push(normalized);
-    } else {
-      anonWallets = anonWallets.filter((w) => w !== normalized);
-    }
-    window.localStorage.setItem(ANON_PREFERENCE_KEY, JSON.stringify(anonWallets));
-  } catch {
-    // ignore storage errors
+  } else {
+    const filtered = anonWallets.filter((w) => w !== normalized);
+    setArray(ANON_PREFERENCE_KEY, filtered);
+    return;
   }
+
+  setArray(ANON_PREFERENCE_KEY, anonWallets);
 }
 
 // Initial demo seed data for top supporters per campaign ID

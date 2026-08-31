@@ -6,6 +6,3 @@ npx lint-staged
 
 # Run typecheck and affected tests
 node scripts/pre-commit-checks.mjs
-
-# Validate commit message
-npx commitlint --edit

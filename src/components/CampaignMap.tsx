@@ -6,6 +6,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { Campaign } from "@/types";
 import { Link } from "@/i18n/routing";
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 
 // Fix Leaflet default marker icon (broken in bundlers)
 // https://github.com/Leaflet/Leaflet/issues/4968
@@ -62,10 +63,15 @@ export function filterByValidCoordinates(
 
 interface CampaignMapProps {
   campaigns: Campaign[];
+  isLoading?: boolean;
 }
 
-export default function CampaignMap({ campaigns }: CampaignMapProps) {
-  const validCampaigns = useMemo(() => filterByValidCoordinates(campaigns), [campaigns]);
+export default function CampaignMap({ campaigns, isLoading = false }: CampaignMapProps) {
+  const t = useTranslations("CampaignMap");
+  const validCampaigns = useMemo(
+    () => filterByValidCoordinates(Array.isArray(campaigns) ? campaigns : []),
+    [campaigns],
+  );
 
   const center = useMemo<[number, number]>(() => {
     if (validCampaigns.length === 0) return [20, 0];
@@ -74,17 +80,47 @@ export default function CampaignMap({ campaigns }: CampaignMapProps) {
     return [latSum / validCampaigns.length, lngSum / validCampaigns.length];
   }, [validCampaigns]);
 
+  if (isLoading) {
+    return (
+      <div className="rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700">
+        <div className="h-[500px] w-full flex items-center justify-center bg-zinc-50 dark:bg-zinc-800">
+          <div className="flex flex-col items-center gap-3">
+            <svg
+              className="w-8 h-8 text-blue-500 animate-spin"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              />
+            </svg>
+            <span className="text-sm text-zinc-500 dark:text-zinc-400">{t("loading")}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (validCampaigns.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] p-6 text-center rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700">
         <div className="text-4xl mb-4">🗺️</div>
         <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-          No campaigns with location data
+          {t("emptyTitle")}
         </h3>
-        <p className="text-zinc-600 dark:text-zinc-400 max-w-md">
-          Campaigns with coordinates will appear on this map. Switch to list view to browse all
-          campaigns.
-        </p>
+        <p className="text-zinc-600 dark:text-zinc-400 max-w-md">{t("emptyBody")}</p>
       </div>
     );
   }

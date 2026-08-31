@@ -12,7 +12,13 @@ export function calculateTrendingScore(
   campaign: Campaign,
   nowSec = Math.floor(Date.now() / 1000),
 ): number {
-  if (campaign.is_cancelled || campaign.status === "cancelled") {
+  const isExpired = campaign.deadline > 0 && campaign.deadline < nowSec;
+  if (
+    campaign.is_cancelled ||
+    campaign.status === "cancelled" ||
+    campaign.status === "failed" ||
+    isExpired
+  ) {
     return -1;
   }
 
@@ -20,7 +26,7 @@ export function calculateTrendingScore(
 
   // Active status weight multiplier
   const isActive = campaign.is_active && campaign.status === "active";
-  const statusMultiplier = isActive ? 1.5 : 0.8;
+  const statusMultiplier = isActive ? 1.5 : 0.5;
 
   // Verification bonus
   const verificationBonus = campaign.is_verified ? 20 : 0;
@@ -34,11 +40,17 @@ export function calculateTrendingScore(
 
 /**
  * Sort and return top trending campaigns.
- * If fewer than limit campaigns meet positive momentum criteria,
- * falls back to non-cancelled active campaigns sorted by funding progress.
+ * Excludes expired, failed, or cancelled campaigns.
  */
-export function getTrendingCampaigns(campaigns: Campaign[], limit = 3): Campaign[] {
-  const eligible = campaigns.filter((c) => !c.is_cancelled && c.status !== "cancelled");
+export function getTrendingCampaigns(
+  campaigns: Campaign[],
+  limit = 3,
+  nowSec = Math.floor(Date.now() / 1000),
+): Campaign[] {
+  const eligible = campaigns.filter((c) => {
+    const isExpired = c.deadline > 0 && c.deadline < nowSec;
+    return !c.is_cancelled && c.status !== "cancelled" && c.status !== "failed" && !isExpired;
+  });
 
   if (eligible.length === 0) {
     return [];
@@ -46,7 +58,7 @@ export function getTrendingCampaigns(campaigns: Campaign[], limit = 3): Campaign
 
   const scored = eligible.map((c) => ({
     campaign: c,
-    score: calculateTrendingScore(c),
+    score: calculateTrendingScore(c, nowSec),
   }));
 
   // Sort descending by trending score

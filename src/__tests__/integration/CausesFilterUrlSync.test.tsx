@@ -48,11 +48,14 @@ jest.mock("@/i18n/routing", () => ({
   useRouter: () => mockRouter,
 }));
 
-jest.mock("@/hooks/useCampaigns", () => ({
-  useCampaigns: () => ({
+jest.mock("@/hooks/useInfiniteCampaigns", () => ({
+  useInfiniteCampaigns: () => ({
     campaigns: mockCampaigns,
     isLoading: false,
+    isFetchingNextPage: false,
+    hasNextPage: false,
     error: null,
+    fetchNextPage: jest.fn(),
     refetch: jest.fn(),
   }),
 }));
@@ -92,9 +95,18 @@ describe("Causes filters URL sync", () => {
     jest.useRealTimers();
   });
 
+  it("associates the status and sort selects with their labels (issue #676)", async () => {
+    render(<CausesClient />);
+
+    expect(screen.getByLabelText("labelStatus")).toBeInTheDocument();
+    expect(screen.getByLabelText("labelSortBy")).toBeInTheDocument();
+  });
+
   it("syncs category, status, sort and search to URL", async () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    render(<CausesClient />);
+    await act(async () => {
+      render(<CausesClient />);
+    });
 
     const [statusSelect, sortSelect] = screen.getAllByRole("combobox");
     await user.click(screen.getByRole("button", { name: "Learner, 1 causes" }));
@@ -119,7 +131,9 @@ describe("Causes filters URL sync", () => {
       new URLSearchParams("q=astro&category=2&status=funded&sort=most_funded"),
     );
 
-    render(<CausesClient />);
+    await act(async () => {
+      render(<CausesClient />);
+    });
     const [statusSelect, sortSelect] = screen.getAllByRole("combobox");
 
     expect(await screen.findByDisplayValue("astro")).toBeInTheDocument();
@@ -131,8 +145,10 @@ describe("Causes filters URL sync", () => {
     expect(sortSelect).toHaveValue("most_funded");
   });
 
-  it("shows live category counts on filter chips", () => {
-    render(<CausesClient />);
+  it("shows live category counts on filter chips", async () => {
+    await act(async () => {
+      render(<CausesClient />);
+    });
 
     expect(
       screen.getByRole("button", { name: "All Categories, 1 causes, selected" }),

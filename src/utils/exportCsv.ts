@@ -35,8 +35,10 @@ export function generateContributionHistoryCsv(contributions: ContributionHistor
     const title = item.campaign.title;
     const status = item.status;
 
-    if (item.transactions && item.transactions.length > 0) {
-      for (const tx of item.transactions) {
+    const contributionTxs = item.transactions?.filter((tx) => tx.action === "contribute") || [];
+
+    if (contributionTxs.length > 0) {
+      for (const tx of contributionTxs) {
         const amountXlm = stroopsToXlmNumber(item.contribution);
         const dateStr = formatCsvDate(tx.timestamp);
         rows.push([title, amountXlm.toFixed(7).replace(/\.?0+$/, ""), status, tx.txHash, dateStr]);

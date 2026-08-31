@@ -183,6 +183,8 @@ Variables without `NEXT_PUBLIC_` prefix are only available on the server:
 ```env
 MAINNET_RPC_URL=https://mainnet.stellar.validationcloud.io/v1/<API_KEY>
 TESTNET_RPC_URL=https://soroban-testnet.stellar.org
+CREATOR_EMAIL_WEBHOOK_URL=
+OBSERVABILITY_WEBHOOK_URL=
 ```
 
 ### Best Practices

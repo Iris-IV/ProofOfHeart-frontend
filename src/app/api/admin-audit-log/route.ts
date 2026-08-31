@@ -51,9 +51,28 @@ function normalizeAddress(address: string): string {
   return address.trim().toUpperCase();
 }
 
+async function verifyIsAdmin(callerAddress: string | null): Promise<boolean> {
+  if (!callerAddress) return false;
+  try {
+    const adminFromEnv = process.env.PLATFORM_ADMIN_ADDRESS?.trim();
+    if (adminFromEnv && normalizeAddress(callerAddress) === normalizeAddress(adminFromEnv)) return true;
+    const { getAdmin } = await import("@/lib/contractClient");
+    const onChainAdmin = await getAdmin().catch(() => null);
+    if (onChainAdmin && normalizeAddress(callerAddress) === normalizeAddress(onChainAdmin)) return true;
+  } catch {}
+  return false;
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const adminAddress = url.searchParams.get("adminAddress");
+  const callerAddress = request.headers.get("x-admin-address") || adminAddress;
+
+  const isAdmin = await verifyIsAdmin(callerAddress);
+  if (!isAdmin) {
+    return NextResponse.json({ error: "Not authorized — admin only" }, { status: 403 });
+  }
+
   const entries = await readEntries();
 
   if (!adminAddress) {
@@ -69,6 +88,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const callerAddress = request.headers.get("x-admin-address");
+  if (!(await verifyIsAdmin(callerAddress))) {
+    return NextResponse.json({ error: "Not authorized — admin only" }, { status: 403 });
+  }
   const body = (await request.json()) as Partial<AdminAuditLogEntry>;
   if (!body.adminAddress || !body.action || !body.txHash) {
     return NextResponse.json({ error: "Invalid audit entry." }, { status: 400 });

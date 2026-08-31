@@ -122,8 +122,8 @@ export async function createCampaignUpdate(
       signature,
     };
 
-    // Log notify action (mock behavior)
-    if (notify) {
+    // Log notify action (mock behavior) — dev-only, never in production (#1056).
+    if (notify && process.env.NODE_ENV === "development") {
       console.log(`[Mock] Notification sent to contributors for campaign ${campaignId}`);
     }
 

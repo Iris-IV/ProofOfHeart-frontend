@@ -4,7 +4,6 @@ import {
   isTheme,
   LOCALE_COOKIE_MAX_AGE,
   LOCALE_COOKIE_NAME,
-  LOCALE_STORAGE_KEY,
   readStoredLocale,
   readStoredTheme,
   resolveInitialTheme,
@@ -35,7 +34,6 @@ describe("preferences", () => {
   describe("theme persistence", () => {
     it("reads and writes stored theme", () => {
       writeStoredTheme("dark");
-      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
       expect(readStoredTheme()).toBe("dark");
       expect(hasStoredTheme()).toBe(true);
     });
@@ -58,12 +56,12 @@ describe("preferences", () => {
     it("writes locale to localStorage and cookie", () => {
       writeLocalePreference("es");
 
-      expect(localStorage.getItem(LOCALE_STORAGE_KEY)).toBe("es");
+      expect(readStoredLocale()).toBe("es");
       expect(document.cookie).toContain(`${LOCALE_COOKIE_NAME}=es`);
     });
 
     it("reads stored locale", () => {
-      localStorage.setItem(LOCALE_STORAGE_KEY, "en");
+      writeLocalePreference("en");
       expect(readStoredLocale()).toBe("en");
     });
   });

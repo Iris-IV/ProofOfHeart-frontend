@@ -37,7 +37,7 @@ export function useRevenueSharing(
   const { data, isLoading } = useQuery({
     queryKey: ["revenueSharing", id, walletAddress],
     queryFn: () => fetchRevenueSharing(id, walletAddress),
-    enabled: enabled && !!campaignId && !isNaN(id),
+    enabled: enabled && Number.isFinite(id),
     staleTime: 30_000,
   });
 

@@ -270,8 +270,11 @@ export default function RevenueSharingPanel({
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex items-center justify-center rounded-full bg-zinc-900 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-400 dark:bg-emerald-600 dark:hover:bg-emerald-700"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-zinc-900 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-400 dark:bg-emerald-600 dark:hover:bg-emerald-700"
             >
+              {isPending && (
+                <span className="inline-block motion-safe:animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
+              )}
               {isPending
                 ? txPhase === "signing"
                   ? "Signing..."

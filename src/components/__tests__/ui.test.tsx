@@ -1,7 +1,17 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { Badge, Button, Card, CardTitle, Input, TabPanel, Tabs, Textarea } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  CardTitle,
+  Input,
+  TabPanel,
+  Tabs,
+  Textarea,
+} from "@/components/ui";
 
 // ---------------------------------------------------------------------------
 // Button
@@ -66,6 +76,24 @@ describe("Card", () => {
 
     expect(screen.getByRole("region", { name: "Panel" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Heading" })).toBeInTheDocument();
+  });
+
+  it("styles its title from the typography tokens, not a hardcoded size", () => {
+    render(<CardTitle>Heading</CardTitle>);
+    const heading = screen.getByRole("heading", { name: "Heading" });
+
+    expect(heading.className).toMatch(/\btext-heading\b/);
+    expect(heading.className).toMatch(/\bfont-heading\b/);
+  });
+
+  it("spaces its header from the card-gap token, not a raw utility", () => {
+    render(
+      <CardHeader>
+        <CardTitle>Heading</CardTitle>
+      </CardHeader>,
+    );
+
+    expect(screen.getByRole("heading").parentElement?.className).toMatch(/\bgap-card-gap\b/);
   });
 });
 
