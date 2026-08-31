@@ -263,7 +263,7 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                       {item.campaign.title}
                     </p>
                     <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                      Contributed {formatXlmAmount(item.contribution, locale)} XLM
+                      Contributed {formatXlmAmount(item.contribution, locale)} XLM to {item.campaign.title}
                     </p>
                   </div>
                   <span
