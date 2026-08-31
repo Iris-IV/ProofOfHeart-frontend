@@ -1,4 +1,17 @@
-import { Account, Address, BASE_FEE, Contract, Keypair, Transaction, TransactionBuilder, nativeToScVal, rpc, scValToBigInt, xdr } from "@stellar/stellar-sdk";
+import {
+  Account,
+  Address,
+  BASE_FEE,
+  Contract,
+  Keypair,
+  Transaction,
+  TransactionBuilder,
+  nativeToScVal,
+  rpc,
+  scValToBigInt,
+  xdr,
+} from "@stellar/stellar-sdk";
+/* eslint-disable @typescript-eslint/no-explicit-any -- legacy contract decoding and wallet bridge shapes */
 // #649 — Signing goes through the active wallet signer (Freighter or an
 // embedded social wallet) rather than the Freighter API directly.
 import { getSignerAddress, signTransactionXdr } from "./walletSigner";
@@ -12,7 +25,12 @@ import {
 } from "./observability";
 import { appendWalletTransaction } from "./transactionLog";
 import { Campaign, Category, deriveStatus, CampaignStatus, Milestone } from "../types";
-import { parseContractError, getContractErrorCode, ContractError } from "../utils/contractErrors";
+import {
+  parseContractError,
+  getContractErrorCode,
+  normalizeContractError,
+  ContractError,
+} from "../utils/contractErrors";
 import { wrapFreighterError } from "../utils/freighterErrors";
 import {
   validateStellarAddress,
@@ -205,6 +223,19 @@ async function getCachedAccount(publicKey: string): Promise<Account> {
   return fresh;
 }
 
+/** Fail before campaign construction if the creator is not funded on Stellar. */
+async function requireExistingCreatorAccount(publicKey: string): Promise<void> {
+  try {
+    await getCachedAccount(publicKey);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    if (/404|not found|does not exist|resource missing/i.test(detail)) {
+      throw new Error("Creator account does not exist on the Stellar network.");
+    }
+    throw error;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Helpers — transaction building & submission
 // ---------------------------------------------------------------------------
@@ -244,7 +275,7 @@ async function buildAndSubmitTransaction(
   }
 
   if (rpc.Api.isSimulationError(simulated)) {
-    const simulationError = new Error(simulated.error ?? "Transaction simulation failed.");
+    const simulationError = normalizeContractError(simulated, "Transaction simulation failed.");
     recordObservabilityFailure(classifySimulationFailure(simulationError, operation), {
       operation,
     });
@@ -252,10 +283,7 @@ async function buildAndSubmitTransaction(
   }
 
   const preparedTx = rpc
-    .assembleTransaction(
-      builtTx,
-      simulated as rpc.Api.SimulateTransactionSuccessResponse,
-    )
+    .assembleTransaction(builtTx, simulated as rpc.Api.SimulateTransactionSuccessResponse)
     .build();
 
   options?.onStatus?.({ phase: "signing" });
@@ -268,10 +296,7 @@ async function buildAndSubmitTransaction(
     wrapFreighterError(error);
   }
 
-  const signedTx = TransactionBuilder.fromXDR(
-    signedTxXdr,
-    NETWORK_PASSPHRASE,
-  ) as Transaction;
+  const signedTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE) as Transaction;
 
   options?.onStatus?.({ phase: "submitting" });
   let submissionResult;
@@ -288,7 +313,7 @@ async function buildAndSubmitTransaction(
       operation,
       rpcStatus: submissionResult.status,
     });
-    throw new Error("Transaction submission failed.");
+    throw normalizeContractError(submissionResult, "Transaction submission failed.");
   }
 
   const txHash = submissionResult.hash;
@@ -338,7 +363,7 @@ async function buildAndSubmitTransaction(
       rpcStatus: getResult.status,
       txHash,
     });
-    throw new Error("Transaction failed on-chain.");
+    throw normalizeContractError(getResult, "Transaction failed on-chain.");
   }
 
   options?.onStatus?.({ phase: "confirmed", txHash, rpcStatus: getResult.status });
@@ -355,10 +380,7 @@ function emitMockLifecycle(txHash: string, options?: TransactionLifecycleOptions
   return txHash;
 }
 
-async function invokeViewMethod(
-  method: string,
-  args: xdr.ScVal[] = [],
-): Promise<xdr.ScVal | null> {
+async function invokeViewMethod(method: string, args: xdr.ScVal[] = []): Promise<xdr.ScVal | null> {
   const contract = new Contract(CONTRACT_ADDRESS);
 
   const zeroKeyPair = Keypair.random();
@@ -383,7 +405,7 @@ async function invokeViewMethod(
   }
 
   if (rpc.Api.isSimulationError(simulated)) {
-    const simulationError = new Error(simulated.error ?? `View call ${method} failed.`);
+    const simulationError = normalizeContractError(simulated, `View call ${method} failed.`);
     recordObservabilityFailure(classifySimulationFailure(simulationError, method), {
       operation: method,
     });
@@ -713,9 +735,7 @@ export async function getCampaignCount(): Promise<number> {
 export async function getCampaign(id: number): Promise<Campaign | null> {
   if (USE_MOCKS) return MOCK_CAMPAIGNS.find((c) => c.id === id) ?? null;
   try {
-    const result = await invokeViewMethod("get_campaign", [
-      nativeToScVal(id, { type: "u32" }),
-    ]);
+    const result = await invokeViewMethod("get_campaign", [nativeToScVal(id, { type: "u32" })]);
     if (!result) return null;
     return decodeCampaign(result);
   } catch (err) {
@@ -795,8 +815,11 @@ export async function getRevenueClaimed(campaignId: number, contributor: string)
   }
 }
 
-export async function extendCampaignDeadline(campaignId: number, additionalDays: number): Promise<string> {
-  if (additionalDays < 1 || additionalDays > 30) throw new Error('additionalDays must be 1..30');
+export async function extendCampaignDeadline(
+  campaignId: number,
+  additionalDays: number,
+): Promise<string> {
+  if (additionalDays < 1 || additionalDays > 30) throw new Error("additionalDays must be 1..30");
   const contract = new Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     "extend_campaign_deadline",
@@ -805,9 +828,15 @@ export async function extendCampaignDeadline(campaignId: number, additionalDays:
   );
   // Caller must be campaign creator; retrieve from wallet context if needed
   // For now use a placeholder — the UI layer should pass the connected wallet address via options
-  const caller = typeof window !== 'undefined' ? (window as any).__walletPublicKey || "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF" : "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF";
+  const caller =
+    typeof window !== "undefined"
+      ? (window as any).__walletPublicKey ||
+        "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF"
+      : "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF";
   try {
-    const result = await buildAndSubmitTransaction(caller, op, { operation: "extend_campaign_deadline" } as any);
+    const result = await buildAndSubmitTransaction(caller, op, {
+      operation: "extend_campaign_deadline",
+    } as any);
     return result.txHash;
   } catch (err) {
     throw new Error(parseContractError(err));
@@ -951,6 +980,8 @@ export async function createCampaign(
     );
     return txHash;
   }
+
+  await requireExistingCreatorAccount(creator);
   const contract = new Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     "create_campaign",
@@ -975,6 +1006,50 @@ export async function createCampaign(
     captureTransactionError("create_campaign", 0, error, errorCode ? String(errorCode) : undefined);
     throw new Error(parseContractError(err));
   }
+}
+
+/**
+ * Simulate the exact contribution operation and return the assembled
+ * transaction fee. Soroban RPC derives this from CPU, memory, ledger reads and
+ * writes, so callers no longer have to guess with a fixed "gas limit".
+ */
+export async function estimateContributeNetworkFee(
+  campaignId: number,
+  contributor: string,
+  amount: bigint,
+): Promise<bigint> {
+  validateStellarAddress(contributor);
+  validateAmount(amount);
+  if (USE_MOCKS) return 100_000n;
+
+  const cached = await getCachedAccount(contributor);
+  // TransactionBuilder increments its source Account during build. Estimation
+  // must not consume a sequence number from the shared submission cache.
+  const source = new Account(cached.accountId(), cached.sequenceNumber());
+  const contract = new Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    "contribute",
+    nativeToScVal(campaignId, { type: "u32" }),
+    new Address(contributor).toScVal(),
+    nativeToScVal(amount, { type: "i128" }),
+  );
+  const transaction = new TransactionBuilder(source, {
+    fee: BASE_FEE,
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(op)
+    .setTimeout(300)
+    .build();
+
+  const simulation = await withRpcServer((server) => server.simulateTransaction(transaction));
+  if (rpc.Api.isSimulationError(simulation)) {
+    throw normalizeContractError(simulation, "Unable to estimate transaction fee.");
+  }
+
+  const prepared = rpc
+    .assembleTransaction(transaction, simulation as rpc.Api.SimulateTransactionSuccessResponse)
+    .build();
+  return BigInt(prepared.fee);
 }
 
 export async function contribute(
@@ -1063,10 +1138,7 @@ export async function cancelCampaign(
   if (USE_MOCKS) return emitMockLifecycle("mock_tx_cancel_campaign", options);
   const callerAddress = await getSignerAddress();
   const contract = new Contract(CONTRACT_ADDRESS);
-  const op = contract.call(
-    "cancel_campaign",
-    nativeToScVal(campaignId, { type: "u32" }),
-  );
+  const op = contract.call("cancel_campaign", nativeToScVal(campaignId, { type: "u32" }));
   try {
     const txResult = await buildAndSubmitTransaction(callerAddress, op, {
       ...options,
@@ -1190,10 +1262,7 @@ export async function verifyCampaign(
   if (USE_MOCKS) return emitMockLifecycle("mock_tx_verify_campaign", options);
   const callerAddress = await getSignerAddress();
   const contract = new Contract(CONTRACT_ADDRESS);
-  const op = contract.call(
-    "verify_campaign",
-    nativeToScVal(campaignId, { type: "u32" }),
-  );
+  const op = contract.call("verify_campaign", nativeToScVal(campaignId, { type: "u32" }));
   try {
     const txResult = await buildAndSubmitTransaction(callerAddress, op, {
       ...options,
@@ -1216,10 +1285,7 @@ export async function updatePlatformFee(
 
   const callerAddress = await getSignerAddress();
   const contract = new Contract(CONTRACT_ADDRESS);
-  const op = contract.call(
-    "update_platform_fee",
-    nativeToScVal(platformFee, { type: "u32" }),
-  );
+  const op = contract.call("update_platform_fee", nativeToScVal(platformFee, { type: "u32" }));
 
   try {
     const txResult = await buildAndSubmitTransaction(callerAddress, op, {

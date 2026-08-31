@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import Modal from "./ui/Modal";
-import { contribute, getCampaign } from "../lib/contractClient";
+import { contribute, estimateContributeNetworkFee, getCampaign } from "../lib/contractClient";
 import { getEstimatedContributeNetworkFeeXlm } from "../lib/networkFee";
 import { Campaign, basisPointsToPercentage } from "../types";
 import { xlmToStroops, stroopsToXlmNumber } from "@/lib/stellarAmount";
 import { formatAmount } from "@/lib/formatters";
 import { useToast } from "./ToastProvider";
-import { SUPPORTED_TOKENS, getEnabledTokens, type TokenSymbol } from "@/lib/supportedTokens";
+import { getEnabledTokens, type TokenSymbol } from "@/lib/supportedTokens";
 import { useWallet } from "./WalletContext";
 import { usePlatformFee } from "../hooks/usePlatformFee";
 import { parseContractError } from "../utils/contractErrors";
@@ -60,7 +60,9 @@ export default function DonationModal({
   const { publicKey } = useWallet();
   const { showError } = useToast();
   const { platformFeeBps } = usePlatformFee();
-  const estimatedNetworkFeeXlm = useMemo(() => getEstimatedContributeNetworkFeeXlm(), []);
+  const [estimatedNetworkFeeXlm, setEstimatedNetworkFeeXlm] = useState(
+    getEstimatedContributeNetworkFeeXlm,
+  );
 
   const [amount, setAmount] = useState("");
   const [selectedToken, setSelectedToken] = useState<TokenSymbol>("USDC");
@@ -185,6 +187,31 @@ export default function DonationModal({
   const currentPct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
   const totalWalletCost =
     amountNum > 0 ? amountNum + estimatedNetworkFeeXlm : estimatedNetworkFeeXlm;
+
+  useEffect(() => {
+    if (!publicKey || !validation.valid || !amount.trim()) return;
+
+    let active = true;
+    const timeout = window.setTimeout(async () => {
+      try {
+        const fee = await estimateContributeNetworkFee(
+          campaign.id,
+          publicKey,
+          xlmToStroops(amount),
+        );
+        if (active) setEstimatedNetworkFeeXlm(stroopsToXlmNumber(fee));
+      } catch {
+        // Keep the documented conservative fallback if RPC estimation is
+        // temporarily unavailable. Submission performs its own simulation.
+        if (active) setEstimatedNetworkFeeXlm(getEstimatedContributeNetworkFeeXlm());
+      }
+    }, 300);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [amount, campaign.id, publicKey, validation.valid]);
 
   const handleDonate = async () => {
     if (!publicKey) return;
@@ -344,7 +371,9 @@ export default function DonationModal({
 
               {/* Multi-token donation selector */}
               <div className="mb-4 mt-4">
-                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">Donation Token</label>
+                <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
+                  Donation Token
+                </p>
                 <div className="flex gap-2 flex-wrap">
                   {getEnabledTokens().map((tok) => (
                     <button
@@ -354,11 +383,14 @@ export default function DonationModal({
                       className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${selectedToken === tok.symbol ? "bg-blue-600 text-white border-blue-600" : "bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-600 hover:border-blue-300"}`}
                       aria-pressed={selectedToken === tok.symbol}
                     >
-                      <span className="mr-1">{tok.icon}</span>{tok.symbol}
+                      <span className="mr-1">{tok.icon}</span>
+                      {tok.symbol}
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-zinc-500 mt-1">Donate in {selectedToken}. Support for multiple Stellar tokens.</p>
+                <p className="text-xs text-zinc-500 mt-1">
+                  Donate in {selectedToken}. Support for multiple Stellar tokens.
+                </p>
               </div>
               {amountError && (
                 <p id="donation-amount-error" role="alert" className="mt-1 text-xs text-red-500">
@@ -408,8 +440,11 @@ export default function DonationModal({
 
             {/* Recurring donation opt-in (#671) */}
             <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 px-4 py-3 space-y-3">
-              <label className="flex items-start gap-3 cursor-pointer">
+              {/* The associated checkbox and visible text are nested in this label. */}
+              {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
+              <label htmlFor="recurring-donation" className="flex items-start gap-3 cursor-pointer">
                 <input
+                  id="recurring-donation"
                   type="checkbox"
                   checked={isRecurring}
                   onChange={(e) => setIsRecurring(e.target.checked)}
@@ -449,34 +484,6 @@ export default function DonationModal({
                 </div>
               )}
             </div>
-            {amountNum > 0 && (
-              <dl className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 px-4 py-3 text-sm space-y-2">
-                <div className="flex justify-between gap-4">
-                  <dt className="text-zinc-600 dark:text-zinc-400">{t("contributionLine")}</dt>
-                  <dd className="font-medium text-zinc-900 dark:text-zinc-50 tabular-nums">
-                    {amountNum.toLocaleString(undefined, { maximumFractionDigits: 7 })} XLM
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-zinc-600 dark:text-zinc-400">{t("networkFeeLine")}</dt>
-                  <dd className="font-medium text-zinc-900 dark:text-zinc-50 tabular-nums">
-                    {estimatedNetworkFeeXlm.toLocaleString(undefined, {
-                      maximumFractionDigits: 7,
-                    })}{" "}
-                    XLM
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-4 border-t border-zinc-200 dark:border-zinc-600 pt-2">
-                  <dt className="font-semibold text-zinc-900 dark:text-zinc-50">
-                    {t("totalLine")}
-                  </dt>
-                  <dd className="font-semibold text-zinc-900 dark:text-zinc-50 tabular-nums">
-                    {totalWalletCost.toLocaleString(undefined, { maximumFractionDigits: 7 })} XLM
-                  </dd>
-                </div>
-              </dl>
-            )}
-
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
               {t("platformFeeNote", { feePercent: basisPointsToPercentage(platformFeeBps) })}
             </p>

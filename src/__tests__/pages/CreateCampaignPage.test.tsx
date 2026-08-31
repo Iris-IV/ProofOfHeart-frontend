@@ -570,7 +570,9 @@ describe("CreateCampaignPage — submission", () => {
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
     fireEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
 
-    expect(await screen.findByRole("button", { name: /submitting/i })).toBeDisabled();
+    const submittingButtons = await screen.findAllByRole("button", { name: /submitting/i });
+    expect(submittingButtons.length).toBeGreaterThan(0);
+    submittingButtons.forEach((button) => expect(button).toBeDisabled());
 
     await act(async () => {
       resolveCreate("tx_hash");
@@ -647,5 +649,19 @@ describe("CreateCampaignPage — cover image upload", () => {
       await screen.findByDisplayValue("https://ipfs.io/ipfs/QmUploadedHash"),
     ).toBeInTheDocument();
     expect(mockShowSuccess).toHaveBeenCalledWith("coverImageUploadSuccess");
+  });
+
+  it("rejects a 5MB image before upload and explains the limit", async () => {
+    renderPage();
+
+    const file = new File([new Uint8Array(5 * 1024 * 1024)], "too-large.png", {
+      type: "image/png",
+    });
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+
+    await userEvent.upload(fileInput, file);
+
+    expect(mockShowError).toHaveBeenCalledWith("Image must be < 5MB");
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });

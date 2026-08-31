@@ -13,8 +13,10 @@ const ALLOWED_IMAGE_TYPES = [
   "image/svg+xml",
 ] as const;
 
-// Maximum file size in bytes (10MB)
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+// Upload service limit. Keep this check client-side and server-side so an
+// oversized image receives immediate feedback and never fails silently.
+export const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+export const IMAGE_SIZE_ERROR = "Image must be < 5MB";
 
 // Minimum file size in bytes (100 bytes - prevents empty/tiny images)
 const MIN_IMAGE_SIZE = 100;
@@ -76,10 +78,10 @@ export function validateImageSize(size: number): { valid: boolean; error?: strin
     return { valid: false, error: "Image is too small (minimum 100 bytes)" };
   }
 
-  if (size > MAX_IMAGE_SIZE) {
+  if (size >= MAX_IMAGE_SIZE) {
     return {
       valid: false,
-      error: `Image is too large (maximum ${MAX_IMAGE_SIZE / 1024 / 1024}MB)`,
+      error: IMAGE_SIZE_ERROR,
     };
   }
 
@@ -92,7 +94,7 @@ export function validateImageSize(size: number): { valid: boolean; error?: strin
 export function validateImageType(mimeType: string): { valid: boolean; error?: string } {
   const normalizedType = mimeType.toLowerCase();
 
-  if (!ALLOWED_IMAGE_TYPES.includes(normalizedType as any)) {
+  if (!ALLOWED_IMAGE_TYPES.includes(normalizedType as (typeof ALLOWED_IMAGE_TYPES)[number])) {
     return {
       valid: false,
       error: `Image type not allowed. Allowed types: ${ALLOWED_IMAGE_TYPES.join(", ")}`,
