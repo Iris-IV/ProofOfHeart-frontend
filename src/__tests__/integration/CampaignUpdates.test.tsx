@@ -17,7 +17,7 @@ jest.mock("@/components/SafeMarkdown", () => ({
   ),
 }));
 
-// Enable mock mode so WalletProvider reads from localStorage
+// Enable mock mode so WalletProvider reads from sessionStorage
 jest.mock("@/lib/runtimeEnv", () => ({
   IS_MOCK_MODE: true,
 }));
@@ -79,6 +79,7 @@ describe("UpdatesSection Integration", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
+    sessionStorage.clear();
   });
 
   describe("Viewing updates", () => {
@@ -152,7 +153,7 @@ describe("UpdatesSection Integration", () => {
   describe("Creator-only composer", () => {
     it("shows composer when user is the campaign creator", async () => {
       // Set wallet to creator address
-      localStorage.setItem("stellar_wallet_public_key", mockCampaign.creator);
+      sessionStorage.setItem("stellar_wallet_public_key", mockCampaign.creator);
       mockGetCampaignUpdates.mockResolvedValue([]);
 
       renderUpdatesSection(mockCampaign, mockCampaign.creator);
@@ -165,7 +166,7 @@ describe("UpdatesSection Integration", () => {
     it("hides composer when user is not the campaign creator", async () => {
       // Set wallet to different address
       const otherAddress = "GOTHER12345678901234567890123456789012345678901234567890";
-      localStorage.setItem("stellar_wallet_public_key", otherAddress);
+      sessionStorage.setItem("stellar_wallet_public_key", otherAddress);
       mockGetCampaignUpdates.mockResolvedValue([]);
 
       renderUpdatesSection(mockCampaign, otherAddress);
@@ -188,7 +189,7 @@ describe("UpdatesSection Integration", () => {
 
   describe("Creating updates", () => {
     it("allows creator to post a new update", async () => {
-      localStorage.setItem("stellar_wallet_public_key", mockCampaign.creator);
+      sessionStorage.setItem("stellar_wallet_public_key", mockCampaign.creator);
       mockGetCampaignUpdates.mockResolvedValue([]);
       mockCreateCampaignUpdate.mockResolvedValue({
         id: "new-update",
@@ -227,7 +228,7 @@ describe("UpdatesSection Integration", () => {
     });
 
     it("shows submitting state while creating update", async () => {
-      localStorage.setItem("stellar_wallet_public_key", mockCampaign.creator);
+      sessionStorage.setItem("stellar_wallet_public_key", mockCampaign.creator);
       mockGetCampaignUpdates.mockResolvedValue([]);
       mockCreateCampaignUpdate.mockImplementation(
         () => new Promise((resolve) => setTimeout(resolve, 100)),
@@ -254,7 +255,7 @@ describe("UpdatesSection Integration", () => {
     });
 
     it("shows error toast on submission failure", async () => {
-      localStorage.setItem("stellar_wallet_public_key", mockCampaign.creator);
+      sessionStorage.setItem("stellar_wallet_public_key", mockCampaign.creator);
       mockGetCampaignUpdates.mockResolvedValue([]);
       mockCreateCampaignUpdate.mockRejectedValue(new Error("Submission failed"));
 
@@ -278,7 +279,7 @@ describe("UpdatesSection Integration", () => {
     });
 
     it("clears composer after successful submission", async () => {
-      localStorage.setItem("stellar_wallet_public_key", mockCampaign.creator);
+      sessionStorage.setItem("stellar_wallet_public_key", mockCampaign.creator);
       mockGetCampaignUpdates.mockResolvedValue([]);
       mockCreateCampaignUpdate.mockResolvedValue({
         id: "new-update",
