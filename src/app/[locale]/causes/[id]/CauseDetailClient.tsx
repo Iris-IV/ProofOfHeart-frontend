@@ -312,9 +312,15 @@ export default function CauseDetailClient({ id }: { id: string }) {
           <nav className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
             <Link
               href="/causes"
+              onClick={(e) => {
+                if (typeof window !== "undefined" && window.history.length > 1) {
+                  e.preventDefault();
+                  window.history.back();
+                }
+              }}
               className="hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
             >
-              Causes
+              ← Causes
             </Link>
             <span>›</span>
             <span className="text-zinc-900 dark:text-zinc-50 truncate max-w-xs">

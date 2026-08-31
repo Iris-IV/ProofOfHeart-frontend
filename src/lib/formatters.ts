@@ -50,16 +50,20 @@ export function formatAmount(
   });
 }
 
-/** Format a Unix timestamp (seconds) as a locale-aware date string. */
+/** Format a Unix timestamp (seconds or milliseconds) as a locale-aware date string. */
 export function formatDate(
   timestampSeconds: number,
   locale: string,
   options: Intl.DateTimeFormatOptions = { year: "numeric", month: "long", day: "numeric" },
 ): string {
-  return new Intl.DateTimeFormat(locale, options).format(new Date(timestampSeconds * 1000));
+  const tsMs =
+    typeof timestampSeconds === "number" && timestampSeconds < 1e11
+      ? timestampSeconds * 1000
+      : timestampSeconds;
+  return new Intl.DateTimeFormat(locale, options).format(new Date(tsMs));
 }
 
-/** Format a Unix timestamp (seconds) as a short date (e.g. "Jan 1, 2024"). */
+/** Format a Unix timestamp (seconds or milliseconds) as a short date (e.g. "Jan 1, 2024"). */
 export function formatShortDate(timestampSeconds: number, locale: string): string {
   return formatDate(timestampSeconds, locale, { year: "numeric", month: "short", day: "numeric" });
 }

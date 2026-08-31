@@ -78,11 +78,26 @@ export default function TransactionHistorySection({
   const [filterAction, setFilterAction] = useState<WalletTransactionLogEntry["action"] | "all">(
     "all",
   );
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 5;
+
+  const handleFilterChange = (opt: WalletTransactionLogEntry["action"] | "all") => {
+    setFilterAction(opt);
+    setCurrentPage(1);
+  };
 
   const filtered = useMemo(() => {
     if (filterAction === "all") return entries;
     return entries.filter((e) => e.action === filterAction);
   }, [entries, filterAction]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginated = useMemo(() => {
+    const start = (safeCurrentPage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, safeCurrentPage]);
 
   if (!isMounted || isLoading) return null;
 
@@ -112,7 +127,7 @@ export default function TransactionHistorySection({
             {actionOptions.map((opt) => (
               <button
                 key={opt}
-                onClick={() => setFilterAction(opt)}
+                onClick={() => handleFilterChange(opt)}
                 aria-pressed={filterAction === opt}
                 className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
                   filterAction === opt
@@ -130,60 +145,86 @@ export default function TransactionHistorySection({
               No transactions match this filter.
             </p>
           ) : (
-            <ul className="space-y-2" aria-label="Transaction history">
-              {filtered.map((entry) => {
-                const campaignTitle =
-                  campaignTitleMap[entry.campaignId] ?? `Campaign #${entry.campaignId}`;
-                return (
-                  <li
-                    key={`${entry.txHash}-${entry.timestamp}`}
-                    className="border border-zinc-200 dark:border-zinc-700 rounded-xl p-4 bg-white dark:bg-zinc-800"
-                  >
-                    <div className="flex items-start justify-between gap-3 flex-wrap">
-                      <div className="flex items-center gap-2 flex-wrap min-w-0">
-                        <span
-                          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 ${getActionColor(entry.action)}`}
+            <>
+              <ul className="space-y-2" aria-label="Transaction history">
+                {paginated.map((entry) => {
+                  const campaignTitle =
+                    campaignTitleMap[entry.campaignId] ?? `Campaign #${entry.campaignId}`;
+                  return (
+                    <li
+                      key={`${entry.txHash}-${entry.timestamp}`}
+                      className="border border-zinc-200 dark:border-zinc-700 rounded-xl p-4 bg-white dark:bg-zinc-800"
+                    >
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap min-w-0">
+                          <span
+                            className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 ${getActionColor(entry.action)}`}
+                          >
+                            {getActionLabel(entry.action)}
+                          </span>
+                          <Link
+                            href={`/causes/${entry.campaignId}`}
+                            className="text-sm font-medium text-zinc-900 dark:text-zinc-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate max-w-[200px] sm:max-w-none"
+                            title={campaignTitle}
+                          >
+                            {campaignTitle}
+                          </Link>
+                        </div>
+                        <time
+                          className="text-xs text-zinc-500 dark:text-zinc-400 shrink-0"
+                          dateTime={new Date(entry.timestamp).toISOString()}
                         >
-                          {getActionLabel(entry.action)}
-                        </span>
-                        <Link
-                          href={`/causes/${entry.campaignId}`}
-                          className="text-sm font-medium text-zinc-900 dark:text-zinc-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate max-w-[200px] sm:max-w-none"
-                          title={campaignTitle}
-                        >
-                          {campaignTitle}
-                        </Link>
+                          {formatTimestamp(entry.timestamp)}
+                        </time>
                       </div>
-                      <time
-                        className="text-xs text-zinc-500 dark:text-zinc-400 shrink-0"
-                        dateTime={new Date(entry.timestamp).toISOString()}
-                      >
-                        {formatTimestamp(entry.timestamp)}
-                      </time>
-                    </div>
 
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                      <span className="text-zinc-500 dark:text-zinc-400">Date: {formatTimestamp(entry.timestamp)}</span>
-                      <span className="text-zinc-400">·</span>
-                      <span className="text-zinc-500 dark:text-zinc-400">Type: {getActionLabel(entry.action)}</span>
-                      <span className="text-zinc-400">·</span>
-                      <span className="font-mono text-zinc-500 dark:text-zinc-400 truncate max-w-[140px] sm:max-w-[200px]" title={entry.txHash}>
-                        {entry.txHash.slice(0, 8)}…{entry.txHash.slice(-6)}
-                      </span>
-                      <a
-                        href={explorerTxUrl(entry.txHash)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={`View transaction ${entry.txHash} for ${campaignTitle} on Stellar Explorer`}
-                        className="text-blue-600 dark:text-blue-400 hover:underline shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded px-1"
-                      >
-                        View on Explorer ↗
-                      </a>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="text-zinc-500 dark:text-zinc-400">Date: {formatTimestamp(entry.timestamp)}</span>
+                        <span className="text-zinc-400">·</span>
+                        <span className="text-zinc-500 dark:text-zinc-400">Type: {getActionLabel(entry.action)}</span>
+                        <span className="text-zinc-400">·</span>
+                        <span className="font-mono text-zinc-500 dark:text-zinc-400 truncate max-w-[140px] sm:max-w-[200px]" title={entry.txHash}>
+                          {entry.txHash.slice(0, 8)}…{entry.txHash.slice(-6)}
+                        </span>
+                        <a
+                          href={explorerTxUrl(entry.txHash)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`View transaction ${entry.txHash} for ${campaignTitle} on Stellar Explorer`}
+                          className="text-blue-600 dark:text-blue-400 hover:underline shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded px-1"
+                        >
+                          View on Explorer ↗
+                        </a>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {totalPages > 1 && (
+                <div className="mt-4 flex items-center justify-between text-xs text-zinc-500">
+                  <button
+                    type="button"
+                    disabled={safeCurrentPage <= 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    className="px-3 py-1 rounded border border-zinc-300 dark:border-zinc-700 disabled:opacity-40"
+                  >
+                    ← Previous
+                  </button>
+                  <span>
+                    Page {safeCurrentPage} of {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={safeCurrentPage >= totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    className="px-3 py-1 rounded border border-zinc-300 dark:border-zinc-700 disabled:opacity-40"
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </>
       )}

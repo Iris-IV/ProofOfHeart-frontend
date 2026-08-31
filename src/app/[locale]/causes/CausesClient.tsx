@@ -104,6 +104,15 @@ function CausesContent() {
   const [tag, setTag] = useState(searchParams.get("tag") ?? "");
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
 
+  // Keep state in sync with URL parameters when navigating back / forward
+  useEffect(() => {
+    setRawSearch(searchParams.get("q") ?? "");
+    setCategory(searchParams.get("category") ?? "all");
+    setStatus(searchParams.get("status") ?? "all");
+    setSort(searchParams.get("sort") ?? "newest");
+    setTag(searchParams.get("tag") ?? "");
+  }, [searchParams]);
+
   const debouncedSearch = useDebounce(rawSearch, 300);
 
   const STATUS_OPTIONS: ("all" | CampaignStatus)[] = [
