@@ -1,4 +1,4 @@
-import { Account, Address, BASE_FEE, Contract, Keypair, Transaction, TransactionBuilder, nativeToScVal, rpc, scValToBigInt, xdr } from "@stellar/stellar-sdk";
+import { Account, Address, BASE_FEE, Contract, Keypair, Memo, Transaction, TransactionBuilder, nativeToScVal, rpc, scValToBigInt, xdr } from "@stellar/stellar-sdk";
 // #649 — Signing goes through the active wallet signer (Freighter or an
 // embedded social wallet) rather than the Freighter API directly.
 import { getSignerAddress, signTransactionXdr } from "./walletSigner";
@@ -58,6 +58,8 @@ export interface TransactionLifecycleOptions {
   timeoutMs?: number;
   /** Soroban contract method name for observability metrics. */
   operation?: string;
+  /** Optional memo to attach to the transaction (e.g. campaign/cause ID). */
+  memo?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -232,6 +234,9 @@ async function buildAndSubmitTransaction(
     networkPassphrase: NETWORK_PASSPHRASE,
   });
   txBuilder.addOperation(contractOp);
+  if (options?.memo) {
+    txBuilder.addMemo(Memo.text(options.memo));
+  }
   txBuilder.setTimeout(300);
 
   const builtTx = txBuilder.build();
