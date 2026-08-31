@@ -17,5 +17,8 @@ export type { InputProps, TextareaProps } from "./Field";
 export { default as Tabs, TabPanel, tabButtonId, tabPanelId } from "./Tabs";
 export type { TabItem, TabPanelProps, TabsProps } from "./Tabs";
 
+export { default as Modal } from "./Modal";
+export type { ModalProps } from "./Modal";
+
 export { cn } from "./cn";
 export type { ClassValue } from "./cn";

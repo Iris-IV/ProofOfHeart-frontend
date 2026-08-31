@@ -29,7 +29,7 @@ export default function FundingProgressBar({
 
   const displayRaised = formatAmount(amountRaised, locale, { maximumFractionDigits: 2 });
   const displayGoal = formatAmount(fundingGoal, locale, { maximumFractionDigits: 2 });
-  const roundedPct = Math.round(targetPct);
+  const roundedPct = Math.min(100, Math.round(targetPct));
   const fundingLabelId = useId();
   const fundingValueText = `${roundedPct}% funded, ${displayRaised} of ${displayGoal} XLM`;
 
@@ -46,7 +46,7 @@ export default function FundingProgressBar({
       <div
         role="progressbar"
         aria-labelledby={fundingLabelId}
-        aria-valuenow={roundedPct}
+        aria-valuenow={Math.min(100, roundedPct)}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuetext={fundingValueText}
@@ -57,7 +57,7 @@ export default function FundingProgressBar({
           <div
             aria-hidden="true"
             className="bg-linear-to-r from-blue-500 to-purple-500 h-1.5 rounded-full"
-            style={{ width: `${targetPct}%` }}
+            style={{ width: `${Math.min(100, Math.max(0, targetPct))}%` }}
           />
         ) : (
           // Spring-animated fill — Framer Motion chunk loads lazily

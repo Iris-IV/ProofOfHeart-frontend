@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AppNotification,
   fetchNotifications,
@@ -12,14 +12,20 @@ const POLL_INTERVAL_MS = 30_000;
 
 export function useNotifications(walletAddress: string | null) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const abortRef = useRef<AbortController | null>(null);
 
   const refresh = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     if (!walletAddress) {
       setNotifications([]);
       return;
     }
 
-    const nextNotifications = await fetchNotifications(walletAddress);
+    const nextNotifications = await fetchNotifications(walletAddress, controller.signal);
+    if (controller.signal.aborted) return;
     setNotifications(nextNotifications);
   }, [walletAddress]);
 
@@ -31,7 +37,10 @@ export function useNotifications(walletAddress: string | null) {
       void refresh();
     }, POLL_INTERVAL_MS);
 
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      abortRef.current?.abort();
+    };
   }, [refresh, walletAddress]);
 
   const unreadCount = notifications.filter((notification) => !notification.read).length;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCampaigns } from "@/hooks/useCampaigns";
+import { getRecommendedCauses } from "@/lib/causeRecommendations";
 import { Category, CATEGORY_LABELS } from "@/types";
 import CauseCard from "./CauseCard";
 import { CauseCardSkeleton } from "./Skeleton";
@@ -47,15 +48,18 @@ export default function RelatedCampaigns({
     );
   }
 
-  const related = campaigns
-    .filter(
-      (c) =>
-        c.id !== currentCampaignId &&
-        (c.category === category || String(c.category) === String(category)) &&
-        c.status !== "cancelled" &&
-        !c.is_cancelled,
-    )
-    .slice(0, limit);
+  const currentCampaign = campaigns.find((c) => c.id === currentCampaignId);
+  const related = currentCampaign
+    ? getRecommendedCauses(currentCampaign, campaigns, limit)
+    : campaigns
+        .filter(
+          (c) =>
+            c.id !== currentCampaignId &&
+            (c.category === category || String(c.category) === String(category)) &&
+            c.status !== "cancelled" &&
+            !c.is_cancelled,
+        )
+        .slice(0, limit);
 
   if (related.length === 0) {
     return null;

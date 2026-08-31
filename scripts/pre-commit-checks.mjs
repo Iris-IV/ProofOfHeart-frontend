@@ -14,6 +14,7 @@
 import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
+import { typecheckStagedFiles } from "./typecheckStagedFiles.mjs";
 
 const colors = {
   reset: "\x1b[0m",
@@ -91,17 +92,14 @@ async function runTypeCheck(files) {
 
   logSection(`TypeScript Type-Check (${files.length} files)`);
 
-  try {
-    // Run tsc on staged files only
-    execSync(`npx tsc --noEmit ${files.join(" ")}`, {
-      stdio: "inherit",
-    });
+  const { ok, output } = typecheckStagedFiles(files);
+  if (ok) {
     log("✓ Type-check passed", "green");
-    return true;
-  } catch (error) {
+  } else {
+    console.error(output);
     log("✗ Type-check failed", "red");
-    return false;
   }
+  return ok;
 }
 
 async function runAffectedTests(files) {
@@ -115,7 +113,7 @@ async function runAffectedTests(files) {
   try {
     // Run jest on affected test files with --bail to stop on first failure
     execSync(
-      `npx jest --bail --testPathPattern="${files.map((f) => f.replace(/\\/g, "/")).join("|")}"`,
+      `npx jest --bail --testPathPatterns="${files.map((f) => f.replace(/\\/g, "/")).join("|")}"`,
       {
         stdio: "inherit",
       },

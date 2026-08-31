@@ -7,12 +7,16 @@ import React, { useMemo, useState } from "react";
 import MyContributionsSection from "@/components/MyContributionsSection";
 import TransactionHistorySection from "@/components/TransactionHistorySection";
 import { Spinner, DashboardSkeleton } from "@/components/Skeleton";
+import CreatorDashboard from "@/components/CreatorDashboard";
 import { useWallet } from "@/components/WalletContext";
 import { Tabs, TabPanel, Card } from "@/components/ui";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { useStellarBalance } from "@/hooks/useStellarBalance";
 import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
 import { isSameAddress } from "@/lib/stellar";
+import { useEffect } from "react";
+import { scheduleExpiryChecks } from "@/lib/campaignExpiryNotifier";
+import { useToast } from "@/components/ToastProvider";
 
 // Pulls in the contract client and the proposal store; only creators with a
 // funded campaign ever open this tab, so keep it out of the dashboard bundle.
@@ -24,6 +28,16 @@ export default function DashboardPage() {
   const t = useTranslations("Dashboard");
   const { publicKey, isWalletConnected } = useWallet();
   const { campaigns, isLoading: campaignsLoading } = useCampaigns();
+  const { showWarning } = useToast();
+
+  useEffect(() => {
+    if (campaigns.length === 0 || !publicKey) return;
+    const creatorCampaigns = campaigns.filter((c) => isSameAddress(c.creator, publicKey));
+    if (creatorCampaigns.length === 0) return;
+    return scheduleExpiryChecks(creatorCampaigns, (c) => {
+      showWarning(`Campaign "${c.title}" expires in under 48 hours — consider extending the deadline.`);
+    });
+  }, [campaigns, publicKey, showWarning]);
   const {
     balance,
     isLoading: balanceLoading,
@@ -33,7 +47,7 @@ export default function DashboardPage() {
   const { savedIds } = useSavedCampaigns();
 
   const [activeTab, setActiveTab] = useState<
-    "overview" | "contributions" | "history" | "withdrawals"
+    "overview" | "contributions" | "history" | "withdrawals" | "creator"
   >("overview");
 
   const savedCampaigns = useMemo(
@@ -76,6 +90,7 @@ export default function DashboardPage() {
     { id: "contributions", label: "My Contributions" },
     { id: "history", label: "Transaction History" },
     { id: "withdrawals", label: t("withdrawalsTab"), count: submittedCampaigns.length },
+    { id: "creator", label: "Creator Dashboard" },
   ];
 
   return (
@@ -202,6 +217,10 @@ export default function DashboardPage() {
             ))
           )}
         </section>
+      </TabPanel>
+
+      <TabPanel tabId="creator" idPrefix="dashboard" active={activeTab === "creator"}>
+        <CreatorDashboard campaigns={campaigns} creatorAddress={publicKey ?? ""} />
       </TabPanel>
     </div>
   );

@@ -1,7 +1,15 @@
 "use client";
 import * as StellarSdk from "@stellar/stellar-sdk";
 import { getAddress, getNetwork, isConnected, isAllowed } from "@stellar/freighter-api";
-import React, { createContext, useContext, useEffect, useState, useMemo, ReactNode, useRef } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+  ReactNode,
+  useRef,
+} from "react";
 import { useToast } from "./ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
 import { IS_MOCK_MODE } from "@/lib/runtimeEnv";
@@ -15,6 +23,7 @@ import {
   type SocialLoginProvider,
   type SocialWalletSession,
 } from "@/lib/socialWallet";
+import { isFreighterLockedError } from "@/utils/freighterErrors";
 import InstallFreighterModal from "./InstallFreighterModal";
 import SocialLoginButtons from "./SocialLoginButtons";
 
@@ -43,12 +52,15 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [isFreighterLocked, setIsFreighterLocked] = useState(false);
   const [walletNetworkWarning, setWalletNetworkWarning] = useState<string | null>(null);
   const [walletKind, setWalletKind] = useState<WalletKind | null>(null);
   const [socialProfile, setSocialProfile] = useState<SocialWalletSession | null>(null);
   const { showError, showWarning, showSuccess } = useToast();
   const queryClient = useQueryClient();
   const previousPublicKeyRef = useRef<string | null>(null);
+  /** #560 — Tracks whether the install prompt was already surfaced by polling. */
+  const installPromptSurfacedRef = useRef(false);
   // #649 — The Freighter poll below runs on a timer and would tear down a social
   // session the moment it saw the extension reporting "not connected". A ref
   // rather than the state value because the poll closes over its first render.
@@ -150,6 +162,9 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       const { isConnected: connected } = await isConnected();
       const { isAllowed: allowed } = await isAllowed();
       if (connected && allowed) {
+        // Freighter is present and authorised — dismiss any lingering install prompt.
+        setShowInstallPrompt(false);
+        installPromptSurfacedRef.current = false;
         const key = await getAddress();
         const network = await getNetwork();
         const walletNetworkPassphrase = network.networkPassphrase || "";
@@ -204,6 +219,19 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         invalidateWalletQueries();
         previousPublicKeyRef.current = null;
       }
+
+      // #560 — the Freighter API throws when the extension is not installed.
+      // Surface the install prompt so the user gets a clear CTA instead of
+      // silently staying disconnected. A ref (not state) guards against
+      // redundant checks because checkWalletConnection is stable-closured.
+      if (!isSocialSessionRef.current && !installPromptSurfacedRef.current) {
+        void isFreighterInstalled().then((installed) => {
+          if (!installed) {
+            installPromptSurfacedRef.current = true;
+            setShowInstallPrompt(true);
+          }
+        });
+      }
     }
   };
 
@@ -256,6 +284,12 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       const key = await getAddress();
+      if (key.error && isFreighterLockedError(key.error)) {
+        setIsFreighterLocked(true);
+        setShowInstallPrompt(true);
+        setIsLoading(false);
+        return;
+      }
       const network = await getNetwork();
       if ((network.networkPassphrase || "") !== appNetworkPassphrase) {
         const warning = `Switch Freighter to ${appNetworkLabel} to continue. Current wallet network does not match the app network.`;
@@ -276,12 +310,17 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       setWalletKind("freighter");
       localStorage.setItem("stellar_wallet_public_key", key.address);
       showSuccess("Wallet connected successfully.");
-    } catch {
+    } catch (error) {
       setPublicKey(null);
       setIsWalletConnected(false);
       setWalletKind(null);
       setWalletNetworkWarning(null);
-      showError("Failed to connect wallet. Please try again.");
+      if (isFreighterLockedError(error)) {
+        setIsFreighterLocked(true);
+        setShowInstallPrompt(true);
+      } else {
+        showError("Failed to connect wallet. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -321,11 +360,9 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const handleRetryInstall = async () => {
-    const installed = await isFreighterInstalled();
-    if (installed) {
-      setShowInstallPrompt(false);
-      connectWallet();
-    }
+    setShowInstallPrompt(false);
+    setIsFreighterLocked(false);
+    await connectWallet();
   };
 
   const disconnectWallet = () => {
@@ -365,8 +402,20 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       connectWallet,
       disconnectWallet,
       isLoading,
+      walletKind,
+      socialProfile,
+      isSocialLoginAvailable: isSocialLoginConfigured(),
+      connectWithSocial,
     }),
-    [publicKey, isWalletConnected, walletNetworkWarning, isLoading]
+    [
+      publicKey,
+      isWalletConnected,
+      walletNetworkWarning,
+      isLoading,
+      walletKind,
+      socialProfile,
+      connectWithSocial,
+    ],
   );
 
   return (
@@ -374,8 +423,12 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       {children}
       <InstallFreighterModal
         isOpen={showInstallPrompt}
-        onClose={() => setShowInstallPrompt(false)}
+        onClose={() => {
+          setShowInstallPrompt(false);
+          setIsFreighterLocked(false);
+        }}
         onRetry={handleRetryInstall}
+        isLocked={isFreighterLocked}
         socialLogin={
           isSocialLoginConfigured() ? (
             <SocialLoginButtons

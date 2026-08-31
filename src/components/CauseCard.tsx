@@ -11,6 +11,7 @@ import { parseContractError } from "@/utils/contractErrors";
 import { Campaign, Vote, CATEGORY_LABELS, calculateFundingPercentage } from "../types";
 import Amount from "./Amount";
 import AsyncButtonContent from "./AsyncButtonContent";
+import CampaignDescription from "./CampaignDescription";
 import CampaignStatusBadge from "./CampaignStatusBadge";
 import CancelCampaignModal from "./cancelCampaignModal";
 import DeadlineCountdown from "./DeadlineCountdown";
@@ -20,6 +21,7 @@ import VotingComponent from "./VotingComponent";
 import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
 
 interface CauseCardProps {
+  priority?: boolean;
   campaign: Campaign;
   userWalletAddress: string | null;
   onVote: (campaignId: number, voteType: "upvote" | "downvote") => Promise<void>;
@@ -43,6 +45,7 @@ function formatDate(ts: number, locale: string) {
 }
 
 function CauseCard({
+  priority = false,
   campaign,
   userWalletAddress,
   onVote,
@@ -120,7 +123,11 @@ function CauseCard({
           <LazyImage
             src={campaign.cover_image_url}
             alt={campaign.title}
-            className="absolute inset-0 w-full h-full object-cover"
+            fill
+            unoptimized
+            priority={priority}
+            loading={priority ? undefined : "lazy"}
+            className="object-cover"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-4xl select-none">
@@ -164,9 +171,7 @@ function CauseCard({
         </h3>
 
         {/* Description */}
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3 leading-relaxed break-words h-[4.5rem]">
-          {campaign.description}
-        </p>
+        <CampaignDescription description={campaign.description} />
 
         {/* Funding progress */}
         <div className="space-y-1.5">
@@ -279,11 +284,17 @@ function CauseCard({
   );
 }
 
+/**
+ * Memoized so a list of cards does not re-render wholesale when unrelated
+ * global state changes (#648). Cards are rendered in long lists, so this is
+ * where an unnecessary render is most expensive.
+ */
 function causeCardPropsAreEqual(prev: CauseCardProps, next: CauseCardProps): boolean {
   const prevCampaign = prev.campaign;
   const nextCampaign = next.campaign;
 
   return (
+    prev.priority === next.priority &&
     prev.userWalletAddress === next.userWalletAddress &&
     prev.userVote === next.userVote &&
     prev.upvotes === next.upvotes &&

@@ -53,7 +53,10 @@ export function CardHeader({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("flex items-center justify-between gap-3 mb-4", className)} {...props}>
+    <div
+      className={cn("flex items-center justify-between gap-card-gap mb-4", className)}
+      {...props}
+    >
       {children}
     </div>
   );
@@ -66,7 +69,7 @@ export function CardTitle({
 }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h2
-      className={cn("text-lg font-semibold text-zinc-900 dark:text-zinc-50", className)}
+      className={cn("text-heading font-heading text-zinc-900 dark:text-zinc-50", className)}
       {...props}
     >
       {children}
