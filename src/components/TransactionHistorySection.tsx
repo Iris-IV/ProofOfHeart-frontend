@@ -162,6 +162,7 @@ export default function TransactionHistorySection({
                           >
                             {getActionLabel(entry.action)}
                           </span>
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400">Cause:</span>
                           <Link
                             href={`/causes/${entry.campaignId}`}
                             className="text-sm font-medium text-zinc-900 dark:text-zinc-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate max-w-[200px] sm:max-w-none"
