@@ -656,7 +656,18 @@ for (let i = 0; i < GENERATED_MOCK_COUNT; i++) {
 // Public API — Read (view) functions
 // ---------------------------------------------------------------------------
 
-export const DEFAULT_CAMPAIGNS_PAGE_SIZE = 12;
+/**
+ * Number of campaigns fetched per page on the /causes list (issue #1150).
+ * A larger initial page means the first viewport is filled in a single round-
+ * trip and the MIN_ROWS_BEFORE_PREFETCH guard in VirtualizedCauseGrid is not
+ * hit on first render, preventing the cascade-load of all pages upfront.
+ * Operators can tune this via NEXT_PUBLIC_CAMPAIGNS_PAGE_SIZE without a code
+ * change (e.g. lower it on mobile-only deployments with slower RPCs).
+ */
+export const DEFAULT_CAMPAIGNS_PAGE_SIZE: number =
+  Number(process.env.NEXT_PUBLIC_CAMPAIGNS_PAGE_SIZE) > 0
+    ? Number(process.env.NEXT_PUBLIC_CAMPAIGNS_PAGE_SIZE)
+    : 20;
 
 export interface CampaignsPage {
   campaigns: Campaign[];

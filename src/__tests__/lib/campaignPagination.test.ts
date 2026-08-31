@@ -57,9 +57,9 @@ describe("listCampaigns", () => {
     expect(await getCampaignCount()).toBeGreaterThan(100);
   });
 
-  it("defaults to a 12-item page when no limit is given", async () => {
+  it("defaults to a 20-item page when no limit is given (issue #1150: raised from 12)", async () => {
     const { listCampaigns } = await loadMockClient();
     const page = await listCampaigns();
-    expect(page.campaigns).toHaveLength(12);
+    expect(page.campaigns).toHaveLength(20);
   });
 });
