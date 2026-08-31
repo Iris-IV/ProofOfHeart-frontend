@@ -36,20 +36,39 @@ export function scoreSimilarity(target: Campaign, candidate: Campaign): Recommen
   return { campaign: candidate, score, reasons };
 }
 
+function getCuratedCauses(allCampaigns: Campaign[], limit: number, excludeIds: Set<number>): Campaign[] {
+  return allCampaigns
+    .filter((c) => !excludeIds.has(c.id) && c.status === "active")
+    .sort((a, b) => Number(b.amount_raised) - Number(a.amount_raised))
+    .slice(0, limit);
+}
+
 export function getRecommendedCauses(
   donatedCampaign: Campaign,
   allCampaigns: Campaign[],
   limit = 4,
   excludeIds: number[] = []
 ): Campaign[] {
-  const excluded = new Set([donatedCampaign.id, ...excludeIds]);
-  const scored = allCampaigns
+  const excluded = new Set([donatedCampaign.id, ...excludeIds);
+  const scoredCampaigns = allCampaigns
     .filter((c) => !excluded.has(c.id) && c.status !== "cancelled" && !c.is_cancelled)
     .map((c) => scoreSimilarity(donatedCampaign, c))
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
     .map((s) => s.campaign);
-  return scored;
+
+  // Fallback to curated top causes when similar campaigns are insufficient.
+  if (scoredCampaigns.length < limit) {
+    const selectedIds = new Set(scoredCampaigns.map((c) => c.id));
+    excluded.forEach((id) => selectedIds.add(id));
+    const curated = getCuratedCauses(
+      allCampaigns,
+      limit - scoredCampaigns.length,
+      selectedIds
+    );
+    scoredCampaigns.push(...curated);
+  }
+  return scoredCampaigns;
 }
 
 export function getPersonalizedRecommendations(
@@ -58,10 +77,7 @@ export function getPersonalizedRecommendations(
   limit = 6
 ): Campaign[] {
   if (donatedCampaignIds.length === 0) {
-    return allCampaigns
-      .filter((c) => c.status === "active")
-      .sort((a, b) => Number(b.amount_raised) - Number(a.amount_raised))
-      .slice(0, limit);
+    return getCuratedCauses(allCampaigns, limit, new Set());
   }
   const donated = allCampaigns.filter((c) => donatedCampaignIds.includes(c.id));
   const seen = new Set<number>();
@@ -75,6 +91,9 @@ export function getPersonalizedRecommendations(
       if (results.length >= limit) break;
     }
     if (results.length >= limit) break;
+  }
+  if (results.length === 0) {
+    return getCuratedCauses(allCampaigns, limit, new Set(donatedCampaignIds));
   }
   return results.slice(0, limit);
 }
