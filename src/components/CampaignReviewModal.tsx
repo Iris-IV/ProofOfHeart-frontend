@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { memo } from "react";
 import { CATEGORY_LABELS } from "@/types";
 import type { ReviewData } from "@/lib/campaignValidation";
 import type { TransactionLifecyclePhase } from "@/lib/contractClient";
@@ -15,7 +16,7 @@ interface CampaignReviewModalProps {
   formatReviewDate: (timestamp: number) => string;
 }
 
-export default function CampaignReviewModal({
+export default memo(function CampaignReviewModal({
   reviewData,
   isSubmitting,
   txPhase,
@@ -187,4 +188,4 @@ export default function CampaignReviewModal({
       </div>
     </div>
   );
-}
+});
