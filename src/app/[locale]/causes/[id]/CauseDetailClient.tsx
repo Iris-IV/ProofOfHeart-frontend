@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Bookmark } from "lucide-react";
 import { notFound } from "next/navigation";
-import Image from "next/image";
+import LazyImage from "@/components/LazyImage";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import CampaignTabs from "@/components/CampaignTabs";
@@ -327,13 +327,10 @@ export default function CauseDetailClient({ id }: { id: string }) {
               </div>
               {campaign.cover_image_url && (
                 <div className="relative w-full aspect-video rounded-lg overflow-hidden mb-4 bg-zinc-100 dark:bg-zinc-700">
-                  <Image
+                  <LazyImage
                     src={campaign.cover_image_url}
                     alt={campaign.title}
-                    fill
-                    unoptimized
-                    loading="lazy"
-                    className="object-cover"
+                    className="absolute inset-0 w-full h-full object-cover"
                   />
                 </div>
               )}
