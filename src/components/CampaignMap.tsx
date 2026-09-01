@@ -8,8 +8,7 @@ import { Link } from "@/i18n/routing";
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 
-// Fix Leaflet default marker icon (broken in bundlers)
-// https://github.com/Leaflet/Leaflet/issues/4968
+
 const defaultIcon = L.icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
