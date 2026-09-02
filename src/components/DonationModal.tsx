@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, memo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import Modal from "./ui/Modal";
 import { contribute, getCampaign } from "../lib/contractClient";
@@ -48,7 +48,7 @@ type DonationValidationKey =
   | "amountExceedsRemainingGoal"
   | "campaignAlreadyFunded";
 
-export default function DonationModal({
+function DonationModal({
   campaign,
   onClose,
   onSuccess,
@@ -594,3 +594,5 @@ export default function DonationModal({
     </Modal>
   );
 }
+
+export default memo(DonationModal);
