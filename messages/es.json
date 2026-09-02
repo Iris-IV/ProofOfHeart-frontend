@@ -52,9 +52,11 @@
     "noFundingHistory": "Aún no hay actividad de financiación/donación.",
     "donated": "Donó {amount} XLM el {date}",
     "campaignFallback": "Campaña #{id}",
-    "withdrawalsTab": "Retiros",
-    "withdrawalsHeading": "Retiros con firma múltiple",
-    "withdrawalsDescription": "Campañas que administras. Cuando una campaña alcanza su meta, puedes proponer un retiro y reunir las aprobaciones de los firmantes de tu organización antes de mover los fondos."
+    "tabOverview": "Resumen",
+    "tabTransactionHistory": "Historial de Transacciones",
+    "noTransactionHistory": "No hay transacciones registradas en este dispositivo todavía.",
+    "txHash": "Hash de tx",
+    "viewOnStellarExpert": "Ver en Stellar Expert"
   },
   "MyContributions": {
     "title": "Mis Contribuciones",
