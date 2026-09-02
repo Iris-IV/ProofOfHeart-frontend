@@ -341,9 +341,16 @@ export default function DonationModal({
                   aria-invalid={amountError ? "true" : "false"}
                   disabled={isFullyFunded}
                   onChange={(e) => {
-                    setAmount(e.target.value);
+                    // Keep only digits and a single decimal point. type="number"
+                    // already blocks most junk, but Firefox/Safari still allow
+                    // pasting values like "1.2.3" or "1e5"; strip them at the source
+                    // so state never holds a non-numeric string.
+                    const cleaned = e.target.value
+                      .replace(/[^0-9.]/g, "")
+                      .replace(/(\..*)\./g, "$1");
+                    setAmount(cleaned);
                     setError(null);
-                    if (e.target.value && parseFloat(e.target.value) > 0) {
+                    if (cleaned && parseFloat(cleaned) > 0) {
                       trackEnterAmount(campaign.id);
                     }
                   }}
