@@ -4,6 +4,7 @@ import DonationModal from "@/components/DonationModal";
 import { Category, type Campaign } from "@/types";
 
 const mockGetCampaign = jest.fn();
+const mockEstimateNetworkFee = jest.fn();
 
 jest.mock("@/lib/contractClient", () => ({
   contribute: jest.fn(),
@@ -118,6 +119,7 @@ describe("DonationModal", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetCampaign.mockImplementation((id) => Promise.resolve(makeCampaign({ id })));
+    mockEstimateNetworkFee.mockResolvedValue(100_000n);
   });
 
   it("rejects zero amounts by disabling submit", () => {
@@ -209,6 +211,18 @@ describe("DonationModal", () => {
     expect(screen.getByText("Est. network fee")).toBeInTheDocument();
     expect(screen.getByText("Total from your wallet")).toBeInTheDocument();
     expect(screen.getByText(/10\.01\s*XLM/)).toBeInTheDocument();
+  });
+
+  it("updates the displayed fee from operation simulation", async () => {
+    mockEstimateNetworkFee.mockResolvedValue(250_000n);
+    render(<DonationModal {...defaultProps} />);
+
+    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value: "10" } });
+
+    await waitFor(() =>
+      expect(mockEstimateNetworkFee).toHaveBeenCalledWith(1, CONTRIBUTOR, 100_000_000n),
+    );
+    expect(screen.getByText(/10\.025\s*XLM/)).toBeInTheDocument();
   });
 
   it("calls contribute with amount converted to stroops", async () => {

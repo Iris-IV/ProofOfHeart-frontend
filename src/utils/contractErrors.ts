@@ -173,6 +173,56 @@ export function getContractErrorCode(error: unknown): ContractError | null {
 }
 
 /**
+ * Soroban errors are not consistent about where they put the useful detail:
+ * simulation errors use `error`, submission errors may use `errorResult`, and
+ * SDK/network wrappers often put it in `cause`. Flatten those shapes before
+ * looking for a contract code or a well-known host error.
+ */
+function stringifyError(error: unknown, seen = new Set<unknown>()): string {
+  if (error == null || seen.has(error)) return "";
+  if (typeof error === "string") return error;
+  if (typeof error === "number" || typeof error === "bigint") return String(error);
+  if (typeof error !== "object") return "";
+
+  seen.add(error);
+  const value = error as Record<string, unknown>;
+  const parts = [
+    error instanceof Error ? error.message : "",
+    stringifyError(value.error, seen),
+    error instanceof Error ? "" : stringifyError(value.message, seen),
+    stringifyError(value.errorResult, seen),
+    stringifyError(value.result, seen),
+    stringifyError(value.cause, seen),
+    stringifyError(value.data, seen),
+  ];
+  return parts.filter(Boolean).join(" ");
+}
+
+/** Convert RPC/SDK revert shapes into stable, user-facing contract errors. */
+export function normalizeContractError(
+  error: unknown,
+  fallback = "Transaction failed on-chain.",
+): Error {
+  const code = getContractErrorCode(error);
+  if (code !== null) return new ContractErrorException(code);
+
+  const detail = stringifyError(error);
+  if (/insufficient\s+(?:balance|funds)|underfunded|tx_insufficient_balance/i.test(detail)) {
+    return new ContractErrorException(ContractError.InsufficientBalance);
+  }
+  if (
+    /auth(?:entication|orization)?\s+(?:failed|failure)|not authorized|unauthorized|tx_bad_auth/i.test(
+      detail,
+    )
+  ) {
+    return new ContractErrorException(ContractError.NotAuthorized);
+  }
+
+  if (error instanceof Error && error.message) return error;
+  return new Error(detail || fallback);
+}
+
+/**
  * Returns the translation key for a numeric contract error code.
  * Falls back to a generic key for unknown codes.
  */

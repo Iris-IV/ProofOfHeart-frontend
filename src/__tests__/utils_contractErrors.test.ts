@@ -1,4 +1,4 @@
-import { parseContractError } from "../utils/contractErrors";
+import { normalizeContractError, parseContractError } from "../utils/contractErrors";
 
 describe("parseContractError", () => {
   it("handles Error(Contract, #n) format", () => {
@@ -21,6 +21,21 @@ describe("parseContractError", () => {
     );
     expect(parseContractError({ error: { message: "contractError: 4" } })).toBe(
       "ContractErrors.FundingGoalMustBePositive",
+    );
+  });
+
+  it("extracts revert details from nested RPC response shapes", () => {
+    expect(
+      parseContractError({ errorResult: { message: "HostError: Error(Contract, #29)" } }),
+    ).toBe("ContractErrors.InsufficientBalance");
+  });
+
+  it("normalizes common balance and authorization reverts", () => {
+    expect(parseContractError(normalizeContractError({ error: "tx_insufficient_balance" }))).toBe(
+      "ContractErrors.InsufficientBalance",
+    );
+    expect(parseContractError(normalizeContractError({ result: "tx_bad_auth" }))).toBe(
+      "ContractErrors.NotAuthorized",
     );
   });
 

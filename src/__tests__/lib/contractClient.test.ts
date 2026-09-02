@@ -157,6 +157,14 @@ async function loadClient(options: LoadClientOptions) {
       private readonly _id: string,
       private readonly _seq: string,
     ) {}
+
+    accountId() {
+      return this._id;
+    }
+
+    sequenceNumber() {
+      return this._seq;
+    }
   }
 
   class MockTransactionBuilder {
@@ -223,6 +231,7 @@ async function loadClient(options: LoadClientOptions) {
       assembleTransaction: jest.fn().mockImplementation(() => ({
         build: () => ({
           toXDR: () => "prepared-xdr",
+          fee: "4321",
         }),
       })),
     },
@@ -356,6 +365,40 @@ describe("contractClient", () => {
     // The contract itself never receives tags as a direct argument — it only
     // accepts the 8 fields the issue's schema lists.
     expect(tx.ops[0].args).toHaveLength(8);
+  });
+
+  it("rejects campaign creation before simulation when the creator account does not exist", async () => {
+    const { module, mockServer } = await loadClient({ useMocks: false });
+    mockServer.getAccount.mockRejectedValueOnce(new Error("404 account not found"));
+
+    await expect(
+      module.createCampaign(
+        TEST_USER,
+        "On-chain campaign",
+        "Description",
+        BigInt(1_000_000_000),
+        30,
+        Category.Learner,
+        false,
+        0,
+        [],
+      ),
+    ).rejects.toThrow("Creator account does not exist on the Stellar network.");
+    expect(mockServer.simulateTransaction).not.toHaveBeenCalled();
+  });
+
+  it("estimates contribution fees from the RPC-assembled transaction", async () => {
+    const { module, mockServer } = await loadClient({ useMocks: false });
+
+    await expect(
+      module.estimateContributeNetworkFee(7, TEST_USER, BigInt(50_000_000)),
+    ).resolves.toBe(4321n);
+    expect(mockServer.simulateTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ops: [expect.objectContaining({ method: "contribute" })],
+      }),
+    );
+    expect(mockServer.sendTransaction).not.toHaveBeenCalled();
   });
 
   it("decodeCampaign parses tags from the off-chain POH_EXT blob when the contract map has no tags field", async () => {
@@ -509,9 +552,7 @@ describe("contractClient", () => {
         throw transportError;
       });
 
-      await expect(module.getAdmin()).rejects.toThrow();
-
-      // The stale client is dropped, so the retry builds a fresh one and works.
+      // Transport failures reconnect and retry transparently.
       await expect(module.getAdmin()).resolves.toBe(TEST_ADMIN);
       expect(serverUrls).toHaveLength(2);
     });
@@ -524,7 +565,6 @@ describe("contractClient", () => {
         throw new Error("Request timed out after 30000ms");
       });
 
-      await expect(module.getAdmin()).rejects.toThrow();
       await expect(module.getAdmin()).resolves.toBe(TEST_ADMIN);
       expect(serverUrls).toHaveLength(2);
     });
