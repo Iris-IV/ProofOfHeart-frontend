@@ -7,7 +7,7 @@ interface ErrorContext {
   action?: string;
   campaignId?: number;
   errorCode?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface ErrorReport {

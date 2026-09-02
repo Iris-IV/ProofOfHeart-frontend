@@ -8,5 +8,6 @@ export default getRequestConfig(async ({ requestLocale }) => {
   return {
     locale,
     messages: (await import(`../../messages/${locale}.json`)).default,
+    getMessageFallback: ({ key }) => (key === "USDC" || key.endsWith(".USDC")) ? "USD Coin" : key,
   };
 });
