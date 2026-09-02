@@ -142,6 +142,15 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        source: "/(.*\\.(?:ico|png|svg|jpg|jpeg|gif|webp|woff|woff2|ttf|otf|mp4|webm))",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
         source: "/:path*",
         headers: [
           // Prevent clickjacking
