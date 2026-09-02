@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import React, { useMemo, useState } from "react";
 import MyContributionsSection from "@/components/MyContributionsSection";
-import TransactionHistorySection from "@/components/TransactionHistorySection";
+import TransactionHistoryTab from "@/components/TransactionHistoryTab";
 import { Spinner, DashboardSkeleton } from "@/components/Skeleton";
 import CreatorDashboard from "@/components/CreatorDashboard";
 import { useWallet } from "@/components/WalletContext";
@@ -23,6 +23,8 @@ import { useToast } from "@/components/ToastProvider";
 const MultiSigWithdrawalPanel = dynamic(() => import("@/components/MultiSigWithdrawalPanel"), {
   ssr: false,
 });
+
+type DashboardTab = "overview" | "history";
 
 export default function DashboardPage() {
   const t = useTranslations("Dashboard");
@@ -45,6 +47,7 @@ export default function DashboardPage() {
   } = useStellarBalance(publicKey);
   const balanceError = balanceQueryError ? t("balanceFetchError") : null;
   const { savedIds } = useSavedCampaigns();
+  const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
 
   const [activeTab, setActiveTab] = useState<
     "overview" | "contributions" | "history" | "withdrawals" | "creator"
@@ -85,12 +88,9 @@ export default function DashboardPage() {
     return <DashboardSkeleton />;
   }
 
-  const tabs: Array<{ id: typeof activeTab; label: string; count?: number }> = [
-    { id: "overview", label: "Overview" },
-    { id: "contributions", label: "My Contributions" },
-    { id: "history", label: "Transaction History" },
-    { id: "withdrawals", label: t("withdrawalsTab"), count: submittedCampaigns.length },
-    { id: "creator", label: "Creator Dashboard" },
+  const tabs: { id: DashboardTab; label: string }[] = [
+    { id: "overview", label: t("tabOverview") },
+    { id: "history", label: t("tabTransactionHistory") },
   ];
 
   return (
@@ -98,17 +98,37 @@ export default function DashboardPage() {
       <h1 className="text-3xl font-bold mb-6">{t("title")}</h1>
 
       {/* Tab navigation */}
-      <Tabs
-        tabs={tabs}
-        activeId={activeTab}
-        onChange={setActiveTab}
-        label="Dashboard sections"
-        idPrefix="dashboard"
-        className="mb-8"
-      />
+      <div
+        className="mb-8 flex gap-1 rounded-xl border border-zinc-200 bg-zinc-100 p-1 dark:border-zinc-700 dark:bg-zinc-800/50"
+        role="tablist"
+        aria-label={t("title")}
+      >
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`tabpanel-${tab.id}`}
+            id={`tab-${tab.id}`}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+              activeTab === tab.id
+                ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-zinc-50"
+                : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
       {/* Overview tab */}
-      <TabPanel tabId="overview" idPrefix="dashboard" active={activeTab === "overview"}>
+      <div
+        id="tabpanel-overview"
+        role="tabpanel"
+        aria-labelledby="tab-overview"
+        hidden={activeTab !== "overview"}
+      >
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-2">{t("walletBalance")}</h2>
           {balanceLoading ? (
@@ -159,12 +179,9 @@ export default function DashboardPage() {
                   key={campaign.id}
                   className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 min-h-[60px]"
                 >
-                  <Link
-                    href={`/causes/${campaign.id}`}
-                    className="font-medium text-zinc-900 dark:text-zinc-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                  >
+                  <div className="font-medium text-zinc-900 dark:text-zinc-50">
                     {campaign.title}
-                  </Link>
+                  </div>
                   <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
                     {campaign.description}
                   </div>
@@ -173,55 +190,89 @@ export default function DashboardPage() {
             </ul>
           )}
         </section>
-      </TabPanel>
 
-      {/* Contributions tab */}
-      <TabPanel tabId="contributions" idPrefix="dashboard" active={activeTab === "contributions"}>
         <MyContributionsSection walletAddress={publicKey} />
-      </TabPanel>
 
-      {/* Transaction History tab */}
-      <TabPanel tabId="history" idPrefix="dashboard" active={activeTab === "history"}>
-        <TransactionHistorySection walletAddress={publicKey} campaignTitleMap={campaignTitleMap} />
-      </TabPanel>
-
-      {/* Withdrawals tab — multi-signature approvals for campaigns you run */}
-      <TabPanel tabId="withdrawals" idPrefix="dashboard" active={activeTab === "withdrawals"}>
-        <section className="space-y-4">
-          <div>
-            <h2 className="text-xl font-semibold mb-1">{t("withdrawalsHeading")}</h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              {t("withdrawalsDescription")}
-            </p>
-          </div>
-
-          {submittedCampaigns.length === 0 ? (
-            <span className="text-zinc-500 dark:text-zinc-400">{t("noSubmittedCampaigns")}</span>
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold mb-2">{t("votingHistory")}</h2>
+          {mockVotes.length === 0 ? (
+            <span className="text-zinc-500 dark:text-zinc-400">{t("noVotingHistory")}</span>
           ) : (
-            submittedCampaigns.map((campaign) => (
-              <Card key={campaign.id} padding="sm" className="bg-zinc-50 dark:bg-zinc-900">
-                <div className="flex items-start justify-between gap-3">
-                  <Link
-                    href={`/causes/${campaign.id}`}
-                    className="font-medium text-zinc-900 dark:text-zinc-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                  >
-                    {campaign.title}
-                  </Link>
-                </div>
-
-                {/* The panel renders nothing unless the campaign is funded and
-                    not yet withdrawn, so campaigns that cannot pay out stay
-                    listed but quiet. */}
-                <MultiSigWithdrawalPanel campaign={campaign} walletAddress={publicKey} />
-              </Card>
-            ))
+            <ul className="space-y-2">
+              {mockVotes.map((vote, idx) => {
+                const campaign = campaigns.find((c) => c.id === vote.campaignId);
+                return (
+                  <li key={idx} className="border rounded p-3 bg-zinc-50 dark:bg-zinc-900">
+                    <div className="font-medium">
+                      {campaign ? campaign.title : t("campaignFallback", { id: vote.campaignId })}
+                    </div>
+                    <div className="text-sm text-zinc-500 dark:text-zinc-400">
+                      {vote.voteType === "upvote"
+                        ? t("upvotedOn", { date: vote.timestamp.toLocaleDateString() })
+                        : t("downvotedOn", { date: vote.timestamp.toLocaleDateString() })}
+                      <br />
+                      <a
+                        href={explorerTxUrl(vote.transactionHash)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        {t("viewOnExplorer")}
+                      </a>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </section>
-      </TabPanel>
 
-      <TabPanel tabId="creator" idPrefix="dashboard" active={activeTab === "creator"}>
-        <CreatorDashboard campaigns={campaigns} creatorAddress={publicKey ?? ""} />
-      </TabPanel>
+        <section>
+          <h2 className="text-xl font-semibold mb-2">{t("fundingHistory")}</h2>
+          {mockFunding.length === 0 ? (
+            <span className="text-zinc-500 dark:text-zinc-400">{t("noFundingHistory")}</span>
+          ) : (
+            <ul className="space-y-2">
+              {mockFunding.map((fund, idx) => {
+                const campaign = campaigns.find((c) => c.id === fund.campaignId);
+                return (
+                  <li key={idx} className="border rounded p-3 bg-zinc-50 dark:bg-zinc-900">
+                    <div className="font-medium">
+                      {campaign ? campaign.title : t("campaignFallback", { id: fund.campaignId })}
+                    </div>
+                    <div className="text-sm text-zinc-500 dark:text-zinc-400">
+                      {t("donated", {
+                        amount: fund.amount,
+                        date: fund.timestamp.toLocaleDateString(),
+                      })}
+                      <br />
+                      <a
+                        href={explorerTxUrl(fund.tx)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        {t("viewOnExplorer")}
+                      </a>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      {/* Transaction History tab */}
+      <div
+        id="tabpanel-history"
+        role="tabpanel"
+        aria-labelledby="tab-history"
+        hidden={activeTab !== "history"}
+      >
+        <h2 className="text-xl font-semibold mb-4">{t("tabTransactionHistory")}</h2>
+        <TransactionHistoryTab walletAddress={publicKey} campaigns={campaigns} />
+      </div>
     </div>
   );
 }

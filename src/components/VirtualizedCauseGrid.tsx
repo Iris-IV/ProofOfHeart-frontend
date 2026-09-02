@@ -49,8 +49,23 @@ function chunk<T>(items: T[], size: number): T[][] {
 }
 
 const ESTIMATED_ROW_HEIGHT = 420;
-/** Start fetching the next page this many rows before the end, so scrolling stays smooth. */
+/**
+ * Start fetching the next page when the user is this many rows from the end
+ * of currently-loaded data — keeps the feed smooth without loading too far ahead.
+ * Must be strictly less than the initial viewport row count to avoid an
+ * immediate cascade on first render (issue #1150).
+ */
 const PREFETCH_ROW_THRESHOLD = 2;
+/**
+ * Minimum number of rows that must be loaded before the scroll-triggered
+ * prefetch activates. Below this value the virtualizer has not received any
+ * real scroll input yet, so triggering early would cause a cascade that loads
+ * all pages upfront (root cause of issue #1150).
+ * At ESTIMATED_ROW_HEIGHT=420px a 900px viewport shows ~2 rows, so requiring
+ * at least 4 rows means the user must have received at least one full viewport
+ * and scrolled meaningfully before the next page loads automatically.
+ */
+const MIN_ROWS_BEFORE_PREFETCH = 4;
 
 /**
  * Renders the campaign grid with row-based window virtualization
@@ -96,6 +111,11 @@ export default function VirtualizedCauseGrid({
 
   useEffect(() => {
     if (!hasNextPage || isFetchingNextPage || virtualRows.length === 0) return;
+    // Guard: don't auto-fetch until enough rows are loaded (issue #1150).
+    // On first render the virtualizer shows all "estimated" rows even though
+    // the user hasn't scrolled, so lastVirtualRow.index is trivially near
+    // rows.length, which would cascade-load every page upfront.
+    if (rows.length < MIN_ROWS_BEFORE_PREFETCH) return;
     const lastVirtualRow = virtualRows[virtualRows.length - 1];
     if (lastVirtualRow.index >= rows.length - PREFETCH_ROW_THRESHOLD) {
       onLoadMore();

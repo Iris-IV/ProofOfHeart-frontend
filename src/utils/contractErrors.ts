@@ -132,7 +132,22 @@ export function getContractErrorCode(error: unknown): ContractError | null {
     return error.code;
   }
 
-  const message = stringifyError(error);
+  let message = "";
+  if (error instanceof Error) {
+    message = error.message;
+  } else if (typeof error === "string") {
+    message = error;
+  } else if (typeof error === "object" && error !== null) {
+    const obj = error as Record<string, unknown>;
+    const inner =
+      typeof obj.error === "object" && obj.error !== null
+        ? (obj.error as Record<string, unknown>)
+        : undefined;
+    message =
+      (typeof obj.message === "string" ? obj.message : "") ||
+      (inner && typeof inner.message === "string" ? inner.message : "") ||
+      JSON.stringify(error);
+  }
 
   if (message) {
     // Soroban SDK typically formats contract errors as "Error(Contract, #N)"
@@ -236,7 +251,21 @@ export function parseContractError(error: unknown): string {
     return errorTranslationKeys[code] ?? FALLBACK_KEY;
   }
 
-  const message = stringifyError(error);
+  let message = "";
+  if (error instanceof Error) {
+    message = error.message;
+  } else if (typeof error === "string") {
+    message = error;
+  } else if (typeof error === "object" && error !== null) {
+    const obj = error as Record<string, unknown>;
+    const inner =
+      typeof obj.error === "object" && obj.error !== null
+        ? (obj.error as Record<string, unknown>)
+        : undefined;
+    message =
+      (typeof obj.message === "string" ? obj.message : "") ||
+      (inner && typeof inner.message === "string" ? inner.message : "");
+  }
 
   // Return the raw message if it looks human-readable (not a stack trace)
   if (message && !message.includes("at ") && message.length < 200) {

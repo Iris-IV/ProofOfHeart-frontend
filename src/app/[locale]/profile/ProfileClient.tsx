@@ -11,7 +11,6 @@ import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
 import { formatAddress } from "@/lib/formatAddress";
 import { formatAmount } from "@/lib/formatters";
 import { isSameAddress } from "@/lib/stellar";
-import MyContributionsSection from "@/components/MyContributionsSection";
 import { Skeleton } from "@/components/Skeleton";
 
 export default function ProfileClient() {
@@ -115,7 +114,43 @@ export default function ProfileClient() {
       </div>
 
       {/* Contributions */}
-      <MyContributionsSection walletAddress={publicKey} />
+      {(isDataLoading || contributions.length > 0) && (
+        <section className="mb-8">
+          <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">
+            {t("campaignsBacked")}
+          </h2>
+          {isDataLoading ? (
+            <Skeleton className="h-20 rounded-2xl" />
+          ) : (
+            <ul className="space-y-3">
+              {contributions.map((item, index) => {
+                const campaign = campaigns.find((c) => c.id === String(item.campaignId));
+                return (
+                  <li key={`${item.campaignId}-${index}`}>
+                    <Link
+                      href={campaign ? `/causes/${campaign.id}` : "#"}
+                      className="group flex items-center justify-between gap-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 hover:border-red-200 dark:hover:border-red-900/40 hover:shadow-md transition-all"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-semibold text-zinc-900 dark:text-zinc-50 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors line-clamp-1">
+                          {campaign?.title ?? item.campaignId}
+                        </p>
+                        <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1 font-medium">
+                          {campaign ? formatAddress(campaign.creator) : item.campaignId}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-sm font-bold text-zinc-900 dark:text-zinc-50">
+                        {formatAmount(item.contribution, locale, { maximumFractionDigits: 2 })}
+                        <span className="text-xs font-semibold text-zinc-400 ml-1">XLM</span>
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      )}
 
       {/* Saved campaigns */}
       <section className="mb-8">
@@ -144,7 +179,7 @@ export default function ProfileClient() {
               <Link
                 key={campaign.id}
                 href={`/causes/${campaign.id}`}
-                className="group rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 hover:border-red-200 dark:hover:border-red-900/40 hover:shadow-md transition-all"
+                className="group rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 hover:border-red-200 dark:hover:border-red-900/40 hover:shadow-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800"
               >
                 <p className="font-semibold text-zinc-900 dark:text-zinc-50 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors line-clamp-1">
                   {campaign.title}
@@ -175,7 +210,7 @@ export default function ProfileClient() {
                 <li key={campaign.id}>
                   <Link
                     href={`/causes/${campaign.id}`}
-                    className="group flex items-center justify-between gap-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 hover:border-red-200 dark:hover:border-red-900/40 hover:shadow-md transition-all"
+                    className="group flex items-center justify-between gap-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 hover:border-red-200 dark:hover:border-red-900/40 hover:shadow-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800"
                   >
                     <div className="min-w-0">
                       <p className="font-semibold text-zinc-900 dark:text-zinc-50 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors line-clamp-1">

@@ -30,7 +30,7 @@ test.describe("Edit Campaign Metadata", () => {
     // so the UI skips the wallet modal and treats the user as connected.
     await page.addInitScript(() => {
       localStorage.setItem("onboarding_tour_dismissed", "1");
-      localStorage.setItem(
+      sessionStorage.setItem(
         "stellar_wallet_public_key",
         "GCREATOR1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ123",
       );

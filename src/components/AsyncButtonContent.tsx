@@ -1,4 +1,5 @@
 import { Spinner } from "./Skeleton";
+import { memo } from "react";
 import type { ReactNode } from "react";
 
 interface AsyncButtonContentProps {
@@ -8,7 +9,7 @@ interface AsyncButtonContentProps {
   spinnerClassName?: string;
 }
 
-export default function AsyncButtonContent({
+function AsyncButtonContent({
   isPending,
   idleLabel,
   pendingLabel = "Processing...",
@@ -24,3 +25,5 @@ export default function AsyncButtonContent({
     </>
   );
 }
+
+export default memo(AsyncButtonContent);

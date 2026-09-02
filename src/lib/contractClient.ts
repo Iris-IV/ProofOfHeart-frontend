@@ -1,17 +1,4 @@
-import {
-  Account,
-  Address,
-  BASE_FEE,
-  Contract,
-  Keypair,
-  Transaction,
-  TransactionBuilder,
-  nativeToScVal,
-  rpc,
-  scValToBigInt,
-  xdr,
-} from "@stellar/stellar-sdk";
-/* eslint-disable @typescript-eslint/no-explicit-any -- legacy contract decoding and wallet bridge shapes */
+import { Account, Address, BASE_FEE, Contract, Keypair, Memo, Transaction, TransactionBuilder, nativeToScVal, rpc, scValToBigInt, xdr } from "@stellar/stellar-sdk";
 // #649 — Signing goes through the active wallet signer (Freighter or an
 // embedded social wallet) rather than the Freighter API directly.
 import { getSignerAddress, signTransactionXdr } from "./walletSigner";
@@ -76,6 +63,8 @@ export interface TransactionLifecycleOptions {
   timeoutMs?: number;
   /** Soroban contract method name for observability metrics. */
   operation?: string;
+  /** Optional memo to attach to the transaction (e.g. campaign/cause ID). */
+  memo?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -263,6 +252,9 @@ async function buildAndSubmitTransaction(
     networkPassphrase: NETWORK_PASSPHRASE,
   });
   txBuilder.addOperation(contractOp);
+  if (options?.memo) {
+    txBuilder.addMemo(Memo.text(options.memo));
+  }
   txBuilder.setTimeout(300);
 
   const builtTx = txBuilder.build();
@@ -333,7 +325,7 @@ async function buildAndSubmitTransaction(
     throw error;
   }
 
-  while (getResult.status === "NOT_FOUND" || (getResult.status as any) === "PENDING") {
+  while (getResult.status === "NOT_FOUND") {
     if (Date.now() - startedAt >= timeoutMs) {
       options?.onStatus?.({ phase: "failed", txHash, rpcStatus: getResult.status });
       recordObservabilityKind("confirmation_timeout", "Transaction confirmation timed out.", {
@@ -454,7 +446,7 @@ function decodeCampaign(val: xdr.ScVal): Campaign {
       const extData = JSON.parse(rawDescription.substring(extIndex + EXT_MARKER.length));
       cover_image_url = extData.coverImageUrl;
       if (extData.milestones && Array.isArray(extData.milestones)) {
-        milestones = extData.milestones.map((m: any) => ({
+        milestones = extData.milestones.map((m: { targetAmount: string | number; description: string }) => ({
           targetAmount: BigInt(m.targetAmount),
           description: m.description,
         }));
@@ -678,7 +670,18 @@ for (let i = 0; i < GENERATED_MOCK_COUNT; i++) {
 // Public API — Read (view) functions
 // ---------------------------------------------------------------------------
 
-export const DEFAULT_CAMPAIGNS_PAGE_SIZE = 12;
+/**
+ * Number of campaigns fetched per page on the /causes list (issue #1150).
+ * A larger initial page means the first viewport is filled in a single round-
+ * trip and the MIN_ROWS_BEFORE_PREFETCH guard in VirtualizedCauseGrid is not
+ * hit on first render, preventing the cascade-load of all pages upfront.
+ * Operators can tune this via NEXT_PUBLIC_CAMPAIGNS_PAGE_SIZE without a code
+ * change (e.g. lower it on mobile-only deployments with slower RPCs).
+ */
+export const DEFAULT_CAMPAIGNS_PAGE_SIZE: number =
+  Number(process.env.NEXT_PUBLIC_CAMPAIGNS_PAGE_SIZE) > 0
+    ? Number(process.env.NEXT_PUBLIC_CAMPAIGNS_PAGE_SIZE)
+    : 20;
 
 export interface CampaignsPage {
   campaigns: Campaign[];

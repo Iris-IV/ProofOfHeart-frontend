@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, memo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import Modal from "./ui/Modal";
 import { contribute, estimateContributeNetworkFee, getCampaign } from "../lib/contractClient";
@@ -48,7 +48,7 @@ type DonationValidationKey =
   | "amountExceedsRemainingGoal"
   | "campaignAlreadyFunded";
 
-export default function DonationModal({
+function DonationModal({
   campaign,
   onClose,
   onSuccess,
@@ -185,6 +185,12 @@ export default function DonationModal({
   const newRaised = raised + amountNum;
   const newPct = goal > 0 ? Math.min(100, Math.round((newRaised / goal) * 100)) : 0;
   const currentPct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
+  const displayedPct = step === "confirmed" ? newPct : currentPct;
+  const displayRaised = formatAmount(liveCampaign.amount_raised, locale, { maximumFractionDigits: 2 });
+  const displayGoal = formatAmount(liveCampaign.funding_goal, locale, { maximumFractionDigits: 2 });
+  const fundingProgressText = `${t("percentFunded", {
+    percent: displayedPct,
+  })}, ${displayRaised} / ${displayGoal} XLM`;
   const totalWalletCost =
     amountNum > 0 ? amountNum + estimatedNetworkFeeXlm : estimatedNetworkFeeXlm;
 
@@ -314,18 +320,29 @@ export default function DonationModal({
 
         <div>
           <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
-            <span>{t("percentFunded", { percent: currentPct })}</span>
+            <span>{t("percentFunded", { percent: displayedPct })}</span>
             <span>
-              {formatAmount(liveCampaign.amount_raised, locale, { maximumFractionDigits: 2 })} /{" "}
-              {formatAmount(liveCampaign.funding_goal, locale, { maximumFractionDigits: 2 })} XLM
+              {displayRaised} / {displayGoal} XLM
             </span>
           </div>
-          <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
+          <div
+            role="progressbar"
+            aria-label={t("percentFunded", { percent: displayedPct })}
+            aria-valuenow={displayedPct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuetext={fundingProgressText}
+            className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2"
+          >
             <div
+              aria-hidden="true"
               className="bg-linear-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
-              style={{ width: `${step === "confirmed" ? newPct : currentPct}%` }}
+              style={{ width: `${displayedPct}%` }}
             />
           </div>
+          <span className="sr-only" aria-live="polite" aria-atomic="true">
+            {fundingProgressText}
+          </span>
         </div>
 
         {step === "input" && (
@@ -346,13 +363,21 @@ export default function DonationModal({
                   inputMode="decimal"
                   enterKeyHint="done"
                   value={amount}
+                  aria-label={t("amountLabel")}
                   aria-describedby={amountError ? "donation-amount-error" : undefined}
                   aria-invalid={amountError ? "true" : "false"}
                   disabled={isFullyFunded}
                   onChange={(e) => {
-                    setAmount(e.target.value);
+                    // Keep only digits and a single decimal point. type="number"
+                    // already blocks most junk, but Firefox/Safari still allow
+                    // pasting values like "1.2.3" or "1e5"; strip them at the source
+                    // so state never holds a non-numeric string.
+                    const cleaned = e.target.value
+                      .replace(/[^0-9.]/g, "")
+                      .replace(/(\..*)\./g, "$1");
+                    setAmount(cleaned);
                     setError(null);
-                    if (e.target.value && parseFloat(e.target.value) > 0) {
+                    if (cleaned && parseFloat(cleaned) > 0) {
                       trackEnterAmount(campaign.id);
                     }
                   }}
@@ -388,9 +413,7 @@ export default function DonationModal({
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-zinc-500 mt-1">
-                  Donate in {selectedToken}. Support for multiple Stellar tokens.
-                </p>
+                <p className="text-xs text-zinc-500 mt-1">Donate in {SUPPORTED_TOKENS.find((t) => t.symbol === selectedToken)?.name ?? selectedToken}. Support for multiple Stellar tokens.</p>
               </div>
               {amountError && (
                 <p id="donation-amount-error" role="alert" className="mt-1 text-xs text-red-500">
@@ -576,3 +599,5 @@ export default function DonationModal({
     </Modal>
   );
 }
+
+export default memo(DonationModal);

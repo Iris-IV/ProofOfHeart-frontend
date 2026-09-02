@@ -52,9 +52,11 @@
     "noFundingHistory": "No funding/donation activity yet.",
     "donated": "Donated {amount} XLM on {date}",
     "campaignFallback": "Campaign #{id}",
-    "withdrawalsTab": "Withdrawals",
-    "withdrawalsHeading": "Multi-Signature Withdrawals",
-    "withdrawalsDescription": "Campaigns you run. Once a campaign reaches its goal you can propose a withdrawal and collect approvals from your organization's signers before the funds move."
+    "tabOverview": "Overview",
+    "tabTransactionHistory": "Transaction History",
+    "noTransactionHistory": "No transactions recorded on this device yet.",
+    "txHash": "Tx hash",
+    "viewOnStellarExpert": "View on Stellar Expert"
   },
   "MyContributions": {
     "title": "My Contributions",
@@ -278,9 +280,10 @@
     "causesFoundFor": " for \"{query}\"",
     "processingVote": "Processing vote…",
     "noCausesYet": "No causes yet",
-    "noCausesFound": "No causes found",
+    "noCausesFound": "No causes found. Try adjusting your filters or clear them to see all causes.",
     "noSearchResults": "No search results",
     "beFirstToSubmit": "Be the first to submit a cause for the community to vote on.",
+    "submit": "Create Cause",
     "tryDifferentKeyword": "Try a different keyword or clear the filters.",
     "tryDifferentSearch": "Try different search terms or clear the filters to see all causes.",
     "tryAgain": "Try again",

@@ -94,7 +94,7 @@ export function validateImageSize(size: number): { valid: boolean; error?: strin
 export function validateImageType(mimeType: string): { valid: boolean; error?: string } {
   const normalizedType = mimeType.toLowerCase();
 
-  if (!ALLOWED_IMAGE_TYPES.includes(normalizedType as (typeof ALLOWED_IMAGE_TYPES)[number])) {
+  if (!(ALLOWED_IMAGE_TYPES as readonly string[]).includes(normalizedType)) {
     return {
       valid: false,
       error: `Image type not allowed. Allowed types: ${ALLOWED_IMAGE_TYPES.join(", ")}`,

@@ -52,9 +52,11 @@
     "noFundingHistory": "Aún no hay actividad de financiación/donación.",
     "donated": "Donó {amount} XLM el {date}",
     "campaignFallback": "Campaña #{id}",
-    "withdrawalsTab": "Retiros",
-    "withdrawalsHeading": "Retiros con firma múltiple",
-    "withdrawalsDescription": "Campañas que administras. Cuando una campaña alcanza su meta, puedes proponer un retiro y reunir las aprobaciones de los firmantes de tu organización antes de mover los fondos."
+    "tabOverview": "Resumen",
+    "tabTransactionHistory": "Historial de Transacciones",
+    "noTransactionHistory": "No hay transacciones registradas en este dispositivo todavía.",
+    "txHash": "Hash de tx",
+    "viewOnStellarExpert": "Ver en Stellar Expert"
   },
   "MyContributions": {
     "title": "Mis Contribuciones",
@@ -278,7 +280,7 @@
     "causesFoundFor": " para \"{query}\"",
     "processingVote": "Procesando voto…",
     "noCausesYet": "Aún no hay causas",
-    "noCausesFound": "No se encontraron causas",
+    "noCausesFound": "No se encontraron causas. Intenta ajustar los filtros o explora todas las causas.",
     "noSearchResults": "No hay resultados de búsqueda",
     "beFirstToSubmit": "Sé el primero en enviar una causa para que la comunidad vote.",
     "tryDifferentKeyword": "Intenta con otra palabra clave o borra los filtros.",
@@ -323,6 +325,7 @@
     "labelExactBps": "Puntos base exactos:",
     "revenueShareBpsDenominator": "/ 10.000",
     "cancel": "Cancelar",
+    "submit": "Crear Causa",
     "launchCampaign": "Lanzar Campaña",
     "reviewTitle": "Revisar Campaña Antes de Firmar",
     "reviewSubtitle": "El lanzamiento es irreversible en la cadena. Confirma estos detalles antes de firmar en Freighter.",

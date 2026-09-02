@@ -144,6 +144,12 @@ function CausesContent() {
   const { showError, showSuccess, showWarning } = useToast();
   const resultsRef = useRef<HTMLDivElement>(null);
   const isFirstFilterRun = useRef(true);
+  /**
+   * Tracks which campaign IDs have already had their vote counts fetched so
+   * that each new page load only requests counts for the *new* campaigns
+   * rather than re-fetching the entire accumulated list (issue #1150).
+   */
+  const fetchedVoteIds = useRef<Set<number>>(new Set());
 
   // Set mounted after hydration to guard SSR-sensitive rendering
   useEffect(() => {
@@ -217,9 +223,16 @@ function CausesContent() {
   }, [userWalletAddress, campaigns]);
 
   const loadVoteCounts = useCallback(async () => {
+    // Only fetch vote counts for campaigns that haven't been fetched yet
+    // (issue #1150): re-fetching ALL campaigns on every new page load caused
+    // O(total×2) RPC calls per page — e.g. page 40 of 500 campaigns fired
+    // 1 000 requests even though pages 1-39 were already counted.
+    const newCampaigns = campaigns.filter((c) => !fetchedVoteIds.current.has(c.id));
+    if (newCampaigns.length === 0) return;
+
     const counts: Record<number, { upvotes: number; downvotes: number; totalVotes: number }> = {};
     await Promise.all(
-      campaigns.map(async (campaign) => {
+      newCampaigns.map(async (campaign) => {
         try {
           const [approves, rejects] = await Promise.all([
             getApproveVotes(campaign.id),
@@ -233,9 +246,11 @@ function CausesContent() {
         } catch {
           counts[campaign.id] = { upvotes: 0, downvotes: 0, totalVotes: 0 };
         }
+        fetchedVoteIds.current.add(campaign.id);
       }),
     );
-    setVoteCounts(counts);
+    // Merge new counts into existing state instead of replacing the whole map
+    setVoteCounts((prev) => ({ ...prev, ...counts }));
   }, [campaigns]);
 
   useEffect(() => {
@@ -248,6 +263,9 @@ function CausesContent() {
       loadVoteCounts();
       return;
     }
+    // Reset the seen-IDs tracker when the list is cleared so a fresh fetch
+    // will re-request counts if campaigns reload (e.g. after a refetch).
+    fetchedVoteIds.current = new Set();
     setVoteCounts({});
   }, [campaigns, loadVoteCounts]);
 
@@ -452,6 +470,12 @@ function CausesContent() {
   const hasActiveFilters =
     debouncedSearch || category !== "all" || status !== "all" || sort !== "newest" || tag;
 
+  const suggestedCategories = CATEGORY_VALUES.filter(
+    (cat) => categoryCounts[cat] > 0 && String(cat) !== category,
+  )
+    .sort((a, b) => categoryCounts[b] - categoryCounts[a])
+    .slice(0, 3);
+
   const clearFilters = () => {
     setRawSearch("");
     setCategory("all");
@@ -459,6 +483,58 @@ function CausesContent() {
     setSort("newest");
     setTag("");
   };
+
+  const renderEmptyState = () => (
+    <div className="text-center py-20">
+      <div className="text-5xl mb-4">
+        {campaigns.length === 0 ? "📭" : debouncedSearch ? "🔍" : "🔎"}
+      </div>
+      <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
+        {campaigns.length === 0
+          ? t("noCausesYet")
+          : debouncedSearch
+            ? t("noSearchResults")
+            : t("noCausesFound")}
+      </h2>
+      <p className="text-zinc-600 dark:text-zinc-400 mb-6">
+        {campaigns.length === 0
+          ? t("beFirstToSubmit")
+          : debouncedSearch
+            ? t("tryDifferentSearch")
+            : t("tryDifferentKeyword")}
+      </p>
+      {campaigns.length > 0 && hasActiveFilters && suggestedCategories.length > 0 && (
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
+          <span className="text-sm text-zinc-500 dark:text-zinc-400">
+            Try one of these categories:
+          </span>
+          {suggestedCategories.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setCategory(String(cat))}
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600"
+            >
+              <span aria-hidden="true">
+                {CATEGORY_ICONS[cat]} {CATEGORY_LABELS[cat]}
+              </span>
+              <span aria-hidden="true" className="tabular-nums text-xs font-semibold px-1.5 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300">
+                {categoryCounts[cat]}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+      {campaigns.length > 0 && (
+        <button
+          onClick={clearFilters}
+          className="px-6 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
+        >
+          {t("clearAllFilters")}
+        </button>
+      )}
+    </div>
+  );
 
   // -------------------------------------------------------------------------
   // Render
@@ -713,42 +789,20 @@ function CausesContent() {
                     onLoadMore={fetchNextPage}
                   />
                 ) : (
-                  <div className="text-center py-20">
-                    <div className="text-5xl mb-4">
-                      {campaigns.length === 0 ? "📭" : debouncedSearch ? "🔍" : "🔎"}
-                    </div>
-                    <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-                      {campaigns.length === 0
-                        ? t("noCausesYet")
-                        : debouncedSearch
-                          ? t("noSearchResults")
-                          : t("noCausesFound")}
-                    </h2>
-                    <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-                      {campaigns.length === 0
-                        ? t("beFirstToSubmit")
-                        : debouncedSearch
-                          ? t("tryDifferentSearch")
-                          : t("tryDifferentKeyword")}
-                    </p>
-                    {campaigns.length > 0 && (
-                      <button
-                        onClick={clearFilters}
-                        className="px-6 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
-                      >
-                        {t("clearAllFilters")}
-                      </button>
-                    )}
-                  </div>
+                  renderEmptyState()
                 )}
               </>
             )}
 
             {/* Map view */}
             {viewMode === "map" && (
-              <MapErrorBoundary>
-                <CampaignMap campaigns={filteredCampaigns} />
-              </MapErrorBoundary>
+              filteredCampaigns.length > 0 ? (
+                <MapErrorBoundary>
+                  <CampaignMap campaigns={filteredCampaigns} />
+                </MapErrorBoundary>
+              ) : (
+                renderEmptyState()
+              )
             )}
           </div>
         )}

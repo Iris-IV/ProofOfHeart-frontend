@@ -219,7 +219,7 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
           <div className="text-sm text-zinc-500 dark:text-zinc-400">
             {contributions.length} campaign
             {contributions.length === 1 ? "" : "s"} contributed ·{" "}
-            {formatXlmAmount(totalContributed, locale)} XLM total
+            {formatXlmAmount(totalContributed, locale)} Stellar Lumens total
           </div>
         </div>
       </div>
@@ -263,7 +263,7 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                       {item.campaign.title}
                     </p>
                     <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                      Contributed {formatXlmAmount(item.contribution, locale)} XLM
+                      Contributed {formatXlmAmount(item.contribution, locale)} XLM to {item.campaign.title}
                     </p>
                   </div>
                   <span
