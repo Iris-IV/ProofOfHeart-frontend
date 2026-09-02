@@ -278,7 +278,7 @@
     "causesFoundFor": " for \"{query}\"",
     "processingVote": "Processing vote…",
     "noCausesYet": "No causes yet",
-    "noCausesFound": "No causes found",
+    "noCausesFound": "No causes found. Try adjusting your filters or clear them to see all causes.",
     "noSearchResults": "No search results",
     "beFirstToSubmit": "Be the first to submit a cause for the community to vote on.",
     "tryDifferentKeyword": "Try a different keyword or clear the filters.",
