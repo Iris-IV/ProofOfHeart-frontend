@@ -146,7 +146,10 @@ export default function RevenueSharingPanel({
             <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Total Pool
             </p>
-            <Tooltip content="The total amount of revenue that has been deposited into this campaign's revenue pool available for all contributors to claim." />
+            <Tooltip
+              label="About the total pool"
+              content="The total amount of revenue that has been deposited into this campaign's revenue pool available for all contributors to claim."
+            />
           </div>
           <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
             {formatXlm(revenuePool)} XLM
@@ -158,6 +161,7 @@ export default function RevenueSharingPanel({
               Your Share
             </p>
             <Tooltip
+              label="About your share"
               content={`Your proportional share of the revenue pool based on your ${contributorSharePercentage}% contribution to the campaign. Calculated as: (your contribution ÷ total raised) × total pool.`}
             />
           </div>
@@ -170,7 +174,10 @@ export default function RevenueSharingPanel({
             <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Already Claimed
             </p>
-            <Tooltip content="The total amount of revenue you have already claimed from your share. This is deducted from your total share to calculate the claimable amount." />
+            <Tooltip
+              label="About the amount already claimed"
+              content="The total amount of revenue you have already claimed from your share. This is deducted from your total share to calculate the claimable amount."
+            />
           </div>
           <p className="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
             {formatXlm(claimed)} XLM
@@ -181,7 +188,10 @@ export default function RevenueSharingPanel({
             <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Claimable Now
             </p>
-            <Tooltip content="The amount of revenue you can claim right now. This is your share minus what you've already claimed." />
+            <Tooltip
+              label="About the claimable amount"
+              content="The amount of revenue you can claim right now. This is your share minus what you've already claimed."
+            />
           </div>
           <p className="mt-2 text-xl font-semibold text-emerald-700 dark:text-emerald-300">
             {formatXlm(claimable)} XLM
@@ -194,7 +204,10 @@ export default function RevenueSharingPanel({
           <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
             Pro-rata calculation
           </p>
-          <Tooltip content="Your revenue share is calculated proportionally based on your contribution to the campaign. The formula is: (your contribution ÷ total raised) × available pool = your claimable share." />
+          <Tooltip
+            label="About the pro-rata calculation"
+            content="Your revenue share is calculated proportionally based on your contribution to the campaign. The formula is: (your contribution ÷ total raised) × available pool = your claimable share."
+          />
         </div>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{breakdown}</p>
       </div>

@@ -21,7 +21,7 @@ jest.mock("@/components/CommentComposer", () => {
 });
 
 jest.mock("@/components/CommentsList", () => {
-  return function MockCommentsList({ comments }: any) {
+  return function MockCommentsList({ comments }: { comments: unknown[] }) {
     return <div data-testid="mock-list">List: {comments.length} comments</div>;
   };
 });

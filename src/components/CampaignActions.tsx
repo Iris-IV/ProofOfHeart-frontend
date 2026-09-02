@@ -161,7 +161,7 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
         </p>
         <button
           onClick={connectWallet}
-          className="w-full py-3 min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full transition-colors"
+          className="fixed bottom-4 left-4 right-4 z-50 sm:static sm:w-full py-3 min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full transition-colors"
         >
           Connect Wallet to Contribute
         </button>
@@ -210,7 +210,7 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
               <button
                 onClick={handleContribute}
                 disabled={isPending("contribute", campaign.id) || !!contributionDisabledReason}
-                className="rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-zinc-400 flex items-center gap-2"
+                className="fixed bottom-4 left-4 right-4 z-50 justify-center sm:static rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-zinc-400 flex items-center gap-2"
               >
                 <AsyncButtonContent
                   isPending={isPending("contribute", campaign.id)}

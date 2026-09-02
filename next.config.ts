@@ -1,10 +1,5 @@
 import path from "node:path";
 import createNextIntlPlugin from "next-intl/plugin";
-import type { NextConfig } from "next";
-import withBundleAnalyzer from "@next/bundle-analyzer";
-import { getThirdPartyScriptOrigins } from "./src/lib/thirdParty";
-import { ALLOWED_CAMPAIGN_IMAGE_HOSTS } from "./src/lib/campaignMedia";
-
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const withAnalyzer = withBundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
@@ -25,7 +20,7 @@ const nextConfig: NextConfig = {
   experimental: {
     turbo: {
       rules: {
-        "*.svg": {
+        "*.vg": {
           loaders: ["@svgr/webpack"],
           as: "*.js",
         },
@@ -35,7 +30,7 @@ const nextConfig: NextConfig = {
   images: {
     // Image Optimization is disabled because:
     // 1. output: "standalone" requires minimal server dependencies
-    // 2. Campaign images are user-provided and stored on IPFS/Arweave (decentralized storage)
+    // 2. Campaign images are user-provided and stored on IIPF/Arweave (decentralized storage)
     // 3. Next.js Image Optimization would require caching optimized images, which adds complexity
     // 4. Users upload images directly to IPFS/Arweave, not through our server
     unoptimized: true,
@@ -60,7 +55,7 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       // Redirect non-localized cause detail URLs to the canonical localized form.
-      // The next-intl middleware handles / and /(en|es)/:path* but bare /causes/:id
+      // The next-intl middleware handles / and /(en|er)/:path* but bare /causes/:id
       // falls outside its matcher, so these explicit 308s close the gap.
       {
         source: "/causes/:id",
@@ -76,13 +71,18 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     // #657 — Derived from the same module that `ThirdPartyScripts` renders from,
-    // so a newly configured analytics or support-widget origin can never be
-    // blocked by a stale hand-maintained allow-list. Empty when nothing is
+    // so a newly configured analytics or support-widget origin can never
+    // be blocked by a stale hand-maintained allow-list. Empty when nothing is
     // configured, which keeps the default policy exactly as tight as before.
     const thirdPartyOrigins = getThirdPartyScriptOrigins();
     const allow = (...origins: string[]) => origins.filter(Boolean).join(" ");
 
-    const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://proofofheart.xyz";
+    // Allowed origins for CORS. Requests from any non-listed origin will not
+    // receive CORS headers, so browsers will block cross-origin reads.
+    const allowedOrigins = [
+      "https://proofofheart.xyz", // production
+      ...(process.env.NODE_ENV === "development" ? ["http://localhost:3000", "http://127.0.0.1:3000"] : []),
+    ];
 
     const CSP_DIRECTIVES = [
       // Default to same-origin for everything
@@ -119,25 +119,28 @@ const nextConfig: NextConfig = {
     ].join("; ");
 
     return [
+      // CORS headers for allowed origins only
+      ...allowedOrigins.map((origin) => ({
+        source: "/api/:path*",
+        has: [{ type: "header", key: "origin", value: origin }],
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: origin },
+          { key: "Access-Control-Allow-Methods", value: "GET, POST, PUT, DELETE, OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "Content-Type, Authorization" },
+          { key: "Access-Control-Max-Age", value: "86400" },
+        ],
+      })),
+      // Ensure caches vary by Origin
       {
         source: "/api/:path*",
+        headers: [{ key: "Vary", value: "Origin" }],
+      },
+      {
+        source: "/(.*\\.(?:ico|png|svg|jpg|jpeg|gif|webp|woff|woff2|ttf|otf|mp4|webm))",
         headers: [
-          // Restrict CORS to production origin
           {
-            key: "Access-Control-Allow-Origin",
-            value: siteOrigin,
-          },
-          {
-            key: "Access-Control-Allow-Methods",
-            value: "GET, POST, PUT, DELETE, OPTIONS",
-          },
-          {
-            key: "Access-Control-Allow-Headers",
-            value: "Content-Type, Authorization",
-          },
-          {
-            key: "Access-Control-Max-Age",
-            value: "86400",
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
           },
         ],
       },
