@@ -7,7 +7,7 @@ const mockGetCampaign = jest.fn();
 
 jest.mock("@/lib/contractClient", () => ({
   contribute: jest.fn(),
-  getCampaign: (...args: any[]) => mockGetCampaign(...args),
+  getCampaign: (...args: unknown[]) => mockGetCampaign(...args),
 }));
 
 jest.mock("@/components/ToastProvider", () => ({
@@ -153,6 +153,30 @@ describe("DonationModal", () => {
     expect(error).toHaveAttribute("role", "alert");
     expect(input).toHaveAttribute("aria-invalid", "true");
     expect(input).toHaveAttribute("aria-describedby", "donation-amount-error");
+  });
+
+  it("gives the donation amount input an explicit aria-label", () => {
+    render(<DonationModal {...defaultProps} />);
+
+    const input = screen.getByLabelText("Amount (XLM)");
+
+    expect(input).toHaveAttribute("aria-label", "Amount (XLM)");
+  });
+
+  it("announces modal funding progress to assistive technology", () => {
+    render(<DonationModal {...defaultProps} />);
+
+    const progressbar = screen.getByRole("progressbar", { name: "1% funded" });
+
+    expect(progressbar).toHaveAttribute("aria-valuenow", "1");
+    expect(progressbar).toHaveAttribute("aria-valuemin", "0");
+    expect(progressbar).toHaveAttribute("aria-valuemax", "100");
+    expect(progressbar.getAttribute("aria-valuetext")).toContain("1% funded");
+    expect(progressbar.getAttribute("aria-valuetext")).toContain("XLM");
+
+    const liveRegion = document.querySelector('[aria-live="polite"]');
+    expect(liveRegion).toHaveAttribute("aria-atomic", "true");
+    expect(liveRegion).toHaveTextContent("1% funded");
   });
 
   it.each([

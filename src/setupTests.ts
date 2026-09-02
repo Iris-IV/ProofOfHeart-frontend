@@ -25,6 +25,23 @@ if (typeof window !== "undefined") {
   });
 }
 
+// jsdom does not implement PointerEvent — tooltip/touch tests need to be able
+// to dispatch pointer events carrying a `pointerType` (#1154).
+if (typeof window !== "undefined" && typeof window.PointerEvent === "undefined") {
+  class PointerEventStub extends MouseEvent {
+    readonly pointerType: string;
+    readonly pointerId: number;
+
+    constructor(type: string, params: PointerEventInit = {}) {
+      super(type, params);
+      this.pointerType = params.pointerType ?? "";
+      this.pointerId = params.pointerId ?? 0;
+    }
+  }
+
+  window.PointerEvent = PointerEventStub as unknown as typeof PointerEvent;
+}
+
 // jsdom does not implement Intl.DisplayNames — stub it so locale-aware
 // components can render their language labels in tests.
 if (typeof Intl.DisplayNames === "undefined") {

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import FundingProgressBar from "@/components/FundingProgressBar";
 
 describe("FundingProgressBar", () => {
@@ -66,5 +66,81 @@ describe("FundingProgressBar", () => {
       <FundingProgressBar amountRaised={BigInt(50_000_000)} fundingGoal={BigInt(100_000_000)} />,
     );
     expect(screen.getByText("50% funded")).toBeInTheDocument();
+  });
+  describe("milestone markers", () => {
+    const milestones = [
+      { targetAmount: BigInt(50_000_000), description: "Buy supplies" },
+      { targetAmount: BigInt(100_000_000), description: "Ship the kits" },
+    ];
+
+    function renderWithMilestones() {
+      return render(
+        <FundingProgressBar
+          amountRaised={BigInt(60_000_000)}
+          fundingGoal={BigInt(100_000_000)}
+          milestones={milestones}
+        />,
+      );
+    }
+
+    it("exposes each marker as a button with an accessible description", () => {
+      renderWithMilestones();
+      expect(
+        screen.getByRole("button", { name: /Milestone: 5 XLM — Buy supplies/ }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /Milestone: 10 XLM — Ship the kits/ }),
+      ).toBeInTheDocument();
+    });
+
+    it("reveals milestone details on tap for touch devices (#1154)", () => {
+      renderWithMilestones();
+      const marker = screen.getByRole("button", { name: /Buy supplies/ });
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+
+      fireEvent.pointerOver(marker, { pointerType: "touch" });
+      fireEvent.pointerDown(marker, { pointerType: "touch" });
+      fireEvent.click(marker);
+
+      const tooltip = screen.getByRole("tooltip");
+      expect(tooltip).toHaveTextContent("Buy supplies");
+      expect(marker).toHaveAttribute("aria-expanded", "true");
+      expect(marker).toHaveAttribute("aria-describedby", tooltip.id);
+    });
+
+    it("hides the details again on a second tap", () => {
+      renderWithMilestones();
+      const marker = screen.getByRole("button", { name: /Buy supplies/ });
+
+      fireEvent.click(marker);
+      expect(screen.getByRole("tooltip")).toBeInTheDocument();
+
+      fireEvent.click(marker);
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    });
+
+    it("closes the details on Escape and when tapping elsewhere", () => {
+      renderWithMilestones();
+      const marker = screen.getByRole("button", { name: /Buy supplies/ });
+
+      fireEvent.click(marker);
+      fireEvent.keyDown(document, { key: "Escape" });
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+
+      fireEvent.click(marker);
+      fireEvent.pointerDown(document.body, { pointerType: "touch" });
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    });
+
+    it("still shows details on mouse hover", () => {
+      renderWithMilestones();
+      const marker = screen.getByRole("button", { name: /Ship the kits/ });
+
+      fireEvent.pointerOver(marker, { pointerType: "mouse" });
+      expect(screen.getByRole("tooltip")).toHaveTextContent("Ship the kits");
+
+      fireEvent.pointerOut(marker, { pointerType: "mouse", relatedTarget: document.body });
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    });
   });
 });

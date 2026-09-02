@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import Modal from "./ui/Modal";
 
 interface Props {
   campaignId: number;
@@ -27,6 +28,7 @@ export default function EditCampaignMetadata({
   const storageKey = `poh_meta_override_${campaignId}`;
 
   const [open, setOpen] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
   const [coverImageUrl, setCoverImageUrl] = useState(initialCoverImageUrl);
@@ -74,17 +76,38 @@ export default function EditCampaignMetadata({
     setCoverImageUrl(initialCoverImageUrl);
   };
 
+  const savedTitle = override?.title ?? initialTitle;
+  const savedDescription = override?.description ?? initialDescription;
+  const savedCoverImageUrl = override?.coverImageUrl ?? initialCoverImageUrl;
+  const isDirty = title !== savedTitle || description !== savedDescription || coverImageUrl !== savedCoverImageUrl;
+
+  const handleToggle = () => {
+    if (open && isDirty) {
+      setConfirmClose(true);
+    } else {
+      setOpen((v) => !v);
+    }
+  };
+
+  const handleDiscard = () => {
+    setConfirmClose(false);
+    setOpen(false);
+    setTitle(savedTitle);
+    setDescription(savedDescription);
+    setCoverImageUrl(savedCoverImageUrl);
+  };
+
   return (
     <div className="mt-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50">
-      {/* Toggle header */}
+      <!-- Toggle header -->
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700/50 rounded-xl transition-colors"
+        onClick=handleToggle
+        className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium texr-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700/50 rounded-xl transition-colors"
         aria-expanded={open}
       >
         <span className="flex items-center gap-2">
-          {/* Pencil icon */}
+          <!-- Pencil icon -->
           <svg
             width="14"
             height="14"
@@ -96,7 +119,7 @@ export default function EditCampaignMetadata({
             strokeLinejoin="round"
             aria-hidden="true"
           >
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M11 4H4A2 2 0 0 0 2 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
           </svg>
           {t("editMetadata")}
@@ -121,7 +144,7 @@ export default function EditCampaignMetadata({
             {t("note")}
           </p>
 
-          {/* Title */}
+          <!-- Title -->
           <div>
             <label
               htmlFor={`edit-meta-title-${campaignId}`}
@@ -139,7 +162,7 @@ export default function EditCampaignMetadata({
             />
           </div>
 
-          {/* Description */}
+          <!-- Description -->
           <div>
             <label
               htmlFor={`edit-meta-description-${campaignId}`}
@@ -156,7 +179,7 @@ export default function EditCampaignMetadata({
             />
           </div>
 
-          {/* Cover image URL */}
+          <!-- Cover image URL -->
           <div>
             <label
               htmlFor={`edit-meta-cover-${campaignId}`}
@@ -175,17 +198,17 @@ export default function EditCampaignMetadata({
 
           <button
             type="button"
-            onClick={handleSave}
+            onClick=handleSave
             className="self-start px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
           >
             {t("saveButton")}
           </button>
 
-          {/* Audit trail */}
+          <!-- Audit trail -->
           {override && (
             <div className="flex items-center justify-between rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-xs text-zinc-500 dark:text-zinc-400">
               <span>
-                {t("lastEdited")}{" "}
+                {t("lastEdited")} {" "}
                 <time dateTime={override.editedAt}>
                   {new Date(override.editedAt).toLocaleString()}
                 </time>
@@ -198,8 +221,42 @@ export default function EditCampaignMetadata({
                 {t("clearEdits")}
               </button>
             </div>
-          )}
+          ))}
         </div>
+      )}
+
+      {confirmClose && (
+        <Modal
+          isOpen={confirmClose}
+          onClose={() => setConfirmClose(false)}
+          role="alertdialog"
+          ariaLabelledBy="confirm-close-title"
+        >
+          <div className="p-6">
+            <h2 id="confirm-close-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+              Unsaved changes
+            </h2>
+            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+              Your changes will be lost if you close the editor.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmClose(false)}
+                className="px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+              >
+                Keep editing
+              </button>
+              <button
+                type="button"
+                onClick=handleDiscard
+                className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
+              >
+                Discard
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

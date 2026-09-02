@@ -44,6 +44,7 @@ describe("WalletContext", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
+    sessionStorage.clear();
     mockUseToast.mockReturnValue({
       showError: mockShowError,
       showWarning: mockShowWarning,
@@ -73,7 +74,7 @@ describe("WalletContext", () => {
 
     expect(screen.getByTestId("publicKey")).toHaveTextContent("G-MO-DEV-SUCCESS");
     expect(screen.getByTestId("isConnected")).toHaveTextContent("true");
-    expect(localStorage.getItem("stellar_wallet_public_key")).toBe("G-MO-DEV-SUCCESS");
+    expect(sessionStorage.getItem("stellar_wallet_public_key")).toBe("G-MO-DEV-SUCCESS");
   });
 
   it("checks wallet connection on mount - failure path (not allowed)", async () => {
@@ -89,7 +90,7 @@ describe("WalletContext", () => {
     });
 
     expect(screen.getByTestId("isConnected")).toHaveTextContent("false");
-    expect(localStorage.getItem("stellar_wallet_public_key")).toBeNull();
+    expect(sessionStorage.getItem("stellar_wallet_public_key")).toBeNull();
   });
 
   it("connectWallet - success path", async () => {
@@ -114,7 +115,7 @@ describe("WalletContext", () => {
     expect(screen.getByTestId("publicKey")).toHaveTextContent("G-MO-DEV-CONNECT-SUCCESS");
     expect(screen.getByTestId("isConnected")).toHaveTextContent("true");
     expect(mockShowSuccess).toHaveBeenCalledWith("Wallet connected successfully.");
-    expect(localStorage.getItem("stellar_wallet_public_key")).toBe("G-MO-DEV-CONNECT-SUCCESS");
+    expect(sessionStorage.getItem("stellar_wallet_public_key")).toBe("G-MO-DEV-CONNECT-SUCCESS");
   });
 
   it("connectWallet - freighter not installed", async () => {
@@ -214,7 +215,7 @@ describe("WalletContext", () => {
 
     expect(screen.getByTestId("publicKey")).toHaveTextContent("");
     expect(screen.getByTestId("isConnected")).toHaveTextContent("false");
-    expect(localStorage.getItem("stellar_wallet_public_key")).toBeNull();
+    expect(sessionStorage.getItem("stellar_wallet_public_key")).toBeNull();
     expect(mockShowWarning).toHaveBeenCalledWith(
       "Disconnected. To fully revoke Freighter access, open the extension and remove this site from Connected Sites.",
     );
@@ -255,7 +256,7 @@ describe("WalletContext", () => {
     // After polling detects the disconnection, context should clear state
     expect(screen.getByTestId("isConnected")).toHaveTextContent("false");
     expect(screen.getByTestId("publicKey")).toHaveTextContent("");
-    expect(localStorage.getItem("stellar_wallet_public_key")).toBeNull();
+    expect(sessionStorage.getItem("stellar_wallet_public_key")).toBeNull();
   });
 
   it("does not reopen the install prompt after the user dismisses it", async () => {
