@@ -3,6 +3,15 @@
 import { memo } from "react";
 import { getMilestonesForCampaign } from "@lib/milestoneAchievements";
 
+const TOKEN_FULL_NAMES: Record<string, string> = {
+  USDC: "USD Coin",
+  XLM: "Stellar Lumens",
+};
+
+function replaceTokenSymbols(text: string): string {
+  return text.replace(/\b([A-Z][A-Z0-9]{2,11})\b/g, (ticker) => TOKEN_FULL_NAMES[ticker] ?? ticker);
+}
+
 interface Props {
   amountRaised: bigint;
   compact?: boolean;

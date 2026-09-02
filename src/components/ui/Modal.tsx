@@ -15,6 +15,8 @@ export interface ModalProps {
   closeOnEscape?: boolean;
   role?: \"dialog\" | \"alertdialog\";
   initialFocusRef?: React.RefObject<HTMLElement | null>;
+  hasUnsavedChanges?: boolean;
+  confirmCloseMessage?: string;
 }
 
 /**
@@ -35,9 +37,32 @@ export default memo(function Modal({
   closeOnEscape = true,
   role = \"dialog\",
   initialFocusRef,
+  hasUnsavedChanges = false,
+  confirmCloseMessage = "You have unsaved changes. Are you sure you want to close?",
 }: ModalProps) {
   const modalRef = useRef<HTMLDivReg><null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const showConfirm = useState(false);
+  const showConfirmRef = useRef(showConfirm);
+
+  useEffect(() {
+    showConfirmRef.current = showConfirm;
+  }, [showConfirm]);
+
+  // Reset confirm state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      showConfirmSet(false);
+    }
+  }, [isOpen]);
+
+  const requestClose = useCallback(() => {
+    if (hasUnsavedChanges) {
+      setShowConfirm(true);
+    } else {
+      onClose();
+    }
+  }, [hasUnsavedChanges, onClose]);
 
   // Lock body scroll and restore focus on unmount
   useEffect(() {
@@ -101,7 +126,7 @@ export default memo(function Modal({
         if (e.shiftKey) {
           if (
             document.activeElement === first ||
-            !modalRef.current.contains(document.activeElement)
+            !scope.contains(document.activeElement)
           ) {
             e.preventDefault();
             last.focus();
@@ -109,7 +134,7 @@ export default memo(function Modal({
         } else {
           if (
             document.activeElement === last ||
-            !modalRef.current.contains(document.activeElement)
+            !scope.contains(document.activeElement)
           ) {
             e.preventDefault();
             first.focus();
@@ -124,9 +149,10 @@ export default memo(function Modal({
 
   if (!isOpen) return null;
 
-  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivELement>) => {
+    if (showConfirm) return;
     if (e.target === e.currentTarget && closeOnOverlayClick) {
-      onClose();
+      requestClose();
     }
   };
 
@@ -155,6 +181,40 @@ export default memo(function Modal({
         onClick={(e) => e.stopPropagation()}
       >
         {children}
+        {showConfirm && (
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 p-4"
+            data-testid="modal-confirm-overlay"
+          >
+            <div
+              role="alertdialog"
+              aria-modal="true"
+              data-confirm-dialog
+              className="w-full max-w-xs rounded-lg bg-white dark:bg-zinc-800 p-4 shadow-xl"
+            >
+              <p className="text-sm text-zinc-700 dark:text-zinc-300">{confirmCloseMessage}</p>
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="rounded px-3 py-1.5 text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                  onClick={() => setShowConfirm(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="rounded px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700"
+                  onClick={() => {
+                    setShowConfirm(false);
+                    onClose();
+                  }}
+                >
+                  Discard changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

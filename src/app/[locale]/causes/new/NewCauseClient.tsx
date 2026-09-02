@@ -6,6 +6,7 @@ import CampaignReviewModal from "@/components/CampaignReviewModal";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { validateImageFile } from "@/lib/imageValidation";
+import { optimizeCoverImage } from "@/lib/imageOptimization";
 import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
 import { useRouter } from "@/i18n/routing";
@@ -151,8 +152,17 @@ export default function CreateCampaignPage() {
 
     setIsUploadingCover(true);
     try {
+      // Downscale + re-encode to WebP (JPEG fallback) in the browser so viewers
+      // don't download multi-MB originals — see src/lib/imageOptimization.ts.
+      const optimized = await optimizeCoverImage(file);
+      const uploadValidation = validateImageFile(optimized);
+      if (!uploadValidation.valid) {
+        showError(uploadValidation.error ?? t("coverImageUploadFailed"));
+        return;
+      }
+
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", optimized);
 
       const response = await fetch("/api/upload-image", {
         method: "POST",
@@ -864,6 +874,7 @@ export default function CreateCampaignPage() {
               <img
                 src={coverImageUrl}
                 alt="Cover preview"
+                loading="lazy"
                 className="mt-2 w-full aspect-video object-cover rounded-lg border border-zinc-200 dark:border-zinc-600"
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).style.display = "none";
@@ -970,7 +981,7 @@ export default function CreateCampaignPage() {
               {isSubmitting && (
                 <span className="inline-block motion-safe:animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
               )}
-              {isSubmitting ? t("submitting") : t("launchCampaign")}
+              {isSubmitting ? t("submitting") : t("createCause")}
             </button>
           </div>
         </form>

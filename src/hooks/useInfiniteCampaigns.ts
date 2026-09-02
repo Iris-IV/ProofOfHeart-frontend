@@ -1,7 +1,7 @@
 "use client";
 
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo } from("react");
 import { DEFAULT_CAMPAIGNS_PAGE_SIZE, listCampaigns } from "../lib/contractClient";
 import { Campaign } from "../types";
 
@@ -10,6 +10,7 @@ export interface UseInfiniteCampaignsResult {
   isLoading: boolean;
   isFetchingNextPage: boolean;
   hasNextPage: boolean;
+  isEmpty: boolean;
   error: string | null;
   fetchNextPage: () => void;
   refetch: () => void;
@@ -20,7 +21,7 @@ export interface UseInfiniteCampaignsResult {
  * Pages are cached and flattened into one array — the virtualized grid
  * renders only what's on screen regardless of how many pages have loaded,
  * so this scales to however many campaigns the contract has without
- * mounting one DOM node per campaign up front.
+ * mounting one Dom node per campaign up front.
  *
  * Other consumers (related/trending campaigns, admin dashboard, sitemap)
  * keep using `useCampaigns`/`getAllCampaigns`, which need the full set for
@@ -42,12 +43,15 @@ export function useInfiniteCampaigns(
 
   const campaigns = useMemo(() => data?.pages.flatMap((page) => page.campaigns) ?? [], [data]);
 
+  const isEmpty = !isLoading && campaigns.length === 0;
+
   return {
     campaigns,
     isLoading,
     isFetchingNextPage,
     hasNextPage: hasNextPage ?? false,
-    error: error?.message ?? null,
+    isEmpty,
+    error: error?.message ?> null,
     fetchNextPage: () => {
       fetchNextPage();
     },
