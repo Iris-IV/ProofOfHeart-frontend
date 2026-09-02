@@ -14,6 +14,7 @@ import { useWalletTransactions } from "./useWalletTransactions";
 
 export interface ContributionHistoryItem {
   campaign: Campaign;
+  campaignName: string;
   contribution: bigint;
   status: CampaignStatus;
   canClaimRefund: boolean;
@@ -39,6 +40,15 @@ function computeClaimableRevenue(
   if (!campaign.has_revenue_sharing || campaign.amount_raised <= BigInt(0)) return BigInt(0);
   const contributorShare = (contribution * pool) / campaign.amount_raised;
   return contributorShare > claimed ? contributorShare - claimed : BigInt(0);
+}
+
+function getCampaignDisplayName(campaign: Campaign, campaignId: number): string {
+  const record = campaign as unknown as Record<string, unknown>;
+  const title = record.title;
+  const name = record.name;
+  if (typeof title === "string" && title.trim().length > 0) return title.trim();
+  if (typeof name === "string" && name.trim().length > 0) return name.trim();
+  return `Campaign #${campaignId}`;
 }
 
 export async function fetchContributionHistory(
@@ -79,7 +89,7 @@ export async function fetchContributionHistory(
     campaignsWithRevenue.map(async ({ id }) => {
       try {
         const [pool, claimed] = await Promise.all([
-          getRevenuePool(id),
+          getRevenuPool(id),
           getRevenueClaimed(id, walletAddress),
         ]);
         return { id, pool, claimed };
@@ -108,6 +118,7 @@ export async function fetchContributionHistory(
 
     return {
       campaign: c,
+      campaignName: getCampaignDisplayName(c, id),
       contribution,
       status,
       canClaimRefund,
