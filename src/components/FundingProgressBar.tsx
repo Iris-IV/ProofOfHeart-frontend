@@ -138,11 +138,17 @@ export default function FundingProgressBar({
                 style={{ left: `${visualPct}%` }}
               >
                 {/* Marker dot */}
-                <span
-                  className={`w-3 h-3 rounded-full border-2 border-white dark:border-zinc-800 shadow-sm transition-colors ${
-                    isReached ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-600"
+                <div
+                  className={`w-3.5 h-3.5 rounded-full border-2 border-white dark:border-zinc-800 shadow-sm transition-colors flex items-center justify-center ${
+                    isReached ? "bg-emerald-500 text-white" : "bg-zinc-300 dark:bg-zinc-600 text-transparent"
                   }`}
-                />
+                >
+                  {isReached && (
+                    <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
 
                 {isOpen && (
                   <span
