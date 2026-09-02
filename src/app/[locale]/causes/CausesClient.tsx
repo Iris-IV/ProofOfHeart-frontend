@@ -144,6 +144,12 @@ function CausesContent() {
   const { showError, showSuccess, showWarning } = useToast();
   const resultsRef = useRef<HTMLDivElement>(null);
   const isFirstFilterRun = useRef(true);
+  /**
+   * Tracks which campaign IDs have already had their vote counts fetched so
+   * that each new page load only requests counts for the *new* campaigns
+   * rather than re-fetching the entire accumulated list (issue #1150).
+   */
+  const fetchedVoteIds = useRef<Set<number>>(new Set());
 
   // Set mounted after hydration to guard SSR-sensitive rendering
   useEffect(() => {
@@ -217,9 +223,16 @@ function CausesContent() {
   }, [userWalletAddress, campaigns]);
 
   const loadVoteCounts = useCallback(async () => {
+    // Only fetch vote counts for campaigns that haven't been fetched yet
+    // (issue #1150): re-fetching ALL campaigns on every new page load caused
+    // O(total×2) RPC calls per page — e.g. page 40 of 500 campaigns fired
+    // 1 000 requests even though pages 1-39 were already counted.
+    const newCampaigns = campaigns.filter((c) => !fetchedVoteIds.current.has(c.id));
+    if (newCampaigns.length === 0) return;
+
     const counts: Record<number, { upvotes: number; downvotes: number; totalVotes: number }> = {};
     await Promise.all(
-      campaigns.map(async (campaign) => {
+      newCampaigns.map(async (campaign) => {
         try {
           const [approves, rejects] = await Promise.all([
             getApproveVotes(campaign.id),
@@ -233,9 +246,11 @@ function CausesContent() {
         } catch {
           counts[campaign.id] = { upvotes: 0, downvotes: 0, totalVotes: 0 };
         }
+        fetchedVoteIds.current.add(campaign.id);
       }),
     );
-    setVoteCounts(counts);
+    // Merge new counts into existing state instead of replacing the whole map
+    setVoteCounts((prev) => ({ ...prev, ...counts }));
   }, [campaigns]);
 
   useEffect(() => {
@@ -248,6 +263,9 @@ function CausesContent() {
       loadVoteCounts();
       return;
     }
+    // Reset the seen-IDs tracker when the list is cleared so a fresh fetch
+    // will re-request counts if campaigns reload (e.g. after a refetch).
+    fetchedVoteIds.current = new Set();
     setVoteCounts({});
   }, [campaigns, loadVoteCounts]);
 

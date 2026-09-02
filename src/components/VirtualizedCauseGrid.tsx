@@ -1,1 +1,180 @@
-"use client";\n\nimport { useWindowVirtualizer } from "@tanstack/react-virtual";\nimport { useEffect, useRef, useState } from "react";\nimport CauseCard from \"@/components/CauseCard\";\nimport { Campaign, Vote } from \"@/types\";\n\ninterface VirtualizedCauseGridProps {\n  campaigns: Campaign[];\n  userWalletAddress: string | null;\n  onVote: (campaignId: number, voteType: \"upvote\" | \"downvote\") => Promise<void>;\n  onCancel: (campaignId: number) => Promise<void>;\n  onClaimRefund: (campaignId: number) => Promise<void>;\n  onTagClick: (tag: string) => void;\n  userVotes: Record<string, Vote>;\n  voteCounts: Record<number, { upvotes: number; downvotes: number; totalVotes: number }>;\n  hasNextPage: boolean;\n  isFetchingNextPage: boolean;\n  onLoadMore: () => void;\n}\n\n/** Matches the grid's `md:grid-cols-2 lg:grid-cols-3` breakpoints so rows stay full. */\nfunction useResponsiveColumnCount(): number {\n  const [columns, setColumns] = useState(1);\n\n  useEffect(() => {\n    const compute = () => {\n      const width = window.innerWidth;\n      if (width >= 1024) return 3;\n      if (width >= 768) return 2;\n      return 1;\n    };\n    setColumns(compute());\n\n    const onResize = () => setColumns(compute());\n    window.addEventListener(\"resize\", onResize);\n    return () => window.removeEventListener(\"resize\", onResize);\n  }, []);\n\n  return columns;\n}\n\nfunction chunk<T>(items: T[], size: number): T[][] {\n  const rows: T[][] = [];\n  for (let i = 0; i < items.length; i += size) {\n    rows.push(items.slice(i, i + size));\n  }\n  return rows;\n}\n\nconst ESTIMATED_ROW_HEIGHT = 420;\n/** Start fetching the next page this many rows before the end, so scrolling stays smooth. */\nconst PREFETCH_ROW_THRESHOLD = 2;\n\n/**\n * Renders the campaign grid with row-based window virtualization\n * (`@tanstack/react-virtual`) instead of one DOM node per card. With 100+\n * campaigns, mounting every `CauseCard` up front was the main render/scroll\n * cost (issue #593) — only the rows near the viewport are ever mounted here,\n * and the rest is represented purely as scroll height.\n *\n * Pairs with `useInfiniteCampaigns: scrolling near the bottom of what's\n * currently loaded fetches the next cursor-paginated page automatically: a\n * manual \"Load more\" button covers users who don't scroll (keyboard/AT).\n */\nexport default function VirtualizedCauseGrid({\n  campaigns,\n  userWalletAddress,\n  onVote,\n  onCancel,\n  onClaimRefund,\n  onTagClick,\n  userVotes,\n  voteCounts,\n  hasNextPage,\n  isFetchingNextPage,\n  onLoadMore,\n}: VirtualizedCauseGridProps) {\n  const columns = useResponsiveColumnCount();\n  const rows = chunk(campaigns, columns);\n  const containerRef = useRef<HTMLDivUg>(null);\n  const [scrollMargin, setScrollMargin] = useState(0);\n\n  useEffect(() => {\n    setScrollMargin(containerRef.current?.offsetTop ?? 0);\n  }, []);\n\n  const rowVirtualizer = useWindowVirtualizer({\n    count: rows.length,\n    estimateSize: () => ESTIMATED_ROW_HEIGHT,\n    overscan: 3,\n    scrollMargin,\n  });\n\n  const virtualRows = rowVirtualizer.getVirtualItems();\n\n  useEffect(() => {\n    if (!hasNextPage || isFetchingNextPage || virtualRows.length === 0) return;\n    const lastVirtualRow = virtualRows[virtualRows.length - 1];\n    if (lastVirtualRow.index >= rows.length - PREFETCH_ROW_THRESHOLD) {\n      onLoadMore();\n    }\n  }, [virtualRows, rows.length, hasNextPage, isFetchingNextPage, onLoadMore]);\n\n  if (campaigns.length === 0) {\n    return (\n      <div className=\"py-16 text-center\">\n        <h2 className=\"text-xl font-semibold text-gray-800\">No causes found</h2>\n        <p className=\"mt-2 text-gray-600\">\n          Try adjusting your filters or searching for different keywords.\n        </p>\n      </div>\n    );\n  }\n\n  return (\n    <div>\n      <div\n        ref={containerRef}\n        style={{ position: \"relative\", height: rowVirtualizer.getTotalSize() }}\n      >\n        {virtualRows.map((virtualRow) => (\n          <div\n            key={virtualRow.key}\n            ref={rowVirtualizer.measureElement}\n            data-index={virtualRow.index}\n            style={{\n              position: \"absolute\",\n              top: 0,\n              left: 0,\n              width: \"100%\",\n              transform: `translateY(${virtualRow.start - rowVirtualizer.options.scrollMargin}px)`,\n            }}\n          >\n            <div className=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6\">\n              {rows[virtualRow.index].map((campaign) => (\n                <CauseCard\n                  key={campaign.id}\n                  campaign={campaign}\n                  priority={virtualRow.index === 0}\n                  userWalletAddress={userWalletAddress}\n                  onVote={onVote}\n                  onCancel={onCancel}\n                  onClaimRefund={onClaimRefund}\n                  onTagClick={onTagClick}\n                  userVote={userVotes[campaign.id]}\n                  upvotes={voteCounts[campaign.id]?.upvotes ?? 0}\n                  downvotes={voteCounts[campaign.id]?.downvotes ?? 0}\n                  totalVotes={voteCounts[campaign.id]?.totalVotes ?? 0}\n                />\n              )))}\n            </div>\n          </div>\n        ))}\n      </div>\n\n      {hasNextPage && (\n        <div className=\"mt-2 flex justify-center\">\n          <button\n            type=\"button\"\n            onClick={onLoadMore}\n            disabled={isFetchingNextPage}\n            className=\"px-6 py-2.5 rounded-full text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 transition-colors\"\n          >\n            {isFetchingNextPage ? \"Loading․\" : \"Load more\"}\n          </button>\n        </div>\n      )}\n    </div>\n  );\n}\n
+"use client";
+
+import { useWindowVirtualizer } from "@tanstack/react-virtual";
+import { useEffect, useRef, useState } from "react";
+import CauseCard from "@/components/CauseCard";
+import { Campaign, Vote } from "@/types";
+
+interface VirtualizedCauseGridProps {
+  campaigns: Campaign[];
+  userWalletAddress: string | null;
+  onVote: (campaignId: number, voteType: "upvote" | "downvote") => Promise<void>;
+  onCancel: (campaignId: number) => Promise<void>;
+  onClaimRefund: (campaignId: number) => Promise<void>;
+  onTagClick: (tag: string) => void;
+  userVotes: Record<string, Vote>;
+  voteCounts: Record<number, { upvotes: number; downvotes: number; totalVotes: number }>;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  onLoadMore: () => void;
+}
+
+/** Matches the grid's `md:grid-cols-2 lg:grid-cols-3` breakpoints so rows stay full. */
+function useResponsiveColumnCount(): number {
+  const [columns, setColumns] = useState(1);
+
+  useEffect(() => {
+    const compute = () => {
+      const width = window.innerWidth;
+      if (width >= 1024) return 3;
+      if (width >= 768) return 2;
+      return 1;
+    };
+    setColumns(compute());
+
+    const onResize = () => setColumns(compute());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  return columns;
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    rows.push(items.slice(i, i + size));
+  }
+  return rows;
+}
+
+const ESTIMATED_ROW_HEIGHT = 420;
+/**
+ * Start fetching the next page when the user is this many rows from the end
+ * of currently-loaded data — keeps the feed smooth without loading too far ahead.
+ * Must be strictly less than the initial viewport row count to avoid an
+ * immediate cascade on first render (issue #1150).
+ */
+const PREFETCH_ROW_THRESHOLD = 2;
+/**
+ * Minimum number of rows that must be loaded before the scroll-triggered
+ * prefetch activates. Below this value the virtualizer has not received any
+ * real scroll input yet, so triggering early would cause a cascade that loads
+ * all pages upfront (root cause of issue #1150).
+ * At ESTIMATED_ROW_HEIGHT=420px a 900px viewport shows ~2 rows, so requiring
+ * at least 4 rows means the user must have received at least one full viewport
+ * and scrolled meaningfully before the next page loads automatically.
+ */
+const MIN_ROWS_BEFORE_PREFETCH = 4;
+
+/**
+ * Renders the campaign grid with row-based window virtualization
+ * (`@tanstack/react-virtual`) instead of one DOM node per card. With 100+
+ * campaigns, mounting every `CauseCard` up front was the main render/scroll
+ * cost (issue #593) — only the rows near the viewport are ever mounted here,
+ * and the rest is represented purely as scroll height.
+ *
+ * Pairs with `useInfiniteCampaigns`: scrolling near the bottom of what's
+ * currently loaded fetches the next cursor-paginated page automatically: a
+ * manual "Load more" button covers users who don't scroll (keyboard/AT).
+ */
+export default function VirtualizedCauseGrid({
+  campaigns,
+  userWalletAddress,
+  onVote,
+  onCancel,
+  onClaimRefund,
+  onTagClick,
+  userVotes,
+  voteCounts,
+  hasNextPage,
+  isFetchingNextPage,
+  onLoadMore,
+}: VirtualizedCauseGridProps) {
+  const columns = useResponsiveColumnCount();
+  const rows = chunk(campaigns, columns);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scrollMargin, setScrollMargin] = useState(0);
+
+  useEffect(() => {
+    setScrollMargin(containerRef.current?.offsetTop ?? 0);
+  }, []);
+
+  const rowVirtualizer = useWindowVirtualizer({
+    count: rows.length,
+    estimateSize: () => ESTIMATED_ROW_HEIGHT,
+    overscan: 3,
+    scrollMargin,
+  });
+
+  const virtualRows = rowVirtualizer.getVirtualItems();
+
+  useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage || virtualRows.length === 0) return;
+    // Guard: don't auto-fetch until enough rows are loaded (issue #1150).
+    // On first render the virtualizer shows all "estimated" rows even though
+    // the user hasn't scrolled, so lastVirtualRow.index is trivially near
+    // rows.length, which would cascade-load every page upfront.
+    if (rows.length < MIN_ROWS_BEFORE_PREFETCH) return;
+    const lastVirtualRow = virtualRows[virtualRows.length - 1];
+    if (lastVirtualRow.index >= rows.length - PREFETCH_ROW_THRESHOLD) {
+      onLoadMore();
+    }
+  }, [virtualRows, rows.length, hasNextPage, isFetchingNextPage, onLoadMore]);
+
+  return (
+    <div>
+      <div
+        ref={containerRef}
+        style={{ position: "relative", height: rowVirtualizer.getTotalSize() }}
+      >
+        {virtualRows.map((virtualRow) => (
+          <div
+            key={virtualRow.key}
+            ref={rowVirtualizer.measureElement}
+            data-index={virtualRow.index}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              transform: `translateY(${virtualRow.start - rowVirtualizer.options.scrollMargin}px)`,
+            }}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6">
+              {rows[virtualRow.index].map((campaign) => (
+                <CauseCard
+                  key={campaign.id}
+                  campaign={campaign}
+                  priority={virtualRow.index === 0}
+                  userWalletAddress={userWalletAddress}
+                  onVote={onVote}
+                  onCancel={onCancel}
+                  onClaimRefund={onClaimRefund}
+                  onTagClick={onTagClick}
+                  userVote={userVotes[campaign.id]}
+                  upvotes={voteCounts[campaign.id]?.upvotes ?? 0}
+                  downvotes={voteCounts[campaign.id]?.downvotes ?? 0}
+                  totalVotes={voteCounts[campaign.id]?.totalVotes ?? 0}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {hasNextPage && (
+        <div className="mt-2 flex justify-center">
+          <button
+            type="button"
+            onClick={onLoadMore}
+            disabled={isFetchingNextPage}
+            className="px-6 py-2.5 rounded-full text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
+          >
+            {isFetchingNextPage ? "Loading…" : "Load more"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
