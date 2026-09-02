@@ -52,9 +52,11 @@
     "noFundingHistory": "No funding/donation activity yet.",
     "donated": "Donated {amount} XLM on {date}",
     "campaignFallback": "Campaign #{id}",
-    "withdrawalsTab": "Withdrawals",
-    "withdrawalsHeading": "Multi-Signature Withdrawals",
-    "withdrawalsDescription": "Campaigns you run. Once a campaign reaches its goal you can propose a withdrawal and collect approvals from your organization's signers before the funds move."
+    "tabOverview": "Overview",
+    "tabTransactionHistory": "Transaction History",
+    "noTransactionHistory": "No transactions recorded on this device yet.",
+    "txHash": "Tx hash",
+    "viewOnStellarExpert": "View on Stellar Expert"
   },
   "MyContributions": {
     "title": "My Contributions",
