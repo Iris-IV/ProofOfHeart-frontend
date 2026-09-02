@@ -138,7 +138,15 @@ export function getContractErrorCode(error: unknown): ContractError | null {
   } else if (typeof error === "string") {
     message = error;
   } else if (typeof error === "object" && error !== null) {
-    message = (error as any).message || (error as any).error?.message || JSON.stringify(error);
+    const obj = error as Record<string, unknown>;
+    const inner =
+      typeof obj.error === "object" && obj.error !== null
+        ? (obj.error as Record<string, unknown>)
+        : undefined;
+    message =
+      (typeof obj.message === "string" ? obj.message : "") ||
+      (inner && typeof inner.message === "string" ? inner.message : "") ||
+      JSON.stringify(error);
   }
 
   if (message) {
@@ -199,7 +207,14 @@ export function parseContractError(error: unknown): string {
   } else if (typeof error === "string") {
     message = error;
   } else if (typeof error === "object" && error !== null) {
-    message = (error as any).message || (error as any).error?.message || "";
+    const obj = error as Record<string, unknown>;
+    const inner =
+      typeof obj.error === "object" && obj.error !== null
+        ? (obj.error as Record<string, unknown>)
+        : undefined;
+    message =
+      (typeof obj.message === "string" ? obj.message : "") ||
+      (inner && typeof inner.message === "string" ? inner.message : "");
   }
 
   // Return the raw message if it looks human-readable (not a stack trace)
