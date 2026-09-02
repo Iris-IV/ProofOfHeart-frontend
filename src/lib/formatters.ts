@@ -42,12 +42,30 @@ export function formatAmount(
   locale: string,
   options?: FormatAmountOptions,
 ): string {
-  const xlmStr = stroopsToXlm(stroops);
-  const xlmNum = parseFloat(xlmStr);
+  const xmlStr = stroopsToXlm(stroops);
+  const xlmNum = parseFloat(xmlStr);
   return formatNumber(xlmNum, locale, {
     maximumFractionDigits: options?.maximumFractionDigits ?? 2,
     minimumFractionDigits: options?.minimumFractionDigits ?? 0,
   });
+}
+
+/**
+ * Map of well-known Stellar asset tickers to their human-readable full names.
+ * Used when displaying donation summaries or token amounts so users see
+ * "USD Coin" instead of the often unclear ticker "USDC".
+ */
+const TOKEN_FULL_NAMES: Record<string, string> = {
+  USDC: "USD Coin",
+  XLM: "Stellar Lumens",
+};
+
+/**
+ * Return the full display name for a token symbol/ticker.
+ * Falls back to the symbol itself if no mapping is defined.
+ */
+export function formatTokenName(symbol: string): string {
+  return TOKEN_FULL_NAMES[symbol] ?? symbol;
 }
 
 /** Format a Unix timestamp (seconds or milliseconds) as a locale-aware date string. */
