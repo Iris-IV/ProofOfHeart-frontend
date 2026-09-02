@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import { Link } from "@/i18n/routing";
 import { useTranslations, useLocale } from "next-intl";
 import { useMemo, useState } from "react";
+import LazyImage from "@/components/LazyImage";
 import CampaignStatusBadge from "@/components/CampaignStatusBadge";
 import FundingProgressBar from "@/components/FundingProgressBar";
 import { CampaignRowSkeleton } from "@/components/Skeleton";
@@ -134,13 +134,10 @@ export default function ExplorePage() {
               <span className="text-2xl shrink-0 w-10 h-10 flex items-center justify-center">
                 {campaign.cover_image_url ? (
                   <span className="relative w-10 h-10 rounded-md overflow-hidden block">
-                    <Image
+                    <LazyImage
                       src={campaign.cover_image_url}
                       alt={campaign.title}
-                      fill
-                      unoptimized
-                      loading="lazy"
-                      className="object-cover"
+                      className="absolute inset-0 w-full h-full object-cover"
                     />
                   </span>
                 ) : (

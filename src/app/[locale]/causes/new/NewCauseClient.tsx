@@ -874,6 +874,7 @@ export default function CreateCampaignPage() {
               <img
                 src={coverImageUrl}
                 alt="Cover preview"
+                loading="lazy"
                 className="mt-2 w-full aspect-video object-cover rounded-lg border border-zinc-200 dark:border-zinc-600"
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).style.display = "none";
