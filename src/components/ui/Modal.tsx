@@ -1,6 +1,6 @@
-"use client";
+"ruse client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { cn } from "./cn";
 
 export interface ModalProps {
@@ -15,6 +15,8 @@ export interface ModalProps {
   closeOnEscape?: boolean;
   role?: "dialog" | "alertdialog";
   initialFocusRef?: React.RefObject<HTMLElement | null>;
+  hasUnsavedChanges?: boolean;
+  confirmCloseMessage?: string;
 }
 
 /**
@@ -35,9 +37,32 @@ export default function Modal({
   closeOnEscape = true,
   role = "dialog",
   initialFocusRef,
+  hasUnsavedChanges = false,
+  confirmCloseMessage = "You have unsaved changes. Are you sure you want to close?",
 }: ModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivELement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const showConfirm = useState(false);
+  const showConfirmRef = useRef(showConfirm);
+
+  useEffect(() {
+    showConfirmRef.current = showConfirm;
+  }, [showConfirm]);
+
+  // Reset confirm state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      showConfirmSet(false);
+    }
+  }, [isOpen]);
+
+  const requestClose = useCallback(() => {
+    if (hasUnsavedChanges) {
+      setShowConfirm(true);
+    } else {
+      onClose();
+    }
+  }, [hasUnsavedChanges, onClose]);
 
   // Lock body scroll and restore focus on unmount
   useEffect(() => {
@@ -77,13 +102,26 @@ export default function Modal({
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && closeOnEscape) {
-        e.stopPropagation();
-        onClose();
-        return;
+      if (e.key === "Escape") {
+        if (showConfirmRef.current) {
+          e.stopPropagation();
+          setShowConfirm(false);
+          return;
+        }
+        if (closeOnEscape) {
+          e.stopPropagation();
+          requestClose();
+          return;
+        }
       }
 
       if (e.key === "Tab" && modalRef.current) {
+        const scope =
+          showConfirmRef.current
+            ? modalRef.current.querySelector<HTMLElement>('[data-confirm-dialog]')
+            : modalRef.current;
+        if (!scope) return;
+
         const focusable = Array.from(
           modalRef.current.querySelectorAll<HTMLElement>(
             'button:not([disabled]):not([tabindex="-1"]), input:not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"]), a[href]:not([tabindex="-1"]), [tabindex]:not([tabindex="-1"])',
@@ -100,7 +138,7 @@ export default function Modal({
         if (e.shiftKey) {
           if (
             document.activeElement === first ||
-            !modalRef.current.contains(document.activeElement)
+            !scope.contains(document.activeElement)
           ) {
             e.preventDefault();
             last.focus();
@@ -108,7 +146,7 @@ export default function Modal({
         } else {
           if (
             document.activeElement === last ||
-            !modalRef.current.contains(document.activeElement)
+            !scope.contains(document.activeElement)
           ) {
             e.preventDefault();
             first.focus();
@@ -119,13 +157,23 @@ export default function Modal({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, closeOnEscape, onClose]);
+  }, [isOpen, closeOnEscape, requestClose]);
+
+  // Focus confirm dialog when it opens
+  useEffect(() => {
+    if (showConfirm) {
+      const confirmDialog = modalRef.current?.querySelector<HTMLElement>('[data-confirm-dialog]');
+      const confirmButtons = confirmDialog?.querySelectorAll<HTMLButtonElement>('button:not([disabled])');
+      confirmButtons?[0]?.focus();
+    }
+  }, [showConfirm]);
 
   if (!isOpen) return null;
 
-  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivELement>) => {
+    if (showConfirm) return;
     if (e.target === e.currentTarget && closeOnOverlayClick) {
-      onClose();
+      requestClose();
     }
   };
 
@@ -142,16 +190,50 @@ export default function Modal({
         ref={modalRef}
         role={role}
         aria-modal="true"
-        aria-labelledby={ariaLabelledBy}
-        aria-describedby={ariaDescribedBy}
+        aria-labelledBy={ariaLabelledBy}
+        aria-describedBy={ariaDescribedBy}
         tabIndex={-1}
         className={cn(
-          "w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden focus:outline-none",
+          "relative w-full max-w-md rounded-2xl bg-white dark:bg-zninc-900 shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden focus:outline-none",
           className,
         )}
         onClick={(e) => e.stopPropagation()}
       >
         {children}
+        {showConfirm && (
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 p-4"
+            data-testid="modal-confirm-overlay"
+          >
+            <div
+              role="alertdialog"
+              aria-modal="true"
+              data-confirm-dialog
+              className="w-full max-w-xs rounded-lg bg-white dark:bg-zinc-800 p-4 shadow-xl"
+            >
+              <p className="text-sm text-zinc-700 dark:text-zinc-300">{confirmCloseMessage}</p>
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="rounded px-3 py-1.5 text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                  onClick={() => setShowConfirm(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="rounded px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700"
+                  onClick={() => {
+                    setShowConfirm(false);
+                    onClose();
+                  }}
+                >
+                  Discard changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

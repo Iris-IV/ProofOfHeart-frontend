@@ -161,7 +161,7 @@ export default function DashboardPage() {
                 >
                   <Link
                     href={`/causes/${campaign.id}`}
-                    className="font-medium text-zinc-900 dark:text-zinc-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                    className="font-medium text-zinc-900 dark:text-zinc-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800 rounded"
                   >
                     {campaign.title}
                   </Link>
@@ -203,7 +203,7 @@ export default function DashboardPage() {
                 <div className="flex items-start justify-between gap-3">
                   <Link
                     href={`/causes/${campaign.id}`}
-                    className="font-medium text-zinc-900 dark:text-zinc-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                    className="font-medium text-zinc-900 dark:text-zinc-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800 rounded"
                   >
                     {campaign.title}
                   </Link>

@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Campaign, CampaignStatus, deriveCampaignStatus } from "../types";
+import Badge, { BadgeTone } from "./ui/Badge";
 import VerifiedIcon from "./icons/VerifiedIcon";
 
 import { PlayCircle, XCircle, CheckCircle, AlertCircle, ShieldCheck } from "lucide-react";
@@ -41,7 +42,7 @@ interface CampaignStatusBadgeProps {
 export default function CampaignStatusBadge({ campaign }: CampaignStatusBadgeProps) {
   const t = useTranslations("Status");
   const status = deriveCampaignStatus(campaign);
-  const config = STATUS_CONFIG[status];
+  const tone = STATUS_TONE[status];
 
   return (
     <span className="inline-flex items-center gap-1.5">
@@ -52,13 +53,10 @@ export default function CampaignStatusBadge({ campaign }: CampaignStatusBadgePro
         {t(config.key)}
       </span>
       {campaign.is_verified && status !== "verified" && (
-        <span
-          className="shrink-0 inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200"
-          title={t("verifiedCampaign")}
-        >
+        <Badge tone="accent" size="sm" title={t("verifiedCampaign")}>
           <VerifiedIcon className="w-3 h-3" />
           {t("verified")}
-        </span>
+        </Badge>
       )}
     </span>
   );

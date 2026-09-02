@@ -137,7 +137,7 @@ export default function CampaignMap({ campaigns, isLoading = false }: CampaignMa
               <div className="min-w-[180px]">
                 <Link
                   href={`/causes/${campaign.id}`}
-                  className="font-semibold text-blue-600 hover:underline block mb-1"
+                  className="font-semibold text-blue-600 hover:underline block mb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
                 >
                   {campaign.title}
                 </Link>

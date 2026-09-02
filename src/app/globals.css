@@ -143,3 +143,11 @@ body {
 @utility text-muted-strong {
   @apply text-zinc-700 dark:text-zinc-100;
 }
+
+/* Small screens (e.g. iPhone SE): use dynamic viewport height for hero
+   sections so the donation CTA is visible without scrolling. */
+@media (max-height: 700px) {
+  .min-h-screen {
+    min-height: 100dvh;
+  }
+}
