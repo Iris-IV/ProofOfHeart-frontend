@@ -14,8 +14,8 @@ html.dark {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans:
-    "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+    var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono:
     ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
@@ -68,6 +68,73 @@ body {
   --color-muted-strong: var(--color-zinc-700);
 }
 
+/* =========================================================================
+   Design system tokens
+   -------------------------------------------------------------------------
+   The single source of truth for brand colour, radius, elevation and motion.
+   UI primitives in `src/components/ui` consume these, so a token change here
+   propagates through every surface instead of being re-typed per component.
+   See docs/DESIGN_SYSTEM.md.
+
+   Semantic intents: brand (primary action), accent (secondary brand),
+   success, warning, danger, info. Each has a base and a `-strong` hover step.
+   ========================================================================= */
+@theme {
+  /* ── Brand ─────────────────────────────────────────────────────────── */
+  --color-brand: var(--color-blue-600);
+  --color-brand-strong: var(--color-blue-700);
+  --color-brand-subtle: var(--color-blue-50);
+  --color-accent: var(--color-purple-600);
+  --color-accent-strong: var(--color-purple-700);
+  --color-accent-subtle: var(--color-purple-50);
+
+  /* ── Status ────────────────────────────────────────────────────────── */
+  --color-success: var(--color-green-600);
+  --color-success-strong: var(--color-green-700);
+  --color-warning: var(--color-amber-500);
+  --color-warning-strong: var(--color-amber-600);
+  --color-danger: var(--color-red-600);
+  --color-danger-strong: var(--color-red-700);
+  --color-info: var(--color-sky-600);
+  --color-info-strong: var(--color-sky-700);
+
+  /* ── Radius scale ──────────────────────────────────────────────────── */
+  --radius-control: 0.75rem; /* buttons, inputs */
+  --radius-surface: 1rem; /* cards, panels */
+
+  /* ── Motion ────────────────────────────────────────────────────────── */
+  --duration-fast: 150ms;
+  --duration-base: 300ms;
+
+  /* ── Typography ────────────────────────────────────────────────────────
+     Named for role, not size, same reasoning as colour. `--text-*` and
+     `--font-weight-*` keys are a Tailwind v4 theme namespace, so each one
+     also becomes a utility class (`text-heading`, `font-heading`, …). */
+  --text-heading: 1.125rem; /* section / card titles */
+  --text-heading--line-height: 1.75rem;
+  --text-heading-lg: 1.5rem; /* page-level titles */
+  --text-heading-lg--line-height: 2rem;
+  --font-weight-heading: 600;
+  --font-weight-heading-lg: 700;
+
+  /* ── Spacing ───────────────────────────────────────────────────────────
+     Extends Tailwind's spacing scale, so `--spacing-card-gap` also yields
+     `gap-card-gap`, `p-card-gap`, `mb-card-gap`, etc. */
+  --spacing-card-gap: 0.75rem; /* gap between a card's header elements */
+}
+
+/* Minimum interactive target (WCAG 2.5.5). Applied by every UI primitive
+   so touch targets stay consistent instead of being hand-tuned per button. */
+@utility tap-target {
+  min-height: 44px;
+}
+
+/* The one focus ring for the whole app: consistent, visible in both themes,
+   and only shown for keyboard focus. */
+@utility focus-ring {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900;
+}
+
 /* Custom utility utilities for responsive accessibility */
 @utility text-muted {
   @apply text-zinc-500 dark:text-zinc-300;
@@ -75,4 +142,12 @@ body {
 
 @utility text-muted-strong {
   @apply text-zinc-700 dark:text-zinc-100;
+}
+
+/* Small screens (e.g. iPhone SE): use dynamic viewport height for hero
+   sections so the donation CTA is visible without scrolling. */
+@media (max-height: 700px) {
+  .min-h-screen {
+    min-height: 100dvh;
+  }
 }

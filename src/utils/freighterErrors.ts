@@ -1,9 +1,3 @@
-/**
- * Detects whether an error from Freighter's signTransaction represents
- * the user rejecting/cancelling the signature request, rather than a
- * genuine technical failure.
- */
-
 export class UserCancelledError extends Error {
   constructor() {
     super("Transaction cancelled");
@@ -35,4 +29,25 @@ export function wrapFreighterError(error: unknown): never {
     throw new UserCancelledError();
   }
   throw error;
+}
+
+export class FreighterLockedError extends Error {
+  constructor() {
+    super("Freighter is locked");
+    this.name = "FreighterLockedError";
+  }
+}
+
+const LOCKED_PATTERNS = [
+  "freighter is locked",
+  "wallet is locked",
+  "unlock your wallet",
+  "extension is locked",
+];
+
+export function isFreighterLockedError(error: unknown): boolean {
+  if (!error) return false;
+  const msg = typeof error === "string" ? error : ((error as Error).message ?? "");
+  const lower = msg.toLowerCase();
+  return LOCKED_PATTERNS.some((p) => lower.includes(p));
 }

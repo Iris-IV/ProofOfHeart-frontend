@@ -1,7 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { memo, useState } from "react";
+import LazyImage from "./LazyImage";
+import { Bookmark } from "lucide-react";
 import { useLocale } from "next-intl";
 import { formatAddress } from "@/lib/formatAddress";
 import { formatShortDate } from "@/lib/formatters";
@@ -10,6 +11,7 @@ import { parseContractError } from "@/utils/contractErrors";
 import { Campaign, Vote, CATEGORY_LABELS, calculateFundingPercentage } from "../types";
 import Amount from "./Amount";
 import AsyncButtonContent from "./AsyncButtonContent";
+import CampaignDescription from "./CampaignDescription";
 import CampaignStatusBadge from "./CampaignStatusBadge";
 import CancelCampaignModal from "./cancelCampaignModal";
 import DeadlineCountdown from "./DeadlineCountdown";
@@ -19,6 +21,7 @@ import VotingComponent from "./VotingComponent";
 import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
 
 interface CauseCardProps {
+  priority?: boolean;
   campaign: Campaign;
   userWalletAddress: string | null;
   onVote: (campaignId: number, voteType: "upvote" | "downvote") => Promise<void>;
@@ -42,6 +45,7 @@ function formatDate(ts: number, locale: string) {
 }
 
 function CauseCard({
+  priority = false,
   campaign,
   userWalletAddress,
   onVote,
@@ -116,12 +120,13 @@ function CauseCard({
       {/* ── Cover image ── */}
       <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-700">
         {campaign.cover_image_url ? (
-          <Image
+          <LazyImage
             src={campaign.cover_image_url}
             alt={campaign.title}
             fill
             unoptimized
-            loading="lazy"
+            priority={priority}
+            loading={priority ? undefined : "lazy"}
             className="object-cover"
           />
         ) : (
@@ -142,18 +147,11 @@ function CauseCard({
           className="absolute top-2 right-2 p-2 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm rounded-full text-zinc-700 dark:text-zinc-200 hover:bg-white dark:hover:bg-zinc-800 transition-colors shadow-sm"
           title={isSaved(campaign.id) ? "Remove from saved" : "Save campaign"}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill={isSaved(campaign.id) ? "currentColor" : "none"}
-            stroke="currentColor"
+          <Bookmark
             className={`w-5 h-5 ${isSaved(campaign.id) ? "text-blue-500" : ""}`}
-            strokeWidth={1.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-          </svg>
+            fill={isSaved(campaign.id) ? "currentColor" : "none"}
+            aria-hidden="true"
+          />
         </button>
       </div>
 
@@ -173,9 +171,7 @@ function CauseCard({
         </h3>
 
         {/* Description */}
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3 leading-relaxed break-words h-[4.5rem]">
-          {campaign.description}
-        </p>
+        <CampaignDescription description={campaign.description} />
 
         {/* Funding progress */}
         <div className="space-y-1.5">
@@ -288,11 +284,17 @@ function CauseCard({
   );
 }
 
+/**
+ * Memoized so a list of cards does not re-render wholesale when unrelated
+ * global state changes (#648). Cards are rendered in long lists, so this is
+ * where an unnecessary render is most expensive.
+ */
 function causeCardPropsAreEqual(prev: CauseCardProps, next: CauseCardProps): boolean {
   const prevCampaign = prev.campaign;
   const nextCampaign = next.campaign;
 
   return (
+    prev.priority === next.priority &&
     prev.userWalletAddress === next.userWalletAddress &&
     prev.userVote === next.userVote &&
     prev.upvotes === next.upvotes &&

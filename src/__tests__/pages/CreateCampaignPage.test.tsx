@@ -1,5 +1,17 @@
 import { render, screen, fireEvent, waitFor, act, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+// react-markdown ships ESM this Jest setup does not transform
+jest.mock("@/components/SafeMarkdown", () => ({
+  __esModule: true,
+  default: ({ children, className }: { children: string; className?: string }) => (
+    <div data-testid="safe-markdown" className={className}>
+      {children}
+    </div>
+  ),
+}));
+
 import CreateCampaignPage from "@/app/[locale]/causes/new/page";
 
 // ---------------------------------------------------------------------------
@@ -10,6 +22,79 @@ const mockPush = jest.fn();
 
 jest.mock("@/i18n/routing", () => ({
   useRouter: () => ({ push: mockPush }),
+}));
+
+jest.mock("next-intl", () => ({
+  useTranslations: () => (key: string, values?: Record<string, string | number>) => {
+    const map: Record<string, string> = {
+      pageTitle: "Create a Campaign",
+      pageSubtitle: "Fill in the details below to launch your campaign on-chain via Freighter.",
+      walletGuard: "Connect your Freighter wallet to create a campaign.",
+      connectWallet: "Connect Wallet",
+      connecting: "Connecting…",
+      labelTitle: "Campaign Title",
+      placeholderTitle: "A clear, compelling title for your campaign",
+      labelDescription: "Description",
+      placeholderDescription:
+        "Describe your campaign, what it aims to achieve, and how funds will be used",
+      labelCreatorEmailOptional: "Creator Email (Optional)",
+      placeholderCreatorEmail: "name@example.com",
+      creatorEmailNote:
+        "Optional, off-chain only. Used for campaign milestone and deadline notifications.",
+      labelFundingGoal: "Funding Goal (XLM)",
+      labelDuration: "Duration (days)",
+      placeholderDuration: "1–365",
+      labelCategory: "Category",
+      startupRevenueHint: "Revenue sharing is available for Educational Startup campaigns.",
+      revenueSharingTitle: "Revenue Sharing",
+      revenueSharingDesc: "Allow contributors to earn a share of future revenue.",
+      revenueSharingAriaLabel: "Revenue Sharing",
+      labelRevenueSharePct: "Revenue Share Percentage",
+      cancel: "Cancel",
+      launchCampaign: "Launch Campaign",
+      reviewTitle: "Review Campaign Before Signing",
+      reviewSubtitle:
+        "Launching is irreversible on-chain. Confirm these details before signing in Freighter.",
+      reviewFieldTitle: "Title",
+      reviewFieldCreatorEmail: "Creator Email",
+      reviewFieldFundingGoal: "Funding Goal",
+      reviewFieldDuration: "Duration",
+      reviewFieldDurationDays:
+        values?.count === 1 ? `${values.count} day` : `${values?.count} days`,
+      reviewFieldCategory: "Category",
+      reviewFieldRevenueShare: "Revenue Share",
+      reviewRevenueShareNone: "0.00% (Not enabled)",
+      reviewCreatorEmailNone: "No email provided",
+      reviewFieldEndDate: "End Date (Your Timezone)",
+      reviewFieldTimestamp: "Estimated Deadline Timestamp",
+      editDetails: "Edit Details",
+      confirmAndSign: "Confirm & Sign",
+      submitting: "Submitting…",
+      successMessage: `Campaign "${values?.title}" created successfully!`,
+      emailWebhookFailed:
+        "Campaign created, but we could not save your optional email subscription.",
+      walletRequiredError: "Please connect your Freighter wallet before creating a campaign.",
+      validationTitleRequired: "Title is required.",
+      validationTitleTooLong: "Title must be 100 characters or fewer.",
+      validationDescriptionRequired: "Description is required.",
+      validationDescriptionTooLong: "Description must be 1,000 characters or fewer.",
+      validationCreatorEmailInvalid: "Enter a valid email address or leave this field empty.",
+      validationFundingGoalInvalid: "Funding goal must be greater than 0 XLM.",
+      validationDurationInvalid: "Duration must be between 1 and 365 days.",
+      validationRevenueShareInvalid: "Revenue share must be between 0.01% and 50%.",
+      labelDescriptionLanguage: "Description Language",
+      tabEnglish: "English",
+      tabSpanish: "Spanish (optional)",
+      placeholderDescriptionEs: "Describe tu campaña en español (opcional)",
+      validationDescriptionEsTooLong: "Spanish description must be 1,000 characters or fewer.",
+      labelTags: "Tags",
+      tagsLimitTip: "max 3",
+      placeholderTags: "Add tags (press Enter)",
+      tagsHelpText: "Tags help users discover your campaign.",
+    };
+    return map[key] ?? key;
+  },
+  useLocale: () => "en",
 }));
 
 const mockShowError = jest.fn();
@@ -67,6 +152,15 @@ function setWalletDisconnected() {
   };
 }
 
+function renderPage() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <CreateCampaignPage />
+    </QueryClientProvider>,
+  );
+}
+
 async function fillRequiredFields({
   title = "My Test Campaign",
   description = "A detailed description of the campaign that explains everything.",
@@ -97,12 +191,12 @@ beforeEach(() => {
 
 describe("CreateCampaignPage — rendering", () => {
   it("renders the page heading", () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     expect(screen.getByRole("heading", { name: /create a campaign/i })).toBeInTheDocument();
   });
 
   it("renders all required form fields", () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     expect(screen.getByLabelText(/campaign title/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/funding goal/i)).toBeInTheDocument();
@@ -111,7 +205,7 @@ describe("CreateCampaignPage — rendering", () => {
   });
 
   it('renders the "Launch Campaign" submit button', () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     expect(screen.getByRole("button", { name: /launch campaign/i })).toBeInTheDocument();
   });
 });
@@ -122,23 +216,23 @@ describe("CreateCampaignPage — rendering", () => {
 
 describe("CreateCampaignPage — wallet guard", () => {
   it("shows the wallet guard banner when wallet is not connected", () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     expect(screen.getByText(/connect your freighter wallet/i)).toBeInTheDocument();
   });
 
   it("disables the submit button when wallet is not connected", () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     expect(screen.getByRole("button", { name: /launch campaign/i })).toBeDisabled();
   });
 
   it("does not show the wallet guard banner when wallet is connected", () => {
     setWalletConnected();
-    render(<CreateCampaignPage />);
+    renderPage();
     expect(screen.queryByText(/connect your freighter wallet/i)).not.toBeInTheDocument();
   });
 
   it('calls connectWallet when the "Connect Wallet" button in the banner is clicked', async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     const connectBtn = screen.getByRole("button", { name: /connect wallet/i });
     await userEvent.click(connectBtn);
     expect(mockConnectWallet).toHaveBeenCalledTimes(1);
@@ -146,7 +240,7 @@ describe("CreateCampaignPage — wallet guard", () => {
 
   it("shows an error toast if submit is triggered without a wallet (edge case)", async () => {
     // wallet disconnected but form submission attempted programmatically
-    render(<CreateCampaignPage />);
+    renderPage();
     fireEvent.submit(screen.getByRole("button", { name: /launch campaign/i }).closest("form")!);
     await waitFor(() => {
       expect(mockShowError).toHaveBeenCalledWith(
@@ -164,13 +258,13 @@ describe("CreateCampaignPage — client-side validation", () => {
   beforeEach(() => setWalletConnected());
 
   it("shows a title error when the field is empty", async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
     expect(await screen.findByText(/title is required/i)).toBeInTheDocument();
   });
 
   it("links field errors to inputs with aria-describedby and aria-invalid", async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
 
     const titleInput = screen.getByLabelText(/campaign title/i);
@@ -189,7 +283,7 @@ describe("CreateCampaignPage — client-side validation", () => {
   });
 
   it("shows a title error when title exceeds 100 characters", async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     // fireEvent.change bypasses the maxLength DOM attribute so we can test the JS validator
     fireEvent.change(screen.getByLabelText(/campaign title/i), {
       target: { value: "A".repeat(101) },
@@ -199,14 +293,14 @@ describe("CreateCampaignPage — client-side validation", () => {
   });
 
   it("shows a description error when the field is empty", async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await userEvent.type(screen.getByLabelText(/campaign title/i), "Valid Title");
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
     expect(await screen.findByText(/description is required/i)).toBeInTheDocument();
   });
 
   it("shows a description error when description exceeds 1000 characters", async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await userEvent.type(screen.getByLabelText(/campaign title/i), "Valid Title");
     fireEvent.change(screen.getByLabelText(/description/i), {
       target: { value: "B".repeat(1001) },
@@ -216,7 +310,7 @@ describe("CreateCampaignPage — client-side validation", () => {
   });
 
   it("shows a funding goal error when value is 0 or empty", async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await userEvent.type(screen.getByLabelText(/campaign title/i), "Valid Title");
     await userEvent.type(
       screen.getByLabelText(/description/i),
@@ -227,7 +321,7 @@ describe("CreateCampaignPage — client-side validation", () => {
   });
 
   it("shows a duration error when value is outside 1–365", async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await userEvent.type(screen.getByLabelText(/campaign title/i), "Valid Title");
     await userEvent.type(
       screen.getByLabelText(/description/i),
@@ -240,7 +334,7 @@ describe("CreateCampaignPage — client-side validation", () => {
   });
 
   it("does not call createCampaign when there are validation errors", async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
     expect(mockCreateCampaign).not.toHaveBeenCalled();
   });
@@ -254,45 +348,44 @@ describe("CreateCampaignPage — revenue sharing", () => {
   beforeEach(() => setWalletConnected());
 
   it("does NOT show the revenue sharing section for non-startup categories", () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     // Default is Learner
     expect(screen.queryByRole("switch")).not.toBeInTheDocument();
   });
 
   it('shows the revenue sharing section when "Educational Startup" is selected', async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await userEvent.selectOptions(screen.getByLabelText(/category/i), "1"); // EducationalStartup = 1
     expect(screen.getByRole("switch", { name: /revenue sharing/i })).toBeInTheDocument();
   });
 
   it("hides the slider when the revenue sharing toggle is off", async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
     // Toggle is off by default
     expect(screen.queryByLabelText(/revenue share percentage/i)).not.toBeInTheDocument();
   });
 
   it("shows the slider when the revenue sharing toggle is turned on", async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
     await userEvent.click(screen.getByRole("switch"));
     expect(await screen.findByLabelText(/revenue share percentage/i)).toBeInTheDocument();
   });
 
   it("updates the displayed percentage when the slider is moved", async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
     await userEvent.click(screen.getByRole("switch"));
 
     const slider = await screen.findByLabelText(/revenue share percentage/i);
-    fireEvent.change(slider, { target: { value: "2500" } }); // 2500 bps = 25%
+    fireEvent.change(slider, { target: { value: "25" } }); // 25%
 
     expect(screen.getByText(/25\.00%/)).toBeInTheDocument();
-    expect(screen.getByText(/2500 bps/)).toBeInTheDocument();
   });
 
   it("hides revenue sharing section when switching away from Educational Startup", async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
     expect(screen.getByRole("switch")).toBeInTheDocument();
 
@@ -309,7 +402,7 @@ describe("CreateCampaignPage — submission", () => {
   beforeEach(() => setWalletConnected());
 
   it('opens review first and only submits after "Confirm & Sign"', async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await fillRequiredFields();
 
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
@@ -325,7 +418,7 @@ describe("CreateCampaignPage — submission", () => {
   });
 
   it("allows editing details and reopening review", async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await fillRequiredFields();
 
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
@@ -345,13 +438,13 @@ describe("CreateCampaignPage — submission", () => {
   });
 
   it("shows a consolidated review with local deadline preview details", async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await fillRequiredFields({ durationDays: "10" });
 
     await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
     await userEvent.click(screen.getByRole("switch", { name: /revenue sharing/i }));
     const slider = await screen.findByLabelText(/revenue share percentage/i);
-    fireEvent.change(slider, { target: { value: "500" } }); // 5%
+    fireEvent.change(slider, { target: { value: "5" } }); // 5%
 
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
 
@@ -373,7 +466,7 @@ describe("CreateCampaignPage — submission", () => {
   });
 
   it("calls createCampaign with correct args on valid submission", async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await fillRequiredFields();
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
     await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
@@ -402,16 +495,16 @@ describe("CreateCampaignPage — submission", () => {
   });
 
   it("passes revenue share basis points correctly", async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await fillRequiredFields();
 
     // Switch to Educational Startup and enable revenue sharing
     await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
     await userEvent.click(screen.getByRole("switch"));
 
-    // Move slider to 500 bps (5%)
+    // Move slider to 5%
     const slider = await screen.findByLabelText(/revenue share percentage/i);
-    fireEvent.change(slider, { target: { value: "500" } });
+    fireEvent.change(slider, { target: { value: "5" } });
 
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
     await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
@@ -426,13 +519,13 @@ describe("CreateCampaignPage — submission", () => {
 
   it("shows a success toast and redirects to the new campaign page", async () => {
     mockGetCampaignCount.mockResolvedValue(7);
-    render(<CreateCampaignPage />);
+    renderPage();
     await fillRequiredFields();
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
     await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
 
     await waitFor(() => {
-      expect(mockShowSuccess).toHaveBeenCalledWith("Campaign created successfully!");
+      expect(mockShowSuccess).toHaveBeenCalledWith(expect.stringContaining("created successfully"));
     });
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/causes/7");
@@ -441,7 +534,7 @@ describe("CreateCampaignPage — submission", () => {
 
   it("falls back to /causes redirect if getCampaignCount fails", async () => {
     mockGetCampaignCount.mockRejectedValue(new Error("rpc error"));
-    render(<CreateCampaignPage />);
+    renderPage();
     await fillRequiredFields();
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
     await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
@@ -453,15 +546,13 @@ describe("CreateCampaignPage — submission", () => {
 
   it("shows an error toast when createCampaign throws", async () => {
     mockCreateCampaign.mockRejectedValue(new Error("Error(Contract, #3)"));
-    render(<CreateCampaignPage />);
+    renderPage();
     await fillRequiredFields();
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
     await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
 
     await waitFor(() => {
-      expect(mockShowError).toHaveBeenCalledWith(
-        expect.stringMatching(/no longer accepting contributions/i),
-      );
+      expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("CampaignNotActive"));
     });
   });
 
@@ -474,7 +565,7 @@ describe("CreateCampaignPage — submission", () => {
         }),
     );
 
-    render(<CreateCampaignPage />);
+    renderPage();
     await fillRequiredFields();
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
     fireEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
@@ -487,7 +578,7 @@ describe("CreateCampaignPage — submission", () => {
   });
 
   it("navigates to /causes when Cancel is clicked", async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await userEvent.click(screen.getByRole("button", { name: /cancel/i }));
     expect(mockPush).toHaveBeenCalledWith("/causes");
   });
@@ -501,14 +592,60 @@ describe("CreateCampaignPage — character counters", () => {
   beforeEach(() => setWalletConnected());
 
   it("updates the title character counter as user types", async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await userEvent.type(screen.getByLabelText(/campaign title/i), "Hello");
     expect(screen.getByText("5/100")).toBeInTheDocument();
   });
 
   it("updates the description character counter as user types", async () => {
-    render(<CreateCampaignPage />);
+    renderPage();
     await userEvent.type(screen.getByLabelText(/description/i), "Test");
     expect(screen.getByText("4/1,000")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cover image upload
+// ---------------------------------------------------------------------------
+
+describe("CreateCampaignPage — cover image upload", () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    setWalletConnected();
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ url: "https://ipfs.io/ipfs/QmUploadedHash" }),
+    }) as typeof fetch;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it("renders an upload button for the cover image field", () => {
+    renderPage();
+    expect(screen.getByRole("button", { name: /coverImageUpload/i })).toBeInTheDocument();
+  });
+
+  it("uploads a selected image and populates the cover URL field", async () => {
+    renderPage();
+
+    const file = new File([new Uint8Array(512).fill(1)], "cover.png", { type: "image/png" });
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+
+    await userEvent.upload(fileInput, file);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/upload-image",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+
+    expect(
+      await screen.findByDisplayValue("https://ipfs.io/ipfs/QmUploadedHash"),
+    ).toBeInTheDocument();
+    expect(mockShowSuccess).toHaveBeenCalledWith("coverImageUploadSuccess");
   });
 });

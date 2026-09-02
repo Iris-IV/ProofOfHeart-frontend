@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations } from "next-intl/server";
+import { headers } from "next/headers";
+import { Inter } from "next/font/google";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
@@ -11,12 +13,19 @@ import { WalletProvider } from "@/components/WalletContext";
 import { DevMockPanel } from "@/components/DevMockPanel";
 import OnboardingTour from "@/components/OnboardingTour";
 import MaintenanceBypass from "@/components/MaintenanceBypass";
+import { PwaInstaller } from "@/components/PwaInstaller";
+import ThirdPartyScripts from "@/components/ThirdPartyScripts";
 import { routing } from "@/i18n/routing";
-import { absoluteUrl } from "@/lib/seo";
 import { getTextDirection } from "@/lib/direction";
 import { getThemeBlockingScript } from "@/lib/preferences";
-import type { Metadata } from "next";
+import { CSP_NONCE_HEADER } from "@/lib/csp";
 import "../globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 // #138 — Pre-render locale shells at build time so /en and /es appear in the
 // static-pages section of the build output instead of being dynamic routes.
@@ -24,42 +33,7 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://proofofheart.xyz"),
-  title: "ProofOfHeart",
-  description:
-    "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
-  alternates: {
-    languages: {
-      en: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://proofofheart.xyz"}/en`,
-      es: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://proofofheart.xyz"}/es`,
-      "x-default": `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://proofofheart.xyz"}/en`,
-    },
-  },
-  openGraph: {
-    type: "website",
-    siteName: "ProofOfHeart",
-    url: absoluteUrl(`/${routing.defaultLocale}`),
-    title: "ProofOfHeart",
-    description:
-      "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
-    images: [
-      {
-        url: "/proof-of-heart-logo.svg",
-        width: 512,
-        height: 512,
-        alt: "ProofOfHeart logo",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "ProofOfHeart",
-    description:
-      "A decentralized launchpad where the community validates causes and contributions are accounted for on-chain.",
-    images: ["/proof-of-heart-logo.svg"],
-  },
-};
+export { siteMetadata as metadata } from "@/lib/siteMetadata";
 
 export default async function RootLayout({
   children,
@@ -79,11 +53,35 @@ export default async function RootLayout({
   // side is the easiest way to get started
   const messages = await getMessages();
   const t = await getTranslations("Common");
+  const reqHeaders = await headers();
+  const nonce = reqHeaders.get(CSP_NONCE_HEADER) ?? "";
 
   return (
-    <html lang={locale} dir={getTextDirection(locale)} suppressHydrationWarning>
+    <html
+      lang={locale}
+      dir={getTextDirection(locale)}
+      className={inter.variable}
+      suppressHydrationWarning
+    >
       <head>
+        {/*
+          The only script that legitimately belongs in <head>. It is inline (no
+          network round-trip) and must run before first paint to apply the stored
+          theme without a flash of the wrong colours. Every third-party script is
+          loaded from <ThirdPartyScripts /> at the end of <body> instead (#657).
+
+          #569 — A per-request nonce is generated in middleware and attached here
+          so that `script-src` does not need `'unsafe-inline'`.
+
+          suppressHydrationWarning: the nonce only exists in the server-rendered
+          HTML (React deliberately omits `nonce` from the client hydration
+          tree), so hydration would otherwise warn about the attribute
+          mismatch. The attribute is left as-is in the DOM, which is what CSP
+          needs; nothing about the script's content ever changes.
+        */}
         <script
+          nonce={nonce}
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: getThemeBlockingScript(),
           }}
@@ -111,12 +109,14 @@ export default async function RootLayout({
                       <DevMockPanel />
                       <OnboardingTour />
                       <MaintenanceBypass />
+                      <PwaInstaller />
                     </div>
                   </WalletProvider>
                 </ToastProvider>
               </ErrorBoundary>
             </ThemeProvider>
           </QueryProvider>
+          <ThirdPartyScripts />
         </NextIntlClientProvider>
       </body>
     </html>

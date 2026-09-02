@@ -1,7 +1,11 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { usePlatformFee, DEFAULT_PLATFORM_FEE_BPS } from "@/hooks/usePlatformFee";
+import {
+  usePlatformFee,
+  DEFAULT_PLATFORM_FEE_BPS,
+  PLATFORM_FEE_QUERY_KEY,
+} from "@/hooks/usePlatformFee";
 
 jest.mock("@/lib/contractClient", () => ({
   getPlatformFee: jest.fn(),
@@ -78,5 +82,21 @@ describe("usePlatformFee", () => {
 
     expect(feeAmount).toBeCloseTo(3);
     expect(creatorNet).toBeCloseTo(97);
+  });
+
+  it("deduplicates concurrent calls using shared React Query cache key", async () => {
+    mockGetPlatformFee.mockResolvedValue(250);
+    const wrapper = createWrapper();
+
+    const { result: hook1 } = renderHook(() => usePlatformFee(), { wrapper });
+    const { result: hook2 } = renderHook(() => usePlatformFee(), { wrapper });
+
+    await waitFor(() => expect(hook1.current.isLoading).toBe(false));
+    await waitFor(() => expect(hook2.current.isLoading).toBe(false));
+
+    expect(hook1.current.platformFeeBps).toBe(250);
+    expect(hook2.current.platformFeeBps).toBe(250);
+    expect(mockGetPlatformFee).toHaveBeenCalledTimes(1);
+    expect(PLATFORM_FEE_QUERY_KEY).toEqual(["platformFee"]);
   });
 });

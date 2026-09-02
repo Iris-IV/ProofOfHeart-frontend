@@ -1,14 +1,27 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
+import { Search } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
-import CauseCard from "@/components/CauseCard";
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
+import { MapIcon, ListIcon } from "lucide-react";
 import { CauseCardSkeleton } from "@/components/Skeleton";
+import MapErrorBoundary from "@/components/MapErrorBoundary";
 import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
-import { useCampaigns } from "@/hooks/useCampaigns";
+import VirtualizedCauseGrid from "@/components/VirtualizedCauseGrid";
+import { useInfiniteCampaigns } from "@/hooks/useInfiniteCampaigns";
 import { useRouter } from "@/i18n/routing";
+
+const CampaignMap = dynamic(() => import("@/components/CampaignMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center min-h-[400px] rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700">
+      <div className="motion-safe:animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+    </div>
+  ),
+});
 import {
   cancelCampaign,
   claimRefund,
@@ -17,7 +30,6 @@ import {
   getApproveVotes,
   getRejectVotes,
 } from "@/lib/contractClient";
-import { CAUSES_PAGE_SIZE } from "@/lib/causesList";
 import { SORT_OPTIONS } from "@/lib/mockCauses";
 import { Campaign, Vote, CATEGORY_LABELS, CampaignStatus, Category } from "@/types";
 import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncAction";
@@ -46,6 +58,36 @@ function useDebounce<T>(value: T, delay: number): T {
   return debounced;
 }
 
+// Levenshtein distance for fuzzy matching — allows 1 typo per 4 chars of word length
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)),
+  );
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] =
+        a[i - 1] === b[j - 1]
+          ? dp[i - 1][j - 1]
+          : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+function fuzzyMatch(text: string, query: string): boolean {
+  if (text.includes(query)) return true;
+  const words = text.split(/\s+/);
+  const queryWords = query.split(/\s+/);
+  return queryWords.every((qw) =>
+    words.some((w) => {
+      const maxDist = Math.floor(w.length / 4);
+      return levenshtein(w, qw) <= maxDist;
+    }),
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main content (needs Suspense because it reads searchParams)
 // ---------------------------------------------------------------------------
@@ -60,6 +102,16 @@ function CausesContent() {
   const [status, setStatus] = useState(searchParams.get("status") ?? "all");
   const [sort, setSort] = useState(searchParams.get("sort") ?? "newest");
   const [tag, setTag] = useState(searchParams.get("tag") ?? "");
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
+
+  // Keep state in sync with URL parameters when navigating back / forward
+  useEffect(() => {
+    setRawSearch(searchParams.get("q") ?? "");
+    setCategory(searchParams.get("category") ?? "all");
+    setStatus(searchParams.get("status") ?? "all");
+    setSort(searchParams.get("sort") ?? "newest");
+    setTag(searchParams.get("tag") ?? "");
+  }, [searchParams]);
 
   const debouncedSearch = useDebounce(rawSearch, 300);
 
@@ -71,7 +123,15 @@ function CausesContent() {
     "failed",
   ];
 
-  const { campaigns: rawCampaigns, isLoading, error, refetch } = useCampaigns();
+  const {
+    campaigns: rawCampaigns,
+    isLoading,
+    error,
+    refetch,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useInfiniteCampaigns();
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [userVotes, setUserVotes] = useState<Record<string, Vote>>({});
@@ -79,9 +139,28 @@ function CausesContent() {
     Record<number, { upvotes: number; downvotes: number; totalVotes: number }>
   >({});
   const [isVotingFor, setIsVotingFor] = useState<number | null>(null);
-  const [visibleCount, setVisibleCount] = useState(CAUSES_PAGE_SIZE);
+  const [mounted, setMounted] = useState(false);
   const { publicKey: userWalletAddress } = useWallet();
   const { showError, showSuccess, showWarning } = useToast();
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const isFirstFilterRun = useRef(true);
+
+  // Set mounted after hydration to guard SSR-sensitive rendering
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Scroll back to the top of the results whenever a search/filter changes
+  // (issue #1107) — otherwise a shrunk result set can leave the page scrolled
+  // past its own content, and the visible page ends up "stuck" wherever the
+  // user last scrolled to under the previous filter.
+  useEffect(() => {
+    if (isFirstFilterRun.current) {
+      isFirstFilterRun.current = false;
+      return;
+    }
+    resultsRef.current?.scrollIntoView?.({ block: "start" });
+  }, [debouncedSearch, category, status, sort, tag]);
 
   // Mirror contract data into local state so optimistic updates work
   useEffect(() => {
@@ -90,15 +169,27 @@ function CausesContent() {
 
   // Sync URL query params whenever filters change
   useEffect(() => {
+    if (!mounted) return;
     const params = new URLSearchParams();
     if (debouncedSearch) params.set("q", debouncedSearch);
     if (category !== "all") params.set("category", category);
     if (status !== "all") params.set("status", status);
     if (sort !== "newest") params.set("sort", sort);
     if (tag) params.set("tag", tag);
+
     const qs = params.toString();
-    router.replace(qs ? `/causes?${qs}` : "/causes", { scroll: false });
-  }, [debouncedSearch, category, status, sort, tag, router]);
+    const currentQs = searchParams.toString();
+
+    // Check if the semantic query string changed to avoid infinite loops and aborted navigations
+    const newParams = new URLSearchParams(qs);
+    const currParams = new URLSearchParams(currentQs);
+    newParams.sort();
+    currParams.sort();
+
+    if (newParams.toString() !== currParams.toString()) {
+      router.replace(qs ? `/causes?${qs}` : "/causes", { scroll: false });
+    }
+  }, [debouncedSearch, category, status, sort, tag, router, mounted, searchParams]);
 
   // Load user votes whenever wallet or campaigns change
   const loadUserVotes = useCallback(async () => {
@@ -201,7 +292,7 @@ function CausesContent() {
           },
         );
         showSuccess(
-          `Your vote has been cast successfully. <a href="${explorerTxUrl(transactionHash)}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;">View on Explorer</a>`,
+          `Your vote has been cast successfully. <a href="${explorerTxUrl(transactionHash)}" target="_blank" rel="noopener noreferrer" style="color:var(--color-brand);text-decoration:underline;">View on Explorer</a>`,
         );
       } catch (error) {
         showError(getAsyncActionErrorMessage(error, parseContractError));
@@ -270,10 +361,10 @@ function CausesContent() {
       const q = debouncedSearch.toLowerCase();
       result = result.filter(
         (c) =>
-          c.title.toLowerCase().includes(q) ||
-          c.description.toLowerCase().includes(q) ||
-          (CATEGORY_LABELS[c.category] ?? "").toLowerCase().includes(q) ||
-          c.tags?.some((t) => t.toLowerCase().includes(q)),
+          fuzzyMatch(c.title.toLowerCase(), q) ||
+          fuzzyMatch(c.description.toLowerCase(), q) ||
+          fuzzyMatch((CATEGORY_LABELS[c.category] ?? "").toLowerCase(), q) ||
+          c.tags?.some((t) => fuzzyMatch(t.toLowerCase(), q)),
       );
     }
 
@@ -315,10 +406,10 @@ function CausesContent() {
       const q = debouncedSearch.toLowerCase();
       result = result.filter(
         (c) =>
-          c.title.toLowerCase().includes(q) ||
-          c.description.toLowerCase().includes(q) ||
-          (CATEGORY_LABELS[c.category] ?? "").toLowerCase().includes(q) ||
-          c.tags?.some((t) => t.toLowerCase().includes(q)),
+          fuzzyMatch(c.title.toLowerCase(), q) ||
+          fuzzyMatch(c.description.toLowerCase(), q) ||
+          fuzzyMatch((CATEGORY_LABELS[c.category] ?? "").toLowerCase(), q) ||
+          c.tags?.some((t) => fuzzyMatch(t.toLowerCase(), q)),
       );
     }
 
@@ -358,19 +449,14 @@ function CausesContent() {
     return result;
   }, [campaigns, debouncedSearch, category, status, sort, tag, voteCounts]);
 
-  useEffect(() => {
-    setVisibleCount(CAUSES_PAGE_SIZE);
-  }, [debouncedSearch, category, status, sort, tag]);
-
-  const visibleCampaigns = useMemo(
-    () => filteredCampaigns.slice(0, visibleCount),
-    [filteredCampaigns, visibleCount],
-  );
-
-  const hasMoreCampaigns = visibleCount < filteredCampaigns.length;
-
   const hasActiveFilters =
     debouncedSearch || category !== "all" || status !== "all" || sort !== "newest" || tag;
+
+  const suggestedCategories = CATEGORY_VALUES.filter(
+    (cat) => categoryCounts[cat] > 0 && String(cat) !== category,
+  )
+    .sort((a, b) => categoryCounts[b] - categoryCounts[a])
+    .slice(0, 3);
 
   const clearFilters = () => {
     setRawSearch("");
@@ -380,12 +466,64 @@ function CausesContent() {
     setTag("");
   };
 
+  const renderEmptyState = () => (
+    <div className="text-center py-20">
+      <div className="text-5xl mb-4">
+        {campaigns.length === 0 ? "📭" : debouncedSearch ? "🔍" : "🔎"}
+      </div>
+      <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
+        {campaigns.length === 0
+          ? t("noCausesYet")
+          : debouncedSearch
+            ? t("noSearchResults")
+            : t("noCausesFound")}
+      </h2>
+      <p className="text-zinc-600 dark:text-zinc-400 mb-6">
+        {campaigns.length === 0
+          ? t("beFirstToSubmit")
+          : debouncedSearch
+            ? t("tryDifferentSearch")
+            : t("tryDifferentKeyword")}
+      </p>
+      {campaigns.length > 0 && hasActiveFilters && suggestedCategories.length > 0 && (
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
+          <span className="text-sm text-zinc-500 dark:text-zinc-400">
+            Try one of these categories:
+          </span>
+          {suggestedCategories.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setCategory(String(cat))}
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600"
+            >
+              <span aria-hidden="true">
+                {CATEGORY_ICONS[cat]} {CATEGORY_LABELS[cat]}
+              </span>
+              <span aria-hidden="true" className="tabular-nums text-xs font-semibold px-1.5 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300">
+                {categoryCounts[cat]}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+      {campaigns.length > 0 && (
+        <button
+          onClick={clearFilters}
+          className="px-6 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
+        >
+          {t("clearAllFilters")}
+        </button>
+      )}
+    </div>
+  );
+
   // -------------------------------------------------------------------------
   // Render
   // -------------------------------------------------------------------------
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
+    <div className="min-h-full bg-linear-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
       <main className="container mx-auto px-4 py-8">
         {/* Page heading */}
         <div className="mb-6">
@@ -413,20 +551,10 @@ function CausesContent() {
         <div className="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4 mb-6 space-y-3">
           {/* Search */}
           <div className="relative" role="search">
-            <svg
+            <Search
               className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
               aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
+            />
             <input
               id="causes-search"
               type="search"
@@ -449,7 +577,7 @@ function CausesContent() {
           </div>
 
           {/* Category filter chips */}
-          {!isLoading && !error && (
+          {!isLoading && !error && mounted && (
             <div role="group" aria-label={t("labelCategory")} className="flex flex-wrap gap-2">
               {(["all", ...CATEGORY_VALUES] as CategoryFilter[]).map((cat) => {
                 const selected = isCategorySelected(cat);
@@ -497,10 +625,14 @@ function CausesContent() {
           {/* Filter row */}
           <div className="flex flex-wrap gap-3 items-center">
             <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 whitespace-nowrap w-16 sm:w-auto">
+              <label
+                htmlFor="causes-status-filter"
+                className="text-xs font-medium text-zinc-500 dark:text-zinc-400 whitespace-nowrap w-16 sm:w-auto"
+              >
                 {t("labelStatus")}
               </label>
               <select
+                id="causes-status-filter"
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
                 className="flex-1 sm:flex-none text-sm rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -514,10 +646,14 @@ function CausesContent() {
             </div>
 
             <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 whitespace-nowrap w-16 sm:w-auto">
+              <label
+                htmlFor="causes-sort-select"
+                className="text-xs font-medium text-zinc-500 dark:text-zinc-400 whitespace-nowrap w-16 sm:w-auto"
+              >
                 {t("labelSortBy")}
               </label>
               <select
+                id="causes-sort-select"
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
                 className="flex-1 sm:flex-none text-sm rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -541,6 +677,36 @@ function CausesContent() {
           </div>
         </div>
 
+        {/* View toggle */}
+        <div className="flex items-center justify-end mb-4 gap-1">
+          <button
+            type="button"
+            onClick={() => setViewMode("list")}
+            aria-pressed={viewMode === "list"}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              viewMode === "list"
+                ? "bg-blue-600 text-white"
+                : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600"
+            }`}
+          >
+            <ListIcon size={16} />
+            {t("listView")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("map")}
+            aria-pressed={viewMode === "map"}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              viewMode === "map"
+                ? "bg-blue-600 text-white"
+                : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600"
+            }`}
+          >
+            <MapIcon size={16} />
+            {t("mapView")}
+          </button>
+        </div>
+
         {/* Error state */}
         {error && (
           <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-6 mb-6 text-center">
@@ -555,7 +721,7 @@ function CausesContent() {
         )}
 
         {/* Loading state */}
-        {isLoading && (
+        {(!mounted || isLoading) && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <CauseCardSkeleton key={i} />
@@ -564,100 +730,63 @@ function CausesContent() {
         )}
 
         {/* Results */}
-        {!isLoading && !error && (
-          <>
-            <div
-              aria-live="polite"
-              aria-atomic="true"
-              className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 flex items-center gap-3"
-            >
-              <span>
-                {t(filteredCampaigns.length === 1 ? "causesFound_one" : "causesFound_other", {
-                  count: filteredCampaigns.length,
-                })}
-                {debouncedSearch && <span>{t("causesFoundFor", { query: debouncedSearch })}</span>}
-              </span>
-              {isVotingFor !== null && (
-                <span className="inline-flex items-center gap-1">
-                  <span className="inline-block motion-safe:animate-spin rounded-full h-3 w-3 border-b border-zinc-500" />
-                  {t("processingVote")}
-                </span>
-              )}
-            </div>
-
-            {filteredCampaigns.length > 0 ? (
+        {!isLoading && !error && mounted && (
+          <div ref={resultsRef}>
+            {/* List view */}
+            {viewMode === "list" && (
               <>
-                {filteredCampaigns.length > CAUSES_PAGE_SIZE && (
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
-                    {t("showingRange", {
-                      shown: visibleCampaigns.length,
-                      total: filteredCampaigns.length,
+                <div
+                  aria-live="polite"
+                  aria-atomic="true"
+                  className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 flex items-center gap-3"
+                >
+                  <span>
+                    {t(filteredCampaigns.length === 1 ? "causesFound_one" : "causesFound_other", {
+                      count: filteredCampaigns.length,
                     })}
-                  </p>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {visibleCampaigns.map((campaign) => (
-                    <CauseCard
-                      key={campaign.id}
-                      campaign={campaign}
-                      userWalletAddress={userWalletAddress}
-                      onVote={handleVote}
-                      onCancel={handleCancel}
-                      onClaimRefund={handleClaimRefund}
-                      onTagClick={handleTagClick}
-                      userVote={userVotes[campaign.id]}
-                      upvotes={voteCounts[campaign.id]?.upvotes ?? 0}
-                      downvotes={voteCounts[campaign.id]?.downvotes ?? 0}
-                      totalVotes={voteCounts[campaign.id]?.totalVotes ?? 0}
-                    />
-                  ))}
+                    {debouncedSearch && (
+                      <span>{t("causesFoundFor", { query: debouncedSearch })}</span>
+                    )}
+                  </span>
+                  {isVotingFor !== null && (
+                    <span className="inline-flex items-center gap-1">
+                      <span className="inline-block motion-safe:animate-spin rounded-full h-3 w-3 border-b border-zinc-500" />
+                      {t("processingVote")}
+                    </span>
+                  )}
                 </div>
-                {hasMoreCampaigns && (
-                  <div className="mt-8 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setVisibleCount((count) =>
-                          Math.min(count + CAUSES_PAGE_SIZE, filteredCampaigns.length),
-                        )
-                      }
-                      className="px-6 py-2.5 rounded-full text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                    >
-                      {t("loadMore")}
-                    </button>
-                  </div>
+
+                {filteredCampaigns.length > 0 ? (
+                  <VirtualizedCauseGrid
+                    campaigns={filteredCampaigns}
+                    userWalletAddress={userWalletAddress}
+                    onVote={handleVote}
+                    onCancel={handleCancel}
+                    onClaimRefund={handleClaimRefund}
+                    onTagClick={handleTagClick}
+                    userVotes={userVotes}
+                    voteCounts={voteCounts}
+                    hasNextPage={hasNextPage}
+                    isFetchingNextPage={isFetchingNextPage}
+                    onLoadMore={fetchNextPage}
+                  />
+                ) : (
+                  renderEmptyState()
                 )}
               </>
-            ) : (
-              <div className="text-center py-20">
-                <div className="text-5xl mb-4">
-                  {campaigns.length === 0 ? "📭" : debouncedSearch ? "🔍" : "🔎"}
-                </div>
-                <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-                  {campaigns.length === 0
-                    ? t("noCausesYet")
-                    : debouncedSearch
-                      ? t("noSearchResults")
-                      : t("noCausesFound")}
-                </h2>
-                <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-                  {campaigns.length === 0
-                    ? t("beFirstToSubmit")
-                    : debouncedSearch
-                      ? t("tryDifferentSearch")
-                      : t("tryDifferentKeyword")}
-                </p>
-                {campaigns.length > 0 && (
-                  <button
-                    onClick={clearFilters}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
-                  >
-                    {t("clearAllFilters")}
-                  </button>
-                )}
-              </div>
             )}
-          </>
+
+            {/* Map view */}
+            {viewMode === "map" && (
+              filteredCampaigns.length > 0 ? (
+                <MapErrorBoundary>
+                  <CampaignMap campaigns={filteredCampaigns} />
+                </MapErrorBoundary>
+              ) : (
+                renderEmptyState()
+              )
+            )}
+          </div>
         )}
       </main>
     </div>

@@ -15,6 +15,7 @@ export default function Footer() {
     { href: "/", label: t("home") },
     { href: "/causes", label: t("exploreCauses") },
     { href: "/about", label: t("about") },
+    { href: "/faq", label: t("faq") },
   ];
 
   return (
@@ -109,7 +110,7 @@ export default function Footer() {
 
         <div className="mt-10 flex flex-col gap-2 border-t border-black/5 pt-6 text-sm text-zinc-500 dark:border-white/10 dark:text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
           <p>{t("rights", { year })}</p>
-          <p className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
             <span>{t("builtWith")}</span>
             <div className="flex items-center gap-1.5">
               {process.env.NEXT_PUBLIC_APP_VERSION && (
@@ -137,7 +138,7 @@ export default function Footer() {
                 </span>
               )}
             </div>
-          </p>
+          </div>
         </div>
       </div>
     </footer>

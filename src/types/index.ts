@@ -61,6 +61,11 @@ export interface Milestone {
   description: string;
 }
 
+export interface SocialLinks {
+  twitter?: string;
+  linkedin?: string;
+  farcaster?: string;
+}
 export interface Campaign {
   id: number;
   creator: string;
@@ -81,6 +86,9 @@ export interface Campaign {
   tags?: string[];
   cover_image_url?: string;
   milestones?: Milestone[];
+  latitude?: number;
+  longitude?: number;
+  social_links?: SocialLinks;
 }
 
 // ---------------------------------------------------------------------------
@@ -198,6 +206,21 @@ export interface CommentPayload {
   campaignId: number;
   content: string;
   timestamp: number;
+}
+
+// ---------------------------------------------------------------------------
+// Donation context — consolidated from src/context/DonationContext.tsx (#1057)
+// ---------------------------------------------------------------------------
+
+import type { PendingDonation } from "../hooks/useDonationGracePeriod";
+
+export interface DonationContextType {
+  pendingDonations: PendingDonation[];
+  startGracePeriod: (
+    donation: Omit<PendingDonation, "id" | "timestamp" | "expiresAt">,
+  ) => PendingDonation;
+  cancelDonation: (id: string) => PendingDonation | undefined;
+  finalizeDonation: (id: string) => void;
 }
 
 // VotingResult is deprecated; use local state shape instead if needed

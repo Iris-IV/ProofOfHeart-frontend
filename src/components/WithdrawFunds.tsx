@@ -15,6 +15,7 @@ import {
   type TransactionLifecycleOptions,
 } from "../lib/contractClient";
 import { useWriteGuard } from "../hooks/useWriteGuard";
+import VerifiedIcon from "./icons/VerifiedIcon";
 
 interface WithdrawFundsProps {
   campaign: Campaign;
@@ -98,18 +99,7 @@ export default function WithdrawFunds({
     return (
       <div className="bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800 p-5">
         <div className="flex items-center gap-2 mb-3">
-          <svg
-            className="w-5 h-5 text-green-600 dark:text-green-400"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-            aria-hidden="true"
-          >
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-              clipRule="evenodd"
-            />
-          </svg>
+          <VerifiedIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
           <h3 className="text-sm font-semibold text-green-800 dark:text-green-200">
             {t("withdrawalSuccessful")}
           </h3>
@@ -124,7 +114,14 @@ export default function WithdrawFunds({
           </p>
           <p className="break-all">
             <span className="font-medium">{t("transaction")}</span>{" "}
-            <span className="font-mono text-xs">{txHash}</span>{" "}
+            <a
+              href={explorerTxUrl(txHash)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-xs text-blue-600 dark:text-blue-400 underline underline-offset-2 hover:text-blue-800 dark:hover:text-blue-300"
+            >
+              {txHash}
+            </a>{" "}
             <a
               href={explorerTxUrl(txHash)}
               target="_blank"

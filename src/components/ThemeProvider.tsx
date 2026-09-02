@@ -19,20 +19,28 @@ interface ThemeContextType {
 export const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const [theme, setThemeState] = useState<Theme>(() => resolveInitialTheme());
-  const [hasExplicitChoice, setHasExplicitChoice] = useState(() => hasStoredTheme());
+  const [theme, setThemeState] = useState<Theme>("light");
+  const [hasExplicitChoice, setHasExplicitChoice] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setThemeState(resolveInitialTheme());
+    setHasExplicitChoice(hasStoredTheme());
+    setMounted(true);
+  }, []);
 
   const useSafeLayoutEffect =
     typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
 
   useSafeLayoutEffect(() => {
+    if (!mounted) return;
     const root = window.document.documentElement;
     if (theme === "dark") {
       root.classList.add("dark");
     } else {
       root.classList.remove("dark");
     }
-  }, [theme]);
+  }, [theme, mounted]);
 
   useEffect(() => {
     if (hasExplicitChoice) {

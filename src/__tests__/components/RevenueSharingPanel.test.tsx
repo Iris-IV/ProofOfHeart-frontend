@@ -64,6 +64,10 @@ function mockWallet(publicKey: string | null) {
     isWalletConnected: !!publicKey,
     isLoading: false,
     walletNetworkWarning: null,
+    walletKind: publicKey ? "freighter" : null,
+    socialProfile: null,
+    isSocialLoginAvailable: false,
+    connectWithSocial: jest.fn(),
   });
 }
 

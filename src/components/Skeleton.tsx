@@ -6,6 +6,7 @@ interface SkeletonProps {
 export function Skeleton({ className = "" }: SkeletonProps) {
   return (
     <div
+      data-testid="skeleton"
       className={`motion-safe:animate-pulse rounded bg-zinc-200 dark:bg-zinc-700 ${className}`}
     />
   );

@@ -6,6 +6,19 @@ jest.mock("@/lib/campaignUpdates", () => ({
   verifyUpdateSignature: jest.fn().mockResolvedValue(true),
 }));
 
+// react-markdown ships ESM that this Jest setup does not transform, so the
+// renderer is stubbed the same way AppPageComponents.test.tsx does. Like
+// react-markdown, the stub renders its input as text and never as HTML — the
+// sanitize schema itself is covered by SafeMarkdown.test.tsx.
+jest.mock("@/components/SafeMarkdown", () => ({
+  __esModule: true,
+  default: ({ children, className }: { children: string; className?: string }) => (
+    <div data-testid="safe-markdown" className={className}>
+      {children}
+    </div>
+  ),
+}));
+
 const mockUpdate: CampaignUpdate = {
   id: "test-update-1",
   campaignId: 1,
@@ -19,6 +32,18 @@ describe("UpdateItem", () => {
   it("renders update content correctly", () => {
     render(<UpdateItem update={mockUpdate} />);
     expect(screen.getByText(mockUpdate.content)).toBeInTheDocument();
+  });
+
+  it("renders content through the sanitized markdown renderer", () => {
+    const markdownUpdate: CampaignUpdate = {
+      ...mockUpdate,
+      content:
+        "## Milestone reached\n\nWe hit **80%** of our goal — [details](https://example.org).",
+    };
+
+    render(<UpdateItem update={markdownUpdate} />);
+
+    expect(screen.getByTestId("safe-markdown")).toHaveTextContent("Milestone reached");
   });
 
   it("displays shortened author address", () => {

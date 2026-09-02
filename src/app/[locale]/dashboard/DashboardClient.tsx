@@ -1,17 +1,28 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import React, { useMemo, useState } from "react";
 import MyContributionsSection from "@/components/MyContributionsSection";
 import TransactionHistoryTab from "@/components/TransactionHistoryTab";
 import { Spinner, DashboardSkeleton } from "@/components/Skeleton";
+import CreatorDashboard from "@/components/CreatorDashboard";
 import { useWallet } from "@/components/WalletContext";
+import { Tabs, TabPanel, Card } from "@/components/ui";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { useStellarBalance } from "@/hooks/useStellarBalance";
 import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
 import { isSameAddress } from "@/lib/stellar";
-import { explorerTxUrl } from "@/utils/explorer";
+import { useEffect } from "react";
+import { scheduleExpiryChecks } from "@/lib/campaignExpiryNotifier";
+import { useToast } from "@/components/ToastProvider";
+
+// Pulls in the contract client and the proposal store; only creators with a
+// funded campaign ever open this tab, so keep it out of the dashboard bundle.
+const MultiSigWithdrawalPanel = dynamic(() => import("@/components/MultiSigWithdrawalPanel"), {
+  ssr: false,
+});
 
 type DashboardTab = "overview" | "history";
 
@@ -19,6 +30,16 @@ export default function DashboardPage() {
   const t = useTranslations("Dashboard");
   const { publicKey, isWalletConnected } = useWallet();
   const { campaigns, isLoading: campaignsLoading } = useCampaigns();
+  const { showWarning } = useToast();
+
+  useEffect(() => {
+    if (campaigns.length === 0 || !publicKey) return;
+    const creatorCampaigns = campaigns.filter((c) => isSameAddress(c.creator, publicKey));
+    if (creatorCampaigns.length === 0) return;
+    return scheduleExpiryChecks(creatorCampaigns, (c) => {
+      showWarning(`Campaign "${c.title}" expires in under 48 hours — consider extending the deadline.`);
+    });
+  }, [campaigns, publicKey, showWarning]);
   const {
     balance,
     isLoading: balanceLoading,
@@ -28,42 +49,23 @@ export default function DashboardPage() {
   const { savedIds } = useSavedCampaigns();
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
 
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "contributions" | "history" | "withdrawals" | "creator"
+  >("overview");
+
   const savedCampaigns = useMemo(
     () => campaigns.filter((c) => savedIds.includes(c.id)),
     [campaigns, savedIds],
   );
 
-  const mockVotes = useMemo(
-    () => [
-      {
-        campaignId: 1,
-        voter: publicKey,
-        voteType: "upvote",
-        timestamp: new Date("2024-02-01"),
-        transactionHash: "tx1",
-      },
-      {
-        campaignId: 2,
-        voter: publicKey,
-        voteType: "downvote",
-        timestamp: new Date("2024-02-10"),
-        transactionHash: "tx2",
-      },
-    ],
-    [publicKey],
-  );
-
-  const mockFunding = useMemo(
-    () => [
-      { campaignId: 3, amount: 100, timestamp: new Date("2024-02-15"), tx: "fund1" },
-      { campaignId: 1, amount: 50, timestamp: new Date("2024-02-20"), tx: "fund2" },
-    ],
-    [],
-  );
-
   const submittedCampaigns = useMemo(
     () => campaigns.filter((c) => isSameAddress(c.creator, publicKey)),
     [campaigns, publicKey],
+  );
+
+  const campaignTitleMap = useMemo(
+    () => Object.fromEntries(campaigns.map((c) => [c.id, c.title])),
+    [campaigns],
   );
 
   if (!isWalletConnected || !publicKey) {
@@ -93,7 +95,7 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-4xl mx-auto py-10 px-4">
-      <h1 className="text-3xl font-bold mb-8">{t("title")}</h1>
+      <h1 className="text-3xl font-bold mb-6">{t("title")}</h1>
 
       {/* Tab navigation */}
       <div

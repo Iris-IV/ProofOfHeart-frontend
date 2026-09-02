@@ -19,8 +19,18 @@ function countBy<T extends string>(items: T[]): Record<string, number> {
 
 export function ingestObservabilityEvent(event: ObservabilityEvent): void {
   events.push(event);
+  // Evict oldest if over cap (rolling window)
   if (events.length > MAX_EVENTS) {
     events.splice(0, events.length - MAX_EVENTS);
+  }
+  // TTL eviction: drop events older than 1 hour to prevent unbounded growth in long-running processes
+  const cutoff = Date.now() - 60 * 60 * 1000;
+  while (events.length > 0 && new Date(events[0].timestamp).getTime() < cutoff) {
+    events.shift();
+  }
+  // Hard cap at 1000 for memory safety (in addition to MAX_EVENTS)
+  if (events.length > 1000) {
+    events.splice(0, events.length - 1000);
   }
 }
 

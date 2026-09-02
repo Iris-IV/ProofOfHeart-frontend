@@ -10,12 +10,14 @@ const CONTRACT_ADDRESS =
 
 export type EventHandler = (event: StellarSdk.rpc.Api.EventResponse) => void;
 
+type PollRequestArgs = StellarSdk.rpc.Api.GetEventsRequest;
+
 class EventSubscriber {
   private server: StellarSdk.rpc.Server;
   private cursor: string | undefined;
   private isPolling = false;
   private handlers = new Map<string, EventHandler[]>();
-  private timeoutId: NodeJS.Timeout | null = null;
+  private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private backoffMs = 2000;
   private maxBackoffMs = 60000;
 
@@ -69,25 +71,28 @@ class EventSubscriber {
     if (!this.isPolling || !CONTRACT_ADDRESS) return;
 
     try {
-      const requestArgs: any = {
+      const baseArgs = {
         limit: 100,
         filters: [
           {
-            type: "contract",
+            type: "contract" as const,
             contractIds: [CONTRACT_ADDRESS],
           },
         ],
       };
 
+      let requestArgs: PollRequestArgs;
+
       if (this.cursor) {
-        requestArgs.pagination = { cursor: this.cursor };
+        requestArgs = { ...baseArgs, cursor: this.cursor };
       } else {
         // Fallback to getting latest ledger if no cursor
         try {
           const latestLedger = await this.server.getLatestLedger();
-          requestArgs.startLedger = latestLedger.sequence;
+          requestArgs = { ...baseArgs, startLedger: latestLedger.sequence };
         } catch (e) {
-          // If latest ledger fails, just don't pass startLedger and wait for next tick
+          // If latest ledger fails, wait for next tick with a default cursor
+          return;
         }
       }
 
@@ -119,7 +124,8 @@ class EventSubscriber {
             }
           }
 
-          this.cursor = (event as any).pagingToken || event.id;
+          this.cursor = (event as StellarSdk.rpc.Api.EventResponse & { pagingToken?: string })
+            .pagingToken || event.id;
           try {
             if (this.cursor) {
               localStorage.setItem(`soroban_cursor_${CONTRACT_ADDRESS}`, this.cursor);

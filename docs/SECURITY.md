@@ -183,6 +183,8 @@ Variables without `NEXT_PUBLIC_` prefix are only available on the server:
 ```env
 MAINNET_RPC_URL=https://mainnet.stellar.validationcloud.io/v1/<API_KEY>
 TESTNET_RPC_URL=https://soroban-testnet.stellar.org
+CREATOR_EMAIL_WEBHOOK_URL=
+OBSERVABILITY_WEBHOOK_URL=
 ```
 
 ### Best Practices
@@ -199,6 +201,8 @@ TESTNET_RPC_URL=https://soroban-testnet.stellar.org
 ### Security Considerations
 
 - **No private keys**: The frontend never handles private keys. All signing is done by the Freighter extension.
+- **Public key in sessionStorage**: The wallet public key is cached in `sessionStorage` (not `localStorage`) to avoid persistent browser fingerprinting. A one-time migration clears any legacy `localStorage` entry on page load (#1139).
+- **Social wallet keys in memory only**: The embedded social wallet (Web3Auth) derives keys on-the-fly and holds the signing keypair in a module-scoped variable. No code path writes a signing key to any browser storage API.
 - **User approval**: Every transaction requires explicit user approval in the Freighter UI.
 - **Network mismatch detection**: The app detects when Freighter is on the wrong network and warns the user.
 
@@ -252,6 +256,8 @@ The RPC proxy implements rate limiting (60 req/min per IP) to prevent abuse. In 
 - [x] Freighter CSP compatibility verified
 - [x] Error tracking PII scrubbing
 - [x] Scoped cache invalidation
+- [x] Wallet public key in sessionStorage (not localStorage) (#1139)
+- [x] Social wallet signing keys held in memory only
 
 ---
 

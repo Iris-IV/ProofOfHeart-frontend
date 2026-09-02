@@ -49,3 +49,6 @@ PR_DESCRIPTION_*.md
 .codex
 # bundle-size CI artefact
 bundle-size-summary.json
+# npm audit artefacts
+npm-audit-report.json
+npm-audit-temp.json

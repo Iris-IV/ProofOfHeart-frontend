@@ -1,0 +1,233 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { type WalletTransactionLogEntry } from "../lib/transactionLog";
+import { explorerTxUrl } from "../utils/explorer";
+import { useWalletTransactions } from "../hooks/useWalletTransactions";
+
+interface TransactionHistorySectionProps {
+  walletAddress: string;
+  /** Campaign titles keyed by campaign ID, used for display. */
+  campaignTitleMap: Record<number, string>;
+}
+
+function getActionLabel(action: WalletTransactionLogEntry["action"]): string {
+  switch (action) {
+    case "contribute":
+      return "Contribute";
+    case "claim_refund":
+      return "Claim Refund";
+    case "claim_revenue":
+      return "Claim Revenue";
+    case "claim_reserve":
+      return "Claim Reserve";
+    case "deposit_revenue":
+      return "Deposit Revenue";
+    case "withdraw":
+      return "Withdraw Funds";
+    case "vote":
+      return "Vote";
+    default:
+      return "Transaction";
+  }
+}
+
+function getActionColor(action: WalletTransactionLogEntry["action"]): string {
+  switch (action) {
+    case "contribute":
+      return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300";
+    case "claim_refund":
+      return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
+    case "claim_revenue":
+      return "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300";
+    case "claim_reserve":
+      return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300";
+    case "deposit_revenue":
+      return "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300";
+    case "withdraw":
+      return "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300";
+    case "vote":
+      return "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
+    default:
+      return "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400";
+  }
+}
+
+function formatTimestamp(ts: number): string {
+  return new Date(ts).toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export default function TransactionHistorySection({
+  walletAddress,
+  campaignTitleMap,
+}: TransactionHistorySectionProps) {
+  const [isMounted, setIsMounted] = useState(false);
+  const { transactions: entries, isLoading } = useWalletTransactions(walletAddress);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const [filterAction, setFilterAction] = useState<WalletTransactionLogEntry["action"] | "all">(
+    "all",
+  );
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 5;
+
+  const handleFilterChange = (opt: WalletTransactionLogEntry["action"] | "all") => {
+    setFilterAction(opt);
+    setCurrentPage(1);
+  };
+
+  const filtered = useMemo(() => {
+    if (filterAction === "all") return entries;
+    return entries.filter((e) => e.action === filterAction);
+  }, [entries, filterAction]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginated = useMemo(() => {
+    const start = (safeCurrentPage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, safeCurrentPage]);
+
+  if (!isMounted || isLoading) return null;
+
+  const actionOptions: Array<WalletTransactionLogEntry["action"] | "all"> = [
+    "all",
+    "contribute",
+    "withdraw",
+    "claim_refund",
+    "claim_revenue",
+    "claim_reserve",
+    "deposit_revenue",
+    "vote",
+  ];
+
+  return (
+    <section className="mb-8" aria-labelledby="tx-history-heading">
+      <h2 id="tx-history-heading" className="text-xl font-semibold mb-4">Transaction History</h2>
+
+      {entries.length === 0 ? (
+        <p className="text-zinc-500 dark:text-zinc-400">
+          No on-chain transactions recorded for this wallet yet.
+        </p>
+      ) : (
+        <>
+          {/* Filter bar */}
+          <div className="flex flex-wrap gap-2 mb-4" role="group" aria-label="Filter transactions">
+            {actionOptions.map((opt) => (
+              <button
+                key={opt}
+                onClick={() => handleFilterChange(opt)}
+                aria-pressed={filterAction === opt}
+                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                  filterAction === opt
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-600 hover:border-blue-400 dark:hover:border-blue-500"
+                }`}
+              >
+                {opt === "all" ? "All" : getActionLabel(opt)}
+              </button>
+            ))}
+          </div>
+
+          {filtered.length === 0 ? (
+            <p className="text-zinc-500 dark:text-zinc-400 text-sm">
+              No transactions match this filter.
+            </p>
+          ) : (
+            <>
+              <ul className="space-y-2" aria-label="Transaction history">
+                {paginated.map((entry) => {
+                  const campaignTitle =
+                    campaignTitleMap[entry.campaignId] ?? `Campaign #${entry.campaignId}`;
+                  return (
+                    <li
+                      key={`${entry.txHash}-${entry.timestamp}`}
+                      className="border border-zinc-200 dark:border-zinc-700 rounded-xl p-4 bg-white dark:bg-zinc-800"
+                    >
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap min-w-0">
+                          <span
+                            className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 ${getActionColor(entry.action)}`}
+                          >
+                            {getActionLabel(entry.action)}
+                          </span>
+                          <Link
+                            href={`/causes/${entry.campaignId}`}
+                            className="text-sm font-medium text-zinc-900 dark:text-zinc-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate max-w-[200px] sm:max-w-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800 rounded"
+                            title={campaignTitle}
+                          >
+                            {campaignTitle}
+                          </Link>
+                        </div>
+                        <time
+                          className="text-xs text-zinc-500 dark:text-zinc-400 shrink-0"
+                          dateTime={new Date(entry.timestamp).toISOString()}
+                        >
+                          {formatTimestamp(entry.timestamp)}
+                        </time>
+                      </div>
+
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="text-zinc-500 dark:text-zinc-400">Date: {formatTimestamp(entry.timestamp)}</span>
+                        <span className="text-zinc-400">·</span>
+                        <span className="text-zinc-500 dark:text-zinc-400">Type: {getActionLabel(entry.action)}</span>
+                        <span className="text-zinc-400">·</span>
+                        <span className="font-mono text-zinc-500 dark:text-zinc-400 truncate max-w-[140px] sm:max-w-[200px]" title={entry.txHash}>
+                          {entry.txHash.slice(0, 8)}…{entry.txHash.slice(-6)}
+                        </span>
+                        <a
+                          href={explorerTxUrl(entry.txHash)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`View transaction ${entry.txHash} for ${campaignTitle} on Stellar Explorer`}
+                          className="text-blue-600 dark:text-blue-400 hover:underline shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded px-1"
+                        >
+                          View on Explorer ↗
+                        </a>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {totalPages > 1 && (
+                <div className="mt-4 flex items-center justify-between text-xs text-zinc-500">
+                  <button
+                    type="button"
+                    disabled={safeCurrentPage <= 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    className="px-3 py-1 rounded border border-zinc-300 dark:border-zinc-700 disabled:opacity-40"
+                  >
+                    ← Previous
+                  </button>
+                  <span>
+                    Page {safeCurrentPage} of {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={safeCurrentPage >= totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    className="px-3 py-1 rounded border border-zinc-300 dark:border-zinc-700 disabled:opacity-40"
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </section>
+  );
+}

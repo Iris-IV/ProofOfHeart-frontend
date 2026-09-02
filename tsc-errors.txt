@@ -1,0 +1,5 @@
+﻿src/app/[locale]/causes/CausesClient.tsx(137,10): error TS2304: Cannot find name 'mounted'.
+src/app/[locale]/causes/CausesClient.tsx(157,61): error TS2304: Cannot find name 'mounted'.
+src/app/[locale]/causes/CausesClient.tsx(498,36): error TS2304: Cannot find name 'mounted'.
+src/app/[locale]/causes/CausesClient.tsx(634,12): error TS2304: Cannot find name 'mounted'.
+src/app/[locale]/causes/CausesClient.tsx(643,34): error TS2304: Cannot find name 'mounted'.

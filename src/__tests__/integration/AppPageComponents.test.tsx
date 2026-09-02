@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type React from "react";
@@ -10,7 +10,9 @@ import { Category, type Campaign } from "@/types";
 function withQueryClient(element: React.ReactElement) {
   return (
     <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false, queryFn: jest.fn() } } })
+      }
     >
       {element}
     </QueryClientProvider>
@@ -128,6 +130,7 @@ jest.mock("@/components/cancelCampaignModal", () => ({
 }));
 
 jest.mock("@/lib/contractClient", () => ({
+  getAllCampaigns: jest.fn(() => Promise.resolve([])),
   getAdmin: jest.fn(() => Promise.resolve(ADMIN)),
   getPlatformFee: jest.fn(() => Promise.resolve(300)),
   updateAdmin: jest.fn(),
@@ -143,6 +146,7 @@ jest.mock("@/lib/contractClient", () => ({
   verifyCampaignWithVotes: jest.fn(),
   getContribution: jest.fn(() => Promise.resolve(15_000_000n)),
   claimRefund: jest.fn(),
+  getAllCampaigns: jest.fn(() => Promise.resolve([])),
 }));
 
 jest.mock("@/lib/adminLog", () => ({
@@ -216,6 +220,24 @@ describe("app page components", () => {
 
     expect(screen.getByRole("heading", { name: "heroTitle" })).toBeInTheDocument();
     expect(mockConnectWallet).toHaveBeenCalledTimes(1);
+
+    await waitFor(() => {
+      expect(screen.getByText("statsRaised")).toBeInTheDocument();
+    });
+    expect(screen.getByText("statsCampaigns")).toBeInTheDocument();
+  });
+
+  it("shows a connecting state on the CTA while the wallet is connecting", () => {
+    mockUseWallet.mockReturnValue({
+      publicKey: null,
+      isWalletConnected: false,
+      connectWallet: mockConnectWallet,
+      isLoading: true,
+    });
+
+    render(withQueryClient(<HomeClient />));
+
+    expect(screen.getByRole("link", { name: /Connecting/i })).toBeInTheDocument();
   });
 
   it("renders the cause detail page with campaign data, voting, actions, and refund state", async () => {
@@ -237,11 +259,27 @@ describe("app page components", () => {
     expect(await screen.findByRole("button", { name: /claim refund/i })).toBeInTheDocument();
   });
 
+  it("renders the empty-description fallback when the campaign description is blank", async () => {
+    mockUseCampaign.mockReturnValue({
+      campaign: makeCampaign({ description: "" }),
+      amountRaised: makeCampaign({ description: "" }).amount_raised,
+      isLoading: false,
+      error: null,
+      refetch: jest.fn(),
+    });
+
+    render(withQueryClient(<CauseDetailClient id="101" />));
+
+    expect(await screen.findByRole("heading", { name: "Solar Classroom" })).toBeInTheDocument();
+    // Blank markdown shows the "noDescription" placeholder instead of a gap
+    expect(await screen.findByRole("status")).toHaveTextContent("noDescription");
+  });
+
   it("renders the admin dashboard queue and aggregate campaign stats for the admin wallet", async () => {
     render(withQueryClient(<AdminClient />));
 
     expect(await screen.findByText("title")).toBeInTheDocument();
-    expect(screen.getByText("Solar Classroom")).toBeInTheDocument();
+    expect(screen.getAllByText("Solar Classroom").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("totalCampaigns")).toBeInTheDocument();
     expect(screen.getByText("verificationQueue")).toBeInTheDocument();
   });
