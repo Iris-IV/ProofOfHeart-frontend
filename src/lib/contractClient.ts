@@ -313,7 +313,7 @@ async function buildAndSubmitTransaction(
     throw error;
   }
 
-  while (getResult.status === "NOT_FOUND" || (getResult.status as any) === "PENDING") {
+  while (getResult.status === "NOT_FOUND") {
     if (Date.now() - startedAt >= timeoutMs) {
       options?.onStatus?.({ phase: "failed", txHash, rpcStatus: getResult.status });
       recordObservabilityKind("confirmation_timeout", "Transaction confirmation timed out.", {
@@ -437,7 +437,7 @@ function decodeCampaign(val: xdr.ScVal): Campaign {
       const extData = JSON.parse(rawDescription.substring(extIndex + EXT_MARKER.length));
       cover_image_url = extData.coverImageUrl;
       if (extData.milestones && Array.isArray(extData.milestones)) {
-        milestones = extData.milestones.map((m: any) => ({
+        milestones = extData.milestones.map((m: { targetAmount: string | number; description: string }) => ({
           targetAmount: BigInt(m.targetAmount),
           description: m.description,
         }));

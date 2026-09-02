@@ -1,15 +1,22 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import CommentsList from "@/components/CommentsList";
+import { type Comment } from "@/types";
 
 // Mock CommentItem to isolate tests
 jest.mock("@/components/CommentItem", () => {
-  return function MockCommentItem({ comment, replies }: any) {
+  return function MockCommentItem({
+    comment,
+    replies,
+  }: {
+    comment: Comment;
+    replies?: Comment[];
+  }) {
     return (
       <div data-testid="comment-item">
         <span>{comment.content}</span>
         {replies &&
-          replies.map((r: any) => (
+          replies.map((r: Comment) => (
             <div key={r.id} data-testid="comment-reply">
               {r.content}
             </div>

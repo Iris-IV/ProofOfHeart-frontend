@@ -580,7 +580,7 @@ export default function AdminDashboard() {
                         <div className="flex md:flex-col items-center gap-3">
                           <Link
                             href={`/causes/${c.id}`}
-                            className="flex-1 md:w-full inline-flex items-center justify-center gap-2 px-6 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
+                            className="flex-1 md:w-full inline-flex items-center justify-center gap-2 px-6 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800"
                           >
                             {t("reviewDetails")}
                             <ExternalLink size={14} />
@@ -838,7 +838,7 @@ export default function AdminDashboard() {
                   <div className="flex items-center gap-2 shrink-0">
                     <Link
                       href={`/causes/${report.campaignId}`}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800"
                     >
                       {t("view")} <ExternalLink size={12} />
                     </Link>

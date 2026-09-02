@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { memo, useState } from "react";
+import LazyImage from "./LazyImage";
 import { Bookmark } from "lucide-react";
 import { useLocale } from "next-intl";
 import { formatAddress } from "@/lib/formatAddress";
@@ -120,7 +120,7 @@ function CauseCard({
       {/* ── Cover image ── */}
       <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-700">
         {campaign.cover_image_url ? (
-          <Image
+          <LazyImage
             src={campaign.cover_image_url}
             alt={campaign.title}
             fill

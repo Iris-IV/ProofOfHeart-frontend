@@ -452,6 +452,12 @@ function CausesContent() {
   const hasActiveFilters =
     debouncedSearch || category !== "all" || status !== "all" || sort !== "newest" || tag;
 
+  const suggestedCategories = CATEGORY_VALUES.filter(
+    (cat) => categoryCounts[cat] > 0 && String(cat) !== category,
+  )
+    .sort((a, b) => categoryCounts[b] - categoryCounts[a])
+    .slice(0, 3);
+
   const clearFilters = () => {
     setRawSearch("");
     setCategory("all");
@@ -459,6 +465,58 @@ function CausesContent() {
     setSort("newest");
     setTag("");
   };
+
+  const renderEmptyState = () => (
+    <div className="text-center py-20">
+      <div className="text-5xl mb-4">
+        {campaigns.length === 0 ? "📭" : debouncedSearch ? "🔍" : "🔎"}
+      </div>
+      <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
+        {campaigns.length === 0
+          ? t("noCausesYet")
+          : debouncedSearch
+            ? t("noSearchResults")
+            : t("noCausesFound")}
+      </h2>
+      <p className="text-zinc-600 dark:text-zinc-400 mb-6">
+        {campaigns.length === 0
+          ? t("beFirstToSubmit")
+          : debouncedSearch
+            ? t("tryDifferentSearch")
+            : t("tryDifferentKeyword")}
+      </p>
+      {campaigns.length > 0 && hasActiveFilters && suggestedCategories.length > 0 && (
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
+          <span className="text-sm text-zinc-500 dark:text-zinc-400">
+            Try one of these categories:
+          </span>
+          {suggestedCategories.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setCategory(String(cat))}
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600"
+            >
+              <span aria-hidden="true">
+                {CATEGORY_ICONS[cat]} {CATEGORY_LABELS[cat]}
+              </span>
+              <span aria-hidden="true" className="tabular-nums text-xs font-semibold px-1.5 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300">
+                {categoryCounts[cat]}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+      {campaigns.length > 0 && (
+        <button
+          onClick={clearFilters}
+          className="px-6 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
+        >
+          {t("clearAllFilters")}
+        </button>
+      )}
+    </div>
+  );
 
   // -------------------------------------------------------------------------
   // Render
@@ -713,42 +771,20 @@ function CausesContent() {
                     onLoadMore={fetchNextPage}
                   />
                 ) : (
-                  <div className="text-center py-20">
-                    <div className="text-5xl mb-4">
-                      {campaigns.length === 0 ? "📭" : debouncedSearch ? "🔍" : "🔎"}
-                    </div>
-                    <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-                      {campaigns.length === 0
-                        ? t("noCausesYet")
-                        : debouncedSearch
-                          ? t("noSearchResults")
-                          : t("noCausesFound")}
-                    </h2>
-                    <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-                      {campaigns.length === 0
-                        ? t("beFirstToSubmit")
-                        : debouncedSearch
-                          ? t("tryDifferentSearch")
-                          : t("tryDifferentKeyword")}
-                    </p>
-                    {campaigns.length > 0 && (
-                      <button
-                        onClick={clearFilters}
-                        className="px-6 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
-                      >
-                        {t("clearAllFilters")}
-                      </button>
-                    )}
-                  </div>
+                  renderEmptyState()
                 )}
               </>
             )}
 
             {/* Map view */}
             {viewMode === "map" && (
-              <MapErrorBoundary>
-                <CampaignMap campaigns={filteredCampaigns} />
-              </MapErrorBoundary>
+              filteredCampaigns.length > 0 ? (
+                <MapErrorBoundary>
+                  <CampaignMap campaigns={filteredCampaigns} />
+                </MapErrorBoundary>
+              ) : (
+                renderEmptyState()
+              )
             )}
           </div>
         )}

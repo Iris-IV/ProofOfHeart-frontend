@@ -179,7 +179,7 @@ export default function ProfileClient() {
               <Link
                 key={campaign.id}
                 href={`/causes/${campaign.id}`}
-                className="group rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 hover:border-red-200 dark:hover:border-red-900/40 hover:shadow-md transition-all"
+                className="group rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 hover:border-red-200 dark:hover:border-red-900/40 hover:shadow-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800"
               >
                 <p className="font-semibold text-zinc-900 dark:text-zinc-50 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors line-clamp-1">
                   {campaign.title}
@@ -210,7 +210,7 @@ export default function ProfileClient() {
                 <li key={campaign.id}>
                   <Link
                     href={`/causes/${campaign.id}`}
-                    className="group flex items-center justify-between gap-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 hover:border-red-200 dark:hover:border-red-900/40 hover:shadow-md transition-all"
+                    className="group flex items-center justify-between gap-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 hover:border-red-200 dark:hover:border-red-900/40 hover:shadow-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800"
                   >
                     <div className="min-w-0">
                       <p className="font-semibold text-zinc-900 dark:text-zinc-50 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors line-clamp-1">

@@ -165,7 +165,7 @@ export default function TransactionHistorySection({
                           <span className="text-xs text-zinc-500 dark:text-zinc-400">Cause:</span>
                           <Link
                             href={`/causes/${entry.campaignId}`}
-                            className="text-sm font-medium text-zinc-900 dark:text-zinc-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate max-w-[200px] sm:max-w-none"
+                            className="text-sm font-medium text-zinc-900 dark:text-zinc-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate max-w-[200px] sm:max-w-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800 rounded"
                             title={campaignTitle}
                           >
                             {campaignTitle}
