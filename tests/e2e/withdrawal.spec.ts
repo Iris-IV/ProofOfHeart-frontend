@@ -20,7 +20,7 @@ test.describe("Creator Withdrawal Flow E2E Test", () => {
     // Dismiss onboarding tour and pre-set connected wallet state
     await page.addInitScript(() => {
       localStorage.setItem("onboarding_tour_dismissed", "1");
-      localStorage.setItem(
+      sessionStorage.setItem(
         "stellar_wallet_public_key",
         "GCREATOR1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ123",
       );
@@ -44,7 +44,7 @@ test.describe("Creator Withdrawal Flow E2E Test", () => {
     // Step 4: Validate mock mode response and withdrawal UI readiness
     await page.evaluate(() => {
       return {
-        connected: localStorage.getItem("stellar_wallet_public_key") !== null,
+        connected: sessionStorage.getItem("stellar_wallet_public_key") !== null,
       };
     });
   });
