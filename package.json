@@ -82,7 +82,7 @@
     "hast-util-sanitize": "^5.0.2",
     "husky": "^9.1.7",
     "jest": "^30.5.0",
-    "jest-environment-jsdom": "^30.4.1",
+    "jest-environment-jsdom": "^30.5.1",
     "prettier": "^3.9.6",
     "storybook": "^8",
     "tailwindcss": "^4.3.3",
