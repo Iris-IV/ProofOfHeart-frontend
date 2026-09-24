@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, memo } from "react";
+import { useState, useEffect, useMemo, memo, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import Modal from "./ui/Modal";
 import { contribute, estimateContributeNetworkFee, getCampaign } from "../lib/contractClient";
@@ -72,6 +72,8 @@ function DonationModal({
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringInterval, setRecurringInterval] = useState<RecurringInterval>("monthly");
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
+
+  const amountInputRef = useRef<HTMLInputElement>(null);
 
   const [liveCampaign, setLiveCampaign] = useState<Campaign>(campaign);
 
@@ -296,6 +298,7 @@ function DonationModal({
       closeOnEscape={step !== "pending"}
       closeOnOverlayClick={step !== "pending"}
       ariaLabelledBy="donation-modal-title"
+      initialFocusRef={amountInputRef}
     >
       <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
         <h2
@@ -356,6 +359,7 @@ function DonationModal({
               </label>
               <div className="relative">
                 <input
+                  ref={amountInputRef}
                   id="donation-amount"
                   type="number"
                   min="0.0000001"
