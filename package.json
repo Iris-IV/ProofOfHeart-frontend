@@ -50,7 +50,8 @@
     "react-leaflet": "^5.0.0",
     "react-markdown": "^10.1.0",
     "rehype-sanitize": "^6.0.0",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.7.0",

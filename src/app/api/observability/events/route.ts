@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ingestObservabilityEvent } from "@/lib/observability/metricsStore";
-import type { ObservabilityEvent } from "@/lib/observability/types";
 import { createRateLimiter, rateLimitKeyFromRequest } from "@/lib/rateLimit";
+import { ObservabilityEventBodySchema } from "@/lib/schemas";
 
 const observabilityRateLimiter = createRateLimiter(60_000, 10);
 
@@ -30,16 +30,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "Too many requests. Please slow down." }, { status: 429 });
   }
 
-  let body: ObservabilityEvent;
+  let rawBody: unknown;
   try {
-    body = await req.json();
+    rawBody = await req.json();
   } catch {
     return NextResponse.json({ message: "Invalid JSON body" }, { status: 400 });
   }
 
-  if (!body?.timestamp || !body?.kind || !body?.category) {
-    return NextResponse.json({ message: "Missing required observability fields" }, { status: 400 });
+  const parsed = ObservabilityEventBodySchema.safeParse(rawBody);
+  if (!parsed.success) {
+    const firstIssue = parsed.error.issues[0];
+    return NextResponse.json(
+      { message: firstIssue?.message ?? "Invalid observability event" },
+      { status: 400 },
+    );
   }
+
+  const body = parsed.data;
 
   ingestObservabilityEvent({
     id: body.id ?? `srv-${Date.now()}`,
@@ -66,7 +73,10 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true }, { status: 202 });
 }
 
-async function forwardToWebhook(webhookUrl: string, event: ObservabilityEvent): Promise<void> {
+async function forwardToWebhook(
+  webhookUrl: string,
+  event: typeof ObservabilityEventBodySchema._type,
+): Promise<void> {
   try {
     const response = await fetch(webhookUrl, {
       method: "POST",

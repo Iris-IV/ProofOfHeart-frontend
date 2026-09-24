@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createRateLimiter, rateLimitKeyFromRequest } from "@/lib/rateLimit";
+import { EmailOptInBodySchema } from "@/lib/schemas";
 
 const emailOptInRateLimiter = createRateLimiter(60_000, 10);
-
-/** Matches the client-side email check in NewCauseClient. */
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Maximum accepted request body size (bytes). */
 const MAX_BODY_BYTES = 16 * 1024;
@@ -32,44 +30,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, message: "Webhook not configured" }, { status: 501 });
   }
 
-  let body: Record<string, unknown>;
+  let rawBody: unknown;
   try {
     const raw = await req.text();
     if (raw.length > MAX_BODY_BYTES) {
       return NextResponse.json({ ok: false, message: "Request body too large" }, { status: 400 });
     }
-    body = JSON.parse(raw);
+    rawBody = JSON.parse(raw);
   } catch {
     return NextResponse.json({ ok: false, message: "Invalid JSON body" }, { status: 400 });
   }
 
-  // body?. — JSON.parse("null") yields null; never dereference it directly.
-  const email = typeof body?.email === "string" ? body.email.trim() : "";
-  const campaignTitle = typeof body?.campaignTitle === "string" ? body.campaignTitle.trim() : "";
-
-  // Validate required fields
-  if (!email || !campaignTitle) {
+  const parsed = EmailOptInBodySchema.safeParse(rawBody);
+  if (!parsed.success) {
+    const firstIssue = parsed.error.issues[0];
     return NextResponse.json(
-      { ok: false, message: "Missing required fields: email, campaignTitle" },
+      { ok: false, message: firstIssue?.message ?? "Invalid request body" },
       { status: 400 },
     );
   }
 
-  // Basic email format check (matches client-side validation)
-  if (!EMAIL_RE.test(email)) {
-    return NextResponse.json({ ok: false, message: "Invalid email format" }, { status: 400 });
-  }
+  const { email, campaignTitle, timestamp } = parsed.data;
 
   try {
     const response = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...body,
+        ...(typeof rawBody === "object" && rawBody !== null ? rawBody : {}),
         email,
         campaignTitle,
         source: "proof_of_heart_frontend",
-        timestamp: body.timestamp ?? new Date().toISOString(),
+        timestamp: timestamp ?? new Date().toISOString(),
       }),
     });
 

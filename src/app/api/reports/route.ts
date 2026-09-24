@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { reportStore } from "@/lib/reportStore";
-import { CampaignReport, ReportReason, REPORT_REASON_LABELS } from "@/lib/campaignReports";
+import { CampaignReport } from "@/lib/campaignReports";
 import { createRateLimiter, rateLimitKeyFromRequest } from "@/lib/rateLimit";
-
-const VALID_REASONS = Object.keys(REPORT_REASON_LABELS) as ReportReason[];
+import { CreateReportBodySchema } from "@/lib/schemas";
 
 const reportRateLimiter = createRateLimiter(60_000, 3);
 
@@ -25,33 +24,23 @@ export async function GET(req: NextRequest) {
 
 // POST /api/reports — submit a new abuse report
 export async function POST(req: NextRequest) {
-  let body: {
-    campaignId?: number;
-    campaignTitle?: string;
-    reason?: string;
-    notes?: string;
-    reporterAddress?: string | null;
-  };
+  let rawBody: unknown;
   try {
-    body = await req.json();
+    rawBody = await req.json();
   } catch {
     return NextResponse.json({ message: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { campaignId, campaignTitle, reason, notes = "", reporterAddress = null } = body;
-
-  if (!campaignId || typeof campaignId !== "number") {
-    return NextResponse.json({ message: "campaignId is required" }, { status: 400 });
-  }
-  if (!campaignTitle || typeof campaignTitle !== "string") {
-    return NextResponse.json({ message: "campaignTitle is required" }, { status: 400 });
-  }
-  if (!reason || !VALID_REASONS.includes(reason as ReportReason)) {
+  const parsed = CreateReportBodySchema.safeParse(rawBody);
+  if (!parsed.success) {
+    const firstIssue = parsed.error.issues[0];
     return NextResponse.json(
-      { message: `reason must be one of: ${VALID_REASONS.join(", ")}` },
+      { message: firstIssue?.message ?? "Invalid request body" },
       { status: 400 },
     );
   }
+
+  const { campaignId, campaignTitle, reason, notes, reporterAddress } = parsed.data;
 
   // Rate limit: keyed by reporter address or IP
   const rateLimitKey = rateLimitKeyFromRequest(req, reporterAddress);
@@ -80,8 +69,8 @@ export async function POST(req: NextRequest) {
     id: `report-${campaignId}-${reportCounter}`,
     campaignId,
     campaignTitle,
-    reason: reason as ReportReason,
-    notes: typeof notes === "string" ? notes.slice(0, 1000) : "",
+    reason,
+    notes,
     reporterAddress: reporterAddress ?? null,
     timestamp: 1700000000000 + reportCounter * 1000,
     status: "pending",

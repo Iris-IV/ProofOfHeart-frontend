@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { reportStore } from "@/lib/reportStore";
+import { z } from "zod";
+
+const PatchReportBodySchema = z.object({
+  status: z.literal("reviewed"),
+});
 
 // PATCH /api/reports/[reportId]  — mark a report as reviewed (admin only)
 export async function PATCH(
@@ -8,14 +13,15 @@ export async function PATCH(
 ) {
   const { reportId } = await params;
 
-  let body: { status?: string };
+  let rawBody: unknown;
   try {
-    body = await req.json();
+    rawBody = await req.json();
   } catch {
     return NextResponse.json({ message: "Invalid JSON body" }, { status: 400 });
   }
 
-  if (body.status !== "reviewed") {
+  const parsed = PatchReportBodySchema.safeParse(rawBody);
+  if (!parsed.success) {
     return NextResponse.json({ message: "status must be 'reviewed'" }, { status: 400 });
   }
 

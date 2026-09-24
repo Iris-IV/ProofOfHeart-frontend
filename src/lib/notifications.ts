@@ -3,6 +3,7 @@
 import { getWalletTransactions, type WalletTransactionLogEntry } from "./transactionLog";
 import { normalizeAddress } from "./stellar";
 import { getArray, setArray } from "./localStorageStore";
+import { AppNotificationSchema, NotificationFeedResponseSchema, parseWithOrNull } from "./schemas";
 
 export type NotificationEventType =
   | "contribution_confirmed"
@@ -106,10 +107,26 @@ async function fetchRemoteNotifications(
       return null;
     }
 
-    const payload = (await response.json()) as NotificationFeedResponse | AppNotification[];
-    const notifications = Array.isArray(payload) ? payload : payload.notifications;
+    const raw: unknown = await response.json();
+
+    // Accept either `{ notifications: [...] }` or a bare array.
+    let notifications: AppNotification[];
+    if (Array.isArray(raw)) {
+      notifications = raw
+        .map((item) => parseWithOrNull(AppNotificationSchema, "AppNotificationSchema", item))
+        .filter((item): item is AppNotification => item !== null);
+    } else {
+      const feed = parseWithOrNull(
+        NotificationFeedResponseSchema,
+        "NotificationFeedResponseSchema",
+        raw,
+      );
+      if (!feed) return null;
+      notifications = feed.notifications;
+    }
+
     return notifications
-      .filter((item): item is AppNotification => Boolean(item && item.id && item.href))
+      .filter((item) => Boolean(item.id && item.href))
       .map((item) => ({
         ...item,
         read: Boolean(item.read),

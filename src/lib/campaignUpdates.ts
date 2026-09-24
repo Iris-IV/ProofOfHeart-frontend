@@ -6,6 +6,7 @@ import {
   requestOffchainJson,
   signOffchainPayload,
 } from "./offchainApiClient";
+import { CampaignUpdateSchema, parseWith } from "./schemas";
 
 // ---------------------------------------------------------------------------
 // Environment configuration
@@ -80,7 +81,8 @@ export async function getCampaignUpdates(campaignId: number): Promise<CampaignUp
   }
 
   try {
-    const updates = await requestOffchainJson<CampaignUpdate[]>(`/campaigns/${campaignId}/updates`);
+    const raw = await requestOffchainJson<unknown[]>(`/campaigns/${campaignId}/updates`);
+    const updates = raw.map((item) => parseWith(CampaignUpdateSchema, "CampaignUpdateSchema", item) as CampaignUpdate);
 
     // Sort by timestamp descending (newest first)
     return updates.sort((a: CampaignUpdate, b: CampaignUpdate) => b.timestamp - a.timestamp);
@@ -143,7 +145,7 @@ export async function createCampaignUpdate(
     // Sign the payload
     const signature = await signPayload(payload);
 
-    return await requestOffchainJson<CampaignUpdate>(`/campaigns/${campaignId}/updates`, {
+    const raw = await requestOffchainJson<unknown>(`/campaigns/${campaignId}/updates`, {
       method: "POST",
       auth: {
         purpose: "create_campaign_update",
@@ -165,6 +167,7 @@ export async function createCampaignUpdate(
         notify,
       },
     });
+    return parseWith(CampaignUpdateSchema, "CampaignUpdateSchema", raw) as CampaignUpdate;
   } catch (error) {
     throw new Error(`Failed to create campaign update: ${parseContractError(error)}`);
   }

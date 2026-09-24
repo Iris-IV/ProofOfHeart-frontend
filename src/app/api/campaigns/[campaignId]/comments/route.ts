@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { Comment } from "@/types";
 import { commentStore } from "@/lib/commentStore";
 import { createRateLimiter } from "@/lib/rateLimit";
+import { CreateCommentBodySchema } from "@/lib/schemas";
 
 const PAGE_SIZE = 20;
-const MAX_CONTENT_LENGTH = 2000;
 
 const commentRateLimiter = createRateLimiter(60_000, 5);
 
@@ -44,36 +44,23 @@ export async function POST(
     return NextResponse.json({ message: "Invalid campaign ID" }, { status: 400 });
   }
 
-  let body: {
-    content?: string;
-    authorAddress?: string;
-    timestamp?: number;
-    parentId?: string | null;
-    signature?: string;
-  };
+  let rawBody: unknown;
   try {
-    body = await req.json();
+    rawBody = await req.json();
   } catch {
     return NextResponse.json({ message: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { content, authorAddress, timestamp, parentId = null, signature } = body;
-
-  if (!content || typeof content !== "string" || content.trim().length === 0) {
-    return NextResponse.json({ message: "Content is required" }, { status: 400 });
-  }
-  if (content.length > MAX_CONTENT_LENGTH) {
+  const parsed = CreateCommentBodySchema.safeParse(rawBody);
+  if (!parsed.success) {
+    const firstIssue = parsed.error.issues[0];
     return NextResponse.json(
-      { message: `Content must be at most ${MAX_CONTENT_LENGTH} characters` },
+      { message: firstIssue?.message ?? "Invalid request body" },
       { status: 400 },
     );
   }
-  if (!authorAddress || typeof authorAddress !== "string") {
-    return NextResponse.json({ message: "Author address is required" }, { status: 400 });
-  }
-  if (!signature || typeof signature !== "string") {
-    return NextResponse.json({ message: "Signature is required" }, { status: 400 });
-  }
+
+  const { content, authorAddress, timestamp, parentId, signature } = parsed.data;
 
   const rateLimitKey = `${authorAddress}:${campaignId}`;
   if (!commentRateLimiter.check(rateLimitKey)) {

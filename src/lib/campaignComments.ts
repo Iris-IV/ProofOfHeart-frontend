@@ -7,6 +7,7 @@ import {
   signOffchainPayload,
 } from "./offchainApiClient";
 import type { CommentsPage } from "../hooks/useCampaignComments";
+import { CommentSchema, CommentsPageSchema, parseWith } from "./schemas";
 
 const USE_MOCKS = typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
@@ -90,9 +91,10 @@ export async function getCampaignComments(
   }
 
   try {
-    return await requestOffchainJson<CommentsPage>(
+    const raw = await requestOffchainJson<unknown>(
       `/campaigns/${campaignId}/comments?page=${page}&pageSize=${pageSize}`,
     );
+    return parseWith(CommentsPageSchema, "CommentsPageSchema", raw) as CommentsPage;
   } catch (error) {
     throw new Error(`Failed to fetch comments: ${parseContractError(error)}`);
   }
@@ -138,7 +140,7 @@ export async function createCampaignComment(
 
     const signature = await signPayload(payload);
 
-    return await requestOffchainJson<Comment>(`/campaigns/${campaignId}/comments`, {
+    const raw = await requestOffchainJson<unknown>(`/campaigns/${campaignId}/comments`, {
       method: "POST",
       auth: {
         purpose: "create_campaign_comment",
@@ -160,6 +162,7 @@ export async function createCampaignComment(
         signature,
       },
     });
+    return parseWith(CommentSchema, "CommentSchema", raw) as Comment;
   } catch (error) {
     throw new Error(`Failed to create comment: ${parseContractError(error)}`);
   }
@@ -182,7 +185,7 @@ export async function pinComment(
   }
 
   try {
-    return await requestOffchainJson<Comment>(
+    const raw = await requestOffchainJson<unknown>(
       `/campaigns/${campaignId}/comments/${commentId}/pin`,
       {
         method: "POST",
@@ -193,6 +196,7 @@ export async function pinComment(
         body: { isPinned },
       },
     );
+    return parseWith(CommentSchema, "CommentSchema", raw) as Comment;
   } catch (error) {
     throw new Error(`Failed to pin comment: ${parseContractError(error)}`);
   }
@@ -211,7 +215,7 @@ export async function reportComment(campaignId: number, commentId: string): Prom
   }
 
   try {
-    return await requestOffchainJson<Comment>(
+    const raw = await requestOffchainJson<unknown>(
       `/campaigns/${campaignId}/comments/${commentId}/report`,
       {
         method: "POST",
@@ -221,6 +225,7 @@ export async function reportComment(campaignId: number, commentId: string): Prom
         },
       },
     );
+    return parseWith(CommentSchema, "CommentSchema", raw) as Comment;
   } catch (error) {
     throw new Error(`Failed to report comment: ${parseContractError(error)}`);
   }
