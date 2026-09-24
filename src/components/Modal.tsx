@@ -3,4 +3,5 @@ import Modal from "./ui/Modal";
 
 const MemoizedModal = memo(Modal);
 
-export default MemoizedModal;(export t9pe { ModalProps } from "./ui/Modal";
+export default MemoizedModal;
+export type { ModalProps } from "./ui/Modal";
