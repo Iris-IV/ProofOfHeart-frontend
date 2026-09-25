@@ -97,7 +97,7 @@ export default function NotificationBell() {
             )}
           </div>
 
-          <ul className="max-h-80 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800">
+          <ul className="min-h-24 max-h-80 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800">
             {notifications.length === 0 ? (
               <li className="px-4 py-8 text-center text-sm text-zinc-400 dark:text-zinc-500">
                 {publicKey ? t("noNotifications") : t("connectWallet")}
