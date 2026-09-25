@@ -27,7 +27,7 @@ ProofOfHeart empowers everyday people to rally behind the causes they believe in
 | **Linting**    | [ESLint 9](https://eslint.org/)                |
 | **Runtime**    | Node.js (v22+)                                 |
 
-## 🏗 Architecture
+## 🏗  Architecture
 
 The project follows the standard **Next.js App Router** architecture:
 
