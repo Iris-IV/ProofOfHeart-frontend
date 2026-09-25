@@ -21,6 +21,14 @@ export default function Navbar() {
   const [mounted, setMounted] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuToggleButtonRef = useRef<HTMLButtonElement>(null);
+  const connectButtonRef = useRef<HTMLButtonElement>(null);
+
+  // #1214 — a rejected/closed Freighter prompt must hand focus back to the
+  // trigger so the retry is reachable with Tab/Enter only.
+  const handleConnect = async () => {
+    await connectWallet();
+    connectButtonRef.current?.focus();
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -221,7 +229,8 @@ export default function Navbar() {
             {!isWalletConnected ? (
               <button
                 type="button"
-                onClick={connectWallet}
+                ref={connectButtonRef}
+                onClick={handleConnect}
                 disabled={isLoading}
                 className="h-10 items-center justify-center rounded-full bg-linear-to-r from-red-500 to-pink-500 px-6 text-sm font-bold text-white transition-all hover:motion-safe:scale-105 hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-red-500/20"
               >
