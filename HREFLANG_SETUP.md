@@ -27,7 +27,7 @@ All 8 localized pages now include hreflang:
 7. ✅ Create Cause (`/causes/new`)
 8. ✅ Admin (`/admin`)
 
-### Documentation
+### Documentation.
 
 - **`docs/HREFLANG_ALTERNATES.md`** - Complete implementation guide
   - How hreflang works
