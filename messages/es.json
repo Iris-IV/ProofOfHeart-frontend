@@ -477,6 +477,7 @@
     "titleLabel": "Título",
     "descriptionLabel": "Descripción",
     "coverImageUrlLabel": "URL de la imagen de portada",
+    "coverImageUrlInvalid": "Introduce una URL de imagen http(s) valida.",
     "saveButton": "Guardar cambios",
     "lastEdited": "Última edición",
     "clearEdits": "Borrar cambios"

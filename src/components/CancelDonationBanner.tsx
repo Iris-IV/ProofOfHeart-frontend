@@ -2,25 +2,35 @@
 
 import React, { useState, useEffect } from "react";
 import { PendingDonation } from "../hooks/useDonationGracePeriod";
+import { isOffsetTrustworthy, nowWithOffset } from "../lib/serverTime";
 
 interface CancelDonationBannerProps {
   pendingDonations: PendingDonation[];
   onCancel: (id: string) => void;
   onFinalize?: (id: string) => void;
+  /**
+   * `serverTime - clientTime` in ms, as measured by `getServerTimeOffsetMs`.
+   * When absent or implausibly large we refuse to render a countdown rather
+   * than show a number derived from a clock we know is wrong (#1212).
+   */
+  serverOffsetMs?: number | null;
 }
 
 export function CancelDonationBanner({
   pendingDonations,
   onCancel,
   onFinalize,
+  serverOffsetMs = null,
 }: CancelDonationBannerProps) {
-  const [, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => nowWithOffset(serverOffsetMs));
+  const clockTrustworthy = isOffsetTrustworthy(serverOffsetMs);
 
   useEffect(() => {
     if (pendingDonations.length === 0) return;
-    const timer = setInterval(() => setNow(Date.now()), 500);
+    setNow(nowWithOffset(serverOffsetMs));
+    const timer = setInterval(() => setNow(nowWithOffset(serverOffsetMs)), 500);
     return () => clearInterval(timer);
-  }, [pendingDonations.length]);
+  }, [pendingDonations.length, serverOffsetMs]);
 
   if (pendingDonations.length === 0) return null;
 
@@ -31,7 +41,9 @@ export function CancelDonationBanner({
       className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-md w-full px-4"
     >
       {pendingDonations.map((donation) => {
-        const remainingSeconds = Math.max(0, Math.ceil((donation.expiresAt - Date.now()) / 1000));
+        const remainingSeconds = clockTrustworthy
+          ? Math.max(0, Math.ceil((donation.expiresAt - now) / 1000))
+          : null;
 
         return (
           <div
@@ -41,8 +53,15 @@ export function CancelDonationBanner({
             <div className="flex flex-col">
               <div className="flex items-center gap-2 font-semibold text-sm">
                 <span>Grace Period Active</span>
-                <span className="px-2 py-0.5 rounded-full text-xs font-mono bg-amber-500/20">
-                  {remainingSeconds}s
+                <span
+                  className="px-2 py-0.5 rounded-full text-xs font-mono bg-amber-500/20"
+                  title={
+                    clockTrustworthy
+                      ? "Time left in the on-chain grace period"
+                      : "Deadline unavailable: this device's clock could not be verified against the network"
+                  }
+                >
+                  {clockTrustworthy ? `${remainingSeconds}s` : "—"}
                 </span>
               </div>
               <p className="text-xs opacity-90">

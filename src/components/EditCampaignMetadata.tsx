@@ -18,6 +18,15 @@ interface MetaOverride {
   editedAt: string;
 }
 
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const { protocol } = new URL(value);
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export default function EditCampaignMetadata({
   campaignId,
   initialTitle,
@@ -33,6 +42,7 @@ export default function EditCampaignMetadata({
   const [description, setDescription] = useState(initialDescription);
   const [coverImageUrl, setCoverImageUrl] = useState(initialCoverImageUrl);
   const [override, setOverride] = useState<MetaOverride | null>(null);
+  const [coverImageError, setCoverImageError] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -50,10 +60,17 @@ export default function EditCampaignMetadata({
   }, [storageKey]);
 
   const handleSave = () => {
+    const cover = coverImageUrl.trim();
+    if (cover !== "" && !isValidHttpUrl(cover)) {
+      setCoverImageError(t("coverImageUrlInvalid"));
+      return;
+    }
+
+    setCoverImageError(null);
     const data: MetaOverride = {
       title,
       description,
-      coverImageUrl,
+      coverImageUrl: cover,
       editedAt: new Date().toISOString(),
     };
     try {
@@ -79,7 +96,10 @@ export default function EditCampaignMetadata({
   const savedTitle = override?.title ?? initialTitle;
   const savedDescription = override?.description ?? initialDescription;
   const savedCoverImageUrl = override?.coverImageUrl ?? initialCoverImageUrl;
-  const isDirty = title !== savedTitle || description !== savedDescription || coverImageUrl !== savedCoverImageUrl;
+  const isDirty =
+    title !== savedTitle ||
+    description !== savedDescription ||
+    coverImageUrl !== savedCoverImageUrl;
 
   const handleToggle = () => {
     if (open && isDirty) {
@@ -99,15 +119,15 @@ export default function EditCampaignMetadata({
 
   return (
     <div className="mt-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50">
-      <!-- Toggle header -->
+      {/* Toggle header */}
       <button
         type="button"
-        onClick=handleToggle
+        onClick={handleToggle}
         className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium texr-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700/50 rounded-xl transition-colors"
         aria-expanded={open}
       >
         <span className="flex items-center gap-2">
-          <!-- Pencil icon -->
+          {/* Pencil icon */}
           <svg
             width="14"
             height="14"
@@ -144,7 +164,7 @@ export default function EditCampaignMetadata({
             {t("note")}
           </p>
 
-          <!-- Title -->
+          {/* Title */}
           <div>
             <label
               htmlFor={`edit-meta-title-${campaignId}`}
@@ -162,7 +182,7 @@ export default function EditCampaignMetadata({
             />
           </div>
 
-          <!-- Description -->
+          {/* Description */}
           <div>
             <label
               htmlFor={`edit-meta-description-${campaignId}`}
@@ -179,7 +199,7 @@ export default function EditCampaignMetadata({
             />
           </div>
 
-          <!-- Cover image URL -->
+          {/* Cover image URL */}
           <div>
             <label
               htmlFor={`edit-meta-cover-${campaignId}`}
@@ -191,24 +211,38 @@ export default function EditCampaignMetadata({
               id={`edit-meta-cover-${campaignId}`}
               type="url"
               value={coverImageUrl}
-              onChange={(e) => setCoverImageUrl(e.target.value)}
+              onChange={(e) => {
+                setCoverImageUrl(e.target.value);
+                setCoverImageError(null);
+              }}
+              aria-invalid={coverImageError ? true : undefined}
+              aria-describedby={coverImageError ? `edit-meta-cover-error-${campaignId}` : undefined}
               className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-sm text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            {coverImageError && (
+              <p
+                id={`edit-meta-cover-error-${campaignId}`}
+                role="alert"
+                className="mt-1 text-xs text-red-600 dark:text-red-400"
+              >
+                {coverImageError}
+              </p>
+            )}
           </div>
 
           <button
             type="button"
-            onClick=handleSave
+            onClick={handleSave}
             className="self-start px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
           >
             {t("saveButton")}
           </button>
 
-          <!-- Audit trail -->
+          {/* Audit trail */}
           {override && (
             <div className="flex items-center justify-between rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-xs text-zinc-500 dark:text-zinc-400">
               <span>
-                {t("lastEdited")} {" "}
+                {t("lastEdited")}{" "}
                 <time dateTime={override.editedAt}>
                   {new Date(override.editedAt).toLocaleString()}
                 </time>
@@ -221,7 +255,7 @@ export default function EditCampaignMetadata({
                 {t("clearEdits")}
               </button>
             </div>
-          ))}
+          )}
         </div>
       )}
 
@@ -233,7 +267,10 @@ export default function EditCampaignMetadata({
           ariaLabelledBy="confirm-close-title"
         >
           <div className="p-6">
-            <h2 id="confirm-close-title" className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+            <h2
+              id="confirm-close-title"
+              className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+            >
               Unsaved changes
             </h2>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
@@ -249,7 +286,7 @@ export default function EditCampaignMetadata({
               </button>
               <button
                 type="button"
-                onClick=handleDiscard
+                onClick={handleDiscard}
                 className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
               >
                 Discard

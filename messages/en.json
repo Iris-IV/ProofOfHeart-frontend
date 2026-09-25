@@ -477,6 +477,7 @@
     "titleLabel": "Title",
     "descriptionLabel": "Description",
     "coverImageUrlLabel": "Cover Image URL",
+    "coverImageUrlInvalid": "Enter a valid http(s) image URL.",
     "saveButton": "Save changes",
     "lastEdited": "Last edited",
     "clearEdits": "Clear edits"
