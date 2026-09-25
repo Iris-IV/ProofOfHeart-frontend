@@ -9,7 +9,7 @@ ProofOfHeart empowers everyday people to rally behind the causes they believe in
 - **Vision**: A world where any meaningful cause can receive support without needing permission from a centralized authority.
 - **Mission**: To build an open, transparent launchpad that lets communities discover, validate, and fund causes through decentralized consensus — ensuring that every voice counts and every contribution is accounted for on-chain.
 
-## 🚀 Core Principles
+## 🚀  Core Principles
 
 - **Community First**: Causes are validated by the people, not by a corporate board.
 - **Radical Transparency**: Every decision and transaction lives on-chain for anyone to verify.
