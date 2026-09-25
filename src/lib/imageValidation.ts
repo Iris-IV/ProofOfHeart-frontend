@@ -39,6 +39,11 @@ export function validateImageDomain(url: string): { valid: boolean; error?: stri
   try {
     const urlObj = new URL(url);
 
+    // Inline payloads (data:/blob:) are never accepted for campaign covers
+    if (urlObj.protocol === "data:" || urlObj.protocol === "blob:") {
+      return { valid: false, error: "Data and blob URLs are not allowed" };
+    }
+
     // Must be HTTPS
     if (urlObj.protocol !== "https:") {
       return { valid: false, error: "Image URL must use HTTPS" };

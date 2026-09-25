@@ -119,6 +119,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   // session the moment it saw the extension reporting "not connected". A ref
   // rather than the state value because the poll closes over its first render.
   const isSocialSessionRef = useRef(false);
+  const connectInFlightRef = useRef(false);
   const appNetworkPassphrase = process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE || "";
   const appNetworkLabel = appNetworkPassphrase.includes("Public Global")
     ? "Mainnet"
@@ -308,6 +309,8 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const connectWallet = async () => {
+    if (connectInFlightRef.current) return;
+    connectInFlightRef.current = true;
     setIsLoading(true);
     try {
       if (IS_MOCK_MODE) {
@@ -376,6 +379,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         showError("Failed to connect wallet. Please try again.");
       }
     } finally {
+      connectInFlightRef.current = false;
       setIsLoading(false);
     }
   };
