@@ -1,28 +1,54 @@
-# Security Policy
+# Security Vulnerability Disclosure Policy
 
-## Supported Versions
+This document outlines the process for reporting security vulnerabilities in **ProofOfHeart-frontend**, including response timelines and bounty rewards.
 
-Currently, the latest release on the `main` branch is supported with security updates.
+## Disclosure Process
 
-## Reporting a Vulnerability
+1. **Reporting**: Submit issues to `security@proofofheart.irisiv.org` with:
+   - Proof-of-concept (PoC) code (TypeScript/Node.js preferred)
+   - Steps to reproduce
+   - Affected versions (`package.json` snapshot)
 
-We take the security of ProofOfHeart seriously. If you discover a security vulnerability within the ProofOfHeart frontend or contract integration, please do not disclose it publicly. Instead, please report it privately via our responsible disclosure process.
+2. **Triage**: Response within **72 hours** (excluding weekends/holidays).
 
-### Contact Information
+3. **Resolution**: Fixes prioritized by severity. Public disclosure after patch release.
 
-Please send an email to security@proofofheart.org (or the core maintainers' contact) to report any security vulnerabilities.
+## Response Timeline
 
-### Scope
+| Severity       | SLA (Max)       |
+|----------------|----------------|
+| Low            | 30 days         |
+| Medium         | 14 days         |
+| High/Critical  | 7 days          |
 
-- Soroban contract integrations and transaction building
-- Authentication, signature generation, and wallet integrations
-- Malicious payload execution (XSS, Injection)
-- Business logic bypasses
+## Bounty Tiers
 
-### Disclosure Timeline
+Rewards (in **USDC**) are paid after patch release and public disclosure.
 
-1. We will acknowledge receipt of your vulnerability report within 48 hours.
-2. We will send you regular updates about our progress in addressing the issue.
-3. We ask that you maintain confidentiality until we have patched the vulnerability and published a fix.
+| Severity       | Bounty Range   |
+|----------------|----------------|
+| Low            | $100–$500       |
+| Medium         | $500–$2,000     |
+| High           | $2,000–$5,000   |
+| Critical       | $5,000+         |
 
-Thank you for helping keep ProofOfHeart secure!
+### Example: Secure Dependency Update
+```typescript
+// Before (vulnerable)
+const axios = require('axios');
+
+// After (patched + audit)
+import axios from 'axios';
+axios.defaults.validateStatus = (status) => status < 500;
+// Run: npm audit fix --force
+```
+
+## Reporting Guidelines
+
+1. **Do not** disclose vulnerabilities publicly before coordination.
+2. **Include** reproducible steps and environment details (`node -v`, `npm -v`).
+3. **Use** encrypted channels for sensitive data.
+
+## Compliance
+
+This policy aligns with [GitHub’s Security Advisory Guidelines](https://docs.github.com/en/code-security/security-advisories) and [OWASP Top 10](https://owasp.org/www-project-top-ten/).
