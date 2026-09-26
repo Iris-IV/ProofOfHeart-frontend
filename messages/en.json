@@ -691,5 +691,9 @@
     "positiveAmountWarning": "Cap must be a positive amount.",
     "capSetSuccess": "Personal cap set to {amount} XLM.",
     "capRemovedSuccess": "Personal cap removed."
+  },
+  "Pagination": {
+    "goToPrevious": "Go to previous page",
+    "goToNext": "Go to next page"
   }
 }

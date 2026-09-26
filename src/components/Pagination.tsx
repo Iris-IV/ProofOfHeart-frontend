@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
@@ -26,6 +28,7 @@ export default function Pagination({
   nextLabel = "Next →",
   className = "",
 }: PaginationProps) {
+  const t = useTranslations("Pagination");
   const isFirst = currentPage <= 1;
   const isLast = currentPage >= totalPages;
 
@@ -37,7 +40,7 @@ export default function Pagination({
         type="button"
         onClick={onPrev}
         disabled={isFirst}
-        aria-label="Go to previous page"
+        aria-label={t("goToPrevious")}
         className="px-4 py-2 text-sm font-medium rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {prevLabel}
@@ -51,7 +54,7 @@ export default function Pagination({
         type="button"
         onClick={onNext}
         disabled={isLast}
-        aria-label="Go to next page"
+        aria-label={t("goToNext")}
         className="px-4 py-2 text-sm font-medium rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {nextLabel}
