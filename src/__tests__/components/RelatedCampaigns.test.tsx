@@ -189,4 +189,19 @@ describe("RelatedCampaigns component", () => {
     expect(screen.getByText("Cause 2")).toBeInTheDocument();
     expect(screen.queryByText("Cause 3")).not.toBeInTheDocument();
   });
+
+  it("excludes the current campaign and renders nothing when too few related exist", () => {
+    mockUseCampaigns.mockReturnValue({ campaigns: [], isLoading: false });
+    const { container } = render(
+      <RelatedCampaigns
+        currentCampaignId={1}
+        category={Category.Learner}
+        userWalletAddress={null}
+        onVote={jest.fn()}
+        onCancel={jest.fn()}
+        onClaimRefund={jest.fn()}
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
 });

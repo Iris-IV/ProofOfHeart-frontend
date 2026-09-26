@@ -118,4 +118,10 @@ describe("exportCsv utility", () => {
       expect(mockRevokeObjectURL).toHaveBeenCalledWith("blob:http://localhost/mock-blob");
     });
   });
+
+  it("emits only the header row for an empty rows array", () => {
+    expect(generateContributionHistoryCsv([])).toBe(
+      "Campaign,Amount (XLM),Status,Transaction Hash,Date",
+    );
+  });
 });
