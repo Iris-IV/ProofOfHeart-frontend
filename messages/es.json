@@ -691,5 +691,9 @@
     "positiveAmountWarning": "El límite debe ser una cantidad positiva.",
     "capSetSuccess": "Límite personal establecido en {amount} XLM.",
     "capRemovedSuccess": "Límite personal eliminado."
+  },
+  "Pagination": {
+    "goToPrevious": "Ir a la página anterior",
+    "goToNext": "Ir a la página siguiente"
   }
 }
