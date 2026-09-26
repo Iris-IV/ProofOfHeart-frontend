@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CausesClient from "@/app/[locale]/causes/CausesClient";
+import { SORT_OPTIONS } from "@/lib/mockCauses";
 import { Category, type Campaign } from "@/types";
 
 const mockReplace = jest.fn();
@@ -95,11 +96,19 @@ describe("Causes filters URL sync", () => {
     jest.useRealTimers();
   });
 
-  it("associates the status and sort selects with their labels (issue #676)", async () => {
+  it("associates the status filter and sort group with their labels (issue #676)", async () => {
     render(<CausesClient />);
 
     expect(screen.getByLabelText("labelStatus")).toBeInTheDocument();
-    expect(screen.getByLabelText("labelSortBy")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "labelSortBy" })).toBeInTheDocument();
+  });
+
+  it("exposes every sort option as a visible button (issue #1164)", () => {
+    render(<CausesClient />);
+
+    SORT_OPTIONS.forEach((option) => {
+      expect(screen.getByRole("button", { name: option.label })).toBeInTheDocument();
+    });
   });
 
   it("syncs category, status, sort and search to URL", async () => {
@@ -108,10 +117,10 @@ describe("Causes filters URL sync", () => {
       render(<CausesClient />);
     });
 
-    const [statusSelect, sortSelect] = screen.getAllByRole("combobox");
+    const statusSelect = screen.getByRole("combobox");
     await user.click(screen.getByRole("button", { name: "Learner, 1 causes" }));
     await user.selectOptions(statusSelect, "active");
-    await user.selectOptions(sortSelect, "oldest");
+    await user.click(screen.getByRole("button", { name: "Oldest First" }));
     await user.type(screen.getByPlaceholderText("searchPlaceholder"), "science");
 
     act(() => {
@@ -134,7 +143,7 @@ describe("Causes filters URL sync", () => {
     await act(async () => {
       render(<CausesClient />);
     });
-    const [statusSelect, sortSelect] = screen.getAllByRole("combobox");
+    const statusSelect = screen.getByRole("combobox");
 
     expect(await screen.findByDisplayValue("astro")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Educator, 0 causes, selected" })).toHaveAttribute(
@@ -142,7 +151,10 @@ describe("Causes filters URL sync", () => {
       "true",
     );
     expect(statusSelect).toHaveValue("funded");
-    expect(sortSelect).toHaveValue("most_funded");
+    expect(screen.getByRole("button", { name: "Most Funded" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
   it("shows live category counts on filter chips", async () => {
