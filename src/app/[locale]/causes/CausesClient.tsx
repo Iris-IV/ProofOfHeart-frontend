@@ -663,25 +663,37 @@ function CausesContent() {
               </select>
             </div>
 
-            <div className="flex items-center gap-2">
-              <label
-                htmlFor="causes-sort-select"
-                className="text-xs font-medium text-zinc-500 dark:text-zinc-400 whitespace-nowrap w-16 sm:w-auto"
+            <div className="flex items-center gap-2 flex-wrap">
+              <span
+                id="causes-sort-label"
+                className="text-xs font-medium text-zinc-500 dark:text-zinc-400 whitespace-nowrap"
               >
                 {t("labelSortBy")}
-              </label>
-              <select
-                id="causes-sort-select"
-                value={sort}
-                onChange={(e) => setSort(e.target.value)}
-                className="flex-1 sm:flex-none text-sm rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              </span>
+              <div
+                role="group"
+                aria-labelledby="causes-sort-label"
+                className="flex flex-wrap gap-1.5"
               >
-                {SORT_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+                {SORT_OPTIONS.map((o) => {
+                  const selected = sort === o.value;
+                  return (
+                    <button
+                      key={o.value}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setSort(o.value)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800 ${
+                        selected
+                          ? "bg-blue-600 text-white"
+                          : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600"
+                      }`}
+                    >
+                      {o.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {hasActiveFilters && (
