@@ -9,6 +9,10 @@ export type MockScenario =
   | "cancelled"
   | "failed"
   | "empty"
+  | "paused"
+  | "goal_completed"
+  | "near_deadline"
+  | "empty_state"
   | "error";
 
 /**

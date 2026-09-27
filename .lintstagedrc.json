@@ -1,4 +1,8 @@
 {
-  "*.{ts,tsx,js,jsx}": ["prettier --write", "eslint --fix --max-warnings=0", "node scripts/lint-staged-typecheck.mjs"],
-  "*.{json,css,md}": ["prettier --write"]
+  "*.{ts,tsx,js,jsx}": [
+    "prettier --write --cache",
+    "eslint --fix --max-warnings=0 --cache",
+    "node scripts/lint-staged-typecheck.mjs"
+  ],
+  "*.{json,css,md}": ["prettier --write --cache"]
 }
