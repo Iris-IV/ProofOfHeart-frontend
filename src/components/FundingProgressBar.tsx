@@ -63,6 +63,9 @@ export default function FundingProgressBar({
 
   return (
     <div>
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {fundingValueText}
+      </div>
       <div className="flex justify-between text-xs text-zinc-600 dark:text-zinc-400 mb-1">
         <span id={fundingLabelId} className="font-medium">
           {roundedPct}% funded
