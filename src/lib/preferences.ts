@@ -88,3 +88,17 @@ export function readStoredLocale(): string | null {
 export function getThemeBlockingScript(): string {
   return `(function(){try{var stored=localStorage.getItem('${THEME_STORAGE_KEY}');var isDark=stored==='dark'||(!stored&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(isDark){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){}})();`;
 }
+
+/** Minimum touch target size in pixels compliant with WCAG 2.1 Success Criterion 2.5.5 / 2.5.8 */
+export const MIN_TOUCH_TARGET_SIZE_PX = 44;
+
+export function isAccessibleTouchTarget(width: number, height: number): boolean {
+  return width >= MIN_TOUCH_TARGET_SIZE_PX && height >= MIN_TOUCH_TARGET_SIZE_PX;
+}
+
+export function getTouchTargetStyles(): { minWidth: string; minHeight: string } {
+  return {
+    minWidth: `${MIN_TOUCH_TARGET_SIZE_PX}px`,
+    minHeight: `${MIN_TOUCH_TARGET_SIZE_PX}px`,
+  };
+}

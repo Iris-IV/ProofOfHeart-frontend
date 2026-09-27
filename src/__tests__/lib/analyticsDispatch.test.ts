@@ -120,4 +120,28 @@ describe("analytics event dispatch", () => {
 
     expect(plausible).not.toHaveBeenCalled();
   });
+
+  it("collects and dispatches Web Vitals metrics correctly", () => {
+    const analytics = loadAnalytics(PLAUSIBLE_ENV);
+    const plausible = jest.fn();
+    window.plausible = plausible;
+
+    analytics.trackWebVital({
+      name: "LCP",
+      value: 1200,
+      rating: "good",
+      id: "v3-12345",
+      navigationType: "navigate",
+    });
+
+    expect(plausible).toHaveBeenCalledWith("web_vitals", {
+      props: expect.objectContaining({
+        metric: "LCP",
+        value: 1200,
+        rating: "good",
+        metricId: "v3-12345",
+        navigationType: "navigate",
+      }),
+    });
+  });
 });

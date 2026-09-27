@@ -243,3 +243,25 @@ export function optInToAnalytics(): void {
 export function hasOptedOutOfAnalytics(): boolean {
   return getItem<string>("analytics_opt_out") === "true";
 }
+
+export interface WebVitalMetric {
+  name: "CLS" | "FCP" | "FID" | "INP" | "LCP" | "TTFB";
+  value: number;
+  rating?: "good" | "needs-improvement" | "poor";
+  id?: string;
+  navigationType?: string;
+}
+
+/**
+ * Tracks Web Vitals performance metrics (LCP, FID, CLS, INP, etc.)
+ */
+export function trackWebVital(metric: WebVitalMetric): void {
+  sendAnalyticsEvent("web_vitals", {
+    metric: metric.name,
+    value: metric.value,
+    rating: metric.rating ?? (metric.value <= 2500 ? "good" : "poor"),
+    metricId: metric.id,
+    navigationType: metric.navigationType,
+    timestamp: Date.now(),
+  });
+}

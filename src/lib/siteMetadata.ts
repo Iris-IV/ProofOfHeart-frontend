@@ -23,6 +23,7 @@ export const siteMetadata: Metadata = {
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
   alternates: {
+    canonical: `${SITE_URL}/en`,
     languages: {
       en: `${SITE_URL}/en`,
       es: `${SITE_URL}/es`,
@@ -65,3 +66,8 @@ export const siteMetadata: Metadata = {
     description: SITE_DESCRIPTION,
   },
 };
+
+export function getCanonicalUrl(path = "", locale = "en"): string {
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return `${SITE_URL}/${locale}${cleanPath === "/" ? "" : cleanPath}`;
+}
