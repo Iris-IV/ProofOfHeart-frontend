@@ -283,7 +283,7 @@ describe("validateForm", () => {
     expect(errors.coverImageUrl).toBe("validationCoverImageInvalid");
   });
 
-  it("accepts valid https cover image URL", () => {
+  it("accepts valid https cover image URL with valid alt text", () => {
     const errors = validateForm(
       valid.title,
       valid.description,
@@ -294,8 +294,10 @@ describe("validateForm", () => {
       valid.hasRevenueSharing,
       valid.revenueSharePercentage,
       "https://example.com/image.jpg",
+      "A clean solar panel installation in rural community",
     );
     expect(errors.coverImageUrl).toBeUndefined();
+    expect(errors.coverImageAltText).toBeUndefined();
   });
 
   it("rejects non-http protocol for cover image", () => {
@@ -309,7 +311,78 @@ describe("validateForm", () => {
       valid.hasRevenueSharing,
       valid.revenueSharePercentage,
       "ftp://example.com/image.jpg",
+      "Valid alt text description",
     );
     expect(errors.coverImageUrl).toBe("validationCoverImageInvalid");
+  });
+
+  describe("Alt text validation for creator uploaded media", () => {
+    it("requires alt text when cover image URL is present", () => {
+      const errors = validateForm(
+        valid.title,
+        valid.description,
+        valid.descriptionEs,
+        valid.creatorEmail,
+        valid.fundingGoal,
+        valid.durationDays,
+        valid.hasRevenueSharing,
+        valid.revenueSharePercentage,
+        "https://example.com/image.jpg",
+        "",
+      );
+      expect(errors.coverImageAltText).toBe("validationAltTextRequired");
+    });
+
+    it("rejects alt text that is too short (< 5 chars)", () => {
+      const errors = validateForm(
+        valid.title,
+        valid.description,
+        valid.descriptionEs,
+        valid.creatorEmail,
+        valid.fundingGoal,
+        valid.durationDays,
+        valid.hasRevenueSharing,
+        valid.revenueSharePercentage,
+        "https://example.com/image.jpg",
+        "cat",
+      );
+      expect(errors.coverImageAltText).toBe("validationAltTextTooShort");
+    });
+
+    it("rejects generic alt text terms like 'image', 'photo', 'picture'", () => {
+      const genericTerms = ["image", "photo", "picture", "cover", "img", "IMG_1234"];
+      for (const term of genericTerms) {
+        const errors = validateForm(
+          valid.title,
+          valid.description,
+          valid.descriptionEs,
+          valid.creatorEmail,
+          valid.fundingGoal,
+          valid.durationDays,
+          valid.hasRevenueSharing,
+          valid.revenueSharePercentage,
+          "https://example.com/image.jpg",
+          term,
+        );
+        expect(errors.coverImageAltText).toBe("validationAltTextGeneric");
+      }
+    });
+
+    it("rejects alt text longer than 150 characters", () => {
+      const longAlt = "a".repeat(151);
+      const errors = validateForm(
+        valid.title,
+        valid.description,
+        valid.descriptionEs,
+        valid.creatorEmail,
+        valid.fundingGoal,
+        valid.durationDays,
+        valid.hasRevenueSharing,
+        valid.revenueSharePercentage,
+        "https://example.com/image.jpg",
+        longAlt,
+      );
+      expect(errors.coverImageAltText).toBe("validationAltTextTooLong");
+    });
   });
 });

@@ -15,6 +15,14 @@ export default defineConfig({
   workers: process.env.CI ? "50%" : undefined,
   reporter: process.env.CI ? [["github"], ["list"], ["html"]] : [["list"]],
 
+  expect: {
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.05,
+      threshold: 0.2,
+      animations: "disabled",
+    },
+  },
+
   use: {
     baseURL: process.env.BASE_URL || "http://localhost:3000",
     trace: process.env.CI ? "on-first-retry" : "retain-on-failure",

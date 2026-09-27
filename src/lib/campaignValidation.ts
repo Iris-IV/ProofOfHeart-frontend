@@ -9,6 +9,7 @@ export interface FormErrorKeys {
   durationDays?: string;
   revenueSharePercentage?: string;
   coverImageUrl?: string;
+  coverImageAltText?: string;
 }
 
 export interface ReviewData {
@@ -23,10 +24,47 @@ export interface ReviewData {
   estimatedDeadlineTimestamp: number;
   tags: string[];
   coverImageUrl: string;
+  coverImageAltText?: string;
   milestones: { targetAmount: bigint; description: string }[];
 }
 
 const IMAGE_URL_RE = /^https?:\/\/.+\..+/;
+const GENERIC_ALT_PATTERNS = [
+  /^image$/i,
+  /^photo$/i,
+  /^picture$/i,
+  /^cover$/i,
+  /^img$/i,
+  /^upload$/i,
+  /^media$/i,
+  /^dsc_\d+$/i,
+  /^img_\d+$/i,
+];
+
+/**
+ * Validates accessibility alt text for creator uploaded media.
+ */
+export function validateAltText(altText: string): { valid: boolean; errorKey?: string } {
+  const trimmed = altText ? altText.trim() : "";
+
+  if (!trimmed) {
+    return { valid: false, errorKey: "validationAltTextRequired" };
+  }
+
+  if (trimmed.length < 5) {
+    return { valid: false, errorKey: "validationAltTextTooShort" };
+  }
+
+  if (trimmed.length > 150) {
+    return { valid: false, errorKey: "validationAltTextTooLong" };
+  }
+
+  if (GENERIC_ALT_PATTERNS.some((pattern) => pattern.test(trimmed))) {
+    return { valid: false, errorKey: "validationAltTextGeneric" };
+  }
+
+  return { valid: true };
+}
 
 /** Returns translation keys for any validation errors, or an empty object if valid. */
 export function validateForm(
@@ -39,6 +77,7 @@ export function validateForm(
   hasRevenueSharing: boolean,
   revenueSharePercentage: number,
   coverImageUrl: string,
+  coverImageAltText?: string,
 ): FormErrorKeys {
   const errors: FormErrorKeys = {};
 
@@ -76,8 +115,15 @@ export function validateForm(
     errors.revenueSharePercentage = "validationRevenueShareInvalid";
   }
 
-  if (coverImageUrl.trim() && !IMAGE_URL_RE.test(coverImageUrl.trim())) {
-    errors.coverImageUrl = "validationCoverImageInvalid";
+  if (coverImageUrl.trim()) {
+    if (!IMAGE_URL_RE.test(coverImageUrl.trim())) {
+      errors.coverImageUrl = "validationCoverImageInvalid";
+    }
+    // Alt text validation is required whenever cover image URL is present
+    const altCheck = validateAltText(coverImageAltText || "");
+    if (!altCheck.valid) {
+      errors.coverImageAltText = altCheck.errorKey;
+    }
   }
 
   return errors;
