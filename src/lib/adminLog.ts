@@ -1,3 +1,13 @@
+/**
+ * Admin audit logging module for ProofOfHeart.
+ *
+ * Provides persistent audit trail for admin actions with dual persistence:
+ * 1. API persistence (primary)
+ * 2. localStorage fallback (when API unavailable)
+ *
+ * @module adminLog
+ */
+
 import { normalizeAddress } from "./stellar";
 import {
   readAllEntries,
