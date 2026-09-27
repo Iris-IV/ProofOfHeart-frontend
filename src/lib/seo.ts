@@ -87,3 +87,33 @@ export function buildCauseJsonLd(
 
   return schema;
 }
+
+/**
+ * Resource hint domain origins for Stellar Horizon RPC and IPFS gateways (#1585).
+ */
+export const STELLAR_PRECONNECT_ORIGINS = [
+  "https://horizon-testnet.stellar.org",
+  "https://soroban-testnet.stellar.org",
+  "https://horizon.stellar.org",
+  "https://ipfs.io",
+] as const;
+
+export interface ResourceHintLink {
+  rel: "preconnect" | "dns-prefetch";
+  href: string;
+  crossOrigin?: string;
+}
+
+/**
+ * Generates preconnect and dns-prefetch resource hints for Stellar RPC and IPFS origins.
+ */
+export function getStellarResourceHints(): ResourceHintLink[] {
+  const hints: ResourceHintLink[] = [];
+
+  for (const origin of STELLAR_PRECONNECT_ORIGINS) {
+    hints.push({ rel: "preconnect", href: origin, crossOrigin: "anonymous" });
+    hints.push({ rel: "dns-prefetch", href: origin });
+  }
+
+  return hints;
+}

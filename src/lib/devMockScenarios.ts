@@ -114,3 +114,76 @@ export const MOCK_SCENARIOS = [
   { value: "empty", label: "Empty", description: "No data" },
   { value: "error", label: "Error", description: "Error state" },
 ] as const;
+
+/**
+ * Mock Soroban RPC Server interface for offline unit testing (#1594).
+ */
+export interface MockSorobanRpcServer {
+  getLatestLedger(): Promise<{ sequence: number; id: string }>;
+  getHealth(): Promise<{ status: "healthy" }>;
+  getLedgerEntries(keys: string[]): Promise<{ entries: Array<{ key: string; val: string; liveUntilLedgerSeq: number }> }>;
+  simulateTransaction(txXdr: string): Promise<{ status: "SUCCESS" | "FAILED"; minResourceFee: string; results?: Array<{ retval: string }> }>;
+  sendTransaction(signedTxXdr: string): Promise<{ status: "PENDING" | "ERROR"; hash: string }>;
+  getTransaction(hash: string): Promise<{ status: "SUCCESS" | "NOT_FOUND"; resultXdr?: string }>;
+}
+
+export interface MockSorobanRpcServerOptions {
+  sequence?: number;
+  healthy?: boolean;
+}
+
+/**
+ * Creates a lightweight mock Soroban RPC Server for offline Jest unit testing.
+ */
+export function createMockSorobanRpcServer(options: MockSorobanRpcServerOptions = {}): MockSorobanRpcServer {
+  const currentSequence = options.sequence ?? 1234567;
+  const isHealthy = options.healthy ?? true;
+
+  return {
+    async getLatestLedger() {
+      return { sequence: currentSequence, id: "0000000000000000000000000000000000000000000000000000000000000000" };
+    },
+
+    async getHealth() {
+      if (!isHealthy) {
+        throw new Error("RPC Server Unhealthy");
+      }
+      return { status: "healthy" };
+    },
+
+    async getLedgerEntries(keys: string[]) {
+      return {
+        entries: keys.map((key) => ({
+          key,
+          val: "AAAAAA==",
+          liveUntilLedgerSeq: currentSequence + 4096,
+        })),
+      };
+    },
+
+    async simulateTransaction(txXdr: string) {
+      if (txXdr.includes("FAIL")) {
+        return { status: "FAILED", minResourceFee: "100" };
+      }
+      return {
+        status: "SUCCESS",
+        minResourceFee: "100",
+        results: [{ retval: "AAAAAA==" }],
+      };
+    },
+
+    async sendTransaction(signedTxXdr: string) {
+      if (signedTxXdr.includes("ERROR")) {
+        return { status: "ERROR", hash: "mock_tx_hash_error" };
+      }
+      return { status: "PENDING", hash: "mock_tx_hash_success" };
+    },
+
+    async getTransaction(hash: string) {
+      if (hash.includes("error")) {
+        return { status: "NOT_FOUND" };
+      }
+      return { status: "SUCCESS", resultXdr: "AAAAAA==" };
+    },
+  };
+}
