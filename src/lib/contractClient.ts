@@ -1,4 +1,17 @@
-import { Account, Address, BASE_FEE, Contract, Keypair, Memo, Transaction, TransactionBuilder, nativeToScVal, rpc, scValToBigInt, xdr } from "@stellar/stellar-sdk";
+import {
+  Account,
+  Address,
+  BASE_FEE,
+  Contract,
+  Keypair,
+  Memo,
+  Transaction,
+  TransactionBuilder,
+  nativeToScVal,
+  rpc,
+  scValToBigInt,
+  xdr,
+} from "@stellar/stellar-sdk";
 // #649 — Signing goes through the active wallet signer (Freighter or an
 // embedded social wallet) rather than the Freighter API directly.
 import { getSignerAddress, signTransactionXdr } from "./walletSigner";
@@ -45,12 +58,7 @@ const NETWORK_PASSPHRASE =
   process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
 
 export type TransactionLifecyclePhase =
-  | "building"
-  | "signing"
-  | "submitting"
-  | "confirming"
-  | "confirmed"
-  | "failed";
+  "building" | "signing" | "submitting" | "confirming" | "confirmed" | "failed";
 
 export interface TransactionLifecycleUpdate {
   phase: TransactionLifecyclePhase;
@@ -109,13 +117,13 @@ function getCacheKey(method: string, args: xdr.ScVal[]): string {
 function getCachedValue<T>(key: string, ttlMs: number = DEFAULT_CACHE_TTL_MS): T | null {
   const entry = contractCallCache.get(key) as CacheEntry<T> | undefined;
   if (!entry) return null;
-  
+
   const age = Date.now() - entry.timestamp;
   if (age > ttlMs) {
     contractCallCache.delete(key);
     return null;
   }
-  
+
   return entry.value;
 }
 
@@ -155,6 +163,14 @@ export function clearContractCacheByMethod(method: string): void {
  */
 export function resetRpcServer(): void {
   _server = null;
+}
+
+/**
+ * Drops all cached contract call results. Exported for tests and for callers
+ * that need to bypass the response cache (e.g. after a wallet switch).
+ */
+export function clearContractCallCache(): void {
+  contractCallCache.clear();
 }
 
 const CONNECTION_ERROR_PATTERNS = [
@@ -482,10 +498,10 @@ async function invokeViewMethod(method: string, args: xdr.ScVal[] = []): Promise
 
   const successSim = simulated as rpc.Api.SimulateTransactionSuccessResponse;
   const result = successSim.result?.retval ?? null;
-  
+
   // Cache the result
   setCachedValue(cacheKey, result);
-  
+
   return result;
 }
 
@@ -527,10 +543,12 @@ function decodeCampaign(val: xdr.ScVal): Campaign {
       const extData = JSON.parse(rawDescription.substring(extIndex + EXT_MARKER.length));
       cover_image_url = extData.coverImageUrl;
       if (extData.milestones && Array.isArray(extData.milestones)) {
-        milestones = extData.milestones.map((m: { targetAmount: string | number; description: string }) => ({
-          targetAmount: BigInt(m.targetAmount),
-          description: m.description,
-        }));
+        milestones = extData.milestones.map(
+          (m: { targetAmount: string | number; description: string }) => ({
+            targetAmount: BigInt(m.targetAmount),
+            description: m.description,
+          }),
+        );
       }
       if (extData.tags && Array.isArray(extData.tags)) {
         tags = extData.tags;
@@ -1083,11 +1101,11 @@ export async function createCampaign(
       ...options,
       operation: "create_campaign",
     });
-    
+
     // Invalidate campaign count and list cache
     clearContractCacheByMethod("get_campaign_count");
     clearContractCacheByMethod("get_campaign");
-    
+
     return txResult.txHash;
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
@@ -1169,11 +1187,11 @@ export async function contribute(
       action: "contribute",
       txHash: txResult.txHash,
     });
-    
+
     // Invalidate cache for this campaign and contribution
     clearContractCacheByMethod("get_campaign");
     clearContractCacheByMethod("get_contribution");
-    
+
     return txResult.txHash;
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
@@ -1207,10 +1225,10 @@ export async function withdrawFunds(
       action: "withdraw",
       txHash: txResult.txHash,
     });
-    
+
     // Invalidate campaign cache as status changes after withdrawal
     clearContractCacheByMethod("get_campaign");
-    
+
     return txResult.txHash;
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));

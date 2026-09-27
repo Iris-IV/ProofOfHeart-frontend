@@ -9,6 +9,7 @@ const mockEstimateNetworkFee = jest.fn();
 jest.mock("@/lib/contractClient", () => ({
   contribute: jest.fn(),
   getCampaign: (...args: unknown[]) => mockGetCampaign(...args),
+  estimateContributeNetworkFee: (...args: unknown[]) => mockEstimateNetworkFee(...args),
 }));
 
 jest.mock("@/components/ToastProvider", () => ({

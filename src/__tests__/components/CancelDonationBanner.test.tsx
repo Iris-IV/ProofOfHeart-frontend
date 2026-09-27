@@ -75,7 +75,9 @@ describe("CancelDonationBanner — clock drift (issue #1212)", () => {
       <CancelDonationBanner
         pendingDonations={[donation]}
         onCancel={jest.fn()}
-        serverOffsetMs={-2_000}
+        // Corrects the 2h-fast device clock and leaves a 2s residual skew,
+        // so 2s of the grace period have elapsed at SERVER_NOW.
+        serverOffsetMs={-SKEW_MS + 2_000}
       />,
     );
 

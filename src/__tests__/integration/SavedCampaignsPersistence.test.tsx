@@ -34,11 +34,15 @@ jest.mock("next-intl", () => ({
   },
 }));
 
-jest.mock("@/hooks/useCampaigns", () => ({
-  useCampaigns: () => ({
+jest.mock("@/hooks/useInfiniteCampaigns", () => ({
+  useInfiniteCampaigns: () => ({
     campaigns: [] as Campaign[],
     isLoading: false,
+    isFetchingNextPage: false,
+    hasNextPage: false,
+    isEmpty: false,
     error: null,
+    fetchNextPage: jest.fn(),
     refetch: jest.fn(),
   }),
 }));
@@ -157,13 +161,20 @@ describe("Saved campaigns persistence", () => {
     localStorage.clear();
 
     // Provide mock campaigns so CausesContent renders CauseCards
-    (jest.requireMock("@/hooks/useCampaigns") as { useCampaigns: () => unknown }).useCampaigns =
-      () => ({
-        campaigns: mockCampaigns,
-        isLoading: false,
-        error: null,
-        refetch: jest.fn(),
-      });
+    (
+      jest.requireMock("@/hooks/useInfiniteCampaigns") as {
+        useInfiniteCampaigns: () => unknown;
+      }
+    ).useInfiniteCampaigns = () => ({
+      campaigns: mockCampaigns,
+      isLoading: false,
+      isFetchingNextPage: false,
+      hasNextPage: false,
+      isEmpty: false,
+      error: null,
+      fetchNextPage: jest.fn(),
+      refetch: jest.fn(),
+    });
   });
 
   it("persists saved campaigns across navigation and page reloads", async () => {

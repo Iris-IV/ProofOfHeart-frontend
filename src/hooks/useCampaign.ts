@@ -69,10 +69,7 @@ export function useCampaign(id: number): UseCampaignResult {
       .then((data) => {
         if (!cancelled) {
           if (data === null) {
-            dispatch({
-              type: "fetch_success",
-              campaign: { id, title: `Unknown Cause #${id}` } as Campaign,
-            });
+            dispatch({ type: "fetch_not_found" });
           } else {
             dispatch({ type: "fetch_success", campaign: data });
           }

@@ -52,6 +52,7 @@ function makeContribution(
 
   return {
     campaign,
+    campaignName: campaign.title,
     contribution: BigInt(25_000_000),
     status: campaign.status,
     canClaimRefund: false,

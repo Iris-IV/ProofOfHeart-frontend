@@ -1,7 +1,8 @@
 import { Campaign } from "@/types";
 
 const NOTIFIED_KEY_PREFIX = "poh_expiry_notified_v1";
-const WEBHOOK_URL = process.env.NEXT_PUBLIC_CREATOR_EMAIL_WEBHOOK_URL || process.env.CREATOR_EMAIL_WEBHOOK_URL;
+const WEBHOOK_URL =
+  process.env.NEXT_PUBLIC_CREATOR_EMAIL_WEBHOOK_URL || process.env.CREATOR_EMAIL_WEBHOOK_URL;
 const FORTY_EIGHT_HOURS_S = 48 * 3600;
 
 function notifiedKey(campaignId: number): string {
@@ -24,8 +25,11 @@ function markNotified(campaignId: number): void {
   }
 }
 
-export function shouldNotifyExpiry(campaign: Campaign, nowSeconds = Math.floor(Date.now() / 1000)): boolean {
-  if (campaign.is_cancelled || campaign.is_funded || !campaign.is_active) return false;
+export function shouldNotifyExpiry(
+  campaign: Campaign,
+  nowSeconds = Math.floor(Date.now() / 1000),
+): boolean {
+  if (campaign.is_cancelled || campaign.funds_withdrawn || !campaign.is_active) return false;
   const secondsLeft = campaign.deadline - nowSeconds;
   if (secondsLeft <= 0 || secondsLeft > FORTY_EIGHT_HOURS_S) return false;
   if (hasBeenNotified(campaign.id)) return false;
@@ -56,7 +60,10 @@ export async function notifyCampaignExpiry(campaign: Campaign): Promise<boolean>
   }
 }
 
-export function scheduleExpiryChecks(campaigns: Campaign[], onNotify?: (c: Campaign) => void): () => void {
+export function scheduleExpiryChecks(
+  campaigns: Campaign[],
+  onNotify?: (c: Campaign) => void,
+): () => void {
   const check = () => {
     for (const c of campaigns) {
       if (shouldNotifyExpiry(c)) {

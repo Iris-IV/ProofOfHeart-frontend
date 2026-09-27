@@ -2,6 +2,7 @@
 
 import { Link } from "@/i18n/routing";
 import { useTranslations, useLocale } from "next-intl";
+import Image from "next/image";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { useMemo, useRef, useState, useEffect } from "react";
 import CampaignStatusBadge from "@/components/CampaignStatusBadge";

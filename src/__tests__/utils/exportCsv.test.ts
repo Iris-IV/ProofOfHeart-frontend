@@ -58,6 +58,7 @@ describe("exportCsv utility", () => {
       const items: ContributionHistoryItem[] = [
         {
           campaign: makeCampaign({ id: 1, title: 'Clean "Water" Project' }),
+          campaignName: 'Clean "Water" Project',
           contribution: BigInt(250_000_000), // 25 XLM
           status: "active",
           canClaimRefund: false,
@@ -98,6 +99,7 @@ describe("exportCsv utility", () => {
       const items: ContributionHistoryItem[] = [
         {
           campaign: makeCampaign(),
+          campaignName: makeCampaign().title,
           contribution: BigInt(100_000_000),
           status: "active",
           canClaimRefund: false,

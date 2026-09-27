@@ -98,7 +98,7 @@ describe("POST /api/email-opt-in", () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
       ok: false,
-      message: "Missing required fields: email, campaignTitle",
+      message: "Expected object, received null",
     });
     expect(global.fetch).not.toHaveBeenCalled();
   });
@@ -120,7 +120,7 @@ describe("POST /api/email-opt-in", () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
       ok: false,
-      message: "Missing required fields: email, campaignTitle",
+      message: "campaignTitle is required",
     });
     expect(global.fetch).not.toHaveBeenCalled();
   });

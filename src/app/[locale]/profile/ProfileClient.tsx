@@ -124,19 +124,19 @@ export default function ProfileClient() {
           ) : (
             <ul className="space-y-3">
               {contributions.map((item, index) => {
-                const campaign = campaigns.find((c) => c.id === String(item.campaignId));
+                const campaign = item.campaign;
                 return (
-                  <li key={`${item.campaignId}-${index}`}>
+                  <li key={`${campaign.id}-${index}`}>
                     <Link
-                      href={campaign ? `/causes/${campaign.id}` : "#"}
+                      href={`/causes/${campaign.id}`}
                       className="group flex items-center justify-between gap-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 hover:border-red-200 dark:hover:border-red-900/40 hover:shadow-md transition-all"
                     >
                       <div className="min-w-0">
                         <p className="font-semibold text-zinc-900 dark:text-zinc-50 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors line-clamp-1">
-                          {campaign?.title ?? item.campaignId}
+                          {campaign.title}
                         </p>
                         <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1 font-medium">
-                          {campaign ? formatAddress(campaign.creator) : item.campaignId}
+                          {formatAddress(campaign.creator)}
                         </p>
                       </div>
                       <span className="shrink-0 text-sm font-bold text-zinc-900 dark:text-zinc-50">

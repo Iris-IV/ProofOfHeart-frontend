@@ -1,7 +1,7 @@
 "use client";
 
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from("react");
+import { useMemo } from "react";
 import { DEFAULT_CAMPAIGNS_PAGE_SIZE, listCampaigns } from "../lib/contractClient";
 import { Campaign } from "../types";
 
@@ -51,7 +51,7 @@ export function useInfiniteCampaigns(
     isFetchingNextPage,
     hasNextPage: hasNextPage ?? false,
     isEmpty,
-    error: error?.message ?> null,
+    error: error?.message ?? null,
     fetchNextPage: () => {
       fetchNextPage();
     },

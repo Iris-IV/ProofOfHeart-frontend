@@ -9,7 +9,7 @@ import { Campaign, basisPointsToPercentage } from "../types";
 import { xlmToStroops, stroopsToXlmNumber } from "@/lib/stellarAmount";
 import { formatAmount } from "@/lib/formatters";
 import { useToast } from "./ToastProvider";
-import { getEnabledTokens, type TokenSymbol } from "@/lib/supportedTokens";
+import { getEnabledTokens, SUPPORTED_TOKENS, type TokenSymbol } from "@/lib/supportedTokens";
 import { useWallet } from "./WalletContext";
 import { usePlatformFee } from "../hooks/usePlatformFee";
 import { parseContractError } from "../utils/contractErrors";
@@ -48,12 +48,7 @@ type DonationValidationKey =
   | "amountExceedsRemainingGoal"
   | "campaignAlreadyFunded";
 
-function DonationModal({
-  campaign,
-  onClose,
-  onSuccess,
-  onRefetch,
-}: DonationModalProps) {
+function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModalProps) {
   const t = useTranslations("Donation");
   const tModal = useTranslations("DonationModal");
   const tContractErrors = useTranslations("ContractErrors");
@@ -188,7 +183,9 @@ function DonationModal({
   const newPct = goal > 0 ? Math.min(100, Math.round((newRaised / goal) * 100)) : 0;
   const currentPct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
   const displayedPct = step === "confirmed" ? newPct : currentPct;
-  const displayRaised = formatAmount(liveCampaign.amount_raised, locale, { maximumFractionDigits: 2 });
+  const displayRaised = formatAmount(liveCampaign.amount_raised, locale, {
+    maximumFractionDigits: 2,
+  });
   const displayGoal = formatAmount(liveCampaign.funding_goal, locale, { maximumFractionDigits: 2 });
   const fundingProgressText = `${t("percentFunded", {
     percent: displayedPct,
@@ -372,16 +369,13 @@ function DonationModal({
                   aria-invalid={amountError ? "true" : "false"}
                   disabled={isFullyFunded}
                   onChange={(e) => {
-                    // Keep only digits and a single decimal point. type="number"
-                    // already blocks most junk, but Firefox/Safari still allow
-                    // pasting values like "1.2.3" or "1e5"; strip them at the source
-                    // so state never holds a non-numeric string.
-                    const cleaned = e.target.value
-                      .replace(/[^0-9.]/g, "")
-                      .replace(/(\..*)\./g, "$1");
-                    setAmount(cleaned);
+                    // Feed the raw value to validateAmount so invalid input maps
+                    // to its specific i18n error key (scientific notation,
+                    // negatives, malformed decimals) instead of being silently
+                    // coerced into a valid-looking amount.
+                    setAmount(e.target.value);
                     setError(null);
-                    if (cleaned && parseFloat(cleaned) > 0) {
+                    if (e.target.value && parseFloat(e.target.value) > 0) {
                       trackEnterAmount(campaign.id);
                     }
                   }}
@@ -417,7 +411,11 @@ function DonationModal({
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-zinc-500 mt-1">Donate in {SUPPORTED_TOKENS.find((t) => t.symbol === selectedToken)?.name ?? selectedToken}. Support for multiple Stellar tokens.</p>
+                <p className="text-xs text-zinc-500 mt-1">
+                  Donate in{" "}
+                  {SUPPORTED_TOKENS.find((t) => t.symbol === selectedToken)?.name ?? selectedToken}.
+                  Support for multiple Stellar tokens.
+                </p>
               </div>
               {amountError && (
                 <p id="donation-amount-error" role="alert" className="mt-1 text-xs text-red-500">

@@ -13,28 +13,28 @@ const TEST_NEW_ADMIN = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD
 function makeScValHelpers() {
   const scVal = {
     u32(value: number) {
-      return { u32: () => value };
+      return { u32: () => value, toXDR: () => `u32:${value}` };
     },
     u64(value: number) {
-      return { u64: () => BigInt(value) };
+      return { u64: () => BigInt(value), toXDR: () => `u64:${value}` };
     },
     bool(value: boolean) {
-      return { b: () => value };
+      return { b: () => value, toXDR: () => `bool:${value}` };
     },
     str(value: string) {
-      return { str: () => ({ toString: () => value }) };
+      return { str: () => ({ toString: () => value }), toXDR: () => `str:${value}` };
     },
     bigint(value: bigint | number) {
-      return { __bigint: BigInt(value) };
+      return { __bigint: BigInt(value), toXDR: () => `i128:${BigInt(value)}` };
     },
     address(value: string) {
-      return { __address: value };
+      return { __address: value, toXDR: () => `address:${value}` };
     },
     symbol(value: string) {
-      return { sym: () => ({ toString: () => value }) };
+      return { sym: () => ({ toString: () => value }), toXDR: () => `symbol:${value}` };
     },
     vec(values: unknown[]) {
-      return { vec: () => values };
+      return { vec: () => values, toXDR: () => `vec:${values.length}` };
     },
     map(fields: Record<string, unknown>) {
       return {
@@ -551,6 +551,7 @@ describe("contractClient", () => {
       mockServer.simulateTransaction.mockImplementationOnce(() => {
         throw transportError;
       });
+      module.clearContractCallCache();
 
       // Transport failures reconnect and retry transparently.
       await expect(module.getAdmin()).resolves.toBe(TEST_ADMIN);
@@ -564,6 +565,7 @@ describe("contractClient", () => {
       mockServer.simulateTransaction.mockImplementationOnce(() => {
         throw new Error("Request timed out after 30000ms");
       });
+      module.clearContractCallCache();
 
       await expect(module.getAdmin()).resolves.toBe(TEST_ADMIN);
       expect(serverUrls).toHaveLength(2);
@@ -576,6 +578,7 @@ describe("contractClient", () => {
       mockServer.simulateTransaction.mockImplementationOnce(() => {
         throw new Error("Error(Contract, #6)");
       });
+      module.clearContractCallCache();
 
       await expect(module.getAdmin()).rejects.toThrow();
       await expect(module.getAdmin()).resolves.toBe(TEST_ADMIN);
@@ -589,6 +592,7 @@ describe("contractClient", () => {
       expect(serverUrls).toHaveLength(1);
 
       module.resetRpcServer();
+      module.clearContractCallCache();
       await module.getAdmin();
 
       expect(serverUrls).toHaveLength(2);

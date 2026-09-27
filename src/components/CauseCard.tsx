@@ -123,11 +123,7 @@ function CauseCard({
           <LazyImage
             src={campaign.cover_image_url}
             alt={campaign.title}
-            fill
-            unoptimized
-            priority={priority}
-            loading={priority ? undefined : "lazy"}
-            className="object-cover"
+            className="absolute inset-0 w-full h-full object-cover"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-4xl select-none">

@@ -52,6 +52,7 @@ jest.mock("next-intl", () => ({
       labelRevenueSharePct: "Revenue Share Percentage",
       cancel: "Cancel",
       launchCampaign: "Launch Campaign",
+      createCause: "Launch Campaign",
       reviewTitle: "Review Campaign Before Signing",
       reviewSubtitle:
         "Launching is irreversible on-chain. Confirm these details before signing in Freighter.",

@@ -1,13 +1,17 @@
 import { getTranslations } from "next-intl/server";
-import { buildAlternates } from "/lib/seo";
+import { buildAlternates } from "@/lib/seo";
 import CausesClient from "./CausesClient";
 
+// #151 — ISR: allow the edge cache to serve a stale snapshot of the /causes
+// listing for up to 30 seconds before revalidating in the background. This
+// improves TTFB and SEO without sacrificing data freshness for active users.
 export const revalidate = 30;
 
 export async function generateMetadata() {
   const t = await getTranslations("Causes");
   const title = `${t("pageTitle")} | ProofOfHeart`;
   const description = t("pageSubtitle");
+
   return {
     title,
     description,
@@ -25,13 +29,4 @@ export async function generateMetadata() {
   };
 }
 
-export default async function CausesPage() {
-  const t = await getTranslations("Causes");
-  const emptyState = (
-    <div>
-      <h2>{t("noCausesTitle")}</h2>
-      <p>{t("noCausesMessage")}</p>
-    </div>
-  );
-  return <CausesClient emptyState={emptyState} />;
-}
+export default CausesClient;

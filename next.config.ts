@@ -1,5 +1,10 @@
 import path from "node:path";
 import createNextIntlPlugin from "next-intl/plugin";
+import type { NextConfig } from "next";
+import withBundleAnalyzer from "@next/bundle-analyzer";
+import { getThirdPartyScriptOrigins } from "./src/lib/thirdParty";
+import { ALLOWED_CAMPAIGN_IMAGE_HOSTS } from "./src/lib/campaignMedia";
+
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const withAnalyzer = withBundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
@@ -14,23 +19,30 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: pkg.version,
   },
+  transpilePackages: [
+    "next-intl",
+    "use-intl",
+    "@formatjs/fast-memoize",
+    "@formatjs/icu-messageformat-parser",
+    "@formatjs/icu-skeleton-parser",
+    "@formatjs/intl-localematcher",
+    "intl-messageformat",
+  ],
   output: "standalone",
   reactCompiler: true,
   outputFileTracingRoot: path.join(__dirname),
-  experimental: {
-    turbo: {
-      rules: {
-        "*.vg": {
-          loaders: ["@svgr/webpack"],
-          as: "*.js",
-        },
+  turbopack: {
+    rules: {
+      "*.svg": {
+        loaders: ["@svgr/webpack"],
+        as: "*.js",
       },
     },
   },
   images: {
     // Image Optimization is disabled because:
     // 1. output: "standalone" requires minimal server dependencies
-    // 2. Campaign images are user-provided and stored on IIPF/Arweave (decentralized storage)
+    // 2. Campaign images are user-provided and stored on IPFS/Arweave (decentralized storage)
     // 3. Next.js Image Optimization would require caching optimized images, which adds complexity
     // 4. Users upload images directly to IPFS/Arweave, not through our server
     unoptimized: true,
@@ -55,7 +67,7 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       // Redirect non-localized cause detail URLs to the canonical localized form.
-      // The next-intl middleware handles / and /(en|er)/:path* but bare /causes/:id
+      // The next-intl middleware handles / and /(en|es)/:path* but bare /causes/:id
       // falls outside its matcher, so these explicit 308s close the gap.
       {
         source: "/causes/:id",
@@ -81,7 +93,9 @@ const nextConfig: NextConfig = {
     // receive CORS headers, so browsers will block cross-origin reads.
     const allowedOrigins = [
       "https://proofofheart.xyz", // production
-      ...(process.env.NODE_ENV === "development" ? ["http://localhost:3000", "http://127.0.0.1:3000"] : []),
+      ...(process.env.NODE_ENV === "development"
+        ? ["http://localhost:3000", "http://127.0.0.1:3000"]
+        : []),
     ];
 
     const CSP_DIRECTIVES = [
@@ -122,7 +136,7 @@ const nextConfig: NextConfig = {
       // CORS headers for allowed origins only
       ...allowedOrigins.map((origin) => ({
         source: "/api/:path*",
-        has: [{ type: "header", key: "origin", value: origin }],
+        has: [{ type: "header" as const, key: "origin", value: origin }],
         headers: [
           { key: "Access-Control-Allow-Origin", value: origin },
           { key: "Access-Control-Allow-Methods", value: "GET, POST, PUT, DELETE, OPTIONS" },

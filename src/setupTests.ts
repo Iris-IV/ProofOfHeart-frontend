@@ -67,7 +67,9 @@ globalThis.ResizeObserver ??= ResizeObserverStub;
 
 // jsdom doesn't implement scrollTo; the window virtualizer calls it when
 // asked to scroll to an offset.
-window.scrollTo ??= () => {};
+if (typeof window !== "undefined") {
+  window.scrollTo ??= () => {};
+}
 
 // Global mock for Freighter API (v6.x returns objects, not primitives)
 jest.mock("@stellar/freighter-api", () => ({

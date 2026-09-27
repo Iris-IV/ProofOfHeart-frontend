@@ -146,7 +146,6 @@ jest.mock("@/lib/contractClient", () => ({
   verifyCampaignWithVotes: jest.fn(),
   getContribution: jest.fn(() => Promise.resolve(15_000_000n)),
   claimRefund: jest.fn(),
-  getAllCampaigns: jest.fn(() => Promise.resolve([])),
 }));
 
 jest.mock("@/lib/adminLog", () => ({
@@ -272,7 +271,8 @@ describe("app page components", () => {
 
     expect(await screen.findByRole("heading", { name: "Solar Classroom" })).toBeInTheDocument();
     // Blank markdown shows the "noDescription" placeholder instead of a gap
-    expect(await screen.findByRole("status")).toHaveTextContent("noDescription");
+    // (queried by text: the status badge also uses role="status").
+    expect(await screen.findByText("noDescription")).toBeInTheDocument();
   });
 
   it("renders the admin dashboard queue and aggregate campaign stats for the admin wallet", async () => {

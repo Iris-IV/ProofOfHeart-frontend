@@ -89,7 +89,7 @@ export async function fetchContributionHistory(
     campaignsWithRevenue.map(async ({ id }) => {
       try {
         const [pool, claimed] = await Promise.all([
-          getRevenuPool(id),
+          getRevenuePool(id),
           getRevenueClaimed(id, walletAddress),
         ]);
         return { id, pool, claimed };

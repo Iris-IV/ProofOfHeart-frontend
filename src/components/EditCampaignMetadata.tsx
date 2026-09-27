@@ -9,6 +9,7 @@ interface Props {
   initialTitle: string;
   initialDescription: string;
   initialCoverImageUrl: string;
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 interface MetaOverride {
@@ -32,6 +33,7 @@ export default function EditCampaignMetadata({
   initialTitle,
   initialDescription,
   initialCoverImageUrl,
+  onDirtyChange,
 }: Props) {
   const t = useTranslations("EditCampaignMetadata");
   const storageKey = `poh_meta_override_${campaignId}`;
@@ -100,6 +102,10 @@ export default function EditCampaignMetadata({
     title !== savedTitle ||
     description !== savedDescription ||
     coverImageUrl !== savedCoverImageUrl;
+
+  useEffect(() => {
+    if (onDirtyChange) onDirtyChange(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   const handleToggle = () => {
     if (open && isDirty) {

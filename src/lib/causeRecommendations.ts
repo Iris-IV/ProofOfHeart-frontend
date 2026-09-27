@@ -27,18 +27,37 @@ export function scoreSimilarity(target: Campaign, candidate: Campaign): Recommen
   const reasons: string[] = [];
   let score = 0;
   const cat = categoryScore(target, candidate);
-  if (cat > 0) { score += cat; reasons.push("same category"); }
+  if (cat > 0) {
+    score += cat;
+    reasons.push("same category");
+  }
   const tag = tagScore(target, candidate);
-  if (tag > 0) { score += tag; reasons.push("shared interests"); }
+  if (tag > 0) {
+    score += tag;
+    reasons.push("shared interests");
+  }
   const prox = fundingProximityScore(target, candidate);
   score += prox;
-  if (candidate.is_verified) { score += 5; reasons.push("verified"); }
+  if (candidate.is_verified) {
+    score += 5;
+    reasons.push("verified");
+  }
   return { campaign: candidate, score, reasons };
 }
 
-function getCuratedCauses(allCampaigns: Campaign[], limit: number, excludeIds: Set<number>): Campaign[] {
+function getCuratedCauses(
+  allCampaigns: Campaign[],
+  limit: number,
+  excludeIds: Set<number>,
+  category?: Campaign["category"],
+): Campaign[] {
   return allCampaigns
-    .filter((c) => !excludeIds.has(c.id) && c.status === "active")
+    .filter(
+      (c) =>
+        !excludeIds.has(c.id) &&
+        c.status === "active" &&
+        (category === undefined || c.category === category),
+    )
     .sort((a, b) => Number(b.amount_raised) - Number(a.amount_raised))
     .slice(0, limit);
 }
@@ -47,11 +66,19 @@ export function getRecommendedCauses(
   donatedCampaign: Campaign,
   allCampaigns: Campaign[],
   limit = 4,
-  excludeIds: number[] = []
+  excludeIds: number[] = [],
 ): Campaign[] {
-  const excluded = new Set([donatedCampaign.id, ...excludeIds);
+  const excluded = new Set([donatedCampaign.id, ...excludeIds]);
+  // Recommendations stay within the donated campaign's category so the section
+  // always matches its "Explore more campaigns in {category}" heading.
   const scoredCampaigns = allCampaigns
-    .filter((c) => !excluded.has(c.id) && c.status !== "cancelled" && !c.is_cancelled)
+    .filter(
+      (c) =>
+        !excluded.has(c.id) &&
+        c.category === donatedCampaign.category &&
+        c.status !== "cancelled" &&
+        !c.is_cancelled,
+    )
     .map((c) => scoreSimilarity(donatedCampaign, c))
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
@@ -64,7 +91,8 @@ export function getRecommendedCauses(
     const curated = getCuratedCauses(
       allCampaigns,
       limit - scoredCampaigns.length,
-      selectedIds
+      selectedIds,
+      donatedCampaign.category,
     );
     scoredCampaigns.push(...curated);
   }
@@ -74,7 +102,7 @@ export function getRecommendedCauses(
 export function getPersonalizedRecommendations(
   donatedCampaignIds: number[],
   allCampaigns: Campaign[],
-  limit = 6
+  limit = 6,
 ): Campaign[] {
   if (donatedCampaignIds.length === 0) {
     return getCuratedCauses(allCampaigns, limit, new Set());
