@@ -16,8 +16,22 @@ RUN npm ci --no-audit --no-fund
 # Stage 2: Build the application
 FROM ${NODE_IMAGE} AS builder
 WORKDIR /app
+
+# Copy dependency manifests and lockfiles first for better layer caching
+COPY package.json package-lock.json ./
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+
+# Copy configuration files that rarely change
+COPY next.config.ts tsconfig.json postcss.config.mjs eslint.config.mjs ./
+COPY .prettierrc .prettierignore ./
+
+# Copy public assets
+COPY public ./public
+
+# Copy source code last (changes most frequently)
+COPY src ./src
+COPY messages ./messages
+
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
