@@ -339,6 +339,15 @@ describe("CreateCampaignPage — client-side validation", () => {
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
     expect(mockCreateCampaign).not.toHaveBeenCalled();
   });
+
+  it("validates form state with all fields filled correctly", async () => {
+    renderPage();
+    await fillRequiredFields();
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+    
+    // Should open review dialog instead of showing errors
+    await expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
 });
 
 // ---------------------------------------------------------------------------
