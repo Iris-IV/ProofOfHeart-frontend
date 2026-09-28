@@ -1,39 +1,24 @@
 // @ts-check
 import js from "@eslint/js";
-import importPlugin from "eslint-plugin-import";
 import unusedImports from "eslint-plugin-unused-imports";
 import tseslint from "typescript-eslint";
 
-/**
- * ESLint 9 Flat Config for Next.js 16+ with TypeScript 6
- * Standardized configuration with strict TypeScript plugin integration
- */
 export default tseslint.config(
-  // Recommended base configurations
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   {
+    name: "app/base",
+    files: ["**/*.{js,mjs,cjs,ts,tsx}"],
     languageOptions: {
       parserOptions: {
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
     },
-  },
-  {
     plugins: {
       "unused-imports": unusedImports,
-      import: importPlugin,
-    },
-    settings: {
-      "import/resolver": {
-        node: {
-          extensions: [".js", ".jsx", ".ts", ".tsx"],
-        },
-      },
     },
     rules: {
-      // Unused imports
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": "off",
       "unused-imports/no-unused-imports": "error",
@@ -46,8 +31,6 @@ export default tseslint.config(
           argsIgnorePattern: "^_",
         },
       ],
-
-      // TypeScript strict rules
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unsafe-assignment": "warn",
       "@typescript-eslint/no-unsafe-member-access": "warn",
@@ -58,20 +41,13 @@ export default tseslint.config(
       "@typescript-eslint/no-misused-promises": "error",
       "@typescript-eslint/no-base-to-string": "warn",
       "@typescript-eslint/no-unsafe-enum-comparison": "warn",
-
-      // Disabled rules for pragmatic reasons
       "preserve-caught-error": "off",
-
-      // Disabled: eslint-import-resolver-typescript is incompatible with TypeScript 6
-      "import/order": "off",
-
-      // React
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
     },
   },
   {
-    files: ["**/__tests__/**/*", "**/*.test.{ts,tsx}"],
+    files: ["**/__tests__/**/*.{ts,tsx}", "**/*.test.{ts,tsx}"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-require-imports": "off",
@@ -92,18 +68,18 @@ export default tseslint.config(
   },
   {
     ignores: [
+      "node_modules/**",
       ".next/**",
       "out/**",
       "build/**",
+      "coverage/**",
       "next-env.d.ts",
       "commitlint.config.js",
       "jest.config.ts",
-      "next.config.ts",
       "postcss.config.mjs",
       "playwright.config.ts",
       "eslint.config.mjs",
       "scripts/**",
-      "coverage/**",
       "**/*.d.ts",
     ],
   },
