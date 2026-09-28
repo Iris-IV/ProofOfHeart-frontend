@@ -9,9 +9,6 @@ const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://proofofheart.xyz"
  * Optimized to avoid repeated regex checks.
  */
 export function absoluteUrl(path: string): string {
-  if (/^https?:\/\//.test(path)) return path;
-  return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
-export function absoluteUrl(path: string): string {
   if (!path) return SITE_URL;
   if (/^https?:\/\//i.test(path)) return path;
 
@@ -28,8 +25,6 @@ export function buildAlternates(path: string, locale: string = routing.defaultLo
   const normalizedLocale = routing.locales.includes(locale) ? locale : routing.defaultLocale;
 
   const languages: Record<string, string> = {};
-  for (const loc of routing.locales) {
-    languages[loc] = `${SITE_URL}/${loc}${path}`;
   for (const supportedLocale of routing.locales) {
     languages[supportedLocale] = `${SITE_URL}/${supportedLocale}${normalizedPath}`;
   }
@@ -79,35 +74,6 @@ export function buildCauseJsonLd(
     "@type": "Organization",
     name: "ProofOfHeart",
     url: absoluteUrl("/"),
-    dateCreated: new Date(campaign.created_at * 1000).toISOString(),
-    provider: {
-      "@type": "Organization",
-      name: "ProofOfHeart",
-      url: absoluteUrl("/"),
-    },
-    additionalProperty: [
-      {
-        "@type": "PropertyValue",
-        name: strings.fundingGoalLabel,
-        value: stroopsToXlm(campaign.funding_goal),
-        unitText: "XLM",
-      },
-      {
-        "@type": "PropertyValue",
-        name: strings.amountRaisedLabel,
-        value: stroopsToXlm(campaign.amount_raised),
-        unitText: "XLM",
-      },
-      ...(campaign.deadline
-        ? [
-            {
-              "@type": "PropertyValue",
-              name: strings.deadlineLabel,
-              value: new Date(campaign.deadline * 1000).toISOString(),
-            },
-          ]
-        : []),
-    ],
   };
 
   // Build additionalProperty array efficiently
@@ -124,11 +90,15 @@ export function buildCauseJsonLd(
       value: stroopsToXlm(campaign.amount_raised),
       unitText: "XLM",
     },
-    {
-      "@type": "PropertyValue",
-      name: strings.deadlineLabel,
-      value: deadlineDate,
-    },
+    ...(campaign.deadline
+      ? [
+          {
+            "@type": "PropertyValue",
+            name: strings.deadlineLabel,
+            value: deadlineDate,
+          },
+        ]
+      : []),
   ];
 
   schema["additionalProperty"] = additionalProperties;
@@ -183,20 +153,13 @@ export function getStellarResourceHints(): ResourceHintLink[] {
   // Return cached result if available
   if (cachedHints) return cachedHints;
 
-  const hints: ResourceHintLink[] = [];
-
-  for (const origin of STELLAR_PRECONNECT_ORIGINS) {
-    hints.push({ rel: "preconnect", href: origin, crossOrigin: "anonymous" });
-    hints.push({ rel: "dns-prefetch", href: origin });
-  }
-
-  cachedHints = hints;
-  return hints;
-export function getStellarResourceHints(): ResourceHintLink[] {
-  return STELLAR_PRECONNECT_ORIGINS.flatMap((origin) => [
+  const hints: ResourceHintLink[] = STELLAR_PRECONNECT_ORIGINS.flatMap((origin) => [
     { rel: "preconnect", href: origin, crossOrigin: "anonymous" },
     { rel: "dns-prefetch", href: origin },
   ]);
+
+  cachedHints = hints;
+  return hints;
 }
 
 /**
