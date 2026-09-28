@@ -665,4 +665,301 @@ describe("CreateCampaignPage — cover image upload", () => {
     expect(mockShowError).toHaveBeenCalledWith("Image must be < 5MB");
     expect(global.fetch).not.toHaveBeenCalled();
   });
+
+  it("shows an error when image upload API fails", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      statusText: "Server Error",
+    }) as typeof fetch;
+
+    renderPage();
+
+    const file = new File([new Uint8Array(512).fill(1)], "cover.png", { type: "image/png" });
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+
+    await userEvent.upload(fileInput, file);
+
+    await waitFor(() => {
+      expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("Failed"));
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Additional form validation edge cases
+// ---------------------------------------------------------------------------
+
+describe("CreateCampaignPage — additional validation edge cases", () => {
+  beforeEach(() => setWalletConnected());
+
+  it("validates creator email format when provided", async () => {
+    renderPage();
+    await fillRequiredFields();
+
+    const emailInput = screen.getByLabelText(/creator email/i);
+    await userEvent.type(emailInput, "invalid-email");
+
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+
+    expect(await screen.findByText(/valid email address/i)).toBeInTheDocument();
+  });
+
+  it("accepts empty creator email field", async () => {
+    renderPage();
+    await fillRequiredFields();
+
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+
+    expect(
+      screen.queryByText(/valid email address/i)
+    ).not.toBeInTheDocument();
+  });
+
+  it("validates revenue share percentage minimum (0.01%)", async () => {
+    renderPage();
+    await fillRequiredFields();
+
+    await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
+    await userEvent.click(screen.getByRole("switch"));
+
+    const slider = await screen.findByLabelText(/revenue share percentage/i);
+    fireEvent.change(slider, { target: { value: "0" } });
+
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+
+    expect(await screen.findByText(/between 0\.01% and 50%/i)).toBeInTheDocument();
+  });
+
+  it("validates revenue share percentage maximum (50%)", async () => {
+    renderPage();
+    await fillRequiredFields();
+
+    await userEvent.selectOptions(screen.getByLabelText(/category/i), "1");
+    await userEvent.click(screen.getByRole("switch"));
+
+    const slider = await screen.findByLabelText(/revenue share percentage/i);
+    fireEvent.change(slider, { target: { value: "51" } });
+
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+
+    expect(await screen.findByText(/between 0\.01% and 50%/i)).toBeInTheDocument();
+  });
+
+  it("validates Spanish description length when provided", async () => {
+    renderPage();
+    await fillRequiredFields();
+
+    const spanishTab = screen.getByRole("tab", { name: /spanish/i });
+    await userEvent.click(spanishTab);
+
+    const spanishDescInput = screen.getByPlaceholderText(/español/i);
+    fireEvent.change(spanishDescInput, {
+      target: { value: "C".repeat(1001) },
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+
+    expect(await screen.findByText(/1,000 characters or fewer/i)).toBeInTheDocument();
+  });
+
+  it("accepts empty Spanish description", async () => {
+    renderPage();
+    await fillRequiredFields();
+
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+
+    const reviewDialog = await screen.findByRole("dialog");
+    expect(reviewDialog).toBeInTheDocument();
+  });
+
+  it("validates tags limit (max 3)", async () => {
+    renderPage();
+    await fillRequiredFields();
+
+    const tagsInput = screen.getByPlaceholderText(/add tags/i);
+    
+    await userEvent.type(tagsInput, "tag1{Enter}");
+    await userEvent.type(tagsInput, "tag2{Enter}");
+    await userEvent.type(tagsInput, "tag3{Enter}");
+    await userEvent.type(tagsInput, "tag4{Enter}");
+
+    expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("max 3"));
+  });
+
+  it("allows removing and re-adding tags", async () => {
+    renderPage();
+    await fillRequiredFields();
+
+    const tagsInput = screen.getByPlaceholderText(/add tags/i);
+    
+    await userEvent.type(tagsInput, "tag1{Enter}");
+    expect(screen.getByText("tag1")).toBeInTheDocument();
+
+    const removeButton = screen.getByRole("button", { name: /remove tag1/i });
+    await userEvent.click(removeButton);
+
+    expect(screen.queryByText("tag1")).not.toBeInTheDocument();
+
+    await userEvent.type(tagsInput, "newtag{Enter}");
+    expect(screen.getByText("newtag")).toBeInTheDocument();
+  });
+
+  it("validates minimum funding goal (greater than 0)", async () => {
+    renderPage();
+    await fillRequiredFields({ fundingGoal: "0" });
+
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+
+    expect(await screen.findByText(/greater than 0 xlm/i)).toBeInTheDocument();
+  });
+
+  it("validates negative funding goal", async () => {
+    renderPage();
+    await fillRequiredFields();
+
+    const fundingInput = screen.getByLabelText(/funding goal/i);
+    await userEvent.clear(fundingInput);
+    await userEvent.type(fundingInput, "-100");
+
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+
+    expect(await screen.findByText(/greater than 0 xlm/i)).toBeInTheDocument();
+  });
+
+  it("validates duration minimum (1 day)", async () => {
+    renderPage();
+    await fillRequiredFields({ durationDays: "0" });
+
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+
+    expect(await screen.findByText(/between 1 and 365 days/i)).toBeInTheDocument();
+  });
+
+  it("validates duration maximum (365 days)", async () => {
+    renderPage();
+    await fillRequiredFields({ durationDays: "366" });
+
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+
+    expect(await screen.findByText(/between 1 and 365 days/i)).toBeInTheDocument();
+  });
+
+  it("clears field error when user corrects the input", async () => {
+    renderPage();
+
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+    expect(await screen.findByText(/title is required/i)).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText(/campaign title/i), "Valid Title");
+
+    expect(screen.queryByText(/title is required/i)).not.toBeInTheDocument();
+  });
+
+  it("maintains form state when switching between tabs", async () => {
+    renderPage();
+    await fillRequiredFields();
+
+    const englishDesc = "English description content";
+    const spanishDesc = "Descripción en español";
+
+    await userEvent.clear(screen.getByLabelText(/description/i));
+    await userEvent.type(screen.getByLabelText(/description/i), englishDesc);
+
+    const spanishTab = screen.getByRole("tab", { name: /spanish/i });
+    await userEvent.click(spanishTab);
+
+    const spanishDescInput = screen.getByPlaceholderText(/español/i);
+    await userEvent.type(spanishDescInput, spanishDesc);
+
+    const englishTab = screen.getByRole("tab", { name: /english/i });
+    await userEvent.click(englishTab);
+
+    expect(screen.getByLabelText(/description/i)).toHaveValue(englishDesc);
+  });
+
+  it("disables submit button during wallet connection", () => {
+    mockWalletState = {
+      publicKey: null,
+      isWalletConnected: false,
+      connectWallet: mockConnectWallet,
+      isLoading: true,
+    };
+
+    renderPage();
+
+    expect(screen.getByRole("button", { name: /launch campaign/i })).toBeDisabled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Review modal interactions
+// ---------------------------------------------------------------------------
+
+describe("CreateCampaignPage — review modal interactions", () => {
+  beforeEach(() => setWalletConnected());
+
+  it("closes review modal when Cancel is clicked", async () => {
+    renderPage();
+    await fillRequiredFields();
+
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    const cancelButton = within(screen.getByRole("dialog")).getByRole("button", {
+      name: /cancel/i,
+    });
+    await userEvent.click(cancelButton);
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("displays formatted funding goal in review modal", async () => {
+    renderPage();
+    await fillRequiredFields({ fundingGoal: "12345.67" });
+
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+
+    const reviewDialog = screen.getByRole("dialog");
+    expect(within(reviewDialog).getByText(/12,345\.67 xlm/i)).toBeInTheDocument();
+  });
+
+  it("shows all form field values in review modal", async () => {
+    renderPage();
+
+    const testData = {
+      title: "Unique Campaign Title",
+      description: "Detailed campaign description for review",
+      fundingGoal: "5000",
+      durationDays: "45",
+    };
+
+    await fillRequiredFields(testData);
+
+    await userEvent.type(screen.getByLabelText(/creator email/i), "creator@test.com");
+
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+
+    const reviewDialog = screen.getByRole("dialog");
+    const reviewScope = within(reviewDialog);
+
+    expect(reviewScope.getByText(testData.title)).toBeInTheDocument();
+    expect(reviewScope.getByText(testData.description)).toBeInTheDocument();
+    expect(reviewScope.getByText(/5,000 xlm/i)).toBeInTheDocument();
+    expect(reviewScope.getByText(/45 days/i)).toBeInTheDocument();
+    expect(reviewScope.getByText("creator@test.com")).toBeInTheDocument();
+  });
+
+  it("handles keyboard navigation for closing review modal (Escape key)", async () => {
+    renderPage();
+    await fillRequiredFields();
+
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape", code: "Escape" });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+  });
 });

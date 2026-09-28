@@ -12,8 +12,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? "50%" : undefined,
+  workers: process.env.CI ? 4 : undefined,
   reporter: process.env.CI ? [["github"], ["list"], ["html"]] : [["list"]],
+  maxFailures: process.env.CI ? 5 : undefined,
 
   expect: {
     toHaveScreenshot: {

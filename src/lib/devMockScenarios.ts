@@ -6,6 +6,31 @@ import type { MockScenario } from "@/hooks/useDevMockScenario";
  * Used by DevMockPanel to test different campaign states at runtime.
  *
  * Never shipped in production.
+ *
+ * ## Usage in Jest Tests
+ *
+ * The mock Soroban RPC server can be used in offline unit tests:
+ *
+ * ```typescript
+ * import { createMockSorobanRpcServer } from '@/lib/devMockScenarios';
+ *
+ * const mockServer = createMockSorobanRpcServer({ sequence: 1000000 });
+ *
+ * // Test transaction simulation
+ * const result = await mockServer.simulateTransaction('transaction_xdr');
+ * expect(result.status).toBe('SUCCESS');
+ * ```
+ *
+ * ## Mock Scenario Application
+ *
+ * Apply different campaign states for testing UI components:
+ *
+ * ```typescript
+ * import { applyMockScenario } from '@/lib/devMockScenarios';
+ *
+ * const campaign = applyMockScenario(baseCampaign, 'funded');
+ * expect(campaign.funds_withdrawn).toBe(true);
+ * ```
  */
 
 export function applyMockScenario(campaign: Campaign, scenario: MockScenario): Campaign {
@@ -173,7 +198,31 @@ export const MOCK_SCENARIOS = [
 ] as const;
 
 /**
- * Mock Soroban RPC Server interface for offline unit testing (#1594).
+ * Mock Soroban RPC Server interface for offline unit testing.
+ *
+ * Provides a lightweight in-memory mock of Soroban RPC endpoints
+ * for use in Jest tests without requiring a live Stellar network connection.
+ *
+ * ## Key Features
+ * - Zero external dependencies
+ * - Configurable ledger sequence and health status
+ * - Simulates transaction success/failure based on XDR content
+ * - Predictable mock responses for test determinism
+ *
+ * ## Example Usage
+ *
+ * ```typescript
+ * const server = createMockSorobanRpcServer({ sequence: 5000000, healthy: true });
+ *
+ * // Test transaction simulation
+ * const simResult = await server.simulateTransaction('valid_xdr');
+ * expect(simResult.status).toBe('SUCCESS');
+ *
+ * // Test transaction submission
+ * const sendResult = await server.sendTransaction('signed_xdr');
+ * expect(sendResult.status).toBe('PENDING');
+ * expect(sendResult.hash).toBe('mock_tx_hash_success');
+ * ```
  */
 export interface MockSorobanRpcServer {
   getLatestLedger(): Promise<{ sequence: number; id: string }>;
