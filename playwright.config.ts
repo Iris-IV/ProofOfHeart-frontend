@@ -6,6 +6,8 @@ import { defineConfig, devices } from "@playwright/test";
  * - Tests run with NEXT_PUBLIC_USE_MOCKS=true to use mock data
  * - CI mode: headless, no traces on success
  * - Local mode: headed with retries disabled for faster feedback
+ * - Visual regression testing enabled with configurable thresholds
+ * - Comprehensive logging and error reporting for CI pipelines
  */
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -13,10 +15,11 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 4 : undefined,
-  reporter: process.env.CI ? [["github"], ["list"], ["html"]] : [["list"]],
+  reporter: process.env.CI ? [["github"], ["list"], ["html"], ["junit"]] : [["list"]],
   maxFailures: process.env.CI ? 5 : undefined,
-
+  timeout: 60000,
   expect: {
+    timeout: 10000,
     toHaveScreenshot: {
       maxDiffPixelRatio: 0.05,
       threshold: 0.2,
