@@ -1,8 +1,10 @@
 {
   "*.{ts,tsx,js,jsx}": [
-    "prettier --write --cache",
-    "eslint --fix --max-warnings=0 --cache",
+    "prettier --write --cache --cache-location .cache/prettier",
+    "eslint --fix --max-warnings=0 --cache --cache-location .cache/eslint",
     "node scripts/lint-staged-typecheck.mjs"
   ],
-  "*.{json,css,md}": ["prettier --write --cache"]
+  "*.{json,css,md,yml,yaml}": [
+    "prettier --write --cache --cache-location .cache/prettier"
+  ]
 }
