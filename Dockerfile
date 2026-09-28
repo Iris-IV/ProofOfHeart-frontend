@@ -8,31 +8,42 @@ ARG NODE_IMAGE=node:22-alpine@sha256:9bef0ef1e268f60627da9ba7d7605e8831d5b56ad07
 # NOTE: The project contains both package-lock.json and pnpm-lock.yaml.
 # package-lock.json is chosen as the source of truth because npm is the primary package manager.
 # pnpm-lock.yaml is explicitly omitted from COPY to ensure clean, deterministic npm-based builds.
+# This stage is optimized for maximum cache reuse - only invalidates when dependencies change.
 FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
+
+# Copy only dependency manifests first - most stable layer
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+
+# Install dependencies in a separate layer for better caching
+RUN npm ci --no-audit --no-fund --prefer-offline
 
 # Stage 2: Build the application
 FROM ${NODE_IMAGE} AS builder
 WORKDIR /app
 
-# Copy dependency manifests and lockfiles first for better layer caching
-COPY package.json package-lock.json ./
+# Copy installed dependencies from deps stage (reuses cache if deps unchanged)
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy configuration files that rarely change
+# Layer 1: Dependency manifests (rarely change)
+COPY package.json package-lock.json ./
+
+# Layer 2: Configuration files (change infrequently)
 COPY next.config.ts tsconfig.json postcss.config.mjs eslint.config.mjs ./
 COPY .prettierrc .prettierignore ./
 
-# Copy public assets
-COPY public ./public
-
-# Copy source code last (changes most frequently)
-COPY src ./src
+# Layer 3: Localization files (change occasionally)
 COPY messages ./messages
 
+# Layer 4: Static assets (change occasionally)
+COPY public ./public
+
+# Layer 5: Source code (changes most frequently - placed last for optimal caching)
+COPY src ./src
+
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Use Next.js standalone output for smaller image size
 RUN npm run build
 
 # Stage 3: Minimal production image

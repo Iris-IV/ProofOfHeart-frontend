@@ -14,13 +14,77 @@ concurrency:
 
 jobs:
   build:
-    name: build
+    name: Build and Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Basic validation
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+          verbose: true
+
+      - name: Build application
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Start server for Lighthouse
         run: |
-          echo "Basic CI passed :heart:"
-          echo "Build check skipped for velocity - auto-merge handles review"
-          # If you want strict checks later, re-enable bun build / npm build here
+          npm run start &
+          echo $! > server.pid
+          sleep 10
+        env:
+          PORT: 3000
+
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: |
+            http://localhost:3000
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+          runs: 3
+
+      - name: Check Lighthouse performance score
+        run: |
+          # Extract performance score from Lighthouse results
+          PERF_SCORE=$(cat .lighthouseci/*/lhr-*.json | jq -r '.categories.performance.score * 100' | head -1)
+          echo "Performance score: $PERF_SCORE"
+          if (( $(echo "$PERF_SCORE < 90" | bc -l) )); then
+            echo "❌ Performance score $PERF_SCORE is below 90"
+            exit 1
+          else
+            echo "✅ Performance score $PERF_SCORE meets the threshold"
+          fi
+
+      - name: Stop server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then
+            kill $(cat server.pid) || true
+            rm server.pid
+          fi

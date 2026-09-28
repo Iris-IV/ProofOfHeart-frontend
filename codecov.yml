@@ -1,5 +1,8 @@
 codecov:
   require_ci_to_pass: true
+  notify:
+    after_n_builds: 1
+    wait_for_ci: true
 
 coverage:
   precision: 2
@@ -11,12 +14,31 @@ coverage:
       default:
         target: auto
         threshold: 1%
+        informational: false
     patch:
       default:
         target: auto
         threshold: 1%
+        informational: false
 
 comment:
   layout: "reach, diff, flags, files"
   behavior: default
   require_changes: false
+  require_base: false
+  require_head: true
+
+# Ignore patterns for files that don't need coverage reporting
+ignore:
+  - "**/*.stories.tsx"
+  - "**/*.config.*"
+  - "**/test/**"
+  - "**/__tests__/**"
+  - "**/node_modules/**"
+
+# Flag configuration for different test suites
+flags:
+  unittests:
+    paths:
+      - src/
+    carryforward: true
