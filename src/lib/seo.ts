@@ -2,7 +2,7 @@ import { routing } from "@/i18n/routing";
 import type { Campaign } from "@/types";
 import { stroopsToXlm } from "@/lib/stellarAmount";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://proofofheart.xyz";
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://proofofheart.xyz").replace(/\/+$/, "");
 
 /**
  * Converts a path to an absolute URL.
@@ -11,6 +11,12 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://proofofheart.xyz";
 export function absoluteUrl(path: string): string {
   if (/^https?:\/\//.test(path)) return path;
   return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+export function absoluteUrl(path: string): string {
+  if (!path) return SITE_URL;
+  if (/^https?:\/\//i.test(path)) return path;
+
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${SITE_URL}${normalizedPath}`;
 }
 
 /**
@@ -18,13 +24,20 @@ export function absoluteUrl(path: string): string {
  * Cached at module level for performance.
  */
 export function buildAlternates(path: string, locale: string = routing.defaultLocale) {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const normalizedLocale = routing.locales.includes(locale) ? locale : routing.defaultLocale;
+
   const languages: Record<string, string> = {};
   for (const loc of routing.locales) {
     languages[loc] = `${SITE_URL}/${loc}${path}`;
+  for (const supportedLocale of routing.locales) {
+    languages[supportedLocale] = `${SITE_URL}/${supportedLocale}${normalizedPath}`;
   }
-  languages["x-default"] = `${SITE_URL}/${routing.defaultLocale}${path}`;
+
+  languages["x-default"] = `${SITE_URL}/${routing.defaultLocale}${normalizedPath}`;
+
   return {
-    canonical: `${SITE_URL}/${locale}${path}`,
+    canonical: `${SITE_URL}/${normalizedLocale}${normalizedPath}`,
     languages,
   };
 }
@@ -44,7 +57,7 @@ export function buildCauseJsonLd(
   campaign: Campaign,
   locale: string,
   strings: CauseJsonLdStrings,
-): object {
+): Record<string, unknown> {
   const url = absoluteUrl(`/${locale}/causes/${campaign.id}`);
   const isAcceptingDonations = campaign.status === "active" || campaign.status === "verified";
   const createdDate = new Date(campaign.created_at * 1000).toISOString();
@@ -66,6 +79,35 @@ export function buildCauseJsonLd(
     "@type": "Organization",
     name: "ProofOfHeart",
     url: absoluteUrl("/"),
+    dateCreated: new Date(campaign.created_at * 1000).toISOString(),
+    provider: {
+      "@type": "Organization",
+      name: "ProofOfHeart",
+      url: absoluteUrl("/"),
+    },
+    additionalProperty: [
+      {
+        "@type": "PropertyValue",
+        name: strings.fundingGoalLabel,
+        value: stroopsToXlm(campaign.funding_goal),
+        unitText: "XLM",
+      },
+      {
+        "@type": "PropertyValue",
+        name: strings.amountRaisedLabel,
+        value: stroopsToXlm(campaign.amount_raised),
+        unitText: "XLM",
+      },
+      ...(campaign.deadline
+        ? [
+            {
+              "@type": "PropertyValue",
+              name: strings.deadlineLabel,
+              value: new Date(campaign.deadline * 1000).toISOString(),
+            },
+          ]
+        : []),
+    ],
   };
 
   // Build additionalProperty array efficiently
@@ -93,7 +135,10 @@ export function buildCauseJsonLd(
 
   // Conditionally add image
   if (campaign.cover_image_url) {
-    schema.image = absoluteUrl(campaign.cover_image_url);
+    const safeCoverImage = absoluteUrl(campaign.cover_image_url);
+    if (/^https?:\/\//i.test(safeCoverImage)) {
+      schema.image = safeCoverImage;
+    }
   }
 
   // Conditionally add donation action
@@ -147,6 +192,11 @@ export function getStellarResourceHints(): ResourceHintLink[] {
 
   cachedHints = hints;
   return hints;
+export function getStellarResourceHints(): ResourceHintLink[] {
+  return STELLAR_PRECONNECT_ORIGINS.flatMap((origin) => [
+    { rel: "preconnect", href: origin, crossOrigin: "anonymous" },
+    { rel: "dns-prefetch", href: origin },
+  ]);
 }
 
 /**

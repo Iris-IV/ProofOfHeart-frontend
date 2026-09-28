@@ -28,6 +28,106 @@ describe("validateForm", () => {
     expect(Object.keys(errors)).toHaveLength(0);
   });
 
+  it("accepts emoji-rich titles within the character limit", () => {
+    const title = "🌍 Community Repair Initiative 🚜";
+    const errors = validateForm(
+      title,
+      valid.description,
+      valid.descriptionEs,
+      valid.creatorEmail,
+      valid.fundingGoal,
+      valid.durationDays,
+      valid.hasRevenueSharing,
+      valid.revenueSharePercentage,
+      valid.coverImageUrl,
+    );
+
+    expect(errors.title).toBeUndefined();
+  });
+
+  it("rejects titles longer than 100 characters even when they contain emoji", () => {
+    const title = "🚀".repeat(51) + " A very long community campaign title that exceeds the limit";
+    const errors = validateForm(
+      title,
+      valid.description,
+      valid.descriptionEs,
+      valid.creatorEmail,
+      valid.fundingGoal,
+      valid.durationDays,
+      valid.hasRevenueSharing,
+      valid.revenueSharePercentage,
+      valid.coverImageUrl,
+    );
+
+    expect(errors.title).toBe("validationTitleTooLong");
+  });
+
+  it("accepts a funding goal just above zero", () => {
+    const errors = validateForm(
+      valid.title,
+      valid.description,
+      valid.descriptionEs,
+      valid.creatorEmail,
+      "0.01",
+      valid.durationDays,
+      valid.hasRevenueSharing,
+      valid.revenueSharePercentage,
+      valid.coverImageUrl,
+    );
+
+    expect(errors.fundingGoal).toBeUndefined();
+  });
+
+  it("rejects zero funding goal values such as 0.00", () => {
+    const errors = validateForm(
+      valid.title,
+      valid.description,
+      valid.descriptionEs,
+      valid.creatorEmail,
+      "0.00",
+      valid.durationDays,
+      valid.hasRevenueSharing,
+      valid.revenueSharePercentage,
+      valid.coverImageUrl,
+    );
+
+    expect(errors.fundingGoal).toBe("validationFundingGoalInvalid");
+  });
+
+  it("accepts long text with emoji content under the description limit", () => {
+    const description = `🌱 ${"A".repeat(500)} community action plan to improve local infrastructure and support education access across our neighborhood.`;
+    const errors = validateForm(
+      valid.title,
+      description,
+      valid.descriptionEs,
+      valid.creatorEmail,
+      valid.fundingGoal,
+      valid.durationDays,
+      valid.hasRevenueSharing,
+      valid.revenueSharePercentage,
+      valid.coverImageUrl,
+    );
+
+    expect(errors.description).toBeUndefined();
+  });
+
+  it("rejects description content above 1000 characters even with emoji formatting", () => {
+    const description = "🌍 " + "a".repeat(1001);
+    const errors = validateForm(
+      valid.title,
+      description,
+      valid.descriptionEs,
+      valid.creatorEmail,
+      valid.fundingGoal,
+      valid.durationDays,
+      valid.hasRevenueSharing,
+      valid.revenueSharePercentage,
+      valid.coverImageUrl,
+    );
+
+    expect(errors.description).toBe("validationDescriptionTooLong");
+  });
+
   it("requires title", () => {
     const errors = validateForm(
       "  ",

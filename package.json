@@ -12,15 +12,18 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint .",
+    "lint:staged": "lint-staged",
     "prepare": "husky",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format:check": "prettier --check . --cache",
     "typecheck": "tsc --noEmit",
     "i18n:check": "node scripts/check-i18n.mjs",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:ci": "jest --ci --coverage --runInBand",
+    "test:coverage:ci": "jest --ci --coverage --runInBand --watch=false",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
@@ -88,6 +91,7 @@
     "husky": "^9.1.7",
     "jest": "^30.5.0",
     "jest-environment-jsdom": "^30.4.1",
+    "lint-staged": "^15.0.0",
     "prettier": "^3.9.6",
     "storybook": "^8",
     "tailwindcss": "^4.3.3",
@@ -116,5 +120,5 @@
       "ws": "^7.5.11"
     }
   },
-  "_overridesRationale": "axios and follow-redirects overrides are pinned to mitigate high-severity CVEs in transitive dependencies. brace-expansion is pinned per-major (CVE-2026-14257, GHSA-mh99-v99m-4gvg): the 1.x/2.x/3.x lines received backported fixes rather than a single upgrade path, and their public API differs from 5.x (default export vs named `expand`), so a blanket bump would break minimatch. nanoid is held at >=3.3.18 (custom generators could loop indefinitely when size is zero) and sharp at >=0.35.4 (libheif CVEs); both are the same-major line their consumers already declare. toml is held at ^4.3.0, which fixes the uncontrolled-recursion and prototype-pollution advisories, because @stellar/stellar-sdk@15 loads it as a CommonJS default export and 4.x keeps that exact shape; the sdk's own v17 major replaces toml with smol-toml, which is the longer-term fix. baseline-browser-mapping is build-time only (browserslist) but is still pinned off the DoS advisory."
+  "_overridesRationale": "axios and follow-redirects overrides are pinned to mitigate high-severity CVEs in transitive dependencies. brace-expansion is pinned per-major (CVE-2026-14257, GHSA-mh99[..."
 }

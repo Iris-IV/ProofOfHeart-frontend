@@ -20,6 +20,7 @@ coverage:
         target: auto
         threshold: 1%
         informational: false
+        only_pulls: true
 
 comment:
   layout: "reach, diff, flags, files"
@@ -28,7 +29,6 @@ comment:
   require_base: false
   require_head: true
 
-# Ignore patterns for files that don't need coverage reporting
 ignore:
   - "**/*.stories.tsx"
   - "**/*.config.*"
@@ -36,7 +36,6 @@ ignore:
   - "**/__tests__/**"
   - "**/node_modules/**"
 
-# Flag configuration for different test suites
 flags:
   unittests:
     paths:
