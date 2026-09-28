@@ -20,8 +20,16 @@ export async function getStellarBalance(publicKey: string): Promise<number> {
       (b: { asset_type: string; balance: string }) => b.asset_type === "native",
     );
     return xlmBalance ? parseFloat(xlmBalance.balance) : 0;
-  } catch (error: any) {
-    if (error.response && error.response.status === 404) {
+  } catch (error: unknown) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "response" in error &&
+      error.response &&
+      typeof error.response === "object" &&
+      "status" in error.response &&
+      error.response.status === 404
+    ) {
       return 0;
     }
     throw error;
