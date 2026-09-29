@@ -17,10 +17,13 @@ function makeImageFile(name = "cover.png", type = "image/png", size = 512): File
   return new File([bytes], name, { type });
 }
 
-function makeUploadRequest(file: File | null): NextRequest {
+function makeUploadRequest(file: File | null, altText?: string): NextRequest {
   const formData = new FormData();
   if (file) {
     formData.append("file", file);
+  }
+  if (altText !== undefined) {
+    formData.append("altText", altText);
   }
 
   return new NextRequest("http://localhost/api/upload-image", {
@@ -36,20 +39,39 @@ describe("POST /api/upload-image", () => {
   });
 
   it("returns 400 when file is missing", async () => {
-    const response = await POST(makeUploadRequest(null));
+    const response = await POST(makeUploadRequest(null, "A campaign cover"));
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ message: "file is required" });
   });
 
   it("returns 400 for invalid image type", async () => {
-    const response = await POST(makeUploadRequest(makeImageFile("cover.txt", "text/plain")));
-    expect(response.status).toBe(400);
+    const response = await POST(
+      makeUploadRequest(makeImageFile("cover.txt", "text/plain"), "A campaign cover"),
+    );
+    expect(response.status).toB(400);
     expect(mockPinImageToIpfs).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when alt text is missing", async () => {
+    const response = await POST(makeUploadRequest(makeImageFile()));
+    expect(response.status).toB(400);
+    expect(await response.json()).toEqual({
+      message: "Alt text is required for accessibility",
+    });
+    expect(mockPinImageToIpfs).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when alt text is blank", async () => {
+    const response = await POST(makeUploadRequest(makeImageFile(), "   "));
+    expect(response.status).toB(400);
+    expect(await response.json()).toEqual({
+      message: "Alt text is required for accessibility",
+    });
   });
 
   it("returns the IPFS gateway URL on success", async () => {
     const file = makeImageFile();
-    const response = await POST(makeUploadRequest(file));
+    const response = await POST(makeUploadRequest(file, "A campaign cover image"));
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ url: "https://ipfs.io/ipfs/QmTestHash" });
@@ -68,8 +90,8 @@ describe("POST /api/upload-image", () => {
   it("returns 503 when upload service is not configured", async () => {
     mockPinImageToIpfs.mockRejectedValue(new Error("Image upload is not configured"));
 
-    const response = await POST(makeUploadRequest(makeImageFile()));
-    expect(response.status).toBe(503);
+    const response = await POST(makeUploadRequest(makeImageFile(), "A campaign cover"));
+    expect(response.status).toBe503);
     expect(await response.json()).toEqual({ message: "Image upload is not configured" });
   });
 });

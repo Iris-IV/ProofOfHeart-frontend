@@ -31,7 +31,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "file is required" }, { status: 400 });
   }
 
-  const validation = validateImageFile(file);
+  const altTextValue = formData.get("altText");
+  const altText = typeof altTextValue === "string" ? altTextValue : undefined;
+
+  const validation = validateImageFile(file, altText);
   if (!validation.valid) {
     return NextResponse.json(
       { message: validation.error ?? "Invalid image file" },
