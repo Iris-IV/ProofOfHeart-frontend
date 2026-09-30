@@ -2,7 +2,14 @@ import { ImageResponse } from "next/og";
 import { getCampaign } from "@/lib/contractClient";
 import { CATEGORY_LABELS } from "@/types";
 import { stroopsToXlmNumber } from "@/lib/stellarAmount";
-import { BrandOgCard, OG_CONTENT_TYPE, OG_SIZE, truncate } from "@/lib/ogCard";
+import {
+  BrandOgCard,
+  OG_CACHE_CONTROL,
+  OG_CONTENT_TYPE,
+  OG_SIZE,
+  ogImageOptions,
+  truncate,
+} from "@/lib/ogCard";
 import { absoluteUrl } from "@/lib/seo";
 import { isAllowedCampaignImageUrl } from "@/lib/campaignMedia";
 
@@ -304,16 +311,14 @@ export default async function Image({
       >
         {layout}
       </div>,
-      {
-        ...size,
-      },
+      ogImageOptions(OG_CACHE_CONTROL.campaign),
     );
   } catch {
     // Campaign lookup failed — still return a valid 1200x630 PNG rather than a 500,
     // otherwise the scraper falls back to no preview at all.
     return new ImageResponse(
       <BrandOgCard title="ProofOfHeart" subtitle="Blockchain-powered crowdfunding" />,
-      { ...size },
+      ogImageOptions(OG_CACHE_CONTROL.fallback),
     );
   }
 }

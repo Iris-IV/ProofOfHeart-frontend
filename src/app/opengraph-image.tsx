@@ -1,5 +1,11 @@
 import { ImageResponse } from "next/og";
-import { BrandOgCard, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/ogCard";
+import {
+  BrandOgCard,
+  OG_CACHE_CONTROL,
+  OG_CONTENT_TYPE,
+  OG_SIZE,
+  ogImageOptions,
+} from "@/lib/ogCard";
 
 /**
  * #642 — Site-wide default Open Graph image.
@@ -20,6 +26,6 @@ export default function OpengraphImage() {
       title="ProofOfHeart"
       subtitle="Community-validated causes, contributions accounted for on-chain."
     />,
-    { ...size },
+    ogImageOptions(OG_CACHE_CONTROL.brand),
   );
 }
