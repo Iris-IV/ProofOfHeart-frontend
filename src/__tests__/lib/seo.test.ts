@@ -1,4 +1,11 @@
-import { absoluteUrl, buildAlternates, buildCauseJsonLd, getStellarResourceHints, isValidSeoUrl, STELLAR_PRECONNECT_ORIGINS } from "./seo";
+import {
+  absoluteUrl,
+  buildAlternates,
+  buildCauseJsonLd,
+  getStellarResourceHints,
+  isValidSeoUrl,
+  STELLAR_PRECONNECT_ORIGINS,
+} from "@/lib/seo";
 import type { Campaign } from "@/types";
 
 // Mock campaign data for testing
@@ -34,13 +41,13 @@ describe("seo.ts", () => {
 
     it("converts relative paths to absolute URLs", () => {
       const url = absoluteUrl("/causes/1");
-      expect(url).toMatch(/https:\/\//)
+      expect(url).toMatch(/https:\/\//);
       expect(url).toContain("/causes/1");
     });
 
     it("handles paths without leading slash", () => {
       const url = absoluteUrl("causes/1");
-      expect(url).toMatch(/https:\/\//)
+      expect(url).toMatch(/https:\/\//);
       expect(url).toContain("/causes/1");
     });
 
@@ -78,8 +85,8 @@ describe("seo.ts", () => {
 
     it("includes campaign title and description", () => {
       const schema = buildCauseJsonLd(mockCampaign, "en", mockStrings);
-      expect(schema.name).toBe("Test Campaign");
-      expect(schema.description).toBe("Test campaign description");
+      expect(schema["name"]).toBe("Test Campaign");
+      expect(schema["description"]).toBe("Test campaign description");
     });
 
     it("includes provider organization", () => {
@@ -97,40 +104,42 @@ describe("seo.ts", () => {
 
     it("includes image when cover_image_url is present", () => {
       const schema = buildCauseJsonLd(mockCampaign, "en", mockStrings);
-      expect(schema.image).toBeDefined();
-      expect(schema.image).toContain("example.com/image.jpg");
+      expect(schema["image"]).toBeDefined();
+      expect(schema["image"]).toContain("example.com/image.jpg");
     });
 
     it("excludes image when cover_image_url is null", () => {
-      const campaign = { ...mockCampaign, cover_image_url: null };
+      // The API can return null for a missing image even though the Campaign
+      // type declares the field optional rather than nullable.
+      const campaign = { ...mockCampaign, cover_image_url: null } as unknown as Campaign;
       const schema = buildCauseJsonLd(campaign, "en", mockStrings);
-      expect(schema.image).toBeUndefined();
+      expect(schema["image"]).toBeUndefined();
     });
 
     it("includes potentialAction when campaign is active", () => {
-      const campaign = { ...mockCampaign, status: "active" };
+      const campaign = { ...mockCampaign, status: "active" as const };
       const schema = buildCauseJsonLd(campaign, "en", mockStrings);
-      expect(schema.potentialAction).toBeDefined();
-      expect((schema.potentialAction as any)["@type"]).toBe("DonateAction");
+      expect(schema["potentialAction"]).toBeDefined();
+      expect((schema["potentialAction"] as any)["@type"]).toBe("DonateAction");
     });
 
     it("includes potentialAction when campaign is verified", () => {
-      const campaign = { ...mockCampaign, status: "verified" };
+      const campaign = { ...mockCampaign, status: "verified" as const };
       const schema = buildCauseJsonLd(campaign, "en", mockStrings);
-      expect(schema.potentialAction).toBeDefined();
+      expect(schema["potentialAction"]).toBeDefined();
     });
 
     it("excludes potentialAction for cancelled campaigns", () => {
-      const campaign = { ...mockCampaign, status: "cancelled" };
+      const campaign = { ...mockCampaign, status: "cancelled" as const };
       const schema = buildCauseJsonLd(campaign, "en", mockStrings);
-      expect(schema.potentialAction).toBeUndefined();
+      expect(schema["potentialAction"]).toBeUndefined();
     });
 
     it("handles different locales", () => {
       const schemaEn = buildCauseJsonLd(mockCampaign, "en", mockStrings);
       const schemaEs = buildCauseJsonLd(mockCampaign, "es", mockStrings);
-      expect(schemaEn.inLanguage).toBe("en");
-      expect(schemaEs.inLanguage).toBe("es");
+      expect(schemaEn["inLanguage"]).toBe("en");
+      expect(schemaEs["inLanguage"]).toBe("es");
     });
   });
 
@@ -143,18 +152,18 @@ describe("seo.ts", () => {
     it("returns preconnect and dns-prefetch hints", () => {
       const hints = getStellarResourceHints();
       expect(hints.length).toBeGreaterThan(0);
-      
-      const hasPreconnect = hints.some(h => h.rel === "preconnect");
-      const hasDnsPrefetch = hints.some(h => h.rel === "dns-prefetch");
-      
+
+      const hasPreconnect = hints.some((h) => h.rel === "preconnect");
+      const hasDnsPrefetch = hints.some((h) => h.rel === "dns-prefetch");
+
       expect(hasPreconnect).toBe(true);
       expect(hasDnsPrefetch).toBe(true);
     });
 
     it("includes all Stellar origins", () => {
       const hints = getStellarResourceHints();
-      const origins = hints.map(h => h.href);
-      
+      const origins = hints.map((h) => h.href);
+
       for (const origin of STELLAR_PRECONNECT_ORIGINS) {
         expect(origins).toContain(origin);
       }
@@ -162,9 +171,9 @@ describe("seo.ts", () => {
 
     it("includes crossOrigin attribute on preconnect hints", () => {
       const hints = getStellarResourceHints();
-      const preconnectHints = hints.filter(h => h.rel === "preconnect");
-      
-      preconnectHints.forEach(hint => {
+      const preconnectHints = hints.filter((h) => h.rel === "preconnect");
+
+      preconnectHints.forEach((hint) => {
         expect(hint.crossOrigin).toBe("anonymous");
       });
     });
