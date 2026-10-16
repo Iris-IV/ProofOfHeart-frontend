@@ -21,6 +21,34 @@ export const IMAGE_SIZE_ERROR = "Image must be < 5MB";
 // Minimum file size in bytes (100 bytes - prevents empty/tiny images)
 const MIN_IMAGE_SIZE = 100;
 
+// Alt text limits for accessibility on creator-uploaded media.
+export const ALT_TEXT_MAX_LENGTH = 150;
+export const ALT_TEXT_REQUIRED_ERROR = "Alt text is required for accessibility";
+
+/**
+ * Validates accessibility alt text for creator uploaded media.
+ *
+ * Blank (or whitespace-only) alt text is rejected so screen readers announce
+ * something meaningful, and overly long alt text is rejected so it stays
+ * readable.
+ */
+export function validateAltText(altText: string | null | undefined): ValidationResult {
+  const trimmed = altText ? altText.trim() : "";
+
+  if (!trimmed) {
+    return { valid: false, error: ALT_TEXT_REQUIRED_ERROR };
+  }
+
+  if (trimmed.length > ALT_TEXT_MAX_LENGTH) {
+    return {
+      valid: false,
+      error: `Alt text must be ${ALT_TEXT_MAX_LENGTH} characters or fewer`,
+    };
+  }
+
+  return { valid: true };
+}
+
 // Allowed domains for campaign images
 const ALLOWED_DOMAINS = [
   "ipfs.io",
@@ -129,9 +157,15 @@ export function validateImageUrl(url: string): ValidationResult {
 }
 
 /**
- * Validates an uploaded image file (size and type).
+ * Validates an uploaded image file (size and type), plus alt text when the
+ * caller supplies it.
+ *
+ * Callers that collect alt text separately (e.g. the creation form, which
+ * validates it through `campaignValidation`) omit the second argument; callers
+ * that receive both in one request (the upload API route) pass it so a missing
+ * or blank alt text fails the same validation.
  */
-export function validateImageFile(file: File): ValidationResult {
+export function validateImageFile(file: File, altText?: string): ValidationResult {
   // Validate size
   const sizeValidation = validateImageSize(file.size);
   if (!sizeValidation.valid) {
@@ -142,6 +176,11 @@ export function validateImageFile(file: File): ValidationResult {
   const typeValidation = validateImageType(file.type);
   if (!typeValidation.valid) {
     return typeValidation;
+  }
+
+  // Validate alt text when provided
+  if (altText !== undefined) {
+    return validateAltText(altText);
   }
 
   return { valid: true };
