@@ -78,7 +78,7 @@ the overrides.
 
 ```bash
 npm run audit:ci        # the gate
-node scripts/check-audit-policy.mjs   # allowlist expiry + overrides parity
+node scripts/check-audit-policy.mjs   # allowlist expiry + single lockfile
 ```
 
 Two things keep it cheap:

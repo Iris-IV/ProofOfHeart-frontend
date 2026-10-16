@@ -5,9 +5,7 @@
 ARG NODE_IMAGE=node:22-alpine@sha256:9bef0ef1e268f60627da9ba7d7605e8831d5b56ad07487d24d1aa386336d1944
 
 # Stage 1: Install dependencies
-# NOTE: The project contains both package-lock.json and pnpm-lock.yaml.
-# package-lock.json is chosen as the source of truth because npm is the primary package manager.
-# pnpm-lock.yaml is explicitly omitted from COPY to ensure clean, deterministic npm-based builds.
+# npm is the only package manager; package-lock.json is the only lockfile.
 # This stage is optimized for maximum cache reuse - only invalidates when dependencies change.
 FROM ${NODE_IMAGE} AS deps
 WORKDIR /app

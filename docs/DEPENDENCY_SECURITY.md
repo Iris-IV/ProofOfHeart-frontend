@@ -43,10 +43,11 @@ the same workflow and is also covered by unit tests:
    permanent, which is how a temporary exception becomes one nobody remembers
    approving. `check-audit-policy.mjs` exits 1 on an expired entry, so the decision
    has to be re-made on a schedule.
-2. **The `overrides` block is identical in `package.json` and `pnpm-workspace.yaml`.**
-   A pin that exists in only one of them means npm and pnpm resolve different
-   versions, so the pin protects whichever installer CI happens to use while leaving
-   everyone else vulnerable.
+2. **npm is the only package manager.** `package-lock.json` is the only lockfile, and
+   `package.json` declares `"packageManager": "npm@..."`. A second lockfile would
+   resolve a different tree, so a pin would protect one installer and not the other.
+   The script fails if `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `yarn.lock` or a bun
+   lockfile is committed.
 
 ### Widening the gate
 
@@ -59,10 +60,8 @@ an expiry.
 ## Enforcing patched transitive versions
 
 Most advisories in this tree come from packages we do not depend on directly. They are
-pinned through the `overrides` block in `package.json`, with the same set mirrored in
-`pnpm-workspace.yaml` so contributors on pnpm resolve identically. **When you change one,
-change both** — CI installs with npm, but the repo supports pnpm locally. This is
-enforced by `check-audit-policy.mjs`, not just documented.
+pinned through the `overrides` block in `package.json`. npm is the only supported
+installer, so that block is the single place a pin lives.
 
 | Package                    | Pin        | Reason                                                 |
 | -------------------------- | ---------- | ------------------------------------------------------ |
@@ -173,8 +172,8 @@ signs transactions with `@stellar/stellar-sdk` and Freighter. Re-evaluate when
 
 1. Confirm the advisory and its real patched versions — read the advisory page, do not
    trust the `npm audit` range alone when majors have diverged.
-2. Add the pin to `package.json` **and** `pnpm-workspace.yaml`. Then run
-   `node scripts/check-audit-policy.mjs` to confirm the two agree.
+2. Add the pin to the `overrides` block in `package.json`, then run
+   `node scripts/check-audit-policy.mjs`.
 3. Re-install, then confirm the vulnerable code is actually gone from
    `node_modules` rather than only the version string changing.
 4. Run `npm run audit:ci`, `npm test` and `npm run lint` — overrides silently break
