@@ -16,7 +16,7 @@ const STORAGE_KEY_PREFIX = "notif_prefs_";
 const VALID_FREQUENCIES: NotificationFrequency[] = ["instant", "daily", "weekly"];
 const VALID_CHANNELS: NotificationChannel[] = ["inApp", "email"];
 
-const DEFAULTS: NotificationPreferences = Object.freeze({
+const DEFAULTS: NotificationPreferences = Object.freeze<NotificationPreferences>({
   contributions: true,
   verified: true,
   refundAvailable: true,
@@ -30,7 +30,10 @@ function isNotificationFrequency(value: unknown): value is NotificationFrequency
 }
 
 function isNotificationChannels(value: unknown): value is NotificationChannel[] {
-  return Array.isArray(value) && value.every((channel) => VALID_CHANNELS.includes(channel as NotificationChannel));
+  return (
+    Array.isArray(value) &&
+    value.every((channel) => VALID_CHANNELS.includes(channel as NotificationChannel))
+  );
 }
 
 export function getNotificationPreferences(walletAddress: string): NotificationPreferences {
@@ -57,7 +60,7 @@ export function setNotificationPreferences(
   const nextPrefs: NotificationPreferences = {
     ...prefs,
     channels: prefs.channels.filter((channel): channel is NotificationChannel =>
-      VALID_CHANNELS.includes(channel as NotificationChannel),
+      VALID_CHANNELS.includes(channel),
     ),
   };
 
@@ -107,7 +110,11 @@ export function writeLocalePreference(locale: string): void {
   setRawItem(LOCALE_STORAGE_KEY, normalized);
 
   if (typeof document !== "undefined") {
-    document.cookie = `${LOCALE_COOKIE_NAME}=${encodeURIComponent(normalized)}; path=/; max-age=${LOCALE_COOKIE_MAX_AGE}; SameSite=Lax; Secure`;
+    // `Secure` cookies are dropped by browsers (and jsdom) over plain http, so
+    // only add the flag on https — otherwise the locale never persists on
+    // localhost / http deployments.
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${LOCALE_COOKIE_NAME}=${encodeURIComponent(normalized)}; path=/; max-age=${LOCALE_COOKIE_MAX_AGE}; SameSite=Lax${secure}`;
   }
 }
 
