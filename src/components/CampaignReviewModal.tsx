@@ -27,7 +27,6 @@ export default memo(function CampaignReviewModal({
   const t = useTranslations("CreateCampaign");
 
   return (
-    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
       role="dialog"
@@ -62,6 +61,15 @@ export default memo(function CampaignReviewModal({
             </dt>
             <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mt-1">
               {reviewData.title}
+            </dd>
+          </div>
+
+          <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 p-3">
+            <dt className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              {t("reviewFieldDescription")}
+            </dt>
+            <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mt-1 whitespace-pre-wrap">
+              {reviewData.description}
             </dd>
           </div>
 
