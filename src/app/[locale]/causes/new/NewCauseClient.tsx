@@ -19,7 +19,6 @@ import { invalidateCampaignsList } from "@/lib/cacheInvalidation";
 import { Category, CATEGORY_LABELS } from "@/types";
 import { xlmToStroops } from "@/lib/stellarAmount";
 import { parseContractError } from "@/utils/contractErrors";
-import { encodeLocalizedDescription } from "@/utils/localizedDescription";
 import { useCampaignFormDraft } from "@/hooks/useCampaignFormDraft";
 import { validateForm, type FormErrorKeys, type ReviewData } from "@/lib/campaignValidation";
 
@@ -60,8 +59,7 @@ export default function CreateCampaignPage() {
   // Creator email webhook URL is server-only — client calls /api/notify-creator instead
 
   // ── Draft management hook ──
-  const { hasDraft, lastSavedAt, restoreDraft, saveDraft, discardDraft, clearDraft } =
-    useCampaignFormDraft({ publicKey });
+  const { restoreDraft, saveDraft, clearDraft } = useCampaignFormDraft({ publicKey });
 
   // Restore draft on mount
   useEffect(() => {
@@ -79,7 +77,7 @@ export default function CreateCampaignPage() {
       setCoverImageUrl,
       setMilestones,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Restore must run once on mount; the setters are stable.
   }, []);
 
   // Persist draft whenever form state changes
@@ -113,23 +111,6 @@ export default function CreateCampaignPage() {
     milestones,
     saveDraft,
   ]);
-
-  const handleDiscardDraft = () => {
-    discardDraft({
-      setTitle,
-      setDescription,
-      setDescriptionEs,
-      setCreatorEmail,
-      setFundingGoal,
-      setDurationDays,
-      setCategory,
-      setHasRevenueSharing,
-      setRevenueSharePercentage,
-      setTags,
-      setCoverImageUrl,
-      setMilestones,
-    });
-  };
 
   // ── Derived state ──
   const isStartup = category === Category.EducationalStartup;
@@ -196,7 +177,7 @@ export default function CreateCampaignPage() {
   };
 
   const formatReviewDate = (timestamp: number) => {
-    const locale = typeof navigator !== 'undefined' ? navigator.language : 'en-US';
+    const locale = typeof navigator !== "undefined" ? navigator.language : "en-US";
     return new Intl.DateTimeFormat(locale, {
       year: "numeric",
       month: "long",
@@ -227,7 +208,7 @@ export default function CreateCampaignPage() {
           }),
         });
         if (!res.ok) {
-          const data = await res.json().catch(() => null);
+          const data = (await res.json().catch(() => null)) as { error?: string } | null;
           if (data?.error) throw new Error(data.error);
         }
       } catch {
@@ -266,8 +247,7 @@ export default function CreateCampaignPage() {
         {
           onStatus: ({ phase }) => setTxPhase(phase),
           coverImageUrl: reviewData.coverImageUrl,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          milestones: reviewData.milestones as any,
+          milestones: reviewData.milestones,
         },
       );
 
@@ -363,8 +343,17 @@ export default function CreateCampaignPage() {
   };
 
   // Resolve error key to translated string
-  const err = (key: keyof FormErrorKeys) =>
-    errorKeys[key] ? t(errorKeys[key] as Parameters<typeof t>[0]) : undefined;
+  const err = (key: keyof FormErrorKeys) => (errorKeys[key] ? t(errorKeys[key]) : undefined);
+
+  // Clear a field's validation error as soon as the user edits it, so a
+  // corrected field stops showing a stale "required" message.
+  const clearError = (key: keyof FormErrorKeys) =>
+    setErrorKeys((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
 
   // ── Render ──
   return (
@@ -386,7 +375,7 @@ export default function CreateCampaignPage() {
             </p>
             <button
               type="button"
-              onClick={connectWallet}
+              onClick={() => void connectWallet()}
               disabled={walletLoading}
               className="shrink-0 w-full sm:w-auto px-4 py-2 min-h-[44px] rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50 transition-colors"
             >
@@ -412,7 +401,10 @@ export default function CreateCampaignPage() {
               id="title"
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                clearError("title");
+              }}
               maxLength={100}
               aria-invalid={Boolean(errorKeys.title)}
               aria-describedby={errorKeys.title ? "title-error" : undefined}
@@ -472,7 +464,10 @@ export default function CreateCampaignPage() {
                 <textarea
                   id="description"
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                    clearError("description");
+                  }}
                   maxLength={1000}
                   rows={5}
                   aria-invalid={Boolean(errorKeys.description)}
@@ -515,7 +510,10 @@ export default function CreateCampaignPage() {
             <textarea
               id="description-es"
               value={descriptionEs}
-              onChange={(e) => setDescriptionEs(e.target.value)}
+              onChange={(e) => {
+                setDescriptionEs(e.target.value);
+                clearError("descriptionEs");
+              }}
               maxLength={1000}
               rows={4}
               aria-invalid={Boolean(errorKeys.descriptionEs)}
@@ -530,7 +528,7 @@ export default function CreateCampaignPage() {
             <div className="flex justify-between mt-1">
               {errorKeys.descriptionEs ? (
                 <p id="description-es-error" className="text-xs text-red-500">
-                  {t(errorKeys.descriptionEs as Parameters<typeof t>[0])}
+                  {t(errorKeys.descriptionEs)}
                 </p>
               ) : (
                 <span />
@@ -551,7 +549,10 @@ export default function CreateCampaignPage() {
               id="creatorEmail"
               type="email"
               value={creatorEmail}
-              onChange={(e) => setCreatorEmail(e.target.value)}
+              onChange={(e) => {
+                setCreatorEmail(e.target.value);
+                clearError("creatorEmail");
+              }}
               aria-invalid={Boolean(errorKeys.creatorEmail)}
               aria-describedby={
                 errorKeys.creatorEmail ? "creator-email-error" : "creator-email-note"
@@ -591,7 +592,10 @@ export default function CreateCampaignPage() {
                   id="fundingGoal"
                   type="number"
                   value={fundingGoal}
-                  onChange={(e) => setFundingGoal(e.target.value)}
+                  onChange={(e) => {
+                    setFundingGoal(e.target.value);
+                    clearError("fundingGoal");
+                  }}
                   min="0.0000001"
                   step="any"
                   aria-invalid={Boolean(errorKeys.fundingGoal)}
@@ -622,7 +626,10 @@ export default function CreateCampaignPage() {
                 id="durationDays"
                 type="number"
                 value={durationDays}
-                onChange={(e) => setDurationDays(e.target.value)}
+                onChange={(e) => {
+                  setDurationDays(e.target.value);
+                  clearError("durationDays");
+                }}
                 min="1"
                 max="365"
                 step="1"
@@ -784,6 +791,7 @@ export default function CreateCampaignPage() {
                   #{tag}
                   <button
                     type="button"
+                    aria-label={`Remove ${tag}`}
                     onClick={() => setTags(tags.filter((_: string, i: number) => i !== idx))}
                     className="hover:text-blue-900 dark:hover:text-blue-100 transition-colors"
                   >
@@ -870,7 +878,6 @@ export default function CreateCampaignPage() {
               </p>
             )}
             {coverImageUrl && !errorKeys.coverImageUrl && (
-              // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, @next/next/no-img-element
               <img
                 src={coverImageUrl}
                 alt="Cover preview"
@@ -920,9 +927,12 @@ export default function CreateCampaignPage() {
                           type="number"
                           value={m.targetAmount}
                           onChange={(e) => {
-                            const newM = [...milestones];
-                            newM[idx].targetAmount = e.target.value;
-                            setMilestones(newM);
+                            const value = e.target.value;
+                            setMilestones(
+                              milestones.map((ms, i) =>
+                                i === idx ? { ...ms, targetAmount: value } : ms,
+                              ),
+                            );
                           }}
                           placeholder="e.g. 1500"
                           min="0"
@@ -941,9 +951,12 @@ export default function CreateCampaignPage() {
                           type="text"
                           value={m.description}
                           onChange={(e) => {
-                            const newM = [...milestones];
-                            newM[idx].description = e.target.value;
-                            setMilestones(newM);
+                            const value = e.target.value;
+                            setMilestones(
+                              milestones.map((ms, i) =>
+                                i === idx ? { ...ms, description: value } : ms,
+                              ),
+                            );
                           }}
                           placeholder="What will this unlock?"
                           className="w-full px-2 py-1.5 rounded-md border text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 border-zinc-200 dark:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -993,7 +1006,7 @@ export default function CreateCampaignPage() {
             isSubmitting={isSubmitting}
             txPhase={txPhase}
             onClose={() => setIsReviewOpen(false)}
-            onConfirm={handleConfirmAndSign}
+            onConfirm={() => void handleConfirmAndSign()}
             formatReviewDate={formatReviewDate}
           />
         )}
