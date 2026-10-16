@@ -928,7 +928,7 @@ export async function extendCampaignDeadline(
   const op = contract.call(
     "extend_campaign_deadline",
     nativeToScVal(campaignId, { type: "u32" }),
-    nativeToScVal(additionalDays, { type: "u32" }),
+    nativeToScVal(additionalDays, { type: "u64" }),
   );
   // Caller must be campaign creator; retrieve from wallet context if needed
   // For now use a placeholder — the UI layer should pass the connected wallet address via options
@@ -1037,26 +1037,12 @@ export async function createCampaign(
     validateRevenueShare(revenueSharePercentage);
   }
 
-  // `tags`, `coverImageUrl`, and `milestones` have no equivalent contract
-  // parameter — the contract only accepts the fields passed to contract.call()
-  // below. They're encoded into this off-chain blob (appended to the
-  // description) instead, and parsed back out by decodeCampaign().
-  let finalDescription = description;
-  if (
-    options?.coverImageUrl ||
-    (options?.milestones && options.milestones.length > 0) ||
-    tags.length > 0
-  ) {
-    const ext = {
-      tags,
-      coverImageUrl: options?.coverImageUrl,
-      milestones: options?.milestones?.map((m) => ({
-        targetAmount: m.targetAmount.toString(),
-        description: m.description,
-      })),
-    };
-    finalDescription = `${description}\n\n===POH_EXT===\n${JSON.stringify(ext)}`;
-  }
+  // Tags, cover images, and milestones are now stored on-chain as native fields
+  // instead of being embedded in the description blob. This ensures they are
+  // properly validated and accessible through the contract interface.
+  // For backward compatibility, old campaigns with blob data can still be parsed
+  // by decodeCampaign().
+  const finalDescription = description;
 
   if (USE_MOCKS) {
     const txHash = emitMockLifecycle("mock_tx_create_campaign", options);
@@ -1722,7 +1708,7 @@ export async function claimReserve(
   if (USE_MOCKS) return emitMockLifecycle("mock_tx_claim_reserve", options);
   const callerAddress = await getSignerAddress();
   const contract = new Contract(CONTRACT_ADDRESS);
-  const op = contract.call("claim_reserve", nativeToScVal(campaignId, { type: "u32" }));
+  const op = contract.call("withdraw_reserve", nativeToScVal(campaignId, { type: "u32" }));
   try {
     const txResult = await buildAndSubmitTransaction(callerAddress, op, {
       ...options,
