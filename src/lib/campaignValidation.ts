@@ -51,16 +51,18 @@ export function validateAltText(altText: string): { valid: boolean; errorKey?: s
     return { valid: false, errorKey: "validationAltTextRequired" };
   }
 
+  // The generic-term rule runs before the length rules so that short generic
+  // words like "img" are reported as generic rather than "too short".
+  if (GENERIC_ALT_PATTERNS.some((pattern) => pattern.test(trimmed))) {
+    return { valid: false, errorKey: "validationAltTextGeneric" };
+  }
+
   if (trimmed.length < 5) {
     return { valid: false, errorKey: "validationAltTextTooShort" };
   }
 
   if (trimmed.length > 150) {
     return { valid: false, errorKey: "validationAltTextTooLong" };
-  }
-
-  if (GENERIC_ALT_PATTERNS.some((pattern) => pattern.test(trimmed))) {
-    return { valid: false, errorKey: "validationAltTextGeneric" };
   }
 
   return { valid: true };
