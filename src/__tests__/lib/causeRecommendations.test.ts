@@ -2,8 +2,7 @@ import {
   scoreSimilarity,
   getRecommendedCauses,
   getPersonalizedRecommendations,
-  type RecommendationScore,
-} from "./causeRecommendations";
+} from "@/lib/causeRecommendations";
 import type { Campaign } from "@/types";
 
 // Mock campaign factory
@@ -206,7 +205,7 @@ describe("causeRecommendations.ts", () => {
       const recommendations = getPersonalizedRecommendations([1], campaigns, 5);
       // Similar campaign should be preferred
       if (recommendations.length > 0) {
-        expect(recommendations[0].id).toBe(2);
+        expect(recommendations[0]?.id).toBe(2);
       }
     });
   });
