@@ -161,8 +161,11 @@ describe("register", () => {
     );
 
     // MAINNET_RPC_URL is unset, which is the warning that makes this boot log.
+    // The counts are derived from the contract so this assertion cannot drift
+    // when variables are added.
+    const { CLIENT_ENV_KEYS, SERVER_ENV_KEYS } = await import("@/lib/runtimeEnv");
     expect(logged()).toContain(
-      "Validated 33 client and 10 server environment variables on mainnet",
+      `Validated ${CLIENT_ENV_KEYS.length} client and ${SERVER_ENV_KEYS.length} server environment variables on mainnet`,
     );
     expect(logged()).toContain("MAINNET_RPC_URL");
   });
