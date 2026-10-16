@@ -48,13 +48,13 @@ describe("POST /api/upload-image", () => {
     const response = await POST(
       makeUploadRequest(makeImageFile("cover.txt", "text/plain"), "A campaign cover"),
     );
-    expect(response.status).toB(400);
+    expect(response.status).toBe(400);
     expect(mockPinImageToIpfs).not.toHaveBeenCalled();
   });
 
   it("returns 400 when alt text is missing", async () => {
     const response = await POST(makeUploadRequest(makeImageFile()));
-    expect(response.status).toB(400);
+    expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
       message: "Alt text is required for accessibility",
     });
@@ -63,7 +63,7 @@ describe("POST /api/upload-image", () => {
 
   it("returns 400 when alt text is blank", async () => {
     const response = await POST(makeUploadRequest(makeImageFile(), "   "));
-    expect(response.status).toB(400);
+    expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
       message: "Alt text is required for accessibility",
     });
@@ -79,7 +79,7 @@ describe("POST /api/upload-image", () => {
     // req.formData() re-parses the body into a fresh File whose `lastModified`
     // is set to the parse time, so assert on the stable attributes instead of
     // whole-object equality (which would be flaky by ~1ms).
-    const [uploadedFile, uploadedName] = mockPinImageToIpfs.mock.calls[0];
+    const [uploadedFile, uploadedName] = mockPinImageToIpfs.mock.calls[0] ?? [];
     expect(uploadedFile).toBeInstanceOf(File);
     expect((uploadedFile as File).name).toBe("cover.png");
     expect((uploadedFile as File).type).toBe("image/png");
@@ -91,7 +91,7 @@ describe("POST /api/upload-image", () => {
     mockPinImageToIpfs.mockRejectedValue(new Error("Image upload is not configured"));
 
     const response = await POST(makeUploadRequest(makeImageFile(), "A campaign cover"));
-    expect(response.status).toBe503);
+    expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ message: "Image upload is not configured" });
   });
 });
