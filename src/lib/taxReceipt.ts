@@ -1,3 +1,21 @@
+/**
+ * Donation tax receipts (browser-only, no server round-trip, nothing stored).
+ *
+ * `downloadTaxReceipt` renders a self-contained HTML receipt, opens it in a new
+ * window from a `blob:` URL and prompts the browser's print dialog so the donor
+ * can print it or save it as a PDF. It is called from the success state of
+ * `DonationModal`.
+ *
+ * Legal and security notes (details in `docs/TAX_RECEIPTS.md`):
+ * - The issuer Tax ID comes from `NEXT_PUBLIC_PLATFORM_TAX_ID` and falls back to
+ *   the placeholder `XX-XXXXXXX`; production must set the real value.
+ * - The receipt states the amount in XLM only (no fiat value), identifies the
+ *   donor by wallet address only, and carries no receipt number or signature.
+ *   Whether it is valid for a deduction depends on jurisdiction and on the
+ *   legal status of the issuer and recipient; it is not legal advice.
+ * - Interpolated values are currently not HTML-escaped; see the "Security
+ *   considerations" section of the doc before using it with untrusted titles.
+ */
 export interface TaxReceiptData {
   /** Stellar transaction hash */
   transactionHash: string;
@@ -17,6 +35,12 @@ const PLATFORM_TAX_ID = process.env.NEXT_PUBLIC_PLATFORM_TAX_ID?.trim() || "XX-X
 /**
  * Opens a printable HTML tax receipt in a new window.
  * Zero dependencies — uses the browser's native print functionality.
+ *
+ * Must be called from a user gesture (otherwise the pop-up is blocked) and only
+ * in the browser (`Blob`, `URL.createObjectURL`, `window.open`). When the
+ * pop-up is blocked nothing is shown and the object URL is revoked at once;
+ * otherwise it is revoked one second after the window loads. Dates are UTC
+ * `YYYY-MM-DD`; the issue date is the moment of generation.
  */
 export function downloadTaxReceipt(data: TaxReceiptData): void {
   const generatedDate = new Date().toISOString().split("T")[0];

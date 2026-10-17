@@ -1,5 +1,23 @@
 # syntax=docker/dockerfile:1
 
+# ProofOfHeart frontend production image (Next.js standalone output).
+#
+# Stages:  deps (npm ci)  ->  builder (npm run build)  ->  runner (non-root, :3000, HEALTHCHECK)
+# Build:   docker build -t proofofheart-frontend:local .
+# Run:     docker run -p 3000:3000 -e MAINNET_RPC_URL=... proofofheart-frontend:local
+#
+# IMPORTANT - NEXT_PUBLIC_* values are inlined into the client bundle at BUILD time. This file
+# does not declare ARG/ENV for them, so `--build-arg NEXT_PUBLIC_...` (as passed by
+# .github/workflows/release.yml) is not applied. Add ARG + ENV lines in the builder stage before
+# `RUN npm run build` for every value that must differ from the defaults, and build one image per
+# network. Server-only variables (MAINNET_RPC_URL, PINATA_JWT, COMMENT_STORE_*, ...) are read at
+# run time and are passed with `docker run -e`.
+#
+# `npm run build` fails when NEXT_PUBLIC_USE_MOCKS=true (scripts/validate-production-build.mjs).
+# docker-compose.yml is a development setup only; it overrides the command with `npm run dev`.
+#
+# Full procedures, release flow, rollback and known gaps: docs/DEPLOYMENT_PLAYBOOK.md
+
 # Pin digest so CI catches unexpected upstream changes.
 # To update: docker pull node:22-alpine && docker inspect node:22-alpine --format '{{index .RepoDigests 0}}'
 ARG NODE_IMAGE=node:22-alpine@sha256:9bef0ef1e268f60627da9ba7d7605e8831d5b56ad07487d24d1aa386336d1944

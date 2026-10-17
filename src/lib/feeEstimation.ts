@@ -11,6 +11,23 @@
  * On top of the range, `recommendedFeeCapStroops` adds a congestion-aware
  * buffer so a transaction built during a fee surge still lands in the next
  * few ledgers instead of being dropped and resubmitted.
+ *
+ * ## Units and arithmetic
+ * Every fee here is a `bigint` number of stroops (1 XLM = 10 000 000 stroops);
+ * only the congestion ratio is a floating-point `number`. Percentages are in
+ * basis points (10 000 bps = 100 %) and buffer math rounds down.
+ *
+ * ## Pipeline
+ * 1. `estimateFeeRange(base, recentMax)` -> typical and surge-adjusted worst case.
+ * 2. `effectiveFeeBufferBps(range, options)` -> headroom percentage for the
+ *    current conditions.
+ * 3. `calculateInclusionFeeBuffer(range, options)` -> headroom in stroops.
+ * 4. `recommendedFeeCapStroops(range, options)` -> worst case + headroom, the
+ *    value to show as the "max fee" and to use as the fee ceiling.
+ *
+ * Full specification, worked examples and edge cases: `docs/FEE_ESTIMATION.md`.
+ * The exact per-transaction estimate shown in the donation dialog comes from a
+ * simulation instead (`estimateContributeNetworkFee` in `contractClient.ts`).
  */
 
 export interface FeeEstimateRange {
@@ -37,6 +54,14 @@ const CONGESTION_RATIO_THRESHOLD = 3;
 /**
  * Build a fee range from a base fee estimate and recent ledger fee stats
  * (e.g. Soroban RPC's `getFeeStats().sorobanInclusionFee.max`).
+ *
+ * The network is "congested" when `recentMaxFeeChargedStroops / baseFeeStroops`
+ * is at least {@link CONGESTION_RATIO_THRESHOLD} (3); the worst case is then the
+ * base fee times 10, otherwise it equals the base fee. A non-positive base fee
+ * is treated as idle (no division by zero).
+ *
+ * @param baseFeeStroops Typical fee for the transaction, in stroops.
+ * @param recentMaxFeeChargedStroops Highest recently charged inclusion fee, in stroops.
  */
 export function estimateFeeRange(
   baseFeeStroops: bigint,
@@ -90,6 +115,10 @@ function clampBps(value: number, fallback: number): number {
  * The buffer percentage (in bps) to apply to the worst-case estimate for the
  * given network conditions. Congested networks use `congestionBufferBps`;
  * idle networks use `bufferBps`.
+ *
+ * While congested the larger of the two is used, so a custom idle buffer can
+ * never reduce congestion headroom. Negative, `NaN` or infinite options fall
+ * back to the defaults; fractional values are truncated.
  */
 export function effectiveFeeBufferBps(range: FeeEstimateRange, options?: GasBufferOptions): number {
   const idle = clampBps(options?.bufferBps ?? DEFAULT_FEE_BUFFER_BPS, DEFAULT_FEE_BUFFER_BPS);
@@ -102,7 +131,8 @@ export function effectiveFeeBufferBps(range: FeeEstimateRange, options?: GasBuff
 
 /**
  * The additional stroops added on top of the worst-case fee to absorb an
- * inclusion-fee surge.
+ * inclusion-fee surge: `worstCase * bps / 10 000`, rounded down (so it can be
+ * `0n` for very small fees).
  */
 export function calculateInclusionFeeBuffer(
   range: FeeEstimateRange,
