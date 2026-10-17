@@ -9,6 +9,12 @@ Thanks for contributing. This guide covers local setup, workflow expectations, a
 - Node.js `>=22`
 - npm `>=10`
 - Git
+
+npm is the only supported package manager. `package-lock.json` is the only
+lockfile in the repo; please don't commit `pnpm-lock.yaml`, `yarn.lock` or a
+`pnpm-workspace.yaml`. `node scripts/check-audit-policy.mjs` (run in CI) fails if
+one is added.
+
 - (Optional) Docker + Docker Compose
 
 ### Clone and install
@@ -301,12 +307,10 @@ Changes that should not be released (docs, tests, CI plumbing) take the
 
 ```bash
 npm run audit:ci                    # the gate CI runs
-node scripts/check-audit-policy.mjs # allowlist expiry + overrides parity
+node scripts/check-audit-policy.mjs # allowlist expiry + single lockfile
 ```
 
-Security pins live in the `overrides` block of **both** `package.json` and
-`pnpm-workspace.yaml`; the two must stay identical, and
-`node scripts/check-audit-policy.mjs` fails if they drift. See
+Security pins live in the `overrides` block of `package.json`. See
 [docs/DEPENDENCY_SECURITY.md](docs/DEPENDENCY_SECURITY.md).
 
 ### Validation

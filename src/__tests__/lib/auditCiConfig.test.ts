@@ -2,27 +2,26 @@
  * #1618 — the dependency-security policy check.
  *
  * The two invariants enforced here are the ones that rot silently: an
- * `audit-ci` allowlist entry that quietly outlives its expiry, and an `overrides`
- * pin that exists in `package.json` but not in `pnpm-workspace.yaml` (or the
- * reverse), so npm and pnpm resolve different versions and the pin protects only
- * whichever one CI happens to use.
+ * `audit-ci` allowlist entry that quietly outlives its expiry, and a second
+ * package manager's lockfile creeping back in next to `package-lock.json`, so
+ * contributors and CI resolve different dependency trees (#1663).
  *
  * `checkAuditPolicy` is called with an explicit `today` so the expiry cases are
  * deterministic rather than dependent on the day the suite runs.
  */
 
-import { readFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore -- plain-JS build script, no type declarations to import
 import {
+  FOREIGN_LOCKFILES,
   checkAuditPolicy,
-  flattenOverrides,
   normaliseExpiry,
-  parsePnpmOverrides,
   validateAuditCiConfig,
-  validateOverrideParity,
+  validateSinglePackageManager,
 } from "../../../scripts/check-audit-policy.mjs";
 
 const TODAY = "2026-09-27";
@@ -32,11 +31,15 @@ type PolicyIssue = { severity: "error" | "warning"; source: string; message: str
 
 /** Validate a config, returning only the messages so tests read cleanly. */
 function messages(config: unknown, today = TODAY): string[] {
-  return validateAuditCiConfig(config, { today }).map((issue) => issue.message);
+  return validateAuditCiConfig(config as Record<string, unknown>, { today }).map(
+    (issue) => issue.message,
+  );
 }
 
 function errorsOnly(config: unknown, today = TODAY): PolicyIssue[] {
-  return validateAuditCiConfig(config, { today }).filter((issue) => issue.severity === "error");
+  return validateAuditCiConfig(config as Record<string, unknown>, { today }).filter(
+    (issue) => issue.severity === "error",
+  );
 }
 
 describe("validateAuditCiConfig", () => {
@@ -85,7 +88,7 @@ describe("validateAuditCiConfig", () => {
       ],
     });
 
-    expect(issues[0].message).toContain("has 2 keys");
+    expect(issues[0]?.message).toContain("has 2 keys");
   });
 
   it("requires notes on every entry", () => {
@@ -96,7 +99,7 @@ describe("validateAuditCiConfig", () => {
       allowlist: [{ toml: { active: true, expiry: "2030-01-01" } }],
     });
 
-    expect(issues[0].message).toContain("has no notes");
+    expect(issues[0]?.message).toContain("has no notes");
   });
 
   it("requires an expiry on every entry", () => {
@@ -107,7 +110,7 @@ describe("validateAuditCiConfig", () => {
       allowlist: [{ toml: { active: true, notes: "dev only" } }],
     });
 
-    expect(issues[0].message).toContain("has no expiry");
+    expect(issues[0]?.message).toContain("has no expiry");
   });
 
   it("fails an entry whose expiry has passed", () => {
@@ -118,7 +121,7 @@ describe("validateAuditCiConfig", () => {
       allowlist: [{ toml: { active: true, notes: "dev only", expiry: "2026-01-01" } }],
     });
 
-    expect(issues[0].message).toContain("expired on 2026-01-01");
+    expect(issues[0]?.message).toContain("expired on 2026-01-01");
   });
 
   it("warns on an entry that expires today", () => {
@@ -133,8 +136,8 @@ describe("validateAuditCiConfig", () => {
     );
 
     expect(issues).toHaveLength(1);
-    expect(issues[0].severity).toBe("warning");
-    expect(issues[0].message).toContain("expires today");
+    expect(issues[0]?.severity).toBe("warning");
+    expect(issues[0]?.message).toContain("expires today");
   });
 
   it("accepts an entry whose expiry is still in the future", () => {
@@ -156,7 +159,7 @@ describe("validateAuditCiConfig", () => {
       allowlist: [{ toml: { active: true, notes: "dev only", expiry: "someday" } }],
     });
 
-    expect(issues[0].message).toContain("unreadable expiry");
+    expect(issues[0]?.message).toContain("unreadable expiry");
   });
 
   it("warns about a bare-string allowlist entry", () => {
@@ -165,8 +168,8 @@ describe("validateAuditCiConfig", () => {
       { today: TODAY },
     );
 
-    expect(issues[0].severity).toBe("warning");
-    expect(issues[0].message).toContain("bare string");
+    expect(issues[0]?.severity).toBe("warning");
+    expect(issues[0]?.message).toContain("bare string");
   });
 
   it("warns about an entry marked inactive", () => {
@@ -180,7 +183,7 @@ describe("validateAuditCiConfig", () => {
       { today: TODAY },
     );
 
-    expect(issues[0].message).toContain('"active": false');
+    expect(issues[0]?.message).toContain('"active": false');
   });
 });
 
@@ -204,109 +207,49 @@ describe("normaliseExpiry", () => {
   });
 });
 
-describe("flattenOverrides", () => {
-  it("leaves a flat block alone", () => {
-    expect(flattenOverrides({ toml: "^4.3.0" })).toEqual({ toml: "^4.3.0" });
+describe("validateSinglePackageManager", () => {
+  it("accepts npm with no foreign lockfiles", () => {
+    expect(validateSinglePackageManager({ files: [], packageManager: "npm@10.9.0" })).toEqual([]);
   });
 
-  it("turns a nested object into a path key, the way pnpm spells it", () => {
-    expect(flattenOverrides({ "webpack-bundle-analyzer": { ws: "^7.5.11" } })).toEqual({
-      "webpack-bundle-analyzer>ws": "^7.5.11",
+  it("reports each foreign lockfile that is present", () => {
+    const issues = validateSinglePackageManager({
+      files: ["pnpm-lock.yaml", "yarn.lock"],
+      packageManager: "npm@10.9.0",
     });
+
+    expect(issues.map((issue: PolicyIssue) => issue.source)).toEqual([
+      "pnpm-lock.yaml",
+      "yarn.lock",
+    ]);
+    expect(issues.every((issue: PolicyIssue) => issue.severity === "error")).toBe(true);
   });
 
-  it("flattens more than one level", () => {
-    expect(flattenOverrides({ a: { b: { c: "1" } } })).toEqual({ "a>b>c": "1" });
+  it("requires packageManager to name npm", () => {
+    for (const packageManager of [undefined, "", "pnpm@9.0.0", "yarn@4.0.0", "npm"]) {
+      const issues = validateSinglePackageManager({ files: [], packageManager });
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.source).toBe("package.json");
+    }
   });
 });
 
-describe("validateOverrideParity", () => {
-  it("accepts identical flat blocks", () => {
-    expect(
-      validateOverrideParity({ overrides: { toml: "^4.3.0" }, pnpmOverrides: { toml: "^4.3.0" } }),
-    ).toEqual([]);
-  });
+describe("checkAuditPolicy lockfile check", () => {
+  it("fails when a pnpm lockfile is added back", () => {
+    const dir = mkdtempSync(join(tmpdir(), "audit-policy-"));
+    try {
+      cpSync(join(ROOT, "audit-ci.json"), join(dir, "audit-ci.json"));
+      cpSync(join(ROOT, "package.json"), join(dir, "package.json"));
+      expect(checkAuditPolicy({ root: dir, today: TODAY }).issues).toEqual([]);
 
-  it("accepts a nested npm block that matches the pnpm path form", () => {
-    expect(
-      validateOverrideParity({
-        overrides: { "webpack-bundle-analyzer": { ws: "^7.5.11" } },
-        pnpmOverrides: { "webpack-bundle-analyzer>ws": "^7.5.11" },
-      }),
-    ).toEqual([]);
-  });
+      writeFileSync(join(dir, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n");
+      const issues = checkAuditPolicy({ root: dir, today: TODAY }).issues;
 
-  it("reports a pin missing from pnpm", () => {
-    const issues = validateOverrideParity({
-      overrides: { toml: "^4.3.0" },
-      pnpmOverrides: {},
-    });
-
-    expect(issues[0].message).toContain('is missing the "toml" pin');
-  });
-
-  it("reports a pin missing from package.json", () => {
-    const issues = validateOverrideParity({
-      overrides: {},
-      pnpmOverrides: { toml: "^4.3.0" },
-    });
-
-    expect(issues[0].source).toBe("package.json");
-    expect(issues[0].message).toContain('is missing the "toml" pin');
-  });
-
-  it("reports a pin whose version differs", () => {
-    const issues = validateOverrideParity({
-      overrides: { toml: "^4.3.0" },
-      pnpmOverrides: { toml: "^3.0.0" },
-    });
-
-    expect(issues[0].message).toContain(
-      'pins "toml" to "^3.0.0" but package.json pins it to "^4.3.0"',
-    );
-  });
-
-  it("reports a missing block on either side", () => {
-    expect(validateOverrideParity({ overrides: null, pnpmOverrides: {} })[0].message).toContain(
-      'has no "overrides"',
-    );
-    expect(validateOverrideParity({ overrides: {}, pnpmOverrides: null })[0].message).toContain(
-      'has no "overrides"',
-    );
-  });
-});
-
-describe("parsePnpmOverrides", () => {
-  it("reads a flat block and ignores unquoted scalars", () => {
-    const parsed = parsePnpmOverrides(
-      ["overrides:", '  toml: "^4.3.0"', "  ws: ^8.21.0", "  'brace-expansion@1': ^1.1.17"].join(
-        "\n",
-      ),
-    );
-
-    expect(parsed).toEqual({
-      toml: "^4.3.0",
-      ws: "^8.21.0",
-      "brace-expansion@1": "^1.1.17",
-    });
-  });
-
-  it("stops at the next top-level key", () => {
-    const parsed = parsePnpmOverrides(
-      ["overrides:", "  toml: ^4.3.0", "somethingElse:", "  other: 1"].join("\n"),
-    );
-
-    expect(parsed).toEqual({ toml: "^4.3.0" });
-  });
-
-  it("returns null when there is no block", () => {
-    expect(parsePnpmOverrides("allowBuilds:\n  sharp: true\n")).toBeNull();
-  });
-
-  it("throws rather than silently misreading a nested list", () => {
-    expect(() => parsePnpmOverrides(["overrides:", "  - a", "  - b"].join("\n"))).toThrow(
-      /nested list/,
-    );
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.source).toBe("pnpm-lock.yaml");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 
@@ -330,13 +273,11 @@ describe("this repository", () => {
     expect(config["package-manager"]).toBe("npm");
   });
 
-  it("keeps package.json and pnpm-workspace.yaml overrides in sync", () => {
-    const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf-8"));
-    const yaml = readFileSync(join(ROOT, "pnpm-workspace.yaml"), "utf-8");
-
-    expect(
-      validateOverrideParity({ overrides: pkg.overrides, pnpmOverrides: parsePnpmOverrides(yaml) }),
-    ).toEqual([]);
+  it("commits package-lock.json and no other lockfile", () => {
+    expect(existsSync(join(ROOT, "package-lock.json"))).toBe(true);
+    for (const file of FOREIGN_LOCKFILES) {
+      expect(existsSync(join(ROOT, file))).toBe(false);
+    }
   });
 
   it("documents a rationale for every override", () => {

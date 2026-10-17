@@ -3,6 +3,7 @@
 This document outlines the process for reporting security vulnerabilities in **ProofOfHeart-frontend**, including response timelines and bounty rewards.
 
 ## Disclosure Process
+
 This document outlines the process for reporting security vulnerabilities in **ProofOfHeart-frontend** and the associated bug bounty program.
 
 ---
@@ -18,30 +19,31 @@ This document outlines the process for reporting security vulnerabilities in **P
 
 ## Response Timeline
 
-| Severity       | SLA (Max)       |
-|----------------|----------------|
-| Low            | 30 days         |
-| Medium         | 14 days         |
-| High/Critical  | 7 days          |
+| Severity      | SLA (Max) |
+| ------------- | --------- |
+| Low           | 30 days   |
+| Medium        | 14 days   |
+| High/Critical | 7 days    |
 
 ## Bounty Tiers
 
 Rewards (in **USDC**) are paid after patch release and public disclosure.
 
-| Severity       | Bounty Range   |
-|----------------|----------------|
-| Low            | $100–$500       |
-| Medium         | $500–$2,000     |
-| High           | $2,000–$5,000   |
-| Critical       | $5,000+         |
+| Severity | Bounty Range  |
+| -------- | ------------- |
+| Low      | $100–$500     |
+| Medium   | $500–$2,000   |
+| High     | $2,000–$5,000 |
+| Critical | $5,000+       |
 
 ### Example: Secure Dependency Update
+
 ```typescript
 // Before (vulnerable)
-const axios = require('axios');
+const axios = require("axios");
 
 // After (patched + audit)
-import axios from 'axios';
+import axios from "axios";
 axios.defaults.validateStatus = (status) => status < 500;
 // Run: npm audit fix --force
 ```
@@ -55,6 +57,7 @@ axios.defaults.validateStatus = (status) => status < 500;
 ## Compliance
 
 This policy aligns with [GitHub’s Security Advisory Guidelines](https://docs.github.com/en/code-security/security-advisories) and [OWASP Top 10](https://owasp.org/www-project-top-ten/).
+
 1. **Do not** publicly disclose vulnerabilities until they are resolved.
 2. Send a detailed report to **security@proofofheart.iris** with:
    - Steps to reproduce
@@ -62,11 +65,12 @@ This policy aligns with [GitHub’s Security Advisory Guidelines](https://docs.g
    - Proof-of-concept (if applicable)
 
 ### Response Timeline
-| Stage               | SLA       |
-|---------------------|-----------|
-| Initial Acknowledgment | <24h      |
-| Triage & Validation  | <72h      |
-| Fix & Patch Release  | <14d      |
+
+| Stage                  | SLA  |
+| ---------------------- | ---- |
+| Initial Acknowledgment | <24h |
+| Triage & Validation    | <72h |
+| Fix & Patch Release    | <14d |
 
 ---
 
@@ -75,14 +79,16 @@ This policy aligns with [GitHub’s Security Advisory Guidelines](https://docs.g
 ProofOfHeart rewards responsible disclosures. Payouts are distributed in **USDC** via Base/EVM.
 
 ### Reward Tiers
-| Severity          | Criteria                                                                 | Reward Range  |
-|--------------------|---------------------------------------------------------------------------|---------------|
-| **Low**            | Minor impact, no data exposure                                      | $100 - $500    |
-| **Medium**          | Partial data exposure or DoS                                        | $500 - $2,000  |
-| **High**            | Full data exposure or critical functionality compromise             | $2,000 - $10,000|
-| **Critical**        | Remote code execution, private key leakage, or system compromise    | $10,000+       |
+
+| Severity     | Criteria                                                         | Reward Range     |
+| ------------ | ---------------------------------------------------------------- | ---------------- |
+| **Low**      | Minor impact, no data exposure                                   | $100 - $500      |
+| **Medium**   | Partial data exposure or DoS                                     | $500 - $2,000    |
+| **High**     | Full data exposure or critical functionality compromise          | $2,000 - $10,000 |
+| **Critical** | Remote code execution, private key leakage, or system compromise | $10,000+         |
 
 ### Eligibility
+
 - Reports must be **original** and **unpublished**.
 - Submitters must comply with the [Responsible Disclosure Policy](#reporting-a-vulnerability).
 - Payouts are taxable; submitters must provide KYC if requested.
@@ -95,10 +101,10 @@ To validate a reported issue, run the following in the `ProofOfHeart-frontend` r
 
 ```bash
 # Install dependencies
-pnpm install
+npm ci
 
 # Run affected component in isolation
-pnpm dev -- --port 3001
+npm run dev -- --port 3001
 
 # Test with a PoC (replace with your exploit)
 echo '{"test":"exploit"}' | curl -X POST http://localhost:3001/api/endpoint
@@ -111,11 +117,13 @@ Verify the response matches the expected behavior documented in [`src/api/endpoi
 ## Scope
 
 **In Scope:**
+
 - Frontend codebase (`src/`)
 - API endpoints (`/api/`)
 - Smart contract interactions (`/contracts/`)
 
 **Out of Scope:**
+
 - Third-party libraries (report to their maintainers)
 - Physical security issues
 
@@ -124,6 +132,7 @@ Verify the response matches the expected behavior documented in [`src/api/endpoi
 ## Legal
 
 By participating in this program, you agree to:
+
 1. Not violate applicable laws.
 2. Not disrupt ProofOfHeart services.
 3. Grant ProofOfHeart a perpetual license to reproduce reports.

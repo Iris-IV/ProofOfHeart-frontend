@@ -25,6 +25,11 @@ jobs:
           node-version: "22"
           cache: "npm"
 
+      # Dependency-free, so it runs before the install and fails fast if a
+      # second lockfile (pnpm, yarn, bun) has been committed.
+      - name: Check dependency policy
+        run: node scripts/check-audit-policy.mjs
+
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
