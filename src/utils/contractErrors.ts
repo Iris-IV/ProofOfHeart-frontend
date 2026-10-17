@@ -119,6 +119,16 @@ export const errorTranslationKeys: Record<ContractError, string> = {
   [ContractError.MilestoneAlreadyClaimed]: "ContractErrors.MilestoneAlreadyClaimed",
 };
 
+const CONTRACT_ERROR_KEYS = new Set(Object.values(errorTranslationKeys));
+
+/**
+ * True when `message` is a contract revert translation key, i.e. the contract
+ * rejected the call. Such errors are deterministic, so retrying cannot help.
+ */
+export function isContractErrorMessage(message: string | null | undefined): boolean {
+  return !!message && CONTRACT_ERROR_KEYS.has(message);
+}
+
 // ---------------------------------------------------------------------------
 // Typed error class
 // ---------------------------------------------------------------------------

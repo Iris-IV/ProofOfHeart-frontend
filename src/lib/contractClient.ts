@@ -59,6 +59,16 @@ const SOROBAN_RPC_URL =
   process.env.NEXT_PUBLIC_RPC_URL ??
   "https://soroban-testnet.stellar.org";
 
+/** Secondary node used while the primary is slow or unreachable. Optional. */
+const SOROBAN_RPC_FALLBACK_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_FALLBACK_URL?.trim() ?? "";
+
+/** A primary call slower than this switches traffic to the fallback node. */
+export const RPC_LATENCY_THRESHOLD_MS =
+  Number(process.env.NEXT_PUBLIC_RPC_LATENCY_THRESHOLD_MS) || 3_000;
+
+/** How long the fallback is used before the primary is tried again. */
+export const RPC_PRIMARY_RETRY_AFTER_MS = 60_000;
+
 const CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? process.env.NEXT_PUBLIC_CONTRACT_ID ?? "";
 
@@ -88,12 +98,48 @@ export interface TransactionLifecycleOptions {
 // ---------------------------------------------------------------------------
 
 let _server: rpc.Server | null = null;
+let _serverUrl: string | null = null;
+let primaryDegradedUntil = 0;
+
+/** The RPC endpoint calls currently go to (the fallback while the primary is degraded). */
+export function getActiveRpcUrl(): string {
+  return SOROBAN_RPC_FALLBACK_URL && Date.now() < primaryDegradedUntil
+    ? SOROBAN_RPC_FALLBACK_URL
+    : SOROBAN_RPC_URL;
+}
 
 function getServer(): rpc.Server {
-  if (!_server) {
-    _server = new rpc.Server(SOROBAN_RPC_URL);
+  const url = getActiveRpcUrl();
+  if (!_server || _serverUrl !== url) {
+    _server = new rpc.Server(url);
+    _serverUrl = url;
   }
   return _server;
+}
+
+function markPrimaryDegraded(reason: string): void {
+  primaryDegradedUntil = Date.now() + RPC_PRIMARY_RETRY_AFTER_MS;
+  console.warn(
+    `[contractClient] Primary Soroban RPC ${reason}; using fallback ${SOROBAN_RPC_FALLBACK_URL} for ${RPC_PRIMARY_RETRY_AFTER_MS / 1000}s.`,
+  );
+}
+
+class RpcLatencyExceededError extends Error {
+  constructor() {
+    super(`Soroban RPC did not respond within ${RPC_LATENCY_THRESHOLD_MS}ms`);
+    this.name = "RpcLatencyExceededError";
+  }
+}
+
+/** Rejects with RpcLatencyExceededError if `call` takes longer than the threshold. */
+function withLatencyBudget<T>(call: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const budget = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new RpcLatencyExceededError()), RPC_LATENCY_THRESHOLD_MS);
+  });
+  // The slow call keeps running; swallow its eventual outcome.
+  call.catch(() => undefined);
+  return Promise.race([call, budget]).finally(() => clearTimeout(timer));
 }
 
 // ---------------------------------------------------------------------------
@@ -171,6 +217,8 @@ export function clearContractCacheByMethod(method: string): void {
  */
 export function resetRpcServer(): void {
   _server = null;
+  _serverUrl = null;
+  primaryDegradedUntil = 0;
 }
 
 /**
@@ -229,6 +277,11 @@ function isConnectionError(error: unknown): boolean {
  * the cached client unusable for every later call, so it is dropped before the
  * error propagates and the next call reconnects. Errors the node returned
  * (contract errors, bad requests) keep the client in place.
+ *
+ * When NEXT_PUBLIC_SOROBAN_RPC_FALLBACK_URL is set, a primary call that is
+ * slower than RPC_LATENCY_THRESHOLD_MS or fails at the transport level is
+ * retried on the fallback right away, and the fallback stays active for
+ * RPC_PRIMARY_RETRY_AFTER_MS before the primary is tried again.
  */
 const RPC_RETRY_DELAYS_MS = [500, 1_000, 2_000];
 
@@ -236,16 +289,26 @@ async function withRpcServer<T>(fn: (server: rpc.Server) => Promise<T>): Promise
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= RPC_RETRY_DELAYS_MS.length; attempt += 1) {
+    const onPrimary = Boolean(SOROBAN_RPC_FALLBACK_URL) && getActiveRpcUrl() === SOROBAN_RPC_URL;
     const server = getServer();
     try {
-      return await fn(server);
+      return await (onPrimary ? withLatencyBudget(Promise.resolve(fn(server))) : fn(server));
     } catch (error) {
       lastError = error;
+      if (onPrimary && error instanceof RpcLatencyExceededError) {
+        markPrimaryDegraded(`exceeded ${RPC_LATENCY_THRESHOLD_MS}ms`);
+        continue;
+      }
       if (!isConnectionError(error)) {
         throw error;
       }
+      if (onPrimary) {
+        markPrimaryDegraded("is unreachable");
+        continue;
+      }
 
-      resetRpcServer();
+      _server = null;
+      _serverUrl = null;
       const retryDelay = RPC_RETRY_DELAYS_MS[attempt];
       if (retryDelay === undefined) {
         throw error;

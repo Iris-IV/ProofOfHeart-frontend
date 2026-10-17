@@ -2,35 +2,134 @@ import { Campaign, CampaignStatus } from "@/types";
 import type { MockScenario } from "@/hooks/useDevMockScenario";
 
 /**
- * Dev-only utility to apply mock scenarios to campaigns.
- * Used by DevMockPanel to test different campaign states at runtime.
+ * # Mock causes and dev scenarios (offline development)
  *
- * Never shipped in production.
+ * Helpers for running the app and its tests without a Soroban RPC node or a
+ * deployed contract. Dev only: nothing here is used when mock mode is off.
  *
- * ## Usage in Jest Tests
+ * ## 1. Turn on mock mode
  *
- * The mock Soroban RPC server can be used in offline unit tests:
+ * Mock mode is controlled by one flag, read as the exact string `"true"`
+ * (`IS_MOCK_MODE` in `src/lib/runtimeEnv.ts`):
  *
- * ```typescript
- * import { createMockSorobanRpcServer } from '@/lib/devMockScenarios';
- *
- * const mockServer = createMockSorobanRpcServer({ sequence: 1000000 });
- *
- * // Test transaction simulation
- * const result = await mockServer.simulateTransaction('transaction_xdr');
- * expect(result.status).toBe('SUCCESS');
+ * ```bash
+ * cp .env.example .env.local   # already contains NEXT_PUBLIC_USE_MOCKS=true
+ * npm run dev
  * ```
  *
- * ## Mock Scenario Application
+ * or for a single run: `NEXT_PUBLIC_USE_MOCKS=true npm run dev`.
  *
- * Apply different campaign states for testing UI components:
+ * Production builds refuse to start with it on:
+ * `assertProductionContractConfig()` throws when `NODE_ENV=production` and
+ * `NEXT_PUBLIC_USE_MOCKS=true`.
+ *
+ * ## 2. Where the mock data comes from
+ *
+ * | What | Where | Notes |
+ * | --- | --- | --- |
+ * | Campaign dataset | `MOCK_CAMPAIGNS` in `src/lib/contractClient.ts` | 6 hand written causes plus 114 generated ones (ids 1 to 120), all relative to the fixed timestamp `1700000000` so output is deterministic. |
+ * | Contract reads | `src/lib/contractClient.ts` | `getAllCampaigns`, `listCampaigns`, `getCampaign`, `getCampaignCount` and `getPlatformStats` serve `MOCK_CAMPAIGNS`; `getContribution` returns `0n`. |
+ * | Contract writes | `src/lib/contractClient.ts` | Writes with a mock branch (for example `contribute`, `createCampaign`, `claimMilestone`) skip signing and RPC, report every lifecycle phase to `options.onStatus`, and resolve with a fixed hash such as `"mock_tx_contribute"`. |
+ * | Listing filters | `src/lib/mockCauses.ts` | Only the `CATEGORIES`, `STATUSES` and `SORT_OPTIONS` constants for filter dropdowns. It holds no campaign data. |
+ * | Per campaign states | this file | `applyMockScenario` reshapes a campaign into one of the scenarios below. |
+ *
+ * ## 3. Switch a campaign's state at runtime
+ *
+ * With mock mode on and `NODE_ENV=development`, the **Mock** button in the
+ * bottom right corner opens `DevMockPanel` (`src/components/DevMockPanel.tsx`).
+ * Picking a scenario for a campaign:
+ *
+ * 1. stores it in `sessionStorage["devMockScenarios"]` as
+ *    `{ "<campaignId>": "<scenario>" }`, so it survives reloads in the tab;
+ * 2. dispatches `devMockScenarioChanged` on `window` with
+ *    `detail: { campaignId, scenario }` (`campaignId` is a string);
+ * 3. "Reset" clears the storage key and dispatches `devMockScenariosReset`.
+ *
+ * `useDevMockScenario(campaignId)` (`src/hooks/useDevMockScenario.ts`) reads
+ * the stored value and follows both events. Combine it with
+ * `applyMockScenario` in a component:
+ *
+ * ```tsx
+ * import { useDevMockScenario } from "@/hooks/useDevMockScenario";
+ * import { applyMockScenario } from "@/lib/devMockScenarios";
+ *
+ * export function CampaignCard({ campaign }: { campaign: Campaign }) {
+ *   const scenario = useDevMockScenario(campaign.id);
+ *   if (scenario === "error") return <ErrorState />;
+ *   const shown = applyMockScenario(campaign, scenario);
+ *   return <h2>{shown.title}</h2>;
+ * }
+ * ```
+ *
+ * The same toggle works from the browser console, which is handy for
+ * scripted QA:
+ *
+ * ```js
+ * sessionStorage.setItem("devMockScenarios", JSON.stringify({ "1": "near_deadline" }));
+ * window.dispatchEvent(
+ *   new CustomEvent("devMockScenarioChanged", {
+ *     detail: { campaignId: "1", scenario: "near_deadline" },
+ *   }),
+ * );
+ * ```
+ *
+ * ## 4. Scenarios
+ *
+ * Every scenario except `default`, `empty` and `error` sets the lifecycle
+ * flags and `status` explicitly. Deadlines are relative to `1700000000`.
+ *
+ * | Scenario | Result |
+ * | --- | --- |
+ * | `default` | Campaign unchanged. |
+ * | `active` | Active, unverified, 50% funded, 30 days left. |
+ * | `verified` | Active and verified, 33% funded, 30 days left. |
+ * | `funded` | Inactive, verified, 100% raised, funds withdrawn, ended 5 days ago. |
+ * | `cancelled` | Cancelled, 25% funded. |
+ * | `failed` | Ended 10 days ago at 20% of the goal. |
+ * | `empty` | Blank title, description and tags, zero goal and raised. |
+ * | `paused` | Contract pause stand in: inactive but verified and not cancelled, 50% funded. |
+ * | `goal_completed` | Still active with 200% of the goal raised. |
+ * | `near_deadline` | 23 hours left at 95% of the goal. |
+ * | `empty_state` | Newly created and active with no contributions. |
+ * | `error` | Campaign unchanged; the component is expected to render its error UI. |
+ *
+ * `MOCK_SCENARIOS` holds the label and description shown in the panel for each.
+ *
+ * ## 5. Add a scenario
+ *
+ * 1. Add the name to the `MockScenario` union in `src/hooks/useDevMockScenario.ts`.
+ * 2. Add a `case` to `applyMockScenario` below that returns a new object
+ *    (never mutate the input).
+ * 3. Add a `{ value, label, description }` entry to `MOCK_SCENARIOS`.
+ * 4. Cover it in `src/lib/devMockScenarios.test.ts`.
+ *
+ * ## 6. Offline unit tests
+ *
+ * `createMockSorobanRpcServer` is an in-memory stand in for the RPC methods
+ * the client uses, so Jest tests run with no network:
  *
  * ```typescript
- * import { applyMockScenario } from '@/lib/devMockScenarios';
+ * import { createMockSorobanRpcServer } from "@/lib/devMockScenarios";
  *
- * const campaign = applyMockScenario(baseCampaign, 'funded');
+ * const server = createMockSorobanRpcServer({ sequence: 1_000_000 });
+ *
+ * await server.simulateTransaction("transaction_xdr"); // { status: "SUCCESS", ... }
+ * await server.simulateTransaction("FAIL_xdr");        // { status: "FAILED", ... }
+ * await server.sendTransaction("ERROR_xdr");           // { status: "ERROR", hash: "mock_tx_hash_error" }
+ * await server.getTransaction("hash_error");           // { status: "NOT_FOUND" }
+ *
+ * const down = createMockSorobanRpcServer({ healthy: false });
+ * await expect(down.getHealth()).rejects.toThrow("RPC Server Unhealthy");
+ * ```
+ *
+ * `applyMockScenario` is a pure function and can be asserted directly:
+ *
+ * ```typescript
+ * const campaign = applyMockScenario(baseCampaign, "funded");
  * expect(campaign.funds_withdrawn).toBe(true);
  * ```
+ *
+ * See also `docs/DEV_MOCK_PANEL.md` and `docs/DEV_TOOLS.md`.
  */
 
 export function applyMockScenario(campaign: Campaign, scenario: MockScenario): Campaign {

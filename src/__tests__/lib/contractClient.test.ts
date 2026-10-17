@@ -746,4 +746,86 @@ describe("contractClient", () => {
       expect(serverUrls).toHaveLength(2);
     });
   });
+
+  describe("RPC latency fallback", () => {
+    const PRIMARY = "https://example-rpc.invalid";
+    const FALLBACK = "https://fallback-rpc.invalid";
+
+    beforeEach(() => {
+      process.env.NEXT_PUBLIC_SOROBAN_RPC_FALLBACK_URL = FALLBACK;
+      process.env.NEXT_PUBLIC_RPC_LATENCY_THRESHOLD_MS = "50";
+      jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+      delete process.env.NEXT_PUBLIC_SOROBAN_RPC_FALLBACK_URL;
+      delete process.env.NEXT_PUBLIC_RPC_LATENCY_THRESHOLD_MS;
+      jest.restoreAllMocks();
+    });
+
+    function delayed<T>(value: T, ms: number): Promise<T> {
+      return new Promise((resolve) => setTimeout(() => resolve(value), ms));
+    }
+
+    it("retries on the fallback when the primary is slower than the threshold", async () => {
+      const { module, mockServer, serverUrls } = await loadClient({ useMocks: false });
+      const respond = mockServer.simulateTransaction.getMockImplementation()!;
+      mockServer.simulateTransaction.mockImplementationOnce((tx) => delayed(respond(tx), 200));
+
+      await expect(module.getAdmin()).resolves.toBe(TEST_ADMIN);
+
+      expect(serverUrls).toEqual([PRIMARY, FALLBACK]);
+      expect(module.getActiveRpcUrl()).toBe(FALLBACK);
+    });
+
+    it("keeps using the fallback for later calls without re-timing the primary", async () => {
+      const { module, mockServer, serverUrls } = await loadClient({ useMocks: false });
+      const respond = mockServer.simulateTransaction.getMockImplementation()!;
+      mockServer.simulateTransaction.mockImplementationOnce((tx) => delayed(respond(tx), 200));
+
+      await module.getAdmin();
+      await module.getPlatformFee();
+
+      expect(serverUrls).toEqual([PRIMARY, FALLBACK]);
+    });
+
+    it("switches immediately on a primary transport failure", async () => {
+      const { module, mockServer, serverUrls } = await loadClient({ useMocks: false });
+      mockServer.simulateTransaction.mockImplementationOnce(() => {
+        throw new TypeError("fetch failed");
+      });
+
+      const started = Date.now();
+      await expect(module.getAdmin()).resolves.toBe(TEST_ADMIN);
+
+      expect(Date.now() - started).toBeLessThan(400);
+      expect(serverUrls).toEqual([PRIMARY, FALLBACK]);
+    });
+
+    it("goes back to the primary once the retry window has passed", async () => {
+      const { module, mockServer, serverUrls } = await loadClient({ useMocks: false });
+      const respond = mockServer.simulateTransaction.getMockImplementation()!;
+      mockServer.simulateTransaction.mockImplementationOnce((tx) => delayed(respond(tx), 200));
+      await module.getAdmin();
+
+      const now = Date.now();
+      jest.spyOn(Date, "now").mockReturnValue(now + module.RPC_PRIMARY_RETRY_AFTER_MS + 1);
+      module.clearContractCallCache();
+      await module.getAdmin();
+
+      expect(module.getActiveRpcUrl()).toBe(PRIMARY);
+      expect(serverUrls).toEqual([PRIMARY, FALLBACK, PRIMARY]);
+    });
+
+    it("still surfaces contract errors as user-facing messages through the fallback", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+      mockServer.simulateTransaction.mockImplementation(() => {
+        throw new Error("Error(Contract, #6)");
+      });
+
+      await expect(module.getAdmin()).rejects.toThrow(
+        parseContractError(new Error("Error(Contract, #6)")),
+      );
+    });
+  });
 });
