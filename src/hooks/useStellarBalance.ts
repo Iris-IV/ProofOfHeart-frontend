@@ -27,14 +27,14 @@ interface UseStellarBalanceResult {
 
 export function useStellarBalance(publicKey: string | null): UseStellarBalanceResult {
   const network = getStellarNetworkKey();
-  const isVisible = useWindowVisibility();
+  const visibility = useWindowVisibility();
 
   const { data, isLoading, error } = useQuery<number, Error>({
     queryKey: [STELLAR_BALANCE_QUERY_KEY, publicKey, network],
     queryFn: () => getStellarBalance(publicKey!),
     enabled: !!publicKey,
-    staleTime: STELLAR_BALANCE_POLL_MS,
-    refetchInterval: publicKey && isVisible ? STELLAR_BALANCE_POLL_MS : false,
+    staleTime: visibility.pollInterval,
+    refetchInterval: publicKey && visibility.isVisible ? visibility.pollInterval : false,
     refetchIntervalInBackground: false,
     retry: 1,
   });
