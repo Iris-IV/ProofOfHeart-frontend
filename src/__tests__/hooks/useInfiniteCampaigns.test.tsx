@@ -92,3 +92,45 @@ describe("useInfiniteCampaigns", () => {
     expect(result.current.campaigns).toEqual([]);
   });
 });
+
+describe("useInfiniteCampaigns filters (contract indexes)", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("forwards category/creator and starts index listings at position 0", async () => {
+    mockListCampaigns.mockResolvedValue({ campaigns: [makeCampaign(1)], nextCursor: null });
+
+    const { result } = renderHook(
+      () => useInfiniteCampaigns(10, { category: Category.Educator, creator: "GCREATOR" }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(mockListCampaigns).toHaveBeenCalledTimes(1);
+    expect(mockListCampaigns).toHaveBeenCalledWith({
+      cursor: 0,
+      limit: 10,
+      category: Category.Educator,
+      creator: "GCREATOR",
+    });
+  });
+
+  it("makes one listCampaigns call per page, not one per campaign", async () => {
+    mockListCampaigns
+      .mockResolvedValueOnce({
+        campaigns: Array.from({ length: 50 }, (_, i) => makeCampaign(i + 1)),
+        nextCursor: 51,
+      })
+      .mockResolvedValueOnce({ campaigns: [makeCampaign(51)], nextCursor: null });
+
+    const { result } = renderHook(() => useInfiniteCampaigns(50), { wrapper: createWrapper() });
+    await waitFor(() => expect(result.current.campaigns).toHaveLength(50));
+    expect(mockListCampaigns).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      result.current.fetchNextPage();
+    });
+    await waitFor(() => expect(result.current.campaigns).toHaveLength(51));
+    expect(mockListCampaigns).toHaveBeenCalledTimes(2);
+  });
+});

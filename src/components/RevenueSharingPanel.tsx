@@ -1,8 +1,14 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useLocale } from "next-intl";
-import { claimRevenue, depositRevenue } from "../lib/contractClient";
+import { claimCreatorRevenue, claimRevenue, depositRevenue } from "../lib/contractClient";
+import {
+  creatorClaimableAmount,
+  creatorRevenueEntitlement,
+  readCreatorClaimed,
+  writeCreatorClaimed,
+} from "../lib/revenueShare";
 import { Campaign, Category, basisPointsToPercentage } from "../types";
 import { xlmToStroops } from "@/lib/stellarAmount";
 import { formatAmount } from "@/lib/formatters";
@@ -48,6 +54,17 @@ export default function RevenueSharingPanel({
 
   const isCreator = isSameAddress(publicKey, campaign.creator);
   const canShowCreatorControls = showCreatorControls && isCreator;
+
+  // Creator's retained share: pool × (10,000 − contributor share bps) / 10,000, minus prior claims.
+  const creatorEntitlement = creatorRevenueEntitlement(
+    revenuePool,
+    campaign.revenue_share_percentage,
+  );
+  const [creatorClaimed, setCreatorClaimed] = useState(BigInt(0));
+  useEffect(() => {
+    setCreatorClaimed(readCreatorClaimed(campaign.id, isCreator ? publicKey : null));
+  }, [campaign.id, isCreator, publicKey]);
+  const creatorClaimable = creatorClaimableAmount(creatorEntitlement, creatorClaimed);
   const canShowContributorControls = showContributorControls && !!publicKey;
   const hasContribution = contribution > BigInt(0);
 
@@ -115,6 +132,39 @@ export default function RevenueSharingPanel({
       showSuccess("Revenue claimed successfully.");
     } catch (err) {
       showError(parseContractError(err));
+    } finally {
+      setIsPending(false);
+      setTxPhase(null);
+    }
+  };
+
+  const handleCreatorClaim = async () => {
+    if (!publicKey) {
+      showWarning("Connect your wallet to claim revenue.");
+      return;
+    }
+
+    setIsPending(true);
+    setTxPhase(null);
+    try {
+      await claimCreatorRevenue(campaign.id, publicKey, {
+        onStatus: ({ phase }) => setTxPhase(phase),
+      });
+      writeCreatorClaimed(campaign.id, publicKey, creatorEntitlement);
+      setCreatorClaimed(creatorEntitlement);
+      refetch();
+      onActionSuccess?.();
+      showSuccess("Creator revenue claimed successfully.");
+    } catch (err) {
+      const message = parseContractError(err);
+      if (message.includes("NoFundsToWithdraw")) {
+        // Everything was already paid out (e.g. from another browser): resync the display.
+        writeCreatorClaimed(campaign.id, publicKey, creatorEntitlement);
+        setCreatorClaimed(creatorEntitlement);
+        showWarning("There is no creator revenue left to claim.");
+      } else {
+        showError(message);
+      }
     } finally {
       setIsPending(false);
       setTxPhase(null);
@@ -297,6 +347,41 @@ export default function RevenueSharingPanel({
                 : "Deposit Revenue"}
             </button>
           </form>
+          <div className="mt-5 border-t border-zinc-200/80 pt-4 dark:border-zinc-700">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                  Creator revenue
+                </p>
+                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                  Your retained share is{" "}
+                  {basisPointsToPercentage(10_000 - campaign.revenue_share_percentage)} of the pool
+                  ({formatXlm(creatorEntitlement)} XLM). Claimable now:{" "}
+                  <span
+                    data-testid="creator-claimable"
+                    className="font-semibold text-emerald-700 dark:text-emerald-300"
+                  >
+                    {formatXlm(creatorClaimable)} XLM
+                  </span>
+                  .
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleCreatorClaim()}
+                disabled={isPending || creatorClaimable <= BigInt(0)}
+                className="inline-flex shrink-0 items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-400"
+              >
+                {isPending
+                  ? txPhase === "signing"
+                    ? "Signing..."
+                    : txPhase === "confirming"
+                      ? "Confirming..."
+                      : "Processing..."
+                  : "Claim Creator Revenue"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </section>

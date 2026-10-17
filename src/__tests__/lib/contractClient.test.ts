@@ -99,6 +99,16 @@ async function loadClient(options: LoadClientOptions) {
         const method = tx.ops?.[0]?.method;
         if (method === "get_campaign_count") return { result: { retval: scVal.u32(1) } };
         if (method === "get_campaign") return { result: { retval: campaignFixture } };
+        if (
+          method === "list_campaigns" ||
+          method === "get_campaigns_by_category" ||
+          method === "get_creator_campaigns"
+        ) {
+          // (Vec<Campaign>, next_cursor): a single short page holding one campaign.
+          return {
+            result: { retval: scVal.vec([scVal.vec([campaignFixture]), scVal.u32(1)]) },
+          };
+        }
         if (method === "get_contribution") return { result: { retval: scVal.bigint(100_000_000) } };
         if (method === "get_revenue_pool") return { result: { retval: scVal.bigint(500_000_000) } };
         if (method === "get_revenue_claimed")
@@ -454,28 +464,166 @@ describe("contractClient", () => {
     await expect(module.getCampaignCount()).rejects.toThrow("fetch failed");
   });
 
-  it("listCampaigns drops a page member whose fetch rejects instead of failing the whole page", async () => {
-    const { module, mockServer, stellarSdkMock } = await loadClient({ useMocks: false });
-    const scVal = makeScValHelpers();
+  describe("paginated reads (no N-way fan-out)", () => {
+    type Call = { method?: string; args?: Array<{ u32?: () => number }> };
 
-    mockServer.simulateTransaction.mockImplementation(
-      (tx: { ops?: Array<{ method?: string; args?: unknown[] }> }) => {
+    function methodsCalled(mockServer: { simulateTransaction: jest.Mock }): string[] {
+      return mockServer.simulateTransaction.mock.calls.map(
+        ([tx]: [{ ops?: Call[] }]) => tx.ops?.[0]?.method ?? "",
+      );
+    }
+
+    function pageOf(
+      scVal: ReturnType<typeof makeScValHelpers>,
+      fixture: unknown,
+      n: number,
+      next: number,
+    ) {
+      return {
+        result: {
+          retval: scVal.vec([scVal.vec(Array.from({ length: n }, () => fixture)), scVal.u32(next)]),
+        },
+      };
+    }
+
+    it("listCampaigns issues exactly one list_campaigns view per page", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+
+      const page = await module.listCampaigns({ cursor: 1, limit: 20 });
+
+      expect(methodsCalled(mockServer)).toEqual(["list_campaigns"]);
+      expect(page.campaigns).toHaveLength(1);
+      // Short page => the listing is exhausted.
+      expect(page.nextCursor).toBeNull();
+    });
+
+    it("passes an exclusive id cursor and caps the limit at LIST_MAX_LIMIT", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+
+      await module.listCampaigns({ cursor: 51, limit: 500 });
+
+      const [tx] = mockServer.simulateTransaction.mock.calls[0] as [{ ops?: Call[] }];
+      expect(tx.ops?.[0]?.args?.[0]?.u32?.()).toBe(50);
+      expect(tx.ops?.[0]?.args?.[1]?.u32?.()).toBe(50);
+    });
+
+    it("advances the cursor while pages are full", async () => {
+      const { module, mockServer, stellarSdkMock } = await loadClient({ useMocks: false });
+      const scVal = makeScValHelpers();
+      mockServer.simulateTransaction.mockImplementation(() =>
+        pageOf(scVal, stellarSdkMock.__campaignFixture, 2, 2),
+      );
+
+      const page = await module.listCampaigns({ cursor: 1, limit: 2 });
+
+      expect(page.nextCursor).toBe(3);
+    });
+
+    it("routes category and creator filters to the contract indexes", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+
+      await module.listCampaigns({ category: Category.Educator, limit: 10 });
+      await module.listCampaigns({ creator: TEST_ADMIN, limit: 10 });
+
+      expect(methodsCalled(mockServer)).toEqual([
+        "get_campaigns_by_category",
+        "get_creator_campaigns",
+      ]);
+    });
+
+    it("loading N campaigns costs ceil(N / 50) calls, never N", async () => {
+      const { module, mockServer, stellarSdkMock } = await loadClient({ useMocks: false });
+      const scVal = makeScValHelpers();
+      const total = 120;
+      mockServer.simulateTransaction.mockImplementation((tx: { ops?: Call[] }) => {
         const op = tx.ops?.[0];
-        if (op?.method === "get_campaign_count") return { result: { retval: scVal.u32(3) } };
-        if (op?.method === "get_campaign") {
-          const id = (op.args?.[0] as { u32: () => number }).u32();
-          if (id === 2) throw new Error("simulated RPC blip for campaign 2");
-          return { result: { retval: stellarSdkMock.__campaignFixture } };
-        }
-        return { result: { retval: null } };
-      },
-    );
+        const start = op?.args?.[0]?.u32?.() ?? 0;
+        const n = Math.min(50, total - start);
+        return pageOf(scVal, stellarSdkMock.__campaignFixture, n, start + n);
+      });
 
-    const page = await module.listCampaigns({ cursor: 1, limit: 3 });
+      const all = await module.getAllCampaigns();
 
-    expect(page.campaigns.map((c) => c.id)).toEqual([7, 7]);
-    expect(page.campaigns).toHaveLength(2);
-    expect(page.nextCursor).toBeNull();
+      expect(all).toHaveLength(total);
+      const methods = methodsCalled(mockServer);
+      expect(methods).toHaveLength(Math.ceil(total / 50));
+      expect(new Set(methods)).toEqual(new Set(["list_campaigns"]));
+      expect(methods).not.toContain("get_campaign");
+    });
+
+    it("getPlatformStats reads counts from one get_platform_stats call", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+      const scVal = makeScValHelpers();
+      mockServer.simulateTransaction.mockImplementation(() => ({
+        result: {
+          retval: scVal.map({
+            total_campaigns: scVal.u32(42),
+            active_campaigns: scVal.u32(30),
+            verified_campaigns: scVal.u32(20),
+            cancelled_campaigns: scVal.u32(2),
+            total_amount_raised: scVal.bigint(9_000_000_000),
+            stats_are_partial: scVal.bool(false),
+          }),
+        },
+      }));
+
+      const stats = await module.getPlatformStats();
+
+      expect(stats.totalCampaigns).toBe(42);
+      expect(stats.totalAmountRaised).toBe(BigInt(9_000_000_000));
+      expect(methodsCalled(mockServer)).toEqual(["get_platform_stats"]);
+    });
+  });
+
+  describe("on-chain bookmarks and creator revenue claim", () => {
+    it("reads saved campaigns and the count from the contract", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+      const scVal = makeScValHelpers();
+      mockServer.simulateTransaction.mockImplementation(
+        (tx: { ops?: Array<{ method?: string }> }) => {
+          const method = tx.ops?.[0]?.method;
+          if (method === "get_saved_campaigns") {
+            return { result: { retval: scVal.vec([scVal.u32(3), scVal.u32(9)]) } };
+          }
+          if (method === "get_saved_campaigns_count") return { result: { retval: scVal.u32(2) } };
+          return { result: { retval: null } };
+        },
+      );
+
+      expect(await module.getSavedCampaigns(TEST_USER)).toEqual([3, 9]);
+      expect(await module.getSavedCampaignsCount(TEST_USER)).toBe(2);
+    });
+
+    it("mock mode enforces the bookmark limit and duplicate checks", async () => {
+      const { module } = await loadClient({ useMocks: true });
+
+      await module.saveCampaign(TEST_USER, 1);
+      await expect(module.saveCampaign(TEST_USER, 1)).rejects.toThrow(
+        "ContractErrors.CampaignAlreadyBookmarked",
+      );
+      await module.batchSaveCampaigns(TEST_USER, [2, 3, 4, 5, 6, 7, 8, 9, 10]);
+      expect(await module.getSavedCampaignsCount(TEST_USER)).toBe(module.MAX_BOOKMARKS_PER_WALLET);
+      await expect(module.saveCampaign(TEST_USER, 11)).rejects.toThrow(
+        "ContractErrors.BookmarkLimitReached",
+      );
+
+      await module.removeSavedCampaign(TEST_USER, 1);
+      expect(await module.getSavedCampaigns(TEST_USER)).not.toContain(1);
+      await module.clearSavedCampaigns(TEST_USER);
+      expect(await module.getSavedCampaigns(TEST_USER)).toEqual([]);
+    });
+
+    it("claimCreatorRevenue submits claim_creator_revenue for the campaign id", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+
+      const txHash = await module.claimCreatorRevenue(7, TEST_ADMIN);
+
+      expect(txHash).toMatch(/^hash-/);
+      const methods = mockServer.simulateTransaction.mock.calls.map(
+        ([tx]: [{ ops?: Array<{ method?: string }> }]) => tx.ops?.[0]?.method,
+      );
+      expect(methods).toContain("claim_creator_revenue");
+    });
   });
 
   it("non-mock branch runs core read/write flows with mocked SDK", async () => {

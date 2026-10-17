@@ -24,12 +24,20 @@ import {
   recordObservabilitySuccess,
 } from "./observability";
 import { appendWalletTransaction } from "./transactionLog";
-import { Campaign, Category, deriveStatus, CampaignStatus, Milestone, ContractMilestone } from "../types";
+import {
+  Campaign,
+  Category,
+  deriveStatus,
+  CampaignStatus,
+  Milestone,
+  ContractMilestone,
+} from "../types";
 import {
   parseContractError,
   getContractErrorCode,
   normalizeContractError,
   ContractError,
+  ContractErrorException,
 } from "../utils/contractErrors";
 import { wrapFreighterError } from "../utils/freighterErrors";
 import {
@@ -533,9 +541,7 @@ function decodeCampaign(val: xdr.ScVal): Campaign {
   // Contract fields carry no `tags`; fall back to that key only for older/mock
   // records that may have stored it directly, otherwise default to [].
   let tags: string[] = fields["tags"]
-    ? fields["tags"]
-        .vec()
-        .map((v: xdr.ScVal) => v.str().toString())
+    ? fields["tags"].vec().map((v: xdr.ScVal) => v.str().toString())
     : [];
 
   const EXT_MARKER = "\n\n===POH_EXT===\n";
@@ -784,42 +790,150 @@ export const DEFAULT_CAMPAIGNS_PAGE_SIZE: number =
     ? Number(process.env.NEXT_PUBLIC_CAMPAIGNS_PAGE_SIZE)
     : 20;
 
+/** Contract-enforced page size cap (LIST_MAX_LIMIT) for every paginated view. */
+export const LIST_MAX_LIMIT = 50;
+
 export interface CampaignsPage {
   campaigns: Campaign[];
-  /** Id of the next campaign to fetch, or null once every campaign has been returned. */
+  /**
+   * Opaque cursor for the next page, or null once the listing is exhausted.
+   * Unfiltered listings use "next campaign id" (1-based); category/creator
+   * listings use a zero-based position in that index. Seed the first page with
+   * `initialCampaignsCursor(filters)`.
+   */
   nextCursor: number | null;
 }
 
+export interface ListCampaignsParams {
+  cursor?: number;
+  limit?: number;
+  /** Uses the contract's `get_campaigns_by_category` index. */
+  category?: Category;
+  /** Uses the contract's `get_creator_campaigns` index. */
+  creator?: string;
+}
+
+/** First cursor to pass to `listCampaigns` for a given filter combination. */
+export function initialCampaignsCursor(filters: { category?: Category; creator?: string } = {}) {
+  return filters.category !== undefined || filters.creator ? 0 : 1;
+}
+
+/** Decodes a `(Vec<Campaign>, u32)` page tuple returned by the paginated views. */
+function decodeCampaignPage(result: xdr.ScVal | null): { campaigns: Campaign[]; next: number } {
+  const [page, next] = result?.vec() ?? [];
+  if (!page || !next) return { campaigns: [], next: 0 };
+  const campaigns = (page.vec() ?? []).map((c) => decodeCampaign(c));
+  return { campaigns, next: next.u32() };
+}
+
 /**
- * Cursor-paginated campaign listing (issue #593). The contract only exposes
- * sequential numeric ids (`get_campaign_count` + `get_campaign(id)`), so the
- * cursor here is simply "the next id to fetch" — opaque to the caller, which
- * is all `useInfiniteQuery` needs.
+ * Cursor-paginated campaign listing. Each call issues exactly ONE contract
+ * view (never one per campaign):
+ *  - no filter        -> `list_campaigns(start, limit)`
+ *  - `category`       -> `get_campaigns_by_category(category, offset, limit)`
+ *  - `creator`        -> `get_creator_campaigns(creator, start, limit)`
+ * Loading N visible campaigns therefore costs at most ceil(N / LIST_MAX_LIMIT)
+ * RPC simulations.
  */
 export async function listCampaigns({
-  cursor = 1,
+  cursor,
   limit = DEFAULT_CAMPAIGNS_PAGE_SIZE,
-}: { cursor?: number; limit?: number } = {}): Promise<CampaignsPage> {
+  category,
+  creator,
+}: ListCampaignsParams = {}): Promise<CampaignsPage> {
+  const filtered = category !== undefined || !!creator;
+  const position = cursor ?? initialCampaignsCursor({ category, creator });
+  const pageLimit = Math.max(1, Math.min(limit, LIST_MAX_LIMIT));
+
   if (USE_MOCKS) {
-    const startIndex = cursor - 1;
-    const campaigns = MOCK_CAMPAIGNS.slice(startIndex, startIndex + limit);
-    const nextCursor = startIndex + limit < MOCK_CAMPAIGNS.length ? cursor + limit : null;
+    const source = filtered
+      ? MOCK_CAMPAIGNS.filter(
+          (c) =>
+            (category === undefined || c.category === category) &&
+            (!creator || c.creator === creator),
+        )
+      : MOCK_CAMPAIGNS;
+    const startIndex = filtered ? position : position - 1;
+    const campaigns = source.slice(startIndex, startIndex + pageLimit);
+    const nextCursor = startIndex + pageLimit < source.length ? position + pageLimit : null;
     return { campaigns, nextCursor };
   }
+
   try {
-    const count = await getCampaignCount();
-    const lastIdExclusive = Math.min(cursor + limit, count + 1);
-    const ids = Array.from({ length: Math.max(0, lastIdExclusive - cursor) }, (_, i) => cursor + i);
-    const results = await Promise.allSettled(ids.map((id) => getCampaign(id)));
-    const campaigns = results.flatMap((r) => {
-      if (r.status === "rejected") {
-        console.warn("Failed to fetch campaign for listCampaigns page", r.reason);
-        return [];
-      }
-      return r.value !== null ? [r.value] : [];
-    });
-    const nextCursor = cursor + limit <= count ? cursor + limit : null;
-    return { campaigns, nextCursor };
+    if (!filtered) {
+      // list_campaigns' `start` is an exclusive id cursor; our cursor is "next id".
+      const result = await invokeViewMethod("list_campaigns", [
+        nativeToScVal(Math.max(0, position - 1), { type: "u32" }),
+        nativeToScVal(pageLimit, { type: "u32" }),
+      ]);
+      const { campaigns, next } = decodeCampaignPage(result);
+      const exhausted = campaigns.length < pageLimit || next + 1 <= position;
+      return { campaigns, nextCursor: exhausted ? null : next + 1 };
+    }
+
+    const result = creator
+      ? await invokeViewMethod("get_creator_campaigns", [
+          new Address(creator).toScVal(),
+          nativeToScVal(position, { type: "u32" }),
+          nativeToScVal(pageLimit, { type: "u32" }),
+        ])
+      : await invokeViewMethod("get_campaigns_by_category", [
+          nativeToScVal(category, { type: "u32" }),
+          nativeToScVal(position, { type: "u32" }),
+          nativeToScVal(pageLimit, { type: "u32" }),
+        ]);
+    const { campaigns: indexed, next } = decodeCampaignPage(result);
+    // The creator index has no category filter; narrow it client-side when both are set.
+    const campaigns =
+      creator && category !== undefined ? indexed.filter((c) => c.category === category) : indexed;
+    const exhausted = indexed.length < pageLimit || next <= position;
+    return { campaigns, nextCursor: exhausted ? null : next };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export interface ContractPlatformStats {
+  totalCampaigns: number;
+  activeCampaigns: number;
+  verifiedCampaigns: number;
+  cancelledCampaigns: number;
+  totalAmountRaised: bigint;
+  /** True when the contract flags its counters as inconsistent. */
+  statsArePartial: boolean;
+}
+
+/** Aggregate counts from `get_platform_stats` — one RPC call, no campaign scan. */
+export async function getPlatformStats(): Promise<ContractPlatformStats> {
+  if (USE_MOCKS) {
+    return {
+      totalCampaigns: MOCK_CAMPAIGNS.length,
+      activeCampaigns: MOCK_CAMPAIGNS.filter((c) => c.is_active && !c.is_cancelled).length,
+      verifiedCampaigns: MOCK_CAMPAIGNS.filter((c) => c.is_verified).length,
+      cancelledCampaigns: MOCK_CAMPAIGNS.filter((c) => c.is_cancelled).length,
+      totalAmountRaised: MOCK_CAMPAIGNS.reduce((sum, c) => sum + c.amount_raised, BigInt(0)),
+      statsArePartial: false,
+    };
+  }
+  try {
+    const result = await invokeViewMethod("get_platform_stats");
+    const map = result?.map();
+    if (!map) throw new Error("Expected ScVal map for PlatformStats.");
+    const fields: Record<string, xdr.ScVal> = {};
+    for (const entry of map) fields[entry.key().sym().toString()] = entry.val();
+    const field = (name: string): xdr.ScVal => {
+      const value = fields[name];
+      if (!value) throw new Error(`PlatformStats is missing ${name}.`);
+      return value;
+    };
+    return {
+      totalCampaigns: field("total_campaigns").u32(),
+      activeCampaigns: field("active_campaigns").u32(),
+      verifiedCampaigns: field("verified_campaigns").u32(),
+      cancelledCampaigns: field("cancelled_campaigns").u32(),
+      totalAmountRaised: scValToBigInt(field("total_amount_raised")),
+      statsArePartial: fields["stats_are_partial"]?.b() ?? false,
+    };
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -849,15 +963,21 @@ export async function getCampaign(id: number): Promise<Campaign | null> {
   }
 }
 
+/**
+ * Loads every campaign by walking `list_campaigns` in LIST_MAX_LIMIT pages
+ * (sequentially) — ceil(N / 50) RPC calls instead of one per campaign.
+ * Prefer `listCampaigns` / `useInfiniteCampaigns` for user-facing lists.
+ */
 export async function getAllCampaigns(): Promise<Campaign[]> {
   if (USE_MOCKS) return [...MOCK_CAMPAIGNS];
-  try {
-    const count = await getCampaignCount();
-    const results = await Promise.all(Array.from({ length: count }, (_, i) => getCampaign(i + 1)));
-    return results.filter((c): c is Campaign => c !== null);
-  } catch (err) {
-    throw new Error(parseContractError(err));
+  const all: Campaign[] = [];
+  let cursor: number | null = 1;
+  while (cursor !== null) {
+    const page: CampaignsPage = await listCampaigns({ cursor, limit: LIST_MAX_LIMIT });
+    all.push(...page.campaigns);
+    cursor = page.nextCursor;
   }
+  return all;
 }
 
 export async function getContribution(campaignId: number, contributor: string): Promise<bigint> {
@@ -1496,6 +1616,189 @@ export async function claimRevenue(
   }
 }
 
+/**
+ * Creator withdraws their retained share of the revenue pool. The contract
+ * rejects with NoFundsToWithdraw once the entitlement is fully claimed.
+ */
+export async function claimCreatorRevenue(
+  campaignId: number,
+  creator: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(creator);
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_claim_creator_revenue", options);
+  const contract = new Contract(CONTRACT_ADDRESS);
+  const op = contract.call("claim_creator_revenue", nativeToScVal(campaignId, { type: "u32" }));
+  try {
+    const txResult = await buildAndSubmitTransaction(creator, op, {
+      ...options,
+      operation: "claim_creator_revenue",
+    });
+    clearContractCacheByMethod("get_revenue_pool");
+    clearContractCacheByMethod("get_revenue_claimed");
+    appendWalletTransaction({
+      walletAddress: creator,
+      campaignId,
+      action: "claim_revenue",
+      txHash: txResult.txHash,
+    });
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// On-chain bookmarks (issue #1674)
+// ---------------------------------------------------------------------------
+
+/** Contract limit (MAX_BOOKMARKS_PER_WALLET) on a wallet's saved list. */
+export const MAX_BOOKMARKS_PER_WALLET = 10;
+
+const mockBookmarks = new Map<string, number[]>();
+
+function clearBookmarkCache(): void {
+  clearContractCacheByMethod("get_saved_campaigns");
+  clearContractCacheByMethod("get_saved_campaigns_count");
+}
+
+async function submitBookmarkTx(
+  user: string,
+  method: string,
+  args: xdr.ScVal[],
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  const contract = new Contract(CONTRACT_ADDRESS);
+  try {
+    const txResult = await buildAndSubmitTransaction(user, contract.call(method, ...args), {
+      ...options,
+      operation: method,
+    });
+    clearBookmarkCache();
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/** Campaign ids the wallet has saved (the contract already drops cancelled campaigns). */
+export async function getSavedCampaigns(user: string): Promise<number[]> {
+  if (USE_MOCKS) return [...(mockBookmarks.get(user) ?? [])];
+  try {
+    const result = await invokeViewMethod("get_saved_campaigns", [new Address(user).toScVal()]);
+    return (result?.vec() ?? []).map((v) => v.u32());
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function getSavedCampaignsCount(user: string): Promise<number> {
+  if (USE_MOCKS) return (mockBookmarks.get(user) ?? []).length;
+  try {
+    const result = await invokeViewMethod("get_saved_campaigns_count", [
+      new Address(user).toScVal(),
+    ]);
+    return result ? result.u32() : 0;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function saveCampaign(
+  user: string,
+  campaignId: number,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(user);
+  if (USE_MOCKS) {
+    const saved = mockBookmarks.get(user) ?? [];
+    if (saved.includes(campaignId))
+      throw new Error(
+        parseContractError(new ContractErrorException(ContractError.CampaignAlreadyBookmarked)),
+      );
+    if (saved.length >= MAX_BOOKMARKS_PER_WALLET)
+      throw new Error(
+        parseContractError(new ContractErrorException(ContractError.BookmarkLimitReached)),
+      );
+    mockBookmarks.set(user, [...saved, campaignId]);
+    return emitMockLifecycle("mock_tx_save_campaign", options);
+  }
+  return submitBookmarkTx(
+    user,
+    "save_campaign",
+    [new Address(user).toScVal(), nativeToScVal(campaignId, { type: "u32" })],
+    options,
+  );
+}
+
+/** Saves many campaigns atomically in one transaction (used for local → wallet migration). */
+export async function batchSaveCampaigns(
+  user: string,
+  campaignIds: number[],
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(user);
+  if (USE_MOCKS) {
+    const saved = mockBookmarks.get(user) ?? [];
+    const merged = [...saved];
+    for (const id of campaignIds) {
+      if (merged.includes(id))
+        throw new Error(
+          parseContractError(new ContractErrorException(ContractError.CampaignAlreadyBookmarked)),
+        );
+      if (merged.length >= MAX_BOOKMARKS_PER_WALLET)
+        throw new Error(
+          parseContractError(new ContractErrorException(ContractError.BookmarkLimitReached)),
+        );
+      merged.push(id);
+    }
+    mockBookmarks.set(user, merged);
+    return emitMockLifecycle("mock_tx_batch_save_campaigns", options);
+  }
+  return submitBookmarkTx(
+    user,
+    "batch_save_campaigns",
+    [
+      new Address(user).toScVal(),
+      xdr.ScVal.scvVec(campaignIds.map((id) => nativeToScVal(id, { type: "u32" }))),
+    ],
+    options,
+  );
+}
+
+export async function removeSavedCampaign(
+  user: string,
+  campaignId: number,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(user);
+  if (USE_MOCKS) {
+    mockBookmarks.set(
+      user,
+      (mockBookmarks.get(user) ?? []).filter((id) => id !== campaignId),
+    );
+    return emitMockLifecycle("mock_tx_remove_saved_campaign", options);
+  }
+  return submitBookmarkTx(
+    user,
+    "remove_saved_campaign",
+    [new Address(user).toScVal(), nativeToScVal(campaignId, { type: "u32" })],
+    options,
+  );
+}
+
+export async function clearSavedCampaigns(
+  user: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(user);
+  if (USE_MOCKS) {
+    mockBookmarks.set(user, []);
+    return emitMockLifecycle("mock_tx_clear_saved_campaigns", options);
+  }
+  return submitBookmarkTx(user, "clear_saved_campaigns", [new Address(user).toScVal()], options);
+}
+
 export async function verifyCampaign(
   campaignId: number,
   options?: TransactionLifecycleOptions,
@@ -1637,10 +1940,7 @@ export async function getApprovalThresholdBps(): Promise<number> {
  * the frontend computes that hash with `hashComment` in `./commentHash`.
  * Unknown hashes read as not censured.
  */
-export async function isCommentCensured(
-  campaignId: number,
-  commentHash: string,
-): Promise<boolean> {
+export async function isCommentCensured(campaignId: number, commentHash: string): Promise<boolean> {
   if (USE_MOCKS) return false;
   try {
     const result = await invokeViewMethod("is_comment_censured", [

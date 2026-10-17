@@ -13,6 +13,7 @@ import LanguageSwitcher from "./LanguageSwitcher";
 import NotificationBell from "./NotificationBell";
 import NotificationSettings from "./NotificationSettings";
 import { useCampaigns } from "@/hooks/useCampaigns";
+import { useSavedCampaignsCount } from "@/hooks/useSavedCampaigns";
 import { useContractVersion } from "@/hooks/useContractVersion";
 import { IS_MOCK_MODE } from "@/lib/runtimeEnv";
 
@@ -45,6 +46,7 @@ export default function Navbar() {
   const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
   const t = useTranslations("Common");
+  const savedCount = useSavedCampaignsCount();
   const { admin: adminAddress } = useAdmin();
   const { isMismatch, version, expectedVersion } = useContractVersion();
 
@@ -174,6 +176,15 @@ export default function Navbar() {
                   {link.href === "/admin" && pendingCount > 0 && (
                     <span className="ms-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white animate-in zoom-in duration-300">
                       {pendingCount}
+                    </span>
+                  )}
+                  {link.href === "/profile" && savedCount > 0 && (
+                    <span
+                      data-testid="saved-count-badge"
+                      aria-label={`${savedCount} saved campaigns`}
+                      className="ms-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-bold text-white"
+                    >
+                      {savedCount}
                     </span>
                   )}
                 </span>
@@ -318,6 +329,14 @@ export default function Navbar() {
                           {link.href === "/admin" && pendingCount > 0 && (
                             <span className="ms-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
                               {pendingCount}
+                            </span>
+                          )}
+                          {link.href === "/profile" && savedCount > 0 && (
+                            <span
+                              aria-label={`${savedCount} saved campaigns`}
+                              className="ms-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-bold text-white"
+                            >
+                              {savedCount}
                             </span>
                           )}
                         </span>

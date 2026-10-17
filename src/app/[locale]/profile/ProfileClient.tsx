@@ -19,7 +19,7 @@ export default function ProfileClient() {
   const { publicKey, isWalletConnected, connectWallet, isLoading: walletLoading } = useWallet();
   const { campaigns, isLoading: campaignsLoading } = useCampaigns();
   const { contributions, isLoading: contributionsLoading } = useContributions(publicKey);
-  const { savedIds } = useSavedCampaigns();
+  const { savedIds, localBookmarks, syncLocalBookmarks, isSyncing } = useSavedCampaigns();
 
   const savedCampaigns = useMemo(
     () => campaigns.filter((c) => savedIds.includes(c.id)),
@@ -157,6 +157,25 @@ export default function ProfileClient() {
         <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">
           {t("savedCampaigns")}
         </h2>
+        {localBookmarks.length > 0 && (
+          <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm dark:border-blue-900/50 dark:bg-blue-950/30 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-blue-900 dark:text-blue-200">
+              You have {localBookmarks.length} bookmark{localBookmarks.length === 1 ? "" : "s"}{" "}
+              saved only in this browser. Move them to your wallet so they follow you across
+              devices.
+            </p>
+            <button
+              type="button"
+              onClick={syncLocalBookmarks}
+              disabled={isSyncing}
+              className="shrink-0 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-zinc-400"
+            >
+              {isSyncing
+                ? "Syncing..."
+                : `Sync ${localBookmarks.length} local bookmark${localBookmarks.length === 1 ? "" : "s"} to your wallet`}
+            </button>
+          </div>
+        )}
         {campaignsLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[0, 1].map((i) => (

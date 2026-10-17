@@ -52,6 +52,12 @@ export enum ContractError {
   UnauthorizedAdmin = 39,
   InvalidVestingSchedule = 40,
   InvalidVestingDelay = 41,
+  /** Campaign is already in the wallet's saved list (bookmarks, #1674). */
+  CampaignAlreadyBookmarked = 44,
+  /** Campaign is not in the wallet's saved list (bookmarks, #1674). */
+  CampaignNotBookmarked = 45,
+  /** Wallet reached the on-chain saved-list size limit (bookmarks, #1674). */
+  BookmarkLimitReached = 47,
   /** Milestone has not been verified yet (milestone payouts, #1671/#1672). */
   MilestoneNotVerified = 49,
   /** Milestone has already been claimed (milestone payouts, #1671/#1672). */
@@ -106,6 +112,9 @@ export const errorTranslationKeys: Record<ContractError, string> = {
   [ContractError.UnauthorizedAdmin]: "ContractErrors.UnauthorizedAdmin",
   [ContractError.InvalidVestingSchedule]: "ContractErrors.InvalidVestingSchedule",
   [ContractError.InvalidVestingDelay]: "ContractErrors.InvalidVestingDelay",
+  [ContractError.CampaignAlreadyBookmarked]: "ContractErrors.CampaignAlreadyBookmarked",
+  [ContractError.CampaignNotBookmarked]: "ContractErrors.CampaignNotBookmarked",
+  [ContractError.BookmarkLimitReached]: "ContractErrors.BookmarkLimitReached",
   [ContractError.MilestoneNotVerified]: "ContractErrors.MilestoneNotVerified",
   [ContractError.MilestoneAlreadyClaimed]: "ContractErrors.MilestoneAlreadyClaimed",
 };
