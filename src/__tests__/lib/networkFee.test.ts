@@ -1,5 +1,7 @@
 import {
   DEFAULT_CONTRIBUTE_NETWORK_FEE_STROOPS,
+  DEFAULT_SOROBAN_RESOURCE_LIMITS,
+  computeResourceLimits,
   getEstimatedContributeNetworkFeeStroops,
   getEstimatedContributeNetworkFeeXlm,
   formatEstimatedNetworkFeeXlm,
@@ -62,6 +64,31 @@ describe("networkFee", () => {
     it("formats an env-override estimate as a locale-appropriate XLM string", () => {
       process.env[ENV_KEY] = "200000";
       expect(formatEstimatedNetworkFeeXlm()).toBe("0.02");
+    });
+  });
+
+  describe("computeResourceLimits", () => {
+    it("pads the simulated footprint with headroom", () => {
+      const limits = computeResourceLimits({
+        instructions: 1_000_000,
+        readBytes: 1_000,
+        writeBytes: 500,
+      });
+      expect(limits.instructions).toBe(1_100_000);
+      expect(limits.readBytes).toBe(1_100);
+      expect(limits.writeBytes).toBe(550);
+    });
+
+    it("falls back per-dimension when the footprint value is missing or invalid", () => {
+      const limits = computeResourceLimits({ instructions: 0, readBytes: undefined });
+      expect(limits.instructions).toBe(DEFAULT_SOROBAN_RESOURCE_LIMITS.instructions);
+      expect(limits.readBytes).toBe(DEFAULT_SOROBAN_RESOURCE_LIMITS.readBytes);
+      expect(limits.writeBytes).toBe(DEFAULT_SOROBAN_RESOURCE_LIMITS.writeBytes);
+    });
+
+    it("accepts an explicit headroom multiplier", () => {
+      const limits = computeResourceLimits({ instructions: 1_000 }, { headroomMultiplier: 2 });
+      expect(limits.instructions).toBe(2_000);
     });
   });
 });
