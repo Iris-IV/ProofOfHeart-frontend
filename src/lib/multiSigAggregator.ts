@@ -1,5 +1,4 @@
-import { Keypair, Transaction, TransactionBuilder, BASE_FEE } from "@stellar/stellar-sdk";
-import { signTransactionXdr } from "./walletSigner";
+import { Transaction } from "@stellar/stellar-sdk";
 
 /**
  * Multi-signature authorization data for a campaign cancellation.
@@ -16,19 +15,11 @@ export interface MultiSigAggregatorState {
   requiredSignatures: number;
   collectedSignatures: MultiSigSignature[];
   isComplete: boolean;
-  transactionXdr?: string;
 }
 
-/**
- * Aggregates signatures from multiple signers for campaign cancellation.
- * Handles signature collection, validation, and aggregation for multi-sig scenarios.
- */
 export class MultiSigAggregator {
   private state: Map<number, MultiSigAggregatorState> = new Map();
 
-  /**
-   * Initialize multi-sig collection for a campaign.
-   */
   initiateCampaignCancellation(
     campaignId: number,
     requiredSignatures: number,
@@ -43,29 +34,16 @@ export class MultiSigAggregator {
     return state;
   }
 
-  /**
-   * Add a signature from a signer.
-   * Validates signer uniqueness and checks if we have all required signatures.
-   */
   addSignature(campaignId: number, signer: string, signatureXdr: string): MultiSigAggregatorState {
     const state = this.state.get(campaignId);
-    if (!state) {
-      throw new Error(`No multi-sig session for campaign ${campaignId}`);
-    }
+    if (!state) throw new Error(`No multi-sig session for campaign ${campaignId}`);
 
-    // Check for duplicate signatures from same signer
     if (state.collectedSignatures.some((sig) => sig.signer === signer)) {
       throw new Error(`Signature from ${signer} already collected`);
     }
 
-    // Add signature
-    state.collectedSignatures.push({
-      signer,
-      signatureXdr,
-      timestamp: Date.now(),
-    });
+    state.collectedSignatures.push({ signer, signatureXdr, timestamp: Date.now() });
 
-    // Check if we have all required signatures
     if (state.collectedSignatures.length >= state.requiredSignatures) {
       state.isComplete = true;
     }
@@ -73,25 +51,16 @@ export class MultiSigAggregator {
     return state;
   }
 
-  /**
-   * Get current state of multi-sig collection.
-   */
   getState(campaignId: number): MultiSigAggregatorState | null {
     return this.state.get(campaignId) ?? null;
   }
 
-  /**
-   * Combine collected signatures into a multi-sig transaction.
-   * All required signatures must be present.
-   */
   aggregateSignatures(
     campaignId: number,
     baseTransaction: Transaction,
   ): { transaction: Transaction; signatures: MultiSigSignature[] } {
     const state = this.state.get(campaignId);
-    if (!state) {
-      throw new Error(`No multi-sig session for campaign ${campaignId}`);
-    }
+    if (!state) throw new Error(`No multi-sig session for campaign ${campaignId}`);
 
     if (!state.isComplete) {
       throw new Error(
@@ -99,41 +68,25 @@ export class MultiSigAggregator {
       );
     }
 
-    // Create new transaction with all collected signatures
     const aggregatedTx = baseTransaction.cloneWithSignatures(
       ...state.collectedSignatures.map((sig) => Buffer.from(sig.signatureXdr, "base64")),
     );
 
-    return {
-      transaction: aggregatedTx,
-      signatures: state.collectedSignatures,
-    };
+    return { transaction: aggregatedTx, signatures: state.collectedSignatures };
   }
 
-  /**
-   * Clear the state for a campaign (after successful submission).
-   */
   clearSession(campaignId: number): void {
     this.state.delete(campaignId);
   }
 
-  /**
-   * Get all pending multi-sig sessions.
-   */
   getPendingSessions(): MultiSigAggregatorState[] {
-    return Array.from(this.state.values()).filter((state) => !state.isComplete);
+    return Array.from(this.state.values()).filter((s) => !s.isComplete);
   }
 
-  /**
-   * Cancel a multi-sig session (e.g., timeout or user cancellation).
-   */
   cancelSession(campaignId: number, reason: string): void {
     console.warn(`Multi-sig session cancelled for campaign ${campaignId}: ${reason}`);
     this.clearSession(campaignId);
   }
 }
 
-/**
- * Global instance of multi-sig aggregator.
- */
 export const multiSigAggregator = new MultiSigAggregator();

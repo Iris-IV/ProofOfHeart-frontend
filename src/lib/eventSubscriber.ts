@@ -22,7 +22,6 @@ class EventSubscriber {
   private maxBackoffMs = 60000;
   private consecutiveFailures = 0;
   private lastSuccessTime = 0;
-  // Minimum backoff to prevent CPU spinning on rapid failures
   private minBackoffMs = 1000;
 
   constructor() {
@@ -148,14 +147,11 @@ class EventSubscriber {
       console.warn("Soroban event polling error:", error);
       this.consecutiveFailures++;
 
-      // Exponential backoff with jitter to avoid thundering herd
-      // #1504: Soroban Contract Event Subscriber Reconnection Exponential Backoff
+      // Exponential backoff with jitter to avoid thundering herd (#1504)
       const exponentialBackoff = Math.min(
         this.minBackoffMs * Math.pow(1.5, this.consecutiveFailures),
         this.maxBackoffMs,
       );
-
-      // Add jitter: random value between 0-25% of backoff time
       const jitter = Math.random() * (exponentialBackoff * 0.25);
       this.backoffMs = exponentialBackoff + jitter;
     }
