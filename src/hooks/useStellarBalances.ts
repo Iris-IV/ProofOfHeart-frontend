@@ -69,16 +69,12 @@ export function useStellarBalances(publicKey: string | null): UseStellarBalances
   const network = getStellarNetworkKey();
   const isVisible = useWindowVisibility();
 
-  // Determine polling interval based on visibility
-  const pollInterval =
-    typeof isVisible === "object" && isVisible.isVisible ? isVisible.pollInterval : false;
-
   const { data, isLoading, error } = useQuery<Map<string, number>, Error>({
     queryKey: [STELLAR_BALANCES_QUERY_KEY, publicKey, network],
     queryFn: () => getStellarBalances(publicKey!),
     enabled: !!publicKey,
     staleTime: STELLAR_BALANCE_POLL_MS,
-    refetchInterval: publicKey && pollInterval ? pollInterval : false,
+    refetchInterval: publicKey && isVisible ? STELLAR_BALANCE_POLL_MS : false,
     refetchIntervalInBackground: false,
     retry: 1,
   });
