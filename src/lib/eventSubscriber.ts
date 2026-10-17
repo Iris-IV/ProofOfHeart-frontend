@@ -20,6 +20,10 @@ class EventSubscriber {
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private backoffMs = 2000;
   private maxBackoffMs = 60000;
+  private consecutiveFailures = 0;
+  private lastSuccessTime = 0;
+  // Minimum backoff to prevent CPU spinning on rapid failures
+  private minBackoffMs = 1000;
 
   constructor() {
     this.server = new StellarSdk.rpc.Server(SOROBAN_RPC_URL);
