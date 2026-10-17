@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Bookmark, FileText } from "lucide-react";
 import { notFound } from "next/navigation";
 import LazyImage from "@/components/LazyImage";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import CampaignTabs from "@/components/CampaignTabs";
 const RevenueSharingPanel = dynamic(() => import("@/components/RevenueSharingPanel"), {
@@ -26,6 +26,7 @@ import ReportModal from "@/components/ReportModal";
 import CampaignActions from "@/components/CampaignActions";
 import ImpactMetricsCard from "@/components/ImpactMetricsCard";
 import PersonalCap from "@/components/PersonalCap";
+import DonationMilestones from "@/components/DonationMilestones";
 import AsyncButtonContent from "@/components/AsyncButtonContent";
 import { useToast } from "@/components/ToastProvider";
 import VotingComponent from "@/components/VotingComponent";
@@ -44,10 +45,15 @@ import {
   getContribution,
   claimRefund,
   cancelCampaign,
+  getAdmin,
+  getMilestones,
+  isMilestoneClaimed,
+  verifyMilestone,
+  claimMilestone,
 } from "@/lib/contractClient";
 import { useTranslations, useLocale } from "next-intl";
 import { CauseDetailSkeleton } from "@/components/Skeleton";
-import { Campaign, Vote, CATEGORY_LABELS } from "@/types";
+import { Campaign, Vote, CATEGORY_LABELS, ContractMilestone } from "@/types";
 import { stroopsToXlmNumber } from "@/lib/stellarAmount";
 import { parseContractError } from "@/utils/contractErrors";
 import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncAction";
@@ -89,6 +95,13 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const [isExtendModalOpen, setIsExtendModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [milestonePayoutPlan, setMilestonePayoutPlan] = useState<{
+    milestones: ContractMilestone[];
+    claimed: Record<number, boolean>;
+  } | null>(null);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+  const [isVerifyingMilestoneId, setIsVerifyingMilestoneId] = useState<number | null>(null);
+  const [isClaimingMilestoneId, setIsClaimingMilestoneId] = useState<number | null>(null);
   const { showError, showSuccess, showWarning } = useToast();
   const { isSaved, toggleSaved } = useSavedCampaigns();
   const { isFollowing, toggleFollow } = useFollowedCreators();
@@ -117,6 +130,52 @@ export default function CauseDetailClient({ id }: { id: string }) {
       trackViewCampaign(campaign.id);
     }
   }, [campaign]);
+
+  // Determine whether the connected wallet is the platform admin (issue #1672)
+  useEffect(() => {
+    if (!userWalletAddress || isPlatformAdmin) return;
+    let isMounted = true;
+    getAdmin()
+      .then((adminAddress) => {
+        if (isMounted && adminAddress) {
+          setIsPlatformAdmin(isSameAddress(adminAddress, userWalletAddress));
+        }
+      })
+      .catch(() => {
+        // ignore: admin check is best-effort gating for the verify action
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [userWalletAddress, isPlatformAdmin]);
+
+  const reloadMilestonePlan = useCallback(async () => {
+    if (!campaign) {
+      setMilestonePayoutPlan(null);
+      return;
+    }
+    try {
+      const milestones = await getMilestones(campaign.id);
+      if (milestones.length === 0) {
+        setMilestonePayoutPlan(null);
+        return;
+      }
+      const claimedFlags = await Promise.all(
+        milestones.map((m) => isMilestoneClaimed(campaign.id, m.id).catch(() => false)),
+      );
+      setMilestonePayoutPlan({
+        milestones,
+        claimed: Object.fromEntries(milestones.map((m, i) => [m.id, claimedFlags[i]])),
+      });
+    } catch {
+      setMilestonePayoutPlan(null);
+    }
+  }, [campaign?.id]);
+
+  // Load the on-chain milestone payout plan and claimed flags (issue #1672)
+  useEffect(() => {
+    void reloadMilestonePlan();
+  }, [reloadMilestonePlan]);
 
   // Warn the user before leaving while the campaign edit form has unsaved changes.
   useEffect(() => {
@@ -189,6 +248,39 @@ export default function CauseDetailClient({ id }: { id: string }) {
     };
     check();
   }, [userWalletAddress, campaign]);
+
+  const handleVerifyMilestone = async (milestoneId: number) => {
+    if (!campaign) return;
+    setIsVerifyingMilestoneId(milestoneId);
+    try {
+      await withActionTimeout(verifyMilestone(campaign.id, milestoneId));
+      showSuccess(
+        `Milestone ${milestoneId} verified — the creator can now claim its payout.`,
+      );
+      await reloadMilestonePlan();
+    } catch (error) {
+      showError(getAsyncActionErrorMessage(error, parseContractError));
+    } finally {
+      setIsVerifyingMilestoneId(null);
+    }
+  };
+
+  const handleClaimMilestone = async (milestoneId: number) => {
+    if (!campaign) return;
+    setIsClaimingMilestoneId(milestoneId);
+    try {
+      await withActionTimeout(claimMilestone(campaign.id, milestoneId));
+      showSuccess(
+        `Milestone ${milestoneId} payout claimed successfully.`,
+      );
+      await reloadMilestonePlan();
+      refetch();
+    } catch (error) {
+      showError(getAsyncActionErrorMessage(error, parseContractError));
+    } finally {
+      setIsClaimingMilestoneId(null);
+    }
+  };
 
   // Load refundable contribution
   useEffect(() => {
@@ -543,6 +635,27 @@ export default function CauseDetailClient({ id }: { id: string }) {
                   amountRaised={campaign.amount_raised}
                   fundingGoal={campaign.funding_goal}
                   milestones={campaign.milestones}
+                />
+              </div>
+            )}
+
+            {milestonePayoutPlan && (
+              <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
+                <DonationMilestones
+                  amountRaised={campaign.amount_raised}
+                  onChainPlan={{
+                    milestones: milestonePayoutPlan.milestones,
+                    claimed: milestonePayoutPlan.claimed,
+                    isAdmin: isPlatformAdmin,
+                    isCreator: isCreator,
+                    isFundingGoalMet: campaign.amount_raised >= campaign.funding_goal,
+                    isWithdrawn: campaign.funds_withdrawn,
+                    platformFeeBps: platformFeeBps,
+                    onVerify: handleVerifyMilestone,
+                    onClaim: handleClaimMilestone,
+                    isVerifyingId: isVerifyingMilestoneId,
+                    isClaimingId: isClaimingMilestoneId,
+                  }}
                 />
               </div>
             )}

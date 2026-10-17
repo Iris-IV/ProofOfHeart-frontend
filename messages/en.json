@@ -189,6 +189,22 @@
     "transferring": "Transferring...",
     "requiredWord": "CONFIRM"
   },
+  "Milestones": {
+    "title": "Milestone payouts",
+    "payoutShare": "{share}% of funds raised",
+    "statusPending": "Pending verification",
+    "statusVerified": "Verified",
+    "statusClaimed": "Claimed",
+    "verifyAction": "Verify milestone",
+    "verifyingAction": "Verifying…",
+    "verifiedByAdmin": "Verified ✓ awaiting claim",
+    "claimAction": "Claim payout",
+    "claimingAction": "Claiming…",
+    "claimBlockedByGoal": "Claim unlocks when the funding goal is met",
+    "claimBlockedByWithdrawn": "Funds for this campaign are already withdrawn",
+    "claimBlockedByUnverified": "Waiting for platform admin verification",
+    "expectedPayout": "Expected payout: {amount} XLM (after platform fee)"
+  },
   "ContractErrors": {
     "NotAuthorized": "You are not authorized to perform this action.",
     "CampaignNotFound": "This campaign could not be found.",
@@ -214,6 +230,8 @@
     "InvalidMilestone": "Invalid milestone.",
     "MilestoneNotFound": "Milestone not found.",
     "MilestoneAlreadyApproved": "Milestone already approved.",
+    "MilestoneNotVerified": "Milestone has not been verified yet.",
+    "MilestoneAlreadyClaimed": "Milestone payout has already been claimed.",
     "ContractPaused": "Contract is paused.",
     "ContributionCapExceeded": "Contribution cap exceeded.",
     "CampaignNotVerified": "Campaign not verified.",

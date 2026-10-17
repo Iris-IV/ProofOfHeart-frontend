@@ -52,6 +52,10 @@ export enum ContractError {
   UnauthorizedAdmin = 39,
   InvalidVestingSchedule = 40,
   InvalidVestingDelay = 41,
+  /** Milestone has not been verified yet (milestone payouts, #1671/#1672). */
+  MilestoneNotVerified = 49,
+  /** Milestone has already been claimed (milestone payouts, #1671/#1672). */
+  MilestoneAlreadyClaimed = 50,
 }
 
 // ---------------------------------------------------------------------------
@@ -102,6 +106,8 @@ export const errorTranslationKeys: Record<ContractError, string> = {
   [ContractError.UnauthorizedAdmin]: "ContractErrors.UnauthorizedAdmin",
   [ContractError.InvalidVestingSchedule]: "ContractErrors.InvalidVestingSchedule",
   [ContractError.InvalidVestingDelay]: "ContractErrors.InvalidVestingDelay",
+  [ContractError.MilestoneNotVerified]: "ContractErrors.MilestoneNotVerified",
+  [ContractError.MilestoneAlreadyClaimed]: "ContractErrors.MilestoneAlreadyClaimed",
 };
 
 // ---------------------------------------------------------------------------

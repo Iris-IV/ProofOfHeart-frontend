@@ -61,6 +61,20 @@ export interface Milestone {
   description: string;
 }
 
+/**
+ * On-chain milestone plan entry for milestone-based payouts (#783 / issue #1672).
+ *
+ * Mirrors the Soroban `Milestone` struct returned by `get_milestones(campaign_id)`.
+ * `payout_bps` is the milestone's share (basis points) of the withdrawable
+ * funds after the platform fee; the plan's `payout_bps` values sum to 10,000.
+ */
+export interface ContractMilestone {
+  id: number;
+  description: string;
+  payout_bps: number;
+  verified: boolean;
+}
+
 export interface SocialLinks {
   twitter?: string;
   linkedin?: string;

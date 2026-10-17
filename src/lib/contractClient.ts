@@ -24,7 +24,7 @@ import {
   recordObservabilitySuccess,
 } from "./observability";
 import { appendWalletTransaction } from "./transactionLog";
-import { Campaign, Category, deriveStatus, CampaignStatus, Milestone } from "../types";
+import { Campaign, Category, deriveStatus, CampaignStatus, Milestone, ContractMilestone } from "../types";
 import {
   parseContractError,
   getContractErrorCode,
@@ -914,6 +914,143 @@ export async function getRevenueClaimed(campaignId: number, contributor: string)
     ]);
     if (!result) return BigInt(0);
     return scValToBigInt(result);
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Milestone payout plan (#783 / issue #1672)
+// Mirrors the on-chain Milestone struct: { id, description, payout_bps, verified }
+// ---------------------------------------------------------------------------
+
+export const BPS_DENOMINATOR = 10_000;
+const BPS_CEIL_OFFSET = 9_999;
+
+function decodeMilestone(val: xdr.ScVal): ContractMilestone {
+  const map = val.map();
+  if (!map) throw new Error("Expected ScVal map for Milestone.");
+  const fields: Record<string, xdr.ScVal> = {};
+  for (const entry of map) {
+    const key = entry.key().sym().toString();
+    fields[key] = entry.val();
+  }
+  return {
+    id: fields["id"].u32(),
+    description: fields["description"].str().toString(),
+    payout_bps: fields["payout_bps"].u32(),
+    verified: fields["verified"].b(),
+  };
+}
+
+/**
+ * Fetch the on-chain milestone payout plan for `campaignId`.
+ * Returns an empty array when the creator has not set a plan.
+ */
+export async function getMilestones(campaignId: number): Promise<ContractMilestone[]> {
+  if (USE_MOCKS) return [];
+  try {
+    const result = await invokeViewMethod("get_milestones", [
+      nativeToScVal(campaignId, { type: "u32" }),
+    ]);
+    return result?.vec()?.map(decodeMilestone) ?? [];
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Whether milestone `milestoneId` of `campaignId` has already claimed its payout.
+ */
+export async function isMilestoneClaimed(
+  campaignId: number,
+  milestoneId: number,
+): Promise<boolean> {
+  if (USE_MOCKS) return false;
+  try {
+    const result = await invokeViewMethod("is_milestone_claimed", [
+      nativeToScVal(campaignId, { type: "u32" }),
+      nativeToScVal(milestoneId, { type: "u32" }),
+    ]);
+    return result?.b() ?? false;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * What the creator would receive when claiming a milestone of `payoutBps` out
+ * of `amountRaised`, before any dust absorption on the final milestone.
+ * Mirrors the contract's release math (ceil fee, floor claim).
+ */
+export function expectedMilestonePayout(
+  amountRaised: bigint,
+  payoutBps: number,
+  feeBps: number,
+): bigint {
+  const feeTotal =
+    (amountRaised * BigInt(feeBps) + BigInt(BPS_CEIL_OFFSET)) / BigInt(BPS_DENOMINATOR);
+  const totalAfterFee = amountRaised - feeTotal;
+  return (totalAfterFee * BigInt(payoutBps)) / BigInt(BPS_DENOMINATOR);
+}
+
+/**
+ * Admin: mark milestone `milestoneId` of `campaignId` as verified.
+ * Returns the transaction hash on success.
+ */
+export async function verifyMilestone(
+  campaignId: number,
+  milestoneId: number,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_verify_milestone", options);
+  const callerAddress = await getSignerAddress();
+  const contract = new Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    "verify_milestone",
+    nativeToScVal(campaignId, { type: "u32" }),
+    nativeToScVal(milestoneId, { type: "u32" }),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "verify_milestone",
+    });
+    // The plan's verified flags changed.
+    clearContractCacheByMethod("get_milestones");
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Creator: claim the already-verified milestone `milestoneId` of `campaignId`.
+ * Returns the transaction hash on success.
+ */
+export async function claimMilestone(
+  campaignId: number,
+  milestoneId: number,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_claim_milestone", options);
+  const callerAddress = await getSignerAddress();
+  const contract = new Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    "claim_milestone",
+    nativeToScVal(campaignId, { type: "u32" }),
+    nativeToScVal(milestoneId, { type: "u32" }),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "claim_milestone",
+    });
+    // Claimed flag and (on the final claim) campaign status both changed.
+    clearContractCacheByMethod("get_milestones");
+    clearContractCacheByMethod("is_milestone_claimed");
+    clearContractCacheByMethod("get_campaign");
+    return txResult.txHash;
   } catch (err) {
     throw new Error(parseContractError(err));
   }

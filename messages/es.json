@@ -189,6 +189,22 @@
     "transferring": "Transfiriendo...",
     "requiredWord": "CONFIRMAR"
   },
+  "Milestones": {
+    "title": "Pagos por hitos",
+    "payoutShare": "{share}% de los fondos recaudados",
+    "statusPending": "Pendiente de verificación",
+    "statusVerified": "Verificado",
+    "statusClaimed": "Reclamado",
+    "verifyAction": "Verificar hito",
+    "verifyingAction": "Verificando…",
+    "verifiedByAdmin": "Verificado ✓ pendiente de reclamo",
+    "claimAction": "Reclamar pago",
+    "claimingAction": "Reclamando…",
+    "claimBlockedByGoal": "El reclamo se desbloquea al alcanzar el objetivo de financiación",
+    "claimBlockedByWithdrawn": "Los fondos de esta campaña ya fueron retirados",
+    "claimBlockedByUnverified": "Esperando verificación del administrador de la plataforma",
+    "expectedPayout": "Pago esperado: {amount} XLM (después de la comisión de plataforma)"
+  },
   "ContractErrors": {
     "NotAuthorized": "No estás autorizado para realizar esta acción.",
     "CampaignNotFound": "No se pudo encontrar esta campaña.",
@@ -214,6 +230,8 @@
     "InvalidMilestone": "Hito inválido.",
     "MilestoneNotFound": "Hito no encontrado.",
     "MilestoneAlreadyApproved": "Hito ya aprobado.",
+    "MilestoneNotVerified": "El hito aún no ha sido verificado.",
+    "MilestoneAlreadyClaimed": "El pago del hito ya ha sido reclamado.",
     "ContractPaused": "El contrato está pausado.",
     "ContributionCapExceeded": "Límite de contribución excedido.",
     "CampaignNotVerified": "Campaña no verificada.",
