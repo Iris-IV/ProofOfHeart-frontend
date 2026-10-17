@@ -1,11 +1,16 @@
 /**
- * Fee estimation with surge-pricing awareness (issue #1117).
+ * Fee estimation with surge-pricing awareness (issue #1117) and inclusion-fee
+ * buffers for network congestion (issue #1501).
  *
  * A flat fee estimate ignores Stellar network congestion, where the
  * inclusion fee on a busy ledger can run several times the base fee. This
  * turns a single point estimate into a range (typical → worst-case) driven
  * by recent ledger fee-charged data, so the UI can show "~0.00001–0.0001
  * XLM" instead of a number that can be off by 10x.
+ *
+ * On top of the range, `recommendedFeeCapStroops` adds a congestion-aware
+ * buffer so a transaction built during a fee surge still lands in the next
+ * few ledgers instead of being dropped and resubmitted.
  */
 
 export interface FeeEstimateRange {
@@ -31,16 +36,14 @@ const CONGESTION_RATIO_THRESHOLD = 3;
 
 /**
  * Build a fee range from a base fee estimate and recent ledger fee stats
- * (e.g. Soroban RPC's `getFeeStats().sorobanInclusionFee`).
+ * (e.g. Soroban RPC's `getFeeStats().sorobanInclusionFee.max`).
  */
 export function estimateFeeRange(
   baseFeeStroops: bigint,
   recentMaxFeeChargedStroops: bigint,
 ): FeeEstimateRange {
   const ratio =
-    baseFeeStroops > 0n
-      ? Number(recentMaxFeeChargedStroops) / Number(baseFeeStroops)
-      : 0;
+    baseFeeStroops > 0n ? Number(recentMaxFeeChargedStroops) / Number(baseFeeStroops) : 0;
 
   const isCongested = ratio >= CONGESTION_RATIO_THRESHOLD;
   const surgeMultiplier = isCongested ? CONGESTED_SURGE_MULTIPLIER : MIN_SURGE_MULTIPLIER;
@@ -51,4 +54,74 @@ export function estimateFeeRange(
     surgeMultiplier,
     isCongested,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Inclusion-fee buffers (#1501)
+//
+// The worst-case range tells the user how high fees can go, but a transaction
+// still needs headroom on top of that to survive a fee surge between build
+// time and ledger close. The buffer scales with congestion: modest when idle
+// (avoid overpaying) and generous under surge (avoid dropped transactions and
+// the retry churn that follows).
+// ---------------------------------------------------------------------------
+
+/** Basis-point denominator for buffer math (100% = 10 000 bps). */
+const BUFFER_BPS_DENOMINATOR = 10_000n;
+
+/** Extra headroom over the worst case while the network is idle: 10%. */
+export const DEFAULT_FEE_BUFFER_BPS = 1_000;
+/** Extra headroom over the worst case during congestion: 50%. */
+export const DEFAULT_CONGESTION_FEE_BUFFER_BPS = 5_000;
+
+export interface GasBufferOptions {
+  /** Headroom over the worst-case fee while idle, in bps. Default: 1 000 (10%). */
+  bufferBps?: number;
+  /** Headroom used instead while congested, in bps. Default: 5 000 (50%). */
+  congestionBufferBps?: number;
+}
+
+function clampBps(value: number, fallback: number): number {
+  if (!Number.isFinite(value) || value < 0) return fallback;
+  return Math.trunc(value);
+}
+
+/**
+ * The buffer percentage (in bps) to apply to the worst-case estimate for the
+ * given network conditions. Congested networks use `congestionBufferBps`;
+ * idle networks use `bufferBps`.
+ */
+export function effectiveFeeBufferBps(range: FeeEstimateRange, options?: GasBufferOptions): number {
+  const idle = clampBps(options?.bufferBps ?? DEFAULT_FEE_BUFFER_BPS, DEFAULT_FEE_BUFFER_BPS);
+  const congested = clampBps(
+    options?.congestionBufferBps ?? DEFAULT_CONGESTION_FEE_BUFFER_BPS,
+    DEFAULT_CONGESTION_FEE_BUFFER_BPS,
+  );
+  return range.isCongested ? Math.max(idle, congested) : idle;
+}
+
+/**
+ * The additional stroops added on top of the worst-case fee to absorb an
+ * inclusion-fee surge.
+ */
+export function calculateInclusionFeeBuffer(
+  range: FeeEstimateRange,
+  options?: GasBufferOptions,
+): bigint {
+  const bps = BigInt(effectiveFeeBufferBps(range, options));
+  return (range.worstCaseStroops * bps) / BUFFER_BPS_DENOMINATOR;
+}
+
+/**
+ * The fee cap (in stroops) to apply to a transaction: the worst-case estimate
+ * plus the congestion-aware inclusion-fee buffer. This is the value UIs should
+ * present as the "max fee" and builders should use as the fee ceiling, so a
+ * transaction is not dropped and rebuilt when fees spike between estimation
+ * and submission.
+ */
+export function recommendedFeeCapStroops(
+  range: FeeEstimateRange,
+  options?: GasBufferOptions,
+): bigint {
+  return range.worstCaseStroops + calculateInclusionFeeBuffer(range, options);
 }
