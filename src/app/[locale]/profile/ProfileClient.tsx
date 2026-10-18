@@ -12,6 +12,8 @@ import { formatAddress } from "@/lib/formatAddress";
 import { formatAmount } from "@/lib/formatters";
 import { isSameAddress } from "@/lib/stellar";
 import { Skeleton } from "@/components/Skeleton";
+import CampaignEmptyState from "@/components/CampaignEmptyState";
+import { Button } from "@/components/ui";
 
 export default function ProfileClient() {
   const t = useTranslations("Profile");
@@ -19,7 +21,10 @@ export default function ProfileClient() {
   const { publicKey, isWalletConnected, connectWallet, isLoading: walletLoading } = useWallet();
   const { campaigns, isLoading: campaignsLoading } = useCampaigns();
   const { contributions, isLoading: contributionsLoading } = useContributions(publicKey);
-  const { savedIds, localBookmarks, syncLocalBookmarks, isSyncing } = useSavedCampaigns();
+  const {
+    savedIds, localBookmarks, syncLocalBookmarks, isSyncing,
+    isLoading: savedLoading, error: savedError, refetch: refetchSaved,
+  } = useSavedCampaigns();
 
   const savedCampaigns = useMemo(
     () => campaigns.filter((c) => savedIds.includes(c.id)),
@@ -176,22 +181,29 @@ export default function ProfileClient() {
             </button>
           </div>
         )}
-        {campaignsLoading ? (
+        {savedError ? (
+          <div role="alert" className="rounded-surface border border-danger p-4 text-danger">
+            <p>{t("savedLoadError")}</p>
+            <Button variant="secondary" onClick={() => { void refetchSaved(); }}>{t("retrySaved")}</Button>
+          </div>
+        ) : campaignsLoading || savedLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[0, 1].map((i) => (
               <Skeleton key={i} className="h-24 rounded-2xl" />
             ))}
           </div>
         ) : savedCampaigns.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50 p-8 text-center">
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("noSavedCampaigns")}</p>
-            <Link
+          <CampaignEmptyState
+            variant="bookmarks"
+            title={t("noSavedCampaigns")}
+            description={t("saveCampaignHint")}
+            action={<Link
               href="/explore"
-              className="inline-block mt-3 text-sm font-semibold text-red-600 dark:text-red-400 hover:underline"
+              className="tap-target focus-ring inline-flex items-center rounded-control bg-brand px-5 py-2 text-sm font-semibold text-white transition-colors duration-[120ms] hover:bg-brand-strong motion-reduce:transition-none"
             >
               {t("browseCauses")}
-            </Link>
-          </div>
+            </Link>}
+          />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {savedCampaigns.map((campaign) => (

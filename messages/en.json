@@ -309,7 +309,9 @@
     "tryDifferentSearch": "Try different search terms or clear the filters to see all causes.",
     "tryAgain": "Try again",
     "loadMore": "Load more causes",
-    "showingRange": "Showing {shown} of {total}"
+    "showingRange": "Showing {shown} of {total}",
+    "suggestedCategories": "Try one of these categories:",
+    "createCampaign": "Create a campaign"
   },
   "Status": {
     "active": "Active",
@@ -546,7 +548,10 @@
     "savedCampaigns": "Saved Campaigns",
     "createdCampaigns": "Created Campaigns",
     "noSavedCampaigns": "No saved campaigns yet.",
-    "browseCauses": "Browse causes"
+    "browseCauses": "Browse causes",
+    "saveCampaignHint": "Keep the causes you care about here. Use the bookmark button on a campaign to save it for later.",
+    "savedLoadError": "Your saved campaigns could not be loaded.",
+    "retrySaved": "Retry saved campaigns"
   },
   "Onboarding": {
     "tourLabel": "Onboarding Tour",

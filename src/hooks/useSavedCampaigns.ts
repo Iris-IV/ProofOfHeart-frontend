@@ -87,7 +87,7 @@ export function useSavedCampaigns() {
     setLegacyIds(publicKey ? readLocalIds(`${WALLET_KEY_PREFIX}${publicKey}`) : []);
   }, [publicKey]);
 
-  const { data: chainIds } = useQuery({
+  const { data: chainIds, isPending, error, refetch } = useQuery({
     queryKey: savedKey(publicKey),
     queryFn: () => getSavedCampaigns(publicKey as string),
     enabled: !!publicKey,
@@ -184,6 +184,9 @@ export function useSavedCampaigns() {
 
   return {
     savedIds,
+    isLoading: !!publicKey && isPending,
+    error: publicKey ? error : null,
+    refetch,
     toggleSaved,
     isSaved,
     /** Local-only bookmarks waiting to be moved on-chain (empty while signed out). */

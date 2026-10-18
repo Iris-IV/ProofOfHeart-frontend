@@ -26,6 +26,23 @@ body {
   font-family: var(--font-sans);
 }
 
+@keyframes campaign-empty-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .campaign-empty-state {
+    animation: campaign-empty-enter 120ms ease-out both;
+  }
+}
+
 /* =========================
    Blob Animation Fix
    ========================= */

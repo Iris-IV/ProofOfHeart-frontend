@@ -309,7 +309,9 @@
     "tryDifferentSearch": "Intenta con otros términos de búsqueda o borra los filtros para ver todas las causas.",
     "tryAgain": "Intentar de nuevo",
     "loadMore": "Cargar más causas",
-    "showingRange": "Mostrando {shown} de {total}"
+    "showingRange": "Mostrando {shown} de {total}",
+    "suggestedCategories": "Prueba una de estas categorías:",
+    "createCampaign": "Crear una campaña"
   },
   "Status": {
     "active": "Activa",
@@ -547,7 +549,10 @@
     "savedCampaigns": "Campañas guardadas",
     "createdCampaigns": "Campañas creadas",
     "noSavedCampaigns": "Aún no tienes campañas guardadas.",
-    "browseCauses": "Explorar causas"
+    "browseCauses": "Explorar causas",
+    "saveCampaignHint": "Guarda aquí las causas que te importan. Usa el botón de marcador de una campaña para verla más tarde.",
+    "savedLoadError": "No se pudieron cargar tus campañas guardadas.",
+    "retrySaved": "Reintentar campañas guardadas"
   },
   "Onboarding": {
     "tourLabel": "Tour de Incorporación",
