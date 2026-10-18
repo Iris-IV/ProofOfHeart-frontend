@@ -110,7 +110,9 @@
     "thankYou": "Thank you for supporting this cause.",
     "viewExplorer": "View on Stellar Explorer →",
     "downloadReceipt": "Download Tax Receipt (PDF)",
-    "close": "Close"
+    "close": "Close",
+    "quickAmounts": "Choose an amount",
+    "walletApproval": "You approve this contribution in your wallet."
   },
   "Admin": {
     "title": "Admin Moderation",
@@ -682,5 +684,45 @@
   "Pagination": {
     "goToPrevious": "Go to previous page",
     "goToNext": "Go to next page"
+  },
+  "CreatorProfile": {
+    "title": "Creator profile",
+    "edit": "Customize profile",
+    "bannerAlt": "Creator profile banner",
+    "verified": "{count, plural, one {# verified campaign} other {# verified campaigns}}",
+    "verifiedHelp": "Based on campaigns verified by the platform. This does not verify personal identity.",
+    "socialLinks": "Creator links",
+    "website": "Website",
+    "twitter": "X / Twitter",
+    "linkedin": "LinkedIn",
+    "opensNewTab": "(opens in a new tab)",
+    "displayName": "Display name",
+    "banner": "Banner image",
+    "bannerHelp": "JPEG, PNG or WebP, up to 2 MB. A wide image works best.",
+    "invalidBanner": "Choose a JPEG, PNG or WebP image smaller than 2 MB.",
+    "removeBanner": "Remove banner",
+    "localOnly": "Your name, banner and links are saved for this wallet in this browser. They are not published to other users.",
+    "save": "Save profile",
+    "cancel": "Cancel",
+    "saved": "Profile saved in this browser.",
+    "reading": "Reading image…",
+    "invalidLink": "Use a full HTTPS URL without a username or password for each link.",
+    "saveError": "Could not save your profile. Try a smaller image or allow browser storage."
+  },
+  "MilestoneRoadmap": {
+    "title": "Fundraising milestones",
+    "fundraisingHelp": "Celebrate the community’s progress. These achievements do not release campaign funds.",
+    "payoutHelp": "Follow the payout plan. The platform verifies each milestone before the creator can claim its share.",
+    "achieved": "Achieved",
+    "next": "Next milestone",
+    "upcoming": "Upcoming",
+    "step": "Milestone {number}",
+    "threshold": "{amount, number} XLM raised",
+    "progress": "{percent, number}% of this milestone funded",
+    "milestone-100": "First Spark",
+    "milestone-500": "Momentum Builder",
+    "milestone-1000": "Community Champion",
+    "milestone-5000": "Impact Leader",
+    "milestone-10000": "Legendary Heart"
   }
 }

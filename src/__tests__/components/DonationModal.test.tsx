@@ -123,6 +123,26 @@ describe("DonationModal", () => {
     mockEstimateNetworkFee.mockResolvedValue(100_000n);
   });
 
+  it("selects a quick XLM amount and exposes the same amount for submission", () => {
+    render(<DonationModal {...defaultProps} />);
+    const preset = screen.getByRole("button", { name: "10 XLM" });
+    fireEvent.click(preset);
+    expect(screen.getByLabelText("Amount (XLM)")).toHaveValue(10);
+    expect(preset).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Donate 10 XLM" })).toBeEnabled();
+    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value: "12" } });
+    expect(preset).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("disables presets that exceed the remaining goal", () => {
+    render(
+      <DonationModal {...defaultProps} campaign={makeCampaign({ amount_raised: 950_000_000n })} />,
+    );
+    expect(screen.getByRole("button", { name: "5 XLM" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "10 XLM" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "25 XLM" })).toBeDisabled();
+  });
+
   it("rejects zero amounts by disabling submit", () => {
     render(<DonationModal {...defaultProps} />);
 

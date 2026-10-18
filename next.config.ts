@@ -4,10 +4,6 @@ import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 import { ALLOWED_CAMPAIGN_IMAGE_HOSTS } from "./src/lib/campaignMedia";
 import { getThirdPartyScriptOrigins } from "./src/lib/thirdParty";
-import type { NextConfig } from "next";
-import withBundleAnalyzer from "@next/bundle-analyzer";
-import { getThirdPartyScriptOrigins } from "./src/lib/thirdParty";
-import { ALLOWED_CAMPAIGN_IMAGE_HOSTS } from "./src/lib/campaignMedia";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const withAnalyzer = withBundleAnalyzer({

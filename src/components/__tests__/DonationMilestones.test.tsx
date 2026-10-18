@@ -5,23 +5,16 @@ import type { ContractMilestone } from "@/types";
 // Values-aware next-intl mock so interpolated strings (e.g. the expected payout
 // amount) appear in the rendered output for numeric assertions.
 jest.mock("next-intl", () => ({
-  useTranslations:
-    () => (key: string, values?: Record<string, unknown>) =>
-      values && Object.keys(values).length > 0
-        ? `${key} ${JSON.stringify(values)}`
-        : key,
+  useLocale: () => "en",
+  useTranslations: () => (key: string, values?: Record<string, unknown>) =>
+    values && Object.keys(values).length > 0 ? `${key} ${JSON.stringify(values)}` : key,
 }));
 
 jest.mock("@/lib/contractClient", () => ({
   BPS_DENOMINATOR: 10000,
   // Real contract math (ceil fee, floor claim) so the rendered payout is exact.
-  expectedMilestonePayout: (
-    amountRaised: bigint,
-    payoutBps: number,
-    feeBps: number,
-  ): bigint => {
-    const feeTotal =
-      (amountRaised * BigInt(feeBps) + BigInt(9_999)) / BigInt(10_000);
+  expectedMilestonePayout: (amountRaised: bigint, payoutBps: number, feeBps: number): bigint => {
+    const feeTotal = (amountRaised * BigInt(feeBps) + BigInt(9_999)) / BigInt(10_000);
     const totalAfterFee = amountRaised - feeTotal;
     return (totalAfterFee * BigInt(payoutBps)) / BigInt(10_000);
   },
@@ -54,9 +47,7 @@ function basePlan(overrides: Record<string, unknown> = {}) {
 
 describe("DonationMilestones — on-chain payout plan (issue #1672)", () => {
   it("renders each milestone's description, payout share and state", () => {
-    render(
-      <DonationMilestones amountRaised={ONE_HUNDRED_XLM} onChainPlan={basePlan()} />,
-    );
+    render(<DonationMilestones amountRaised={ONE_HUNDRED_XLM} onChainPlan={basePlan()} />);
 
     expect(screen.getByText("School supplies delivered")).toBeInTheDocument();
     expect(screen.getByText("Teachers trained")).toBeInTheDocument();
@@ -111,9 +102,7 @@ describe("DonationMilestones — on-chain payout plan (issue #1672)", () => {
   });
 
   it("does not render verify actions for non-admin wallets", () => {
-    render(
-      <DonationMilestones amountRaised={ONE_HUNDRED_XLM} onChainPlan={basePlan()} />,
-    );
+    render(<DonationMilestones amountRaised={ONE_HUNDRED_XLM} onChainPlan={basePlan()} />);
 
     expect(screen.queryByTestId("verify-milestone-1")).not.toBeInTheDocument();
     expect(screen.queryByTestId("verify-milestone-2")).not.toBeInTheDocument();
@@ -139,7 +128,11 @@ describe("DonationMilestones — on-chain payout plan (issue #1672)", () => {
     render(
       <DonationMilestones
         amountRaised={ONE_HUNDRED_XLM}
-        onChainPlan={basePlan({ isCreator: true, isFundingGoalMet: false, milestones: [milestones[0]] })}
+        onChainPlan={basePlan({
+          isCreator: true,
+          isFundingGoalMet: false,
+          milestones: [milestones[0]],
+        })}
       />,
     );
 
@@ -164,7 +157,11 @@ describe("DonationMilestones — on-chain payout plan (issue #1672)", () => {
     render(
       <DonationMilestones
         amountRaised={ONE_HUNDRED_XLM}
-        onChainPlan={basePlan({ isCreator: true, isFundingGoalMet: false, milestones: [milestones[1]] })}
+        onChainPlan={basePlan({
+          isCreator: true,
+          isFundingGoalMet: false,
+          milestones: [milestones[1]],
+        })}
       />,
     );
 
@@ -182,8 +179,8 @@ describe("DonationMilestones — on-chain payout plan (issue #1672)", () => {
     );
 
     // 50 XLM raised, 250 bps fee, 5000 bps payout -> 24.5 * 50% = 24.375 XLM
-    const payoutLines = screen.getAllByText(
-      (_, el) => (el?.textContent ?? "").includes("expectedPayout"),
+    const payoutLines = screen.getAllByText((_, el) =>
+      (el?.textContent ?? "").includes("expectedPayout"),
     );
     expect(payoutLines.length).toBeGreaterThan(0);
     expect(document.body.textContent).toContain("24");
@@ -211,8 +208,44 @@ describe("DonationMilestones — on-chain payout plan (issue #1672)", () => {
   it("keeps rendering the legacy thank-you milestones when no on-chain plan exists", () => {
     render(<DonationMilestones amountRaised={ONE_HUNDRED_XLM} />);
 
-    expect(screen.getByText("Donation Milestones")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "title" })).toBeInTheDocument();
+    expect(screen.getByText("fundraisingHelp")).toBeInTheDocument();
     expect(screen.queryByText(/Milestone payouts/)).not.toBeInTheDocument();
+  });
+});
+
+describe("DonationMilestones roadmap", () => {
+  it("identifies the next achievement in an ordered, expandable timeline", () => {
+    render(<DonationMilestones amountRaised={ONE_HUNDRED_XLM} />);
+    const stops = screen.getAllByRole("listitem");
+    expect(stops).toHaveLength(5);
+    expect(stops[0]).toHaveAttribute("data-complete", "true");
+    expect(stops[1]).toHaveAttribute("aria-current", "step");
+    expect(stops[1]?.querySelector("details")).toHaveAttribute("open");
+    expect(stops[2]?.querySelector("details")).not.toHaveAttribute("open");
+    const progress = screen.getByRole("progressbar", { name: "milestone-500" });
+    expect(progress).toHaveAttribute("value", "20");
+  });
+
+  it("moves the current payout step after a claim without implying pending steps are complete", () => {
+    render(
+      <DonationMilestones
+        amountRaised={ONE_HUNDRED_XLM}
+        onChainPlan={basePlan({ claimed: { 1: true } })}
+      />,
+    );
+    const stops = screen.getAllByRole("listitem");
+    expect(stops[0]).toHaveAttribute("data-complete", "true");
+    expect(stops[1]).toHaveAttribute("data-complete", "false");
+    expect(stops[1]).toHaveAttribute("aria-current", "step");
+    expect(screen.getByText("payoutHelp")).toBeInTheDocument();
+  });
+
+  it("shows only earned achievements in compact mode", () => {
+    const view = render(<DonationMilestones amountRaised={0n} compact />);
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+    view.rerender(<DonationMilestones amountRaised={ONE_HUNDRED_XLM} compact />);
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
   });
 });
 

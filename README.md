@@ -15,12 +15,12 @@ The smart contract lives in a separate repository:
 
 ## Prerequisites
 
-| Tool                                                  | Version     | Notes                                              |
-| ----------------------------------------------------- | ----------- | -------------------------------------------------- |
-| [Node.js](https://nodejs.org/)                        | `>= 22`     | Enforced via `engines` in `package.json`           |
-| npm                                                   | `>= 10`     | Ships with Node 22                                 |
-| [Freighter](https://www.freighter.app/)               | latest      | Browser wallet used to sign transactions           |
-| Git                                                   | any recent  |                                                    |
+| Tool                                    | Version    | Notes                                    |
+| --------------------------------------- | ---------- | ---------------------------------------- |
+| [Node.js](https://nodejs.org/)          | `>= 22`    | Enforced via `engines` in `package.json` |
+| npm                                     | `>= 10`    | Ships with Node 22                       |
+| [Freighter](https://www.freighter.app/) | latest     | Browser wallet used to sign transactions |
+| Git                                     | any recent |                                          |
 
 No Freighter wallet is needed to run the app in mock mode — it is only required for
 real testnet/mainnet transactions.
@@ -82,18 +82,18 @@ fiat on-ramp) need extra variables. Every variable is documented in
 
 ## Scripts
 
-| Command              | What it does                                                        |
-| -------------------- | ------------------------------------------------------------------- |
-| `npm run dev`        | Start the Next.js dev server at <http://localhost:3000>             |
-| `npm run build`      | Production build (runs the production-build validator first)        |
-| `npm run start`      | Serve a production build                                            |
-| `npm run lint`       | Run ESLint across the repo                                          |
-| `npm run typecheck`  | Type-check with `tsc --noEmit`                                      |
-| `npm test`           | Run the Jest unit/integration suite                                 |
-| `npm run test:watch` | Run Jest in watch mode                                              |
-| `npm run test:e2e`   | Run the Playwright end-to-end suite (mock mode)                     |
-| `npm run storybook`  | Start Storybook on <http://localhost:6006>                          |
-| `npm run format`     | Format the repo with Prettier                                       |
+| Command              | What it does                                                 |
+| -------------------- | ------------------------------------------------------------ |
+| `npm run dev`        | Start the Next.js dev server at <http://localhost:3000>      |
+| `npm run build`      | Production build (runs the production-build validator first) |
+| `npm run start`      | Serve a production build                                     |
+| `npm run lint`       | Run ESLint across the repo                                   |
+| `npm run typecheck`  | Type-check with `tsc --noEmit`                               |
+| `npm test`           | Run the Jest unit/integration suite                          |
+| `npm run test:watch` | Run Jest in watch mode                                       |
+| `npm run test:e2e`   | Run the Playwright end-to-end suite (mock mode)              |
+| `npm run storybook`  | Start Storybook on <http://localhost:6006>                   |
+| `npm run format`     | Format the repo with Prettier                                |
 
 See `package.json` for the full list (coverage, bundle-size, audit, changesets, …).
 
@@ -141,6 +141,7 @@ local runs.
 
 ## Documentation
 
+- [`docs/architecture.md`](docs/architecture.md) — frontend architecture, Soroban transaction lifecycle and IPFS data flows.
 - [`docs/`](docs/) — architecture, API reference, environment variables, deployment,
   security, design system and operations guides.
 - [`docs/CONTRACT_INTEGRATION.md`](docs/CONTRACT_INTEGRATION.md) — frontend ↔ contract

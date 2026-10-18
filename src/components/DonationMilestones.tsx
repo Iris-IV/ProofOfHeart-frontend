@@ -1,15 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useId } from "react";
+import { Check, ChevronDown } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { getMilestonesForCampaign } from "@/lib/milestoneAchievements";
 import type { ContractMilestone } from "@/types";
 import { stroopsToXlmNumber } from "@/lib/stellarAmount";
-import { formatXlm } from "@/lib/formatters";
-import {
-  BPS_DENOMINATOR,
-  expectedMilestonePayout,
-} from "@/lib/contractClient";
+import { formatAmount } from "@/lib/formatters";
+import { BPS_DENOMINATOR, expectedMilestonePayout } from "@/lib/contractClient";
 
 const TOKEN_FULL_NAMES: Record<string, string> = {
   USDC: "USD Coin",
@@ -68,12 +66,10 @@ export function canClaimMilestone(plan: {
 }
 
 export default function DonationMilestones({ amountRaised, compact = false, onChainPlan }: Props) {
-  const contractPlan = useMemo(() => {
-    if (!onChainPlan || onChainPlan.milestones.length === 0) return null;
-    return { validated: true as const };
-  }, [onChainPlan]);
+  const t = useTranslations("MilestoneRoadmap");
+  const headingId = useId();
 
-  if (contractPlan && onChainPlan) {
+  if (onChainPlan && onChainPlan.milestones.length > 0) {
     return <OnChainPlanSection plan={onChainPlan} amountRaised={amountRaised} />;
   }
 
@@ -82,60 +78,112 @@ export default function DonationMilestones({ amountRaised, compact = false, onCh
 
   if (achieved.length === 0 && compact) return null;
 
+  const nextId = milestones.find((milestone) => !milestone.achieved)?.id;
+  const visibleMilestones = compact ? achieved : milestones;
+
   return (
-    <section aria-labelledby="milestones-heading" className={compact ? "py-2" : "py-6"}>
-      <h3
-        id="milestones-heading"
-        className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3 flex items-center gap-2"
-      >
-        <span>🏅</span> Donation Milestones
+    <section
+      aria-labelledby={headingId}
+      className={
+        compact ? "py-2" : "rounded-surface bg-linear-to-br from-brand/5 to-accent/5 p-3 sm:p-4"
+      }
+    >
+      <h3 id={headingId} className="mb-2 text-heading font-heading text-zinc-900 dark:text-zinc-50">
+        {t("title")}
       </h3>
-      <div className={compact ? "flex gap-2 flex-wrap" : "grid grid-cols-1 sm:grid-cols-2 gap-3"}>
-        {milestones.map((m) => {
-          const label = replaceTokenSymbols(m.label);
-          const description = replaceTokenSymbols(m.description);
+      {!compact && (
+        <p className="mb-5 text-sm text-zinc-600 dark:text-zinc-300">{t("fundraisingHelp")}</p>
+      )}
+      <ol className={compact ? "flex flex-wrap gap-2" : "milestone-roadmap"}>
+        {visibleMilestones.map((milestone) => {
+          const current = milestone.id === nextId;
+          const label = t(milestone.id);
           return (
-            <div
-              key={m.id}
-              className={`rounded-xl border p-3 flex items-center gap-3 ${m.achieved ? "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800" : "bg-zinc-50 border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700 opacity-60"}`}
+            <li
+              key={milestone.id}
+              aria-current={current ? "step" : undefined}
+              className={
+                compact
+                  ? "rounded-control bg-success/10 px-3 py-2 text-sm text-green-800 dark:text-green-300"
+                  : "milestone-stop"
+              }
+              data-complete={milestone.achieved}
             >
-              <span className="text-2xl" aria-hidden>
-                {m.badge}
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50 ">{label}</p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{description}</p>
-                {!m.achieved && (
-                  <div className="mt-1 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
-                    <div className="h-full bg-amber-500" style={{ width: `${m.progress}%` }} />
-                  </div>
-                )}
-              </div>
-              {m.achieved && (
-                <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
-                  Unlocked
+              {compact ? (
+                <span>
+                  <span aria-hidden="true">{milestone.badge} </span>
+                  {label}
                 </span>
+              ) : (
+                <>
+                  <span
+                    className={`milestone-marker ${milestone.achieved ? "bg-success text-white" : current ? "bg-brand text-white" : "bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-200"}`}
+                    aria-hidden="true"
+                  >
+                    {milestone.achieved ? <Check size={16} /> : milestone.badge}
+                  </span>
+                  <details
+                    open={current}
+                    className="group min-w-0 rounded-control border border-zinc-200 bg-white/90 backdrop-blur-sm dark:border-zinc-700 dark:bg-zinc-900/90"
+                  >
+                    <summary className="focus-ring flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-control p-3 transition-colors duration-[140ms] hover:bg-brand/5 motion-reduce:transition-none">
+                      <span className="min-w-0 flex-1">
+                        <span className="block break-words text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                          {label}
+                        </span>
+                        <span
+                          className={`mt-1 block text-xs ${milestone.achieved ? "text-green-800 dark:text-green-300" : "text-zinc-600 dark:text-zinc-300"}`}
+                        >
+                          {milestone.achieved ? t("achieved") : current ? t("next") : t("upcoming")}
+                        </span>
+                      </span>
+                      <ChevronDown
+                        size={16}
+                        aria-hidden="true"
+                        className="shrink-0 text-zinc-600 transition-transform duration-[140ms] group-open:rotate-180 motion-reduce:transition-none dark:text-zinc-300"
+                      />
+                    </summary>
+                    <div className="space-y-3 px-3 pb-4 text-sm text-zinc-600 dark:text-zinc-300">
+                      <p>{t("threshold", { amount: stroopsToXlmNumber(milestone.threshold) })}</p>
+                      <progress
+                        aria-label={label}
+                        value={milestone.progress}
+                        max={100}
+                        className="milestone-progress w-full"
+                      />
+                      <p>{t("progress", { percent: milestone.progress })}</p>
+                    </div>
+                  </details>
+                </>
               )}
-            </div>
+            </li>
           );
         })}
-      </div>
+      </ol>
     </section>
   );
 }
 
 function OnChainPlanSection({ plan, amountRaised }: { plan: OnChainPlan; amountRaised: bigint }) {
   const t = useTranslations("Milestones");
+  const locale = useLocale();
+  const roadmap = useTranslations("MilestoneRoadmap");
+  const headingId = useId();
+  const currentId = plan.milestones.find((milestone) => !plan.claimed[milestone.id])?.id;
   return (
-    <section aria-labelledby="milestone-plan-heading" className="py-6">
+    <section
+      aria-labelledby={headingId}
+      className="rounded-surface bg-linear-to-br from-brand/5 to-accent/5 p-3 sm:p-4"
+    >
       <h3
-        id="milestone-plan-heading"
+        id={headingId}
         className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3 flex items-center gap-2"
       >
         <span>🏅</span> {t("title")}
       </h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {plan.milestones.map((m) => {
+      <p className="mb-5 text-sm text-zinc-600 dark:text-zinc-300">{roadmap("payoutHelp")}</p>
+      <ol className="milestone-roadmap">
+        {plan.milestones.map((m, index) => {
           const isClaimed = !!plan.claimed[m.id];
           const canClaim = canClaimMilestone({
             verified: m.verified,
@@ -159,82 +207,114 @@ function OnChainPlanSection({ plan, amountRaised }: { plan: OnChainPlan; amountR
           }
 
           return (
-            <div
+            <li
               key={m.id}
-              className={`rounded-xl border p-3 ${isClaimed ? "bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800" : m.verified ? "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800" : "bg-zinc-50 border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700"}`}
+              className="milestone-stop"
+              data-complete={isClaimed}
+              aria-current={m.id === currentId ? "step" : undefined}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
-                    {replaceTokenSymbols(m.description)}
-                  </p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              <span
+                aria-hidden="true"
+                className={`milestone-marker ${isClaimed ? "bg-success text-white" : m.id === currentId ? "bg-brand text-white" : "bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200"}`}
+              >
+                {isClaimed ? <Check size={16} /> : index + 1}
+              </span>
+              <details
+                open
+                className="group min-w-0 rounded-control border border-zinc-200 bg-white/90 p-3 backdrop-blur-sm dark:border-zinc-700 dark:bg-zinc-900/90"
+              >
+                <summary className="focus-ring flex min-h-11 cursor-pointer list-none items-center gap-3 rounded-control text-zinc-900 dark:text-zinc-50">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs text-zinc-600 dark:text-zinc-300">
+                      {roadmap("step", { number: index + 1 })}
+                    </span>
+                    <span className="mt-1 block break-words text-sm font-semibold">
+                      {replaceTokenSymbols(m.description)}
+                    </span>
+                    <span
+                      data-testid={`milestone-state-${m.id}`}
+                      className={`mt-2 block text-xs font-medium ${isClaimed ? "text-green-800 dark:text-green-300" : m.verified ? "text-amber-800 dark:text-amber-300" : "text-zinc-600 dark:text-zinc-300"}`}
+                    >
+                      {isClaimed
+                        ? t("statusClaimed")
+                        : m.verified
+                          ? t("statusVerified")
+                          : t("statusPending")}
+                    </span>
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    aria-hidden="true"
+                    className="shrink-0 transition-transform duration-[140ms] group-open:rotate-180 motion-reduce:transition-none"
+                  />
+                </summary>
+                <div className="mt-3">
+                  <p className="text-xs text-zinc-600 dark:text-zinc-300">
                     {t("payoutShare", { share: sharePct.toFixed(2) })}
                   </p>
                   {plan.isCreator && m.verified && !isClaimed && (
-                    <p className="text-xs text-zinc-600 dark:text-zinc-300 mt-1">
-                      {t("expectedPayout", {
-                        amount: formatXlm(stroopsToXlmNumber(expectedPayout), "en"),
-                      })}
+                    <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">
+                      {t("expectedPayout", { amount: formatAmount(expectedPayout, locale) })}
                     </p>
                   )}
                 </div>
-                <span
-                  data-testid={`milestone-state-${m.id}`}
-                  className={`text-xs font-medium ${isClaimed ? "text-green-600 dark:text-green-400" : m.verified ? "text-amber-600 dark:text-amber-400" : "text-zinc-500 dark:text-zinc-400"}`}
-                >
-                  {isClaimed ? t("statusClaimed") : m.verified ? t("statusVerified") : t("statusPending")}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2 mt-3 flex-wrap">
-                {plan.isAdmin && !m.verified && !isClaimed && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void plan.onVerify(m.id);
-                    }}
-                    disabled={isVerifying}
-                    data-testid={`verify-milestone-${m.id}`}
-                    className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-60"
-                  >
-                    {isVerifying ? t("verifyingAction") : t("verifyAction")}
-                  </button>
-                )}
-                {plan.isAdmin && m.verified && !isClaimed && (
-                  <span className="text-xs text-amber-600 dark:text-amber-400">
-                    {t("verifiedByAdmin")}
-                  </span>
-                )}
-                {plan.isCreator && !isClaimed && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void plan.onClaim(m.id);
-                    }}
-                    disabled={!canClaim || isClaiming}
-                    data-testid={`claim-milestone-${m.id}`}
-                    title={claimBlockedReasons.length > 0 ? claimBlockedReasons.join(" · ") : undefined}
-                    aria-disabled={!canClaim || isClaiming}
-                    className={`px-3 py-1.5 text-sm rounded-lg font-medium ${
-                      canClaim && !isClaiming
-                        ? "bg-green-600 text-white hover:bg-green-700"
-                        : "bg-zinc-200 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400 cursor-not-allowed"
-                    }`}
-                  >
-                    {isClaiming ? t("claimingAction") : t("claimAction")}
-                  </button>
-                )}
-                {plan.isCreator && !isClaimed && claimBlockedReasons.map((reason) => (
-                  <span key={reason} className="text-xs text-zinc-500 dark:text-zinc-400" aria-live="polite">
-                    {reason}
-                  </span>
-                ))}
-              </div>
-            </div>
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
+                  {plan.isAdmin && !m.verified && !isClaimed && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void plan.onVerify(m.id);
+                      }}
+                      disabled={isVerifying}
+                      data-testid={`verify-milestone-${m.id}`}
+                      className="tap-target focus-ring px-3 py-1.5 text-sm rounded-control bg-brand text-white font-medium hover:bg-brand-strong transition-colors duration-[140ms] motion-reduce:transition-none disabled:opacity-60"
+                    >
+                      {isVerifying ? t("verifyingAction") : t("verifyAction")}
+                    </button>
+                  )}
+                  {plan.isAdmin && m.verified && !isClaimed && (
+                    <span className="text-xs text-amber-800 dark:text-amber-300">
+                      {t("verifiedByAdmin")}
+                    </span>
+                  )}
+                  {plan.isCreator && !isClaimed && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void plan.onClaim(m.id);
+                      }}
+                      disabled={!canClaim || isClaiming}
+                      data-testid={`claim-milestone-${m.id}`}
+                      title={
+                        claimBlockedReasons.length > 0 ? claimBlockedReasons.join(" · ") : undefined
+                      }
+                      aria-disabled={!canClaim || isClaiming}
+                      className={`tap-target focus-ring px-3 py-1.5 text-sm rounded-control font-medium transition-colors duration-[140ms] motion-reduce:transition-none ${
+                        canClaim && !isClaiming
+                          ? "bg-green-600 text-white hover:bg-green-700"
+                          : "bg-zinc-200 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400 cursor-not-allowed"
+                      }`}
+                    >
+                      {isClaiming ? t("claimingAction") : t("claimAction")}
+                    </button>
+                  )}
+                  {plan.isCreator &&
+                    !isClaimed &&
+                    claimBlockedReasons.map((reason) => (
+                      <span
+                        key={reason}
+                        className="text-xs text-zinc-600 dark:text-zinc-300"
+                        aria-live="polite"
+                      >
+                        {reason}
+                      </span>
+                    ))}
+                </div>
+              </details>
+            </li>
           );
         })}
-      </div>
+      </ol>
     </section>
   );
 }

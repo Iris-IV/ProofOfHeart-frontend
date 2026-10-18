@@ -12,6 +12,7 @@ import { formatAddress } from "@/lib/formatAddress";
 import { formatAmount } from "@/lib/formatters";
 import { isSameAddress } from "@/lib/stellar";
 import { Skeleton } from "@/components/Skeleton";
+import CreatorProfileHeader from "@/components/CreatorProfileHeader";
 
 export default function ProfileClient() {
   const t = useTranslations("Profile");
@@ -65,53 +66,52 @@ export default function ProfileClient() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
-      {/* Profile header */}
-      <div className="rounded-3xl bg-linear-to-br from-zinc-900 to-zinc-800 dark:from-zinc-800 dark:to-zinc-900 border border-zinc-700 p-8 mb-8 shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-          <div className="w-16 h-16 shrink-0 rounded-full bg-linear-to-br from-red-400 to-pink-600 flex items-center justify-center text-white font-black text-xl shadow-lg">
-            {publicKey.slice(1, 3).toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-1">
-              {t("walletAddress")}
-            </p>
-            <p className="font-mono text-zinc-100 text-sm break-all" title={publicKey}>
-              {publicKey}
-            </p>
-          </div>
-        </div>
-
+      <CreatorProfileHeader
+        key={publicKey}
+        address={publicKey}
+        verifiedCampaignCount={createdCampaigns.filter((campaign) => campaign.is_verified).length}
+      >
         {/* Impact stats */}
-        <div className="grid grid-cols-3 gap-4 mt-8 pt-8 border-t border-zinc-700">
+        <div className="grid grid-cols-3 gap-4 mt-8 pt-8 border-t border-zinc-200 dark:border-zinc-700">
           <div className="text-center">
             {isDataLoading ? (
               <Skeleton className="h-7 w-24 mx-auto mb-1" />
             ) : (
-              <p className="text-2xl font-black text-white">
+              <p className="break-words text-xl font-bold text-zinc-900 dark:text-zinc-50 sm:text-2xl">
                 {formatAmount(totalContributed, locale, { maximumFractionDigits: 2 })}
-                <span className="text-sm font-bold text-zinc-400 ml-1">XLM</span>
+                <span className="text-sm font-bold text-zinc-600 dark:text-zinc-300 ml-1">XLM</span>
               </p>
             )}
-            <p className="text-xs text-zinc-400 font-medium mt-1">{t("totalContributed")}</p>
+            <p className="text-xs text-zinc-600 dark:text-zinc-300 font-medium mt-1">
+              {t("totalContributed")}
+            </p>
           </div>
           <div className="text-center">
             {isDataLoading ? (
               <Skeleton className="h-7 w-12 mx-auto mb-1" />
             ) : (
-              <p className="text-2xl font-black text-white">{contributions.length}</p>
+              <p className="break-words text-xl font-bold text-zinc-900 dark:text-zinc-50 sm:text-2xl">
+                {contributions.length}
+              </p>
             )}
-            <p className="text-xs text-zinc-400 font-medium mt-1">{t("campaignsBacked")}</p>
+            <p className="text-xs text-zinc-600 dark:text-zinc-300 font-medium mt-1">
+              {t("campaignsBacked")}
+            </p>
           </div>
           <div className="text-center">
             {isDataLoading ? (
               <Skeleton className="h-7 w-12 mx-auto mb-1" />
             ) : (
-              <p className="text-2xl font-black text-white">{createdCampaigns.length}</p>
+              <p className="break-words text-xl font-bold text-zinc-900 dark:text-zinc-50 sm:text-2xl">
+                {createdCampaigns.length}
+              </p>
             )}
-            <p className="text-xs text-zinc-400 font-medium mt-1">{t("campaignsCreated")}</p>
+            <p className="text-xs text-zinc-600 dark:text-zinc-300 font-medium mt-1">
+              {t("campaignsCreated")}
+            </p>
           </div>
         </div>
-      </div>
+      </CreatorProfileHeader>
 
       {/* Contributions */}
       {(isDataLoading || contributions.length > 0) && (

@@ -110,7 +110,9 @@
     "thankYou": "Gracias por apoyar esta causa.",
     "viewExplorer": "Ver en Stellar Explorer →",
     "downloadReceipt": "Descargar Recibo Fiscal (PDF)",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "quickAmounts": "Elige un importe",
+    "walletApproval": "Apruebas esta contribución en tu billetera."
   },
   "Admin": {
     "title": "Moderación Administrativa",
@@ -683,5 +685,45 @@
   "Pagination": {
     "goToPrevious": "Ir a la página anterior",
     "goToNext": "Ir a la página siguiente"
+  },
+  "CreatorProfile": {
+    "title": "Perfil del creador",
+    "edit": "Personalizar perfil",
+    "bannerAlt": "Imagen de portada del creador",
+    "verified": "{count, plural, one {# campaña verificada} other {# campañas verificadas}}",
+    "verifiedHelp": "Según las campañas verificadas por la plataforma. No verifica la identidad personal.",
+    "socialLinks": "Enlaces del creador",
+    "website": "Sitio web",
+    "twitter": "X / Twitter",
+    "linkedin": "LinkedIn",
+    "opensNewTab": "(se abre en una pestaña nueva)",
+    "displayName": "Nombre para mostrar",
+    "banner": "Imagen de portada",
+    "bannerHelp": "JPEG, PNG o WebP, hasta 2 MB. Se recomienda una imagen horizontal.",
+    "invalidBanner": "Elige una imagen JPEG, PNG o WebP de menos de 2 MB.",
+    "removeBanner": "Eliminar portada",
+    "localOnly": "Tu nombre, portada y enlaces se guardan para esta billetera en este navegador. No se publican para otros usuarios.",
+    "save": "Guardar perfil",
+    "cancel": "Cancelar",
+    "saved": "Perfil guardado en este navegador.",
+    "reading": "Leyendo imagen…",
+    "invalidLink": "Usa una URL HTTPS completa sin nombre de usuario ni contraseña para cada enlace.",
+    "saveError": "No se pudo guardar el perfil. Prueba una imagen más pequeña o permite el almacenamiento del navegador."
+  },
+  "MilestoneRoadmap": {
+    "title": "Hitos de recaudación",
+    "fundraisingHelp": "Celebra el progreso de la comunidad. Estos logros no liberan fondos de la campaña.",
+    "payoutHelp": "Sigue el plan de pagos. La plataforma verifica cada hito antes de que el creador pueda reclamar su parte.",
+    "achieved": "Logrado",
+    "next": "Próximo hito",
+    "upcoming": "Pendiente",
+    "step": "Hito {number}",
+    "threshold": "{amount, number} XLM recaudados",
+    "progress": "{percent, number}% de este hito financiado",
+    "milestone-100": "Primera chispa",
+    "milestone-500": "Impulso colectivo",
+    "milestone-1000": "Campeón de la comunidad",
+    "milestone-5000": "Líder de impacto",
+    "milestone-10000": "Corazón legendario"
   }
 }

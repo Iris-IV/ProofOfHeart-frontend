@@ -135,6 +135,133 @@ body {
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900;
 }
 
+/* Campaign roadmap: the rail follows the reading order, including on phones. */
+.milestone-roadmap {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.milestone-stop {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.milestone-stop:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 2rem;
+  bottom: -1rem;
+  inset-inline-start: calc(1rem - 1px);
+  width: 2px;
+  background: var(--color-zinc-300);
+}
+
+.milestone-stop[data-complete="true"]::after {
+  background: var(--color-success);
+}
+
+.milestone-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.milestone-progress {
+  display: block;
+  height: 0.5rem;
+  appearance: none;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-zinc-200);
+  accent-color: var(--color-brand);
+}
+
+.milestone-progress::-webkit-progress-bar {
+  background: var(--color-zinc-200);
+}
+
+.milestone-progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: var(--color-brand);
+}
+
+.milestone-progress::-moz-progress-bar {
+  border-radius: 999px;
+  background: var(--color-brand);
+}
+
+.milestone-roadmap summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Keep the primary contribution action above the mobile safe area and keyboard. */
+.contribution-sheet {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 2rem);
+  animation: contribution-enter 140ms ease-out;
+}
+
+.contribution-content {
+  animation: contribution-feedback 140ms ease-out;
+}
+
+.contribution-footer {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+@keyframes contribution-enter {
+  from {
+    transform: translateY(1rem);
+    opacity: 0.7;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes contribution-feedback {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 639px) {
+  .contribution-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .contribution-sheet {
+    max-width: none;
+    max-height: calc(100dvh - max(0.5rem, env(safe-area-inset-top)));
+    border-bottom: 0;
+    border-radius: var(--radius-surface) var(--radius-surface) 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contribution-sheet,
+  .contribution-content {
+    animation: none;
+  }
+}
+
 /* Custom utility utilities for responsive accessibility */
 @utility text-muted {
   @apply text-zinc-500 dark:text-zinc-300;
