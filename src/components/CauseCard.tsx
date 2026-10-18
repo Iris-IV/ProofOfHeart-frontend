@@ -10,6 +10,7 @@ import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncActi
 import { parseContractError } from "@/utils/contractErrors";
 import { Campaign, Vote, CATEGORY_LABELS, calculateFundingPercentage } from "../types";
 import Amount from "./Amount";
+import CampaignCurrencySelector from "./CampaignCurrencySelector";
 import AsyncButtonContent from "./AsyncButtonContent";
 import CampaignDescription from "./CampaignDescription";
 import CampaignStatusBadge from "./CampaignStatusBadge";
@@ -183,9 +184,7 @@ function CauseCard({
               style={{ width: `${progressPct}%` }}
             />
           </div>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500">
-            Goal: <Amount value={campaign.funding_goal} maximumFractionDigits={2} /> XLM
-          </p>
+          <CampaignCurrencySelector goal={campaign.funding_goal} />
         </div>
 
         {/* Funding progress */}

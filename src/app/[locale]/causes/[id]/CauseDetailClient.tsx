@@ -7,6 +7,7 @@ import LazyImage from "@/components/LazyImage";
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import CampaignTabs from "@/components/CampaignTabs";
+import CampaignCurrencySelector from "@/components/CampaignCurrencySelector";
 const RevenueSharingPanel = dynamic(() => import("@/components/RevenueSharingPanel"), {
   ssr: false,
 });
@@ -631,6 +632,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-4">
                   Funding Progress
                 </h2>
+                <CampaignCurrencySelector goal={campaign.funding_goal} />
                 <FundingProgressBar
                   amountRaised={campaign.amount_raised}
                   fundingGoal={campaign.funding_goal}

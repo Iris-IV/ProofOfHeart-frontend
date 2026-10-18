@@ -683,5 +683,13 @@
   "Pagination": {
     "goToPrevious": "Ir a la página anterior",
     "goToNext": "Ir a la página siguiente"
+  },
+  "CampaignCurrency": {
+    "goal": "Meta de la campaña",
+    "loading": "Cargando estimación…",
+    "unavailable": "Tipos de cambio no disponibles. Se muestra el importe en XLM.",
+    "retry": "Reintentar",
+    "estimate": "Los valores en moneda fiat son estimaciones. Las donaciones siguen en XLM.",
+    "updated": "Actualizado a las {time}."
   }
 }

@@ -682,5 +682,13 @@
   "Pagination": {
     "goToPrevious": "Go to previous page",
     "goToNext": "Go to next page"
+  },
+  "CampaignCurrency": {
+    "goal": "Campaign goal",
+    "loading": "Loading estimate…",
+    "unavailable": "Rates unavailable. XLM amount shown.",
+    "retry": "Retry rates",
+    "estimate": "Fiat values are estimates. Donations remain in XLM.",
+    "updated": "Updated {time}."
   }
 }

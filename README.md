@@ -151,6 +151,16 @@ local runs.
 
 ---
 
+## Campaign display currencies
+
+Campaign cards and detail pages offer an XLM/USD/EUR selector for the funding
+target. Fiat values are approximate display values from CoinGecko, refreshed
+every minute while selected; donations and contract amounts remain in XLM.
+The server caches quotes for 60 seconds and rejects invalid quotes or prices
+older than ten minutes. If the provider is unavailable or rate limited, the XLM
+target stays visible and supporters can retry. No provider key is required and
+wallet addresses are never sent to the quote provider.
+
 ## Campaign hook split
 
 Campaign data fetching is separated into focused hooks so each query is easier to
