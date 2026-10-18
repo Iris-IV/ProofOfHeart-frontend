@@ -11,6 +11,9 @@ import {
   THEME_STORAGE_KEY,
   writeLocalePreference,
   writeStoredTheme,
+  HIGH_CONTRAST_STORAGE_KEY,
+  resolveInitialHighContrast,
+  writeHighContrast,
 } from "@/lib/preferences";
 
 describe("preferences", () => {
@@ -63,6 +66,20 @@ describe("preferences", () => {
     it("reads stored locale", () => {
       writeLocalePreference("en");
       expect(readStoredLocale()).toBe("en");
+    });
+  });
+
+  describe("high contrast persistence", () => {
+    it("uses the system preference until the user makes an explicit choice", () => {
+      window.matchMedia = jest.fn().mockImplementation((query: string) => ({
+        matches: query.includes("prefers-contrast"),
+      }));
+      expect(resolveInitialHighContrast()).toBe(true);
+      writeHighContrast(false);
+      expect(resolveInitialHighContrast()).toBe(false);
+      expect(localStorage.getItem(HIGH_CONTRAST_STORAGE_KEY)).toBe("false");
+      writeHighContrast(true);
+      expect(resolveInitialHighContrast()).toBe(true);
     });
   });
 

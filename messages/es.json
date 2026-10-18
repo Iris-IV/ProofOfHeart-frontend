@@ -18,7 +18,8 @@
     "continueWithGoogle": "Continuar con Google",
     "continueWithX": "Continuar con X",
     "socialLoginHint": "Crea una billetera Stellar protegida por tu cuenta social, sin necesidad de extensión.",
-    "signedInAs": "Sesión iniciada como {name}"
+    "signedInAs": "Sesión iniciada como {name}",
+    "highContrast": "Alto contraste"
   },
   "PwaInstaller": {
     "installTitle": "Instalar ProofOfHeart",

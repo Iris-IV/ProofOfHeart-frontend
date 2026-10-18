@@ -24,6 +24,8 @@ describe("useTheme & WCAG 2.1 AA Dark Mode Contrast Ratio Audit (#1557)", () => 
       theme: "dark" as Theme,
       toggleTheme: () => {},
       setTheme: () => {},
+      highContrast: false,
+      setHighContrast: () => {},
     };
     const wrapper = ({ children }: { children: React.ReactNode }) =>
       React.createElement(ThemeContext.Provider, { value: mockValue }, children);
