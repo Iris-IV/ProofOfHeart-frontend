@@ -1,0 +1,97 @@
+name: Security Scan
+
+# #1618 — automated dependency vulnerability audit on every pull request.
+#
+# Runs alongside the build rather than inside it, so it cannot lengthen the
+# build pipeline. `npm ci --ignore-scripts` is used instead of a full install:
+# the audit only needs the resolved dependency tree from the lockfile, and
+# skipping install scripts avoids building native modules (sharp, @swc/core) just
+# to read an advisory database.
+#
+# Gating policy lives in audit-ci.json, not here. The details and the rationale
+# for each allowlist entry are in docs/DEPENDENCY_SECURITY.md.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - "pnpm-workspace.yaml"
+      - "pnpm-lock.yaml"
+      - "audit-ci.json"
+      - ".github/workflows/security.yml"
+  schedule:
+    # Weekly, Monday 08:00 UTC. Dependabot opens PRs for known advisories, but
+    # a new advisory is sometimes published against a version already installed,
+    # and only a scheduled run catches that.
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-audit:
+    name: Dependency vulnerability audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies without running install scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      # Blocks on high and critical. Moderate and low are reported but do not
+      # fail the job, matching the documented `npm run audit` gate.
+      - name: Run audit-ci
+        run: npm run audit:ci
+
+      - name: Collect the machine-readable report
+        if: always()
+        run: npm run audit:ci:json > audit-report.json || true
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo "## Dependency audit"
+            echo ""
+            echo '```'
+            npx audit-ci --config audit-ci.json --report-type summary || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the audit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: audit-report
+          path: audit-report.json
+          retention-days: 30
+          if-no-files-found: ignore
+
+  # Fails when an audit-ci allowlist entry has passed its expiry date, which
+  # turns "we decided to accept this advisory" into a review that has to happen
+  # on a schedule rather than a suppression that quietly becomes permanent.
+  allowlist-expiry:
+    name: Allowlist expiry
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Check audit-ci allowlist expiry
+        run: node scripts/check-audit-policy.mjs

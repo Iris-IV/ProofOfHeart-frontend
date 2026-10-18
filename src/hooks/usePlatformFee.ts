@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { getPlatformFee } from '../lib/contractClient';
+import { useQuery } from "@tanstack/react-query";
+import { getPlatformFee } from "../lib/contractClient";
 
 export const DEFAULT_PLATFORM_FEE_BPS = 300;
+export const PLATFORM_FEE_QUERY_KEY = ["platformFee"] as const;
 
 interface UsePlatformFeeResult {
   platformFeeBps: number;
@@ -12,34 +13,17 @@ interface UsePlatformFeeResult {
 }
 
 export function usePlatformFee(): UsePlatformFeeResult {
-  const [platformFeeBps, setPlatformFeeBps] = useState(DEFAULT_PLATFORM_FEE_BPS);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isFallback, setIsFallback] = useState(false);
+  const { data, isLoading, isError } = useQuery<number, Error>({
+    queryKey: PLATFORM_FEE_QUERY_KEY,
+    queryFn: getPlatformFee,
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 60,
+    retry: 1,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    getPlatformFee()
-      .then((fee) => {
-        if (cancelled) return;
-        setPlatformFeeBps(fee);
-        setIsFallback(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setPlatformFeeBps(DEFAULT_PLATFORM_FEE_BPS);
-        setIsFallback(true);
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return { platformFeeBps, isLoading, isFallback };
+  return {
+    platformFeeBps: data ?? DEFAULT_PLATFORM_FEE_BPS,
+    isLoading,
+    isFallback: isError || data === undefined,
+  };
 }

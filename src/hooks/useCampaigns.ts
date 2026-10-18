@@ -1,75 +1,44 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Campaign } from '../types';
-import { getAllCampaigns } from '../lib/contractClient';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getAllCampaigns } from "../lib/contractClient";
+import { Campaign } from "../types";
+import { isContractErrorMessage } from "../utils/contractErrors";
+import { useWindowVisibility } from "./useWindowVisibility";
 
 export interface UseCampaignsResult {
   campaigns: Campaign[];
   isLoading: boolean;
-  isRefreshing?: boolean;
+  isRefreshing: boolean;
   error: string | null;
   refetch: () => void;
 }
 
-const POLL_INTERVAL = Number(process.env.NEXT_PUBLIC_POLL_INTERVAL_LISTING_MS) || 60000;
+const POLL_INTERVAL = Number(process.env.NEXT_PUBLIC_POLL_INTERVAL_LISTING_MS) || 60_000;
+const RETRY_DELAY_MS = 500;
 
 export function useCampaigns(): UseCampaignsResult {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [tick, setTick] = useState(0);
-  const isFirstLoad = useRef(true);
+  const queryClient = useQueryClient();
+  const isVisible = useWindowVisibility();
 
-  const refetch = useCallback(() => {
-    setIsRefreshing(true);
-    setTick((t) => t + 1);
-  }, []);
+  const { data, isLoading, isFetching, error } = useQuery<Campaign[], Error>({
+    queryKey: ["campaigns"],
+    queryFn: getAllCampaigns,
+    staleTime: POLL_INTERVAL,
+    refetchInterval: isVisible ? POLL_INTERVAL : false,
+    refetchIntervalInBackground: false,
+    // A contract revert will fail the same way again; a network blip may not.
+    retry: (failureCount, err) => !isContractErrorMessage(err.message) && failureCount < 1,
+    retryDelay: RETRY_DELAY_MS,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    setTimeout(() => {
-      if (!cancelled) {
-        setIsLoading(true);
-        setError(null);
-      }
-    }, 0);
-
-    getAllCampaigns()
-      .then((data) => {
-        if (!cancelled) {
-          setCampaigns(data);
-          setError(null);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled)
-          setError(err instanceof Error ? err.message : 'Failed to load campaigns.');
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-          setIsRefreshing(false);
-          isFirstLoad.current = false;
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [tick]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (document.visibilityState === 'visible' && !isLoading && !isRefreshing) {
-        refetch();
-      }
-    }, POLL_INTERVAL);
-
-    return () => clearInterval(interval);
-  }, [isLoading, isRefreshing, refetch]);
-
-  return { campaigns, isLoading, error, refetch };
+  return {
+    campaigns: data ?? [],
+    isLoading,
+    isRefreshing: isFetching && !isLoading,
+    error: error?.message ?? null,
+    refetch: () => {
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+    },
+  };
 }

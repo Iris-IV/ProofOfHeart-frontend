@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run linting and formatting
+npx lint-staged
+
+# Run typecheck and affected tests
+node scripts/pre-commit-checks.mjs

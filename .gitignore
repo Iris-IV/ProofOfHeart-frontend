@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/test-results
+/playwright-report
 
 # next.js
 /.next/
@@ -40,3 +42,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+fix.md
+pr.md
+PR_CONTENT.md
+PR_DESCRIPTION_*.md
+.codex
+# bundle-size CI artefact
+bundle-size-summary.json
+# npm audit artefacts
+npm-audit-report.json
+npm-audit-temp.json
+
+# local comment/report store (see COMMENT_STORE_PATH)
+/.data/
+
+# tooling caches (eslint/prettier --cache locations)
+/.cache/

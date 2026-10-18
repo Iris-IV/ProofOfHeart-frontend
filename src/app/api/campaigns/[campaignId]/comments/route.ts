@@ -1,0 +1,104 @@
+import { NextRequest, NextResponse } from "next/server";
+import { Comment } from "@/types";
+import { getCommentRepository } from "@/lib/commentRepository";
+import { createRateLimiter } from "@/lib/rateLimit";
+import { CreateCommentBodySchema } from "@/lib/schemas";
+import { hashComment } from "@/lib/commentHash";
+import { filterCensuredComments } from "@/lib/commentCensure";
+
+const PAGE_SIZE = 20;
+
+const commentRateLimiter = createRateLimiter("campaign_comments", 60_000, 5);
+
+// GET /api/campaigns/[campaignId]/comments?page=1&pageSize=20
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ campaignId: string }> },
+) {
+  const { campaignId: campaignIdStr } = await params;
+  const campaignId = parseInt(campaignIdStr, 10);
+  if (isNaN(campaignId)) {
+    return NextResponse.json({ message: "Invalid campaign ID" }, { status: 400 });
+  }
+
+  const url = new URL(_req.url);
+  const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10));
+  const pageSize = Math.min(
+    100,
+    Math.max(1, parseInt(url.searchParams.get("pageSize") ?? String(PAGE_SIZE), 10)),
+  );
+
+  const stored = await getCommentRepository().list(campaignId);
+  const notCensured = await filterCensuredComments(campaignId, stored);
+  const all = notCensured.filter((c) => !c.isReported);
+  const total = all.length;
+  const items = all.slice((page - 1) * pageSize, page * pageSize);
+
+  return NextResponse.json({ items, total, page, pageSize, hasMore: page * pageSize < total });
+}
+
+// POST /api/campaigns/[campaignId]/comments
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ campaignId: string }> },
+) {
+  const { campaignId: campaignIdStr } = await params;
+  const campaignId = parseInt(campaignIdStr, 10);
+  if (isNaN(campaignId)) {
+    return NextResponse.json({ message: "Invalid campaign ID" }, { status: 400 });
+  }
+
+  let rawBody: unknown;
+  try {
+    rawBody = await req.json();
+  } catch {
+    return NextResponse.json({ message: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const parsed = CreateCommentBodySchema.safeParse(rawBody);
+  if (!parsed.success) {
+    const firstIssue = parsed.error.issues[0];
+    return NextResponse.json(
+      { message: firstIssue?.message ?? "Invalid request body" },
+      { status: 400 },
+    );
+  }
+
+  const { content, authorAddress, timestamp, parentId, signature } = parsed.data;
+
+  const rateLimitKey = `${authorAddress}:${campaignId}`;
+  if (!(await commentRateLimiter.check(rateLimitKey))) {
+    return NextResponse.json(
+      { message: "Too many requests. Please wait before posting again." },
+      { status: 429 },
+    );
+  }
+
+  const repository = getCommentRepository();
+  const existing = await repository.list(campaignId);
+
+  const resolvedTimestamp =
+    typeof timestamp === "number" ? timestamp : 1700000000000 + existing.length * 1000;
+
+  const comment: Comment = {
+    id: `comment-${campaignId}-${existing.length + 1}`,
+    campaignId,
+    content: content.trim(),
+    authorAddress,
+    timestamp: resolvedTimestamp,
+    parentId: parentId ?? null,
+    signature,
+    isPinned: false,
+    isReported: false,
+    commentHash: hashComment({
+      campaignId,
+      content: content.trim(),
+      authorAddress,
+      timestamp: resolvedTimestamp,
+    }),
+  };
+
+  await repository.add(campaignId, comment);
+
+  return NextResponse.json(comment, { status: 201 });
+}

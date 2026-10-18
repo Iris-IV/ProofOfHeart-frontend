@@ -1,27 +1,54 @@
-'use client';
+"use client";
 
-import { Campaign, CampaignStatus, deriveCampaignStatus } from '../types';
+import { useTranslations } from "next-intl";
+import { Campaign, CampaignStatus, deriveCampaignStatus } from "../types";
+import Badge from "./ui/Badge";
+import VerifiedIcon from "./icons/VerifiedIcon";
+import {
+  PlayCircle,
+  XCircle,
+  CheckCircle,
+  AlertCircle,
+  ShieldCheck,
+} from "lucide-react";
 
-const STATUS_CONFIG: Record<CampaignStatus, { label: string; className: string }> = {
+/**
+ * Cause status badges must not rely on color alone (WCAG 1.4.1).
+ * Each status pairs a distinct icon + visible text label with the tone color.
+ */
+const STATUS_CONFIG: Record<
+  CampaignStatus,
+  { key: CampaignStatus; className: string; Icon: React.ElementType }
+> = {
   active: {
-    label: 'Active',
-    className: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200',
+    key: "active",
+    className:
+      "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border border-blue-300 dark:border-blue-700",
+    Icon: PlayCircle,
   },
   cancelled: {
-    label: 'Cancelled',
-    className: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200',
+    key: "cancelled",
+    className:
+      "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border border-dashed border-red-400 dark:border-red-600",
+    Icon: XCircle,
   },
   funded: {
-    label: 'Funded',
-    className: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
+    key: "funded",
+    className:
+      "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border border-green-300 dark:border-green-700",
+    Icon: CheckCircle,
   },
   failed: {
-    label: 'Failed',
-    className: 'bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300',
+    key: "failed",
+    className:
+      "bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 border border-dotted border-amber-400 dark:border-amber-600",
+    Icon: AlertCircle,
   },
   verified: {
-    label: 'Verified',
-    className: 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200',
+    key: "verified",
+    className:
+      "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 border border-purple-300 dark:border-purple-700",
+    Icon: ShieldCheck,
   },
 };
 
@@ -30,35 +57,25 @@ interface CampaignStatusBadgeProps {
 }
 
 export default function CampaignStatusBadge({ campaign }: CampaignStatusBadgeProps) {
+  const t = useTranslations("Status");
   const status = deriveCampaignStatus(campaign);
   const config = STATUS_CONFIG[status];
+  const label = t(config.key);
 
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span className="inline-flex items-center gap-1.5" role="status" aria-label={label}>
       <span
-        className={`shrink-0 px-2.5 py-0.5 rounded-full text-xs font-semibold ${config.className}`}
+        className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${config.className}`}
+        data-status={config.key}
       >
-        {config.label}
+        <config.Icon className="w-3.5 h-3.5" aria-hidden="true" />
+        <span>{label}</span>
       </span>
-      {campaign.is_verified && status !== 'verified' && (
-        <span
-          className="shrink-0 inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200"
-          title="Verified campaign"
-        >
-          <svg
-            className="w-3 h-3"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-            aria-hidden="true"
-          >
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-              clipRule="evenodd"
-            />
-          </svg>
-          Verified
-        </span>
+      {campaign.is_verified && status !== "verified" && (
+        <Badge tone="accent" size="sm" title={t("verifiedCampaign")}>
+          <VerifiedIcon className="w-3 h-3" aria-hidden="true" />
+          {t("verified")}
+        </Badge>
       )}
     </span>
   );

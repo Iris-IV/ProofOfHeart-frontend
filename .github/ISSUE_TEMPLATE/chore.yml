@@ -1,0 +1,56 @@
+name: Chore / Maintenance
+description: Track documentation, tooling, CI, cleanup, or maintenance work
+title: "[Chore]: "
+labels: ["chore"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping maintain ProofOfHeart. Please review `CONTRIBUTING.md` before starting implementation or opening a PR.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What maintenance task should be completed?
+      placeholder: Add or update templates, CI, docs, tooling, configuration, or cleanup work.
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this useful for contributors, maintainers, users, or the Stellar Wave flow?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: List the concrete checks that make this chore complete.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which area is affected?
+      options:
+        - Documentation
+        - Issue or PR workflow
+        - CI / automation
+        - Tooling / dependencies
+        - Tests
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: contribution-flow
+    attributes:
+      label: Contribution Flow
+      options:
+        - label: I searched existing issues and PRs for duplicates.
+        - label: I reviewed `CONTRIBUTING.md`.
+        - label: I will link this issue from the PR.

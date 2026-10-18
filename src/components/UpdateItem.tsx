@@ -1,0 +1,136 @@
+import { useState, useEffect } from "react";
+import { ShieldCheck } from "lucide-react";
+import { CampaignUpdate } from "@/types";
+import SafeMarkdown from "./SafeMarkdown";
+import VerifiedIcon from "./icons/VerifiedIcon";
+import CreatorAvatar from "./CreatorAvatar";
+import { verifyUpdateSignature } from "@/lib/campaignUpdates";
+
+interface UpdateItemProps {
+  update: CampaignUpdate;
+}
+
+/**
+ * Formats a Unix timestamp (seconds) to relative time string (e.g., "2 hours ago")
+ */
+function formatRelativeTime(timestamp: number): string {
+  const now = Math.floor(Date.now() / 1000);
+  const diff = now - timestamp;
+
+  if (diff < 60) return "just now";
+  if (diff < 3600) {
+    const mins = Math.floor(diff / 60);
+    return `${mins} ${mins === 1 ? "m" : "m"} ago`;
+  }
+  if (diff < 86400) {
+    const hours = Math.floor(diff / 3600);
+    return `${hours} ${hours === 1 ? "h" : "h"} ago`;
+  }
+  if (diff < 604800) {
+    const days = Math.floor(diff / 86400);
+    return `${days} ${days === 1 ? "d" : "d"} ago`;
+  }
+  const date = new Date(timestamp * 1000);
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+/**
+ * Formats a Unix timestamp (seconds) to absolute date string for tooltip
+ */
+function formatAbsoluteTime(timestamp: number): string {
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: true,
+  }).format(new Date(timestamp * 1000));
+}
+
+/**
+ * Shortens a Stellar address for display (e.g., "GABC...7890")
+ */
+function shortenAddress(address: string): string {
+  if (address.length <= 12) return address;
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
+/**
+ * Displays a single campaign update with content, author, and timestamp.
+ */
+export default function UpdateItem({ update }: UpdateItemProps) {
+  const [isVerified, setIsVerified] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const verify = async () => {
+      const result = await verifyUpdateSignature(update);
+      setIsVerified(result);
+    };
+    verify();
+  }, [update]);
+
+  const relativeTime = formatRelativeTime(update.timestamp);
+  const absoluteTime = formatAbsoluteTime(update.timestamp);
+  const shortenedAuthor = shortenAddress(update.authorAddress);
+
+  return (
+    <article
+      className="group bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-6 shadow-xs hover:shadow-md transition-all duration-300 ring-1 ring-zinc-900/5"
+      aria-label={`Update from ${shortenedAuthor}`}
+    >
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div className="flex items-center gap-4">
+          {/* Author avatar */}
+          <CreatorAvatar
+            address={update.authorAddress}
+            src={(update as { avatarUrl?: string | null }).avatarUrl}
+            size={48}
+          />
+          <div>
+            <div className="flex items-center flex-wrap gap-2">
+              <span
+                className="text-sm font-bold text-zinc-900 dark:text-zinc-50 tracking-tight"
+                title={update.authorAddress}
+              >
+                {shortenedAuthor}
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                  Creator
+                </span>
+                {isVerified && (
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800"
+                    title="Cryptographically verified update"
+                  >
+                    <VerifiedIcon className="w-2.5 h-2.5" />
+                    Verified
+                  </span>
+                )}
+              </div>
+            </div>
+            <time
+              dateTime={new Date(update.timestamp * 1000).toISOString()}
+              className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-0.5 block"
+              title={absoluteTime}
+            >
+              {relativeTime}
+            </time>
+          </div>
+        </div>
+
+        {/* Verification Icon - Right side */}
+        <div className="hidden sm:block opacity-20 group-hover:opacity-100 transition-opacity duration-300">
+          <ShieldCheck className="w-5 h-5 text-zinc-400 dark:text-zinc-500" aria-hidden="true" />
+        </div>
+      </div>
+
+      {/* Update content — markdown, sanitized with the same hardened schema
+          used for campaign descriptions. Author input is never trusted HTML. */}
+      <SafeMarkdown className="prose prose-sm prose-zinc dark:prose-invert max-w-none break-words text-zinc-700 dark:text-zinc-300 ml-0 sm:ml-16">
+        {update.content}
+      </SafeMarkdown>
+    </article>
+  );
+}

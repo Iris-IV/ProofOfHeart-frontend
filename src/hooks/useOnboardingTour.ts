@@ -11,6 +11,14 @@ export function useOnboardingTour(totalSteps = 1) {
 
   useEffect(() => {
     if (!localStorage.getItem(STORAGE_KEY)) setShow(true);
+export function useOnboardingTour() {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem(STORAGE_KEY);
+    if (!dismissed) {
+      setShow(true);
+    }
   }, []);
 
   const dismiss = () => {
@@ -21,4 +29,7 @@ export function useOnboardingTour(totalSteps = 1) {
   const previous = () => setStep((current) => Math.max(current - 1, 0));
 
   return { show, step, next, previous, dismiss, isFirst: step === 0, isLast: step === lastStep };
+}
+
+  return { show, dismiss };
 }

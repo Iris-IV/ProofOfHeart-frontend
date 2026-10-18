@@ -11,28 +11,81 @@ export enum Category {
 
 /** Human-readable labels for each Category value. */
 export const CATEGORY_LABELS: Record<Category, string> = {
-  [Category.Learner]: 'Learner',
-  [Category.EducationalStartup]: 'Educational Startup',
-  [Category.Educator]: 'Educator',
-  [Category.Publisher]: 'Publisher',
+  [Category.Learner]: "Learner",
+  [Category.EducationalStartup]: "Educational Startup",
+  [Category.Educator]: "Educator",
+  [Category.Publisher]: "Publisher",
 };
 
 // ---------------------------------------------------------------------------
 // Campaign status — derived from contract boolean flags
 // ---------------------------------------------------------------------------
 
-export type CampaignStatus = 'active' | 'cancelled' | 'funded' | 'failed' | 'verified';
+export type CampaignStatus = "active" | "cancelled" | "funded" | "failed" | "verified";
+
+/**
+ * Raw on-chain fields used to derive CampaignStatus.
+ * Matches the boolean flags the Soroban contract actually stores.
+ */
+export interface RawCampaignFlags {
+  is_cancelled: boolean;
+  is_verified: boolean;
+  is_active: boolean;
+  funds_withdrawn: boolean;
+  deadline: number; // Unix timestamp seconds
+  amount_raised: bigint;
+  funding_goal: bigint;
+}
+
+/**
+ * Single canonical status derivation used by every view.
+ * Priority: cancelled > funded > failed > verified > active
+ */
+export function deriveStatus(flags: RawCampaignFlags): CampaignStatus {
+  if (flags.is_cancelled) return "cancelled";
+  if (flags.funds_withdrawn) return "funded";
+  const now = Math.floor(Date.now() / 1000);
+  if (!flags.is_active && flags.deadline < now && flags.amount_raised < flags.funding_goal) {
+    return "failed";
+  }
+  if (flags.is_verified) return "verified";
+  return "active";
+}
 
 // ---------------------------------------------------------------------------
 // Campaign interface — mirrors the on-chain Campaign struct
 // ---------------------------------------------------------------------------
 
+export interface Milestone {
+  targetAmount: bigint;
+  description: string;
+}
+
+/**
+ * On-chain milestone plan entry for milestone-based payouts (#783 / issue #1672).
+ *
+ * Mirrors the Soroban `Milestone` struct returned by `get_milestones(campaign_id)`.
+ * `payout_bps` is the milestone's share (basis points) of the withdrawable
+ * funds after the platform fee; the plan's `payout_bps` values sum to 10,000.
+ */
+export interface ContractMilestone {
+  id: number;
+  description: string;
+  payout_bps: number;
+  verified: boolean;
+}
+
+export interface SocialLinks {
+  twitter?: string;
+  linkedin?: string;
+  farcaster?: string;
+}
 export interface Campaign {
   id: number;
   creator: string;
   title: string;
   description: string;
-  created_at : number; // Unix timestamp in seconds
+  created_at: number; // Unix timestamp in seconds
   status: CampaignStatus;
   funding_goal: bigint;
   deadline: number;
@@ -44,6 +97,12 @@ export interface Campaign {
   category: Category;
   has_revenue_sharing: boolean;
   revenue_share_percentage: number; // basis points (e.g. 300 = 3%)
+  tags?: string[];
+  cover_image_url?: string;
+  milestones?: Milestone[];
+  latitude?: number;
+  longitude?: number;
+  social_links?: SocialLinks;
 }
 
 // ---------------------------------------------------------------------------
@@ -78,33 +137,21 @@ export enum ContractErrorCode {
 
 /**
  * Derive the campaign lifecycle status from its boolean flags + deadline.
+ * Delegates to deriveStatus so all views use a single derivation path.
  */
 export function deriveCampaignStatus(campaign: Campaign): CampaignStatus {
-  if (campaign.is_cancelled) return 'cancelled';
-  if (campaign.funds_withdrawn) return 'funded';
-  if (
-    !campaign.is_active &&
-    campaign.deadline < Math.floor(Date.now() / 1000) &&
-    campaign.amount_raised < campaign.funding_goal
-  ) {
-    return 'failed';
-  }
-  if (campaign.is_active) return 'active';
-  return 'active'; // fallback
+  return deriveStatus(campaign);
 }
 
 /**
- * Convert stroops (i128) to a floating-point XLM number for display purposes.
+ * Calculate funding percentage using bigint arithmetic to avoid precision loss.
+ * Returns a number between 0 and 100.
  */
-export function stroopsToXlm(stroops: bigint): number {
-  return Number(stroops) / 10_000_000;
-}
-
-/**
- * Convert an XLM number to stroops (bigint) for contract calls.
- */
-export function xlmToStroops(xlm: number): bigint {
-  return BigInt(Math.round(xlm * 10_000_000));
+export function calculateFundingPercentage(amountRaised: bigint, fundingGoal: bigint): number {
+  if (fundingGoal <= BigInt(0)) return 0;
+  // Use bigint arithmetic: (amountRaised * 100) / fundingGoal
+  const percentage = (amountRaised * BigInt(100)) / fundingGoal;
+  return Math.min(100, Number(percentage));
 }
 
 /**
@@ -121,9 +168,75 @@ export function basisPointsToPercentage(basisPoints: number): string {
 export interface Vote {
   causeId: string;
   voter: string;
-  voteType: 'upvote' | 'downvote';
+  voteType: "upvote" | "downvote";
   timestamp: Date;
   transactionHash: string;
+}
+
+// ---------------------------------------------------------------------------
+// Campaign Update types — for off-chain signed updates
+// ---------------------------------------------------------------------------
+
+/**
+ * Represents a campaign update posted by the creator.
+ * Updates are stored off-chain and signed by the creator's wallet.
+ */
+export interface CampaignUpdate {
+  id: string;
+  campaignId: number;
+  content: string;
+  authorAddress: string;
+  timestamp: number; // Unix timestamp in seconds
+  signature: string;
+}
+
+/**
+ * Payload to be signed when creating a new update.
+ * This is what gets signed by the wallet, not the entire update.
+ */
+export interface UpdatePayload {
+  campaignId: number;
+  content: string;
+  timestamp: number;
+}
+
+// ---------------------------------------------------------------------------
+// Comment & Q&A types
+// ---------------------------------------------------------------------------
+
+export interface Comment {
+  id: string;
+  campaignId: number;
+  content: string;
+  authorAddress: string;
+  timestamp: number; // Unix timestamp in seconds
+  parentId: string | null;
+  signature: string;
+  isPinned: boolean;
+  isReported: boolean;
+  /** sha256 of the canonical comment, used to match on-chain censures (#1682). */
+  commentHash?: string;
+}
+
+export interface CommentPayload {
+  campaignId: number;
+  content: string;
+  timestamp: number;
+}
+
+// ---------------------------------------------------------------------------
+// Donation context — consolidated from src/context/DonationContext.tsx (#1057)
+// ---------------------------------------------------------------------------
+
+import type { PendingDonation } from "../hooks/useDonationGracePeriod";
+
+export interface DonationContextType {
+  pendingDonations: PendingDonation[];
+  startGracePeriod: (
+    donation: Omit<PendingDonation, "id" | "timestamp" | "expiresAt">,
+  ) => PendingDonation;
+  cancelDonation: (id: string) => PendingDonation | undefined;
+  finalizeDonation: (id: string) => void;
 }
 
 // VotingResult is deprecated; use local state shape instead if needed

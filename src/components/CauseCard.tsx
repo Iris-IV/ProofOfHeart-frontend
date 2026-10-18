@@ -1,80 +1,92 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Campaign, Vote, CATEGORY_LABELS } from '../types';
-import VotingComponent from './VotingComponent';
-import CampaignStatusBadge from './CampaignStatusBadge';
-import FundingProgressBar from './FundingProgressBar';
-import DeadlineCountdown from './DeadlineCountdown';
-import CancelCampaignModal from './cancelCampaignModal';
+import { memo, useState } from "react";
+import LazyImage from "./LazyImage";
+import { Bookmark } from "lucide-react";
+import { useLocale } from "next-intl";
+import { formatAddress } from "@/lib/formatAddress";
+import { formatShortDate } from "@/lib/formatters";
+import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncAction";
+import { parseContractError } from "@/utils/contractErrors";
+import { Campaign, Vote, CATEGORY_LABELS, calculateFundingPercentage } from "../types";
+import Amount from "./Amount";
+import AsyncButtonContent from "./AsyncButtonContent";
+import CampaignDescription from "./CampaignDescription";
+import CampaignStatusBadge from "./CampaignStatusBadge";
+import CancelCampaignModal from "./cancelCampaignModal";
+import DeadlineCountdown from "./DeadlineCountdown";
+import FundingProgressBar from "./FundingProgressBar";
+import { useToast } from "./ToastProvider";
+import VotingComponent from "./VotingComponent";
+import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
 
 interface CauseCardProps {
+  priority?: boolean;
   campaign: Campaign;
   userWalletAddress: string | null;
-  onVote: (campaignId: number, voteType: 'upvote' | 'downvote') => Promise<void>;
+  onVote: (campaignId: number, voteType: "upvote" | "downvote") => Promise<void>;
   onCancel: (campaignId: number) => Promise<void>;
   onClaimRefund: (campaignId: number) => Promise<void>;
+  onTagClick?: (tag: string) => void;
   userVote?: Vote;
+  upvotes?: number;
+  downvotes?: number;
+  totalVotes?: number;
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
-  environment: '🌱',
-  education:   '📚',
-  healthcare:  '🏥',
+  environment: "🌱",
+  education: "📚",
+  healthcare: "🏥",
 };
 
-function formatDate(ts: number) {
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }).format(new Date(ts * 1000));
+function formatDate(ts: number, locale: string) {
+  return formatShortDate(ts, locale);
 }
 
-function formatAddress(addr: string) {
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-}
-
-export default function CauseCard({
+function CauseCard({
+  priority = false,
   campaign,
   userWalletAddress,
   onVote,
   onCancel,
   onClaimRefund,
+  onTagClick,
   userVote,
+  upvotes = 0,
+  downvotes = 0,
+  totalVotes = 0,
 }: CauseCardProps) {
   const [isVoting, setIsVoting] = useState(false);
+  const locale = useLocale();
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isClaimingRefund, setIsClaimingRefund] = useState(false);
+  const { showError, showWarning } = useToast();
+  const { isSaved, toggleSaved } = useSavedCampaigns();
 
-  const progressPct =
-    campaign.funding_goal > BigInt(0)
-      ? Math.min(100, Math.round((Number(campaign.amount_raised) / Number(campaign.funding_goal)) * 100))
-      : 0;
+  const progressPct = calculateFundingPercentage(campaign.amount_raised, campaign.funding_goal);
 
-  const isCreator =
-    !!userWalletAddress && userWalletAddress === campaign.creator;
+  const isCreator = !!userWalletAddress && userWalletAddress === campaign.creator;
 
   const showCancelButton =
-    isCreator &&
-    campaign.status !== 'cancelled' &&
-    !campaign.funds_withdrawn;
+    isCreator && campaign.status !== "cancelled" && !campaign.funds_withdrawn;
 
   const showClaimRefund =
-    campaign.status === 'cancelled' &&
+    campaign.status === "cancelled" &&
     !!userWalletAddress &&
     userWalletAddress !== campaign.creator;
 
-  const categoryLabel =
-    CATEGORY_LABELS?.[campaign.category] ?? campaign.category;
+  const categoryLabel = CATEGORY_LABELS?.[campaign.category] ?? campaign.category;
 
-  const categoryIcon = CATEGORY_ICONS[campaign.category] ?? '';
+  const categoryIcon = CATEGORY_ICONS[campaign.category] ?? "";
 
-  const handleVote = async (_campaignId: number, voteType: 'upvote' | 'downvote') => {
+  const handleVote = async (_campaignId: number, voteType: "upvote" | "downvote") => {
     setIsVoting(true);
     try {
-      await onVote(campaign.id, voteType);
+      await withActionTimeout(onVote(campaign.id, voteType));
+    } catch (error) {
+      showError(getAsyncActionErrorMessage(error, parseContractError));
     } finally {
       setIsVoting(false);
     }
@@ -83,8 +95,10 @@ export default function CauseCard({
   const handleCancelConfirm = async () => {
     setIsCancelling(true);
     try {
-      await onCancel(campaign.id);
+      await withActionTimeout(onCancel(campaign.id));
       setIsCancelModalOpen(false);
+    } catch (error) {
+      showError(getAsyncActionErrorMessage(error, parseContractError));
     } finally {
       setIsCancelling(false);
     }
@@ -93,18 +107,52 @@ export default function CauseCard({
   const handleClaimRefund = async () => {
     setIsClaimingRefund(true);
     try {
-      await onClaimRefund(campaign.id);
+      await withActionTimeout(onClaimRefund(campaign.id));
+    } catch (error) {
+      showError(getAsyncActionErrorMessage(error, parseContractError));
     } finally {
       setIsClaimingRefund(false);
     }
   };
 
   return (
-    <div className="flex flex-col bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 overflow-hidden hover:shadow-md transition-shadow duration-200">
+    <article className="flex h-full flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition-transform duration-200 hover:motion-safe:-translate-y-0.5 hover:border-blue-200 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-blue-800">
+      {/* ── Cover image ── */}
+      <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-700">
+        {campaign.cover_image_url ? (
+          <LazyImage
+            src={campaign.cover_image_url}
+            alt={campaign.title}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-4xl select-none">
+            {categoryIcon || "💡"}
+          </div>
+        )}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!userWalletAddress) {
+              showWarning("Please connect your wallet to save campaigns.");
+              return;
+            }
+            toggleSaved(campaign.id);
+          }}
+          className="absolute top-2 right-2 p-2 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm rounded-full text-zinc-700 dark:text-zinc-200 hover:bg-white dark:hover:bg-zinc-800 transition-colors shadow-sm"
+          title={isSaved(campaign.id) ? "Remove from saved" : "Save campaign"}
+        >
+          <Bookmark
+            className={`w-5 h-5 ${isSaved(campaign.id) ? "text-blue-500" : ""}`}
+            fill={isSaved(campaign.id) ? "currentColor" : "none"}
+            aria-hidden="true"
+          />
+        </button>
+      </div>
 
       {/* ── Card body ── */}
       <div className="p-5 flex-1 space-y-3">
-
         {/* Category + status */}
         <div className="flex items-start justify-between gap-3">
           <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
@@ -114,19 +162,19 @@ export default function CauseCard({
         </div>
 
         {/* Title */}
-        <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 leading-snug line-clamp-2">
+        <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 leading-snug line-clamp-2 break-words h-[3rem]">
           {campaign.title}
         </h3>
 
         {/* Description */}
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3 leading-relaxed">
-          {campaign.description}
-        </p>
+        <CampaignDescription description={campaign.description} />
 
         {/* Funding progress */}
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400">
-            <span>${campaign.amount_raised.toLocaleString()} raised</span>
+            <span>
+              <Amount value={campaign.amount_raised} maximumFractionDigits={2} /> XLM raised
+            </span>
             <span>{progressPct}%</span>
           </div>
           <div className="w-full bg-zinc-100 dark:bg-zinc-700 rounded-full h-1.5">
@@ -136,15 +184,16 @@ export default function CauseCard({
             />
           </div>
           <p className="text-xs text-zinc-400 dark:text-zinc-500">
-            Goal: ${campaign.funding_goal.toLocaleString()}
+            Goal: <Amount value={campaign.funding_goal} maximumFractionDigits={2} /> XLM
           </p>
         </div>
 
-        {/* Extended funding bar (BigInt path) */}
+        {/* Funding progress */}
         {campaign.funding_goal > BigInt(0) && (
           <FundingProgressBar
             amountRaised={campaign.amount_raised}
             fundingGoal={campaign.funding_goal}
+            milestones={campaign.milestones}
           />
         )}
 
@@ -163,26 +212,28 @@ export default function CauseCard({
 
         {/* Created date */}
         <p className="text-xs text-zinc-400 dark:text-zinc-500">
-          Created {formatDate(campaign.created_at)}
+          Created {formatDate(campaign.created_at, locale)}
         </p>
       </div>
 
       {/* ── Actions ── */}
       <div className="px-5 pb-5 space-y-3">
-
         {/* Voting — hidden when cancelled */}
-        {campaign.status !== 'cancelled' && (
+        {campaign.status !== "cancelled" && (
           <VotingComponent
             campaign={campaign}
             userVote={userVote}
             isVoting={isVoting}
             onVote={handleVote}
             userWalletAddress={userWalletAddress}
+            upvotes={upvotes}
+            downvotes={downvotes}
+            totalVotes={totalVotes}
           />
         )}
 
         {/* Cancelled banner */}
-        {campaign.status === 'cancelled' && (
+        {campaign.status === "cancelled" && (
           <div className="rounded-lg bg-zinc-50 dark:bg-zinc-700/50 border border-zinc-200 dark:border-zinc-600 px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400 text-center">
             This campaign has been cancelled.
           </div>
@@ -196,14 +247,12 @@ export default function CauseCard({
             disabled={isClaimingRefund}
             className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
           >
-            {isClaimingRefund ? (
-              <>
-                <span className="inline-block animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
-                Claiming Refund…
-              </>
-            ) : (
-              '↩ Claim Refund'
-            )}
+            <AsyncButtonContent
+              isPending={isClaimingRefund}
+              idleLabel="↩ Claim Refund"
+              pendingLabel="Claiming refund..."
+              spinnerClassName="h-3.5 w-3.5"
+            />
           </button>
         )}
 
@@ -212,7 +261,7 @@ export default function CauseCard({
           <button
             type="button"
             onClick={() => setIsCancelModalOpen(true)}
-            className="w-full py-2 rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            className="w-full min-h-[44px] py-2 rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
           >
             Cancel Campaign
           </button>
@@ -227,6 +276,39 @@ export default function CauseCard({
         onConfirm={handleCancelConfirm}
         onClose={() => setIsCancelModalOpen(false)}
       />
-    </div>
+    </article>
   );
 }
+
+/**
+ * Memoized so a list of cards does not re-render wholesale when unrelated
+ * global state changes (#648). Cards are rendered in long lists, so this is
+ * where an unnecessary render is most expensive.
+ */
+function causeCardPropsAreEqual(prev: CauseCardProps, next: CauseCardProps): boolean {
+  const prevCampaign = prev.campaign;
+  const nextCampaign = next.campaign;
+
+  return (
+    prev.priority === next.priority &&
+    prev.userWalletAddress === next.userWalletAddress &&
+    prev.userVote === next.userVote &&
+    prev.upvotes === next.upvotes &&
+    prev.downvotes === next.downvotes &&
+    prev.totalVotes === next.totalVotes &&
+    prev.onVote === next.onVote &&
+    prev.onCancel === next.onCancel &&
+    prev.onClaimRefund === next.onClaimRefund &&
+    prev.onTagClick === next.onTagClick &&
+    prevCampaign.id === nextCampaign.id &&
+    prevCampaign.status === nextCampaign.status &&
+    prevCampaign.title === nextCampaign.title &&
+    prevCampaign.amount_raised === nextCampaign.amount_raised &&
+    prevCampaign.funding_goal === nextCampaign.funding_goal &&
+    prevCampaign.deadline === nextCampaign.deadline &&
+    prevCampaign.funds_withdrawn === nextCampaign.funds_withdrawn &&
+    prevCampaign.cover_image_url === nextCampaign.cover_image_url
+  );
+}
+
+export default memo(CauseCard, causeCardPropsAreEqual);

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://github.com/IBM/audit-ci/raw/main/docs/schema.json",
+  "package-manager": "npm",
+  "directory": "./",
+  "critical": true,
+  "high": true,
+  "moderate": false,
+  "low": false,
+  "skip-dev": true,
+  "report-type": "important",
+  "output-format": "text",
+  "show-found": true,
+  "show-not-found": false,
+  "pass-enoaudit": true,
+  "retry-count": 3,
+  "allowlist": [
+    {
+      "brace-expansion": {
+        "active": true,
+        "expiry": "2026-12-31",
+        "notes": "dev-only, reached through eslint, jest, glob and storybook. 5.0.8 already carries the EXPANSION_MAX_LENGTH guard from CVE-2026-14257, but GitHub's advisory range cannot express the per-major backport and the newer intermediate-array DoS is not yet released on any 1.x/2.x/3.x/5.x line. Tracked in docs/DEPENDENCY_SECURITY.md."
+      }
+    },
+    {
+      "browserslist": {
+        "active": true,
+        "expiry": "2026-12-31",
+        "notes": "dev-only, reached through storybook's webpack only. Unbounded memory growth from distinct browserslist queries; not reachable at runtime. Upstream fix is pending."
+      }
+    },
+    {
+      "fast-uri": {
+        "active": true,
+        "expiry": "2026-12-31",
+        "notes": "dev-only, reached through ajv inside storybook. Host-confusion and SSRF advisories on URL parsing that this app never performs."
+      }
+    },
+    {
+      "image-size": {
+        "active": true,
+        "expiry": "2026-12-31",
+        "notes": "dev-only, reached through storybook. Infinite-loop DoS in the JXL/HEIF/ICNS parsers, which only run when Storybook builds."
+      }
+    },
+    {
+      "js-yaml": {
+        "active": true,
+        "expiry": "2026-12-31",
+        "notes": "dev-only, reached through @changesets/cli. The quadratic-merge advisory is fixed only in 5.x, and the 4.x line is the one pinned by the overrides block. Tracked in docs/DEPENDENCY_SECURITY.md."
+      }
+    }
+  ]
+}

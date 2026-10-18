@@ -1,0 +1,56 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+title: "[Feature]: "
+labels: ["feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. Please search existing issues and PRs first, then review `CONTRIBUTING.md` before opening a PR.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of the feature you're proposing
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Solved
+      description: What problem does this feature solve?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe your proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: What should be true when this feature is complete?
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions you've considered
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context or screenshots about the feature request here
+  - type: checkboxes
+    id: contribution-flow
+    attributes:
+      label: Contribution Flow
+      options:
+        - label: I searched existing issues and PRs for duplicates.
+        - label: I reviewed `CONTRIBUTING.md`.
+        - label: I will follow the Stellar Wave flow for bounty-related work, if applicable.

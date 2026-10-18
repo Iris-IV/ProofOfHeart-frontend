@@ -1,14 +1,22 @@
-import Link from "next/link";
-import Image from "next/image";
+"use client";
 
-const productLinks = [
-  { href: "/", label: "Home" },
-  { href: "/causes", label: "Explore Causes" },
-  { href: "/about", label: "About" },
-];
+import Image from "next/image";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/routing";
+import { useContractVersion } from "@/hooks/useContractVersion";
+import { AlertTriangle } from "lucide-react";
 
 export default function Footer() {
+  const t = useTranslations("Footer");
   const year = new Date().getFullYear();
+  const { version, isMismatch, isLoading } = useContractVersion();
+
+  const productLinks = [
+    { href: "/", label: t("home") },
+    { href: "/causes", label: t("exploreCauses") },
+    { href: "/about", label: t("about") },
+    { href: "/faq", label: t("faq") },
+  ];
 
   return (
     <footer className="border-t border-black/5 bg-white dark:border-white/10 dark:bg-zinc-900">
@@ -25,16 +33,15 @@ export default function Footer() {
               />
             </div>
             <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-              A decentralized launchpad where the community validates causes and
-              contributions are accounted for on-chain.
+              {t("tagline")}
             </p>
           </div>
 
           <div className="flex flex-wrap gap-8">
             <div>
-              <h3 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
-                Product
-              </h3>
+              <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
+                {t("productHeading")}
+              </h2>
               <ul className="mt-3 space-y-2 text-sm">
                 {productLinks.map((link) => (
                   <li key={link.href}>
@@ -50,9 +57,9 @@ export default function Footer() {
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
-                Links
-              </h3>
+              <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
+                {t("linksHeading")}
+              </h2>
               <ul className="mt-3 space-y-2 text-sm">
                 <li>
                   <a
@@ -61,7 +68,7 @@ export default function Footer() {
                     rel="noopener noreferrer"
                     className="text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-50"
                   >
-                    GitHub
+                    {t("github")}
                   </a>
                 </li>
                 <li>
@@ -71,8 +78,30 @@ export default function Footer() {
                     rel="noopener noreferrer"
                     className="text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-50"
                   >
-                    Stellar
+                    {t("stellar")}
                   </a>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">Legal</h2>
+              <ul className="mt-3 space-y-2 text-sm">
+                <li>
+                  <Link
+                    href="/terms"
+                    className="text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-50"
+                  >
+                    Terms of Service
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/privacy"
+                    className="text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-50"
+                  >
+                    Privacy Policy
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -80,8 +109,36 @@ export default function Footer() {
         </div>
 
         <div className="mt-10 flex flex-col gap-2 border-t border-black/5 pt-6 text-sm text-zinc-500 dark:border-white/10 dark:text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {year} ProofOfHeart. All rights reserved.</p>
-          <p>Built with Next.js + Stellar</p>
+          <p>{t("rights", { year })}</p>
+          <div className="flex items-center gap-3">
+            <span>{t("builtWith")}</span>
+            <div className="flex items-center gap-1.5">
+              {process.env.NEXT_PUBLIC_APP_VERSION && (
+                <span
+                  className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] uppercase font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                  title="App Version"
+                >
+                  v{process.env.NEXT_PUBLIC_APP_VERSION}
+                </span>
+              )}
+              {!isLoading && version !== null && (
+                <span
+                  className={`flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] uppercase font-bold ${
+                    isMismatch
+                      ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800"
+                      : "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-100/50 dark:border-blue-800/50"
+                  }`}
+                  title={
+                    isMismatch
+                      ? "Contract version mismatch! Unexpected behavior may occur."
+                      : "Contract Version"
+                  }
+                >
+                  {isMismatch && <AlertTriangle size={10} />}c{version}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </footer>

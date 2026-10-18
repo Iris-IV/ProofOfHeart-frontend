@@ -1,0 +1,70 @@
+name: Changeset Check
+
+# #1617 / #1631 — verify that a pull request carries a usable changeset.
+#
+# Deliberately has no `npm ci` and no build. `scripts/validate-changesets.mjs`
+# only uses Node's standard library, so this check adds a couple of seconds of
+# `actions/checkout` and nothing else — the install-and-build time that dominates
+# this repo's CI budget is untouched. `changeset status` still runs in
+# `release.yml`, where `node_modules` is already present.
+
+on:
+  pull_request:
+    paths:
+      - ".changeset/**"
+      - "package.json"
+      - "scripts/validate-changesets.mjs"
+      - ".github/workflows/changeset-check.yml"
+  push:
+    branches: [main]
+    paths:
+      - ".changeset/**"
+      - "package.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: changeset-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate changesets
+    runs-on: ubuntu-latest
+    steps:
+      # Full history is required for `git diff main...HEAD`. It is a metadata
+      # fetch, not a build, so it stays cheap.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      # Confirms the config is shaped so a changeset actually produces a release
+      # (privatePackages.version), and that every pending entry is well formed.
+      - name: Validate pending changesets
+        run: node scripts/validate-changesets.mjs
+
+      # Narrower pass: only the changesets this pull request adds, and it fails
+      # when there are none. Changes that should not be released (docs, tests,
+      # CI plumbing) opt out with the `skip-changeset` label.
+      - name: Validate changesets added by this pull request
+        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'skip-changeset')
+        run: node scripts/validate-changesets.mjs --base origin/${{ github.base_ref }} --require
+
+      - name: Publish the report
+        if: always()
+        run: node scripts/validate-changesets.mjs --json > changeset-report.json || true
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: changeset-report
+          path: changeset-report.json
+          retention-days: 14
+          if-no-files-found: ignore

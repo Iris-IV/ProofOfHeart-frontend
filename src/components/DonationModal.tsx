@@ -1,198 +1,635 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Campaign, xlmToStroops, stroopsToXlm } from '../types';
-import { contribute } from '../lib/contractClient';
-import { useWallet } from './WalletContext';
-import { useToast } from './ToastProvider';
-import { parseContractError } from '../utils/contractErrors';
+import { useState, useEffect, memo, useRef } from "react";
+import { useTranslations, useLocale } from "next-intl";
+import Modal from "./ui/Modal";
+import { contribute, estimateContributeNetworkFee, getCampaign } from "../lib/contractClient";
+import { getEstimatedContributeNetworkFeeXlm } from "../lib/networkFee";
+import { Campaign, basisPointsToPercentage } from "../types";
+import { xlmToStroops, stroopsToXlmNumber } from "@/lib/stellarAmount";
+import { formatAmount } from "@/lib/formatters";
+import { useToast } from "./ToastProvider";
+import { useWallet } from "./WalletContext";
+import { usePlatformFee } from "../hooks/usePlatformFee";
+import { parseContractError } from "../utils/contractErrors";
+import { downloadTaxReceipt } from "../lib/taxReceipt";
+import { INTERVAL_LABELS, RecurringInterval, createSchedule } from "../lib/recurringDonations";
 
-const EXPLORER_BASE =
-    process.env.NEXT_PUBLIC_EXPLORER_URL ?? 'https://stellar.expert/explorer/testnet/tx';
+import { type TransactionLifecyclePhase } from "../lib/contractClient";
+import { validateContributorNotCreator } from "../utils/validators";
+import { explorerTxUrl } from "../utils/explorer";
+import FiatOnrampButton from "./FiatOnrampButton";
+import {
+  trackClickContribute,
+  trackEnterAmount,
+  trackReviewContribution,
+  trackSignTransaction,
+  trackContributionConfirmed,
+  trackContributionError,
+} from "../lib/analytics";
 
 interface DonationModalProps {
-    campaign: Campaign;
-    onClose: () => void;
-    onSuccess: () => void;
+  campaign: Campaign;
+  onClose: () => void;
+  onSuccess: () => void;
+  onRefetch?: () => void;
 }
 
-type Step = 'input' | 'pending' | 'confirmed';
+type Step = "input" | "pending" | "confirmed";
 
-export default function DonationModal({ campaign, onClose, onSuccess }: DonationModalProps) {
-    const { publicKey } = useWallet();
-    const { showError } = useToast();
+type DonationValidationKey =
+  | "scientificNotation"
+  | "invalidNumber"
+  | "invalidAmount"
+  | "amountMustBePositive"
+  | "invalidNumberFormat"
+  | "maxDecimalPlaces"
+  | "amountExceedsRemainingGoal"
+  | "campaignAlreadyFunded";
 
-    const [amount, setAmount] = useState('');
-    const [step, setStep] = useState<Step>('input');
-    const [txHash, setTxHash] = useState<string | null>(null);
-    const [error, setError] = useState<string | null>(null);
+function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModalProps) {
+  const t = useTranslations("Donation");
+  const tModal = useTranslations("DonationModal");
+  const tContractErrors = useTranslations("ContractErrors");
+  const { publicKey } = useWallet();
+  const { showError } = useToast();
+  const { platformFeeBps } = usePlatformFee();
+  const [estimatedNetworkFeeXlm, setEstimatedNetworkFeeXlm] = useState(
+    getEstimatedContributeNetworkFeeXlm,
+  );
 
-    const goal = stroopsToXlm(campaign.funding_goal);
-    const raised = stroopsToXlm(campaign.amount_raised);
-    const amountNum = parseFloat(amount) || 0;
-    const newRaised = raised + amountNum;
-    const newPct = goal > 0 ? Math.min(100, Math.round((newRaised / goal) * 100)) : 0;
-    const currentPct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
+  const [amount, setAmount] = useState("");
+  const [step, setStep] = useState<Step>("input");
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringInterval, setRecurringInterval] = useState<RecurringInterval>("monthly");
+  const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
 
-    const handleDonate = async () => {
-        if (!publicKey) return;
-        if (amountNum <= 0) {
-            setError('Please enter a valid amount.');
-            return;
+  const amountInputRef = useRef<HTMLInputElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (step === "input") amountInputRef.current?.focus();
+    else statusRef.current?.focus();
+  }, [step]);
+
+  const [liveCampaign, setLiveCampaign] = useState<Campaign>(campaign);
+
+  useEffect(() => {
+    setLiveCampaign(campaign);
+  }, [campaign]);
+
+  useEffect(() => {
+    let active = true;
+    const poll = async () => {
+      try {
+        const updated = await getCampaign(campaign.id);
+        if (active && updated) {
+          setLiveCampaign(updated);
         }
-        setError(null);
-        setStep('pending');
-        try {
-            const stroops = xlmToStroops(amountNum);
-            const hash = await contribute(campaign.id, publicKey, stroops);
-            setTxHash(hash);
-            setStep('confirmed');
-            onSuccess();
-        } catch (err) {
-            const msg = parseContractError(err);
-            showError(msg);
-            setError(msg);
-            setStep('input');
-        }
+      } catch {
+        // ignore polling errors
+      }
     };
 
-    return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-            onClick={(e) => e.target === e.currentTarget && step !== 'pending' && onClose()}
+    poll();
+    const interval = setInterval(poll, 2000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [campaign.id]);
+
+  const localizeContractError = (message: string) =>
+    message.startsWith("ContractErrors.") ? tContractErrors(message) : message;
+
+  const formatError = (message: string) =>
+    message.startsWith("ContractErrors.")
+      ? localizeContractError(message)
+      : tModal(message as DonationValidationKey);
+
+  useEffect(() => {
+    trackClickContribute(campaign.id);
+  }, [campaign.id]);
+
+  // Poll live funding data while the user is filling in the amount so the
+  // progress bar reflects concurrent donations from other users.
+  useEffect(() => {
+    if (!onRefetch || step !== "input") return;
+    const id = setInterval(onRefetch, 10_000);
+    return () => clearInterval(id);
+  }, [onRefetch, step]);
+
+  const locale = useLocale();
+  const goal = stroopsToXlmNumber(liveCampaign.funding_goal);
+  const raised = stroopsToXlmNumber(liveCampaign.amount_raised);
+
+  const validateAmount = (
+    value: string,
+  ): { valid: boolean; errorKey?: DonationValidationKey; amount?: number } => {
+    const trimmed = value.trim();
+
+    if (!trimmed) {
+      return { valid: false };
+    }
+
+    if (/[eE]/.test(trimmed)) {
+      return { valid: false, errorKey: "scientificNotation" };
+    }
+
+    const parsed = parseFloat(trimmed);
+
+    if (isNaN(parsed)) {
+      return { valid: false, errorKey: "invalidNumber" };
+    }
+
+    if (!isFinite(parsed)) {
+      return { valid: false, errorKey: "invalidAmount" };
+    }
+
+    if (parsed <= 0) {
+      return { valid: false, errorKey: "amountMustBePositive" };
+    }
+
+    const parts = trimmed.split(".");
+    if (parts.length > 2) {
+      return { valid: false, errorKey: "invalidNumberFormat" };
+    }
+    if (parts[1] && parts[1].length > 7) {
+      return { valid: false, errorKey: "maxDecimalPlaces" };
+    }
+
+    const remainingGoal = Math.max(0, goal - raised);
+    if (remainingGoal === 0) {
+      return { valid: false, errorKey: "campaignAlreadyFunded" };
+    }
+
+    if (parsed > remainingGoal) {
+      return { valid: false, errorKey: "amountExceedsRemainingGoal" };
+    }
+
+    return { valid: true, amount: parsed };
+  };
+
+  const validation = validateAmount(amount);
+  const isFullyFunded = raised >= goal;
+  // Always a translation key so formatError() can resolve it through next-intl —
+  // never a hard-coded English sentence.
+  const validationErrorKey: DonationValidationKey | null = isFullyFunded
+    ? "campaignAlreadyFunded"
+    : amount.trim() && !validation.valid
+      ? (validation.errorKey ?? "invalidAmount")
+      : null;
+  const amountError = error || validationErrorKey;
+  const amountNum = validation.amount || 0;
+  const newRaised = raised + amountNum;
+  const newPct = goal > 0 ? Math.min(100, Math.round((newRaised / goal) * 100)) : 0;
+  const currentPct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
+  const displayedPct = step === "confirmed" ? newPct : currentPct;
+  const displayRaised = formatAmount(liveCampaign.amount_raised, locale, {
+    maximumFractionDigits: 2,
+  });
+  const displayGoal = formatAmount(liveCampaign.funding_goal, locale, { maximumFractionDigits: 2 });
+  const fundingProgressText = `${t("percentFunded", {
+    percent: displayedPct,
+  })}, ${displayRaised} / ${displayGoal} XLM`;
+  const totalWalletCost =
+    amountNum > 0 ? amountNum + estimatedNetworkFeeXlm : estimatedNetworkFeeXlm;
+
+  useEffect(() => {
+    if (!publicKey || !validation.valid || !amount.trim()) return;
+
+    let active = true;
+    const timeout = window.setTimeout(async () => {
+      try {
+        const fee = await estimateContributeNetworkFee(
+          campaign.id,
+          publicKey,
+          xlmToStroops(amount),
+        );
+        if (active) setEstimatedNetworkFeeXlm(stroopsToXlmNumber(fee));
+      } catch {
+        // Keep the documented conservative fallback if RPC estimation is
+        // temporarily unavailable. Submission performs its own simulation.
+        if (active) setEstimatedNetworkFeeXlm(getEstimatedContributeNetworkFeeXlm());
+      }
+    }, 300);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [amount, campaign.id, publicKey, validation.valid]);
+
+  const handleDonate = async () => {
+    if (!publicKey) return;
+
+    try {
+      validateContributorNotCreator(publicKey, campaign.creator);
+    } catch (err) {
+      const msg = parseContractError(err);
+      setError(msg);
+      trackContributionError(campaign.id, "contributor_is_creator");
+      return;
+    }
+
+    const amountValidation = validateAmount(amount);
+    if (!amountValidation.valid) {
+      setError(amountValidation.errorKey ?? "invalidAmount");
+      trackContributionError(campaign.id, "invalid_amount");
+      return;
+    }
+
+    const amountToSend = amount;
+    setError(null);
+    setStep("pending");
+    setTxPhase(null);
+
+    trackReviewContribution(campaign.id);
+
+    try {
+      const stroops = xlmToStroops(amountToSend);
+      const hash = await contribute(campaign.id, publicKey, stroops, {
+        onStatus: ({ phase }) => {
+          setTxPhase(phase);
+          if (phase === "signing") {
+            trackSignTransaction(campaign.id);
+          }
+        },
+      });
+      setTxHash(hash);
+
+      // Only record the schedule once this cycle actually settled, so a failed
+      // donation never leaves a subscription behind.
+      if (isRecurring) {
+        createSchedule({
+          walletAddress: publicKey,
+          campaignId: campaign.id,
+          campaignTitle: campaign.title,
+          amountStroops: stroops,
+          interval: recurringInterval,
+        });
+      }
+
+      setStep("confirmed");
+      trackContributionConfirmed(campaign.id);
+      onSuccess();
+    } catch (err) {
+      const msg = parseContractError(err);
+      const localized = localizeContractError(msg);
+      showError(localized);
+      setError(msg);
+      setStep("input");
+      setTxPhase(null);
+
+      const errorType = msg.toLowerCase().includes("rejected")
+        ? "user_rejected"
+        : msg.toLowerCase().includes("insufficient")
+          ? "insufficient_funds"
+          : "transaction_failed";
+      trackContributionError(campaign.id, errorType);
+    }
+  };
+
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      closeOnEscape={step !== "pending"}
+      closeOnOverlayClick={step !== "pending"}
+      ariaLabelledBy="donation-modal-title"
+      initialFocusRef={amountInputRef}
+      className="contribution-sheet"
+      overlayClassName="contribution-overlay"
+    >
+      <div
+        aria-hidden="true"
+        className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-zinc-300 sm:hidden dark:bg-zinc-600"
+      />
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3 sm:px-6 dark:border-zinc-700">
+        <h2
+          id="donation-modal-title"
+          className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
         >
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-md border border-zinc-200 dark:border-zinc-700 overflow-hidden">
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
-                    <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-                        {step === 'confirmed' ? 'Donation Confirmed' : 'Fund This Cause'}
-                    </h2>
-                    {step !== 'pending' && (
-                        <button
-                            onClick={onClose}
-                            aria-label="Close"
-                            className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors text-2xl leading-none"
-                        >
-                            ×
-                        </button>
-                    )}
-                </div>
+          {step === "confirmed" ? t("confirmedTitle") : t("title")}
+        </h2>
+        {step !== "pending" && (
+          <button
+            onClick={onClose}
+            aria-label={t("closeAriaLabel")}
+            className="tap-target focus-ring flex w-11 shrink-0 items-center justify-center rounded-control text-2xl leading-none text-zinc-600 transition-colors duration-[140ms] hover:bg-zinc-100 motion-reduce:transition-none dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            ×
+          </button>
+        )}
+      </div>
 
-                <div className="px-6 py-5 space-y-5">
-                    {/* Campaign title */}
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2">{campaign.title}</p>
+      <div
+        key={step}
+        className="contribution-content min-h-0 space-y-5 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6"
+      >
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2">{campaign.title}</p>
 
-                    {/* Current progress */}
-                    <div>
-                        <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
-                            <span>{currentPct}% funded</span>
-                            <span>
-                                {raised.toLocaleString(undefined, { maximumFractionDigits: 2 })} /{' '}
-                                {goal.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM
-                            </span>
-                        </div>
-                        <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
-                            <div
-                                className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
-                                style={{ width: `${step === 'confirmed' ? newPct : currentPct}%` }}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Input step */}
-                    {step === 'input' && (
-                        <>
-                            <div>
-                                <label
-                                    htmlFor="donation-amount"
-                                    className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
-                                >
-                                    Amount (XLM)
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        id="donation-amount"
-                                        type="number"
-                                        min="0.0000001"
-                                        step="any"
-                                        value={amount}
-                                        onChange={(e) => { setAmount(e.target.value); setError(null); }}
-                                        placeholder="e.g. 10"
-                                        className="w-full px-4 py-3 pr-16 rounded-xl border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                                    />
-                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-zinc-400">
-                                        XLM
-                                    </span>
-                                </div>
-                                {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-                            </div>
-
-                            {/* Preview progress if amount entered */}
-                            {amountNum > 0 && (
-                                <div className="rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
-                                    After your donation: {newPct}% funded
-                                    {newRaised >= goal && (
-                                        <span className="ml-2 font-semibold text-green-600 dark:text-green-400">
-                                            🎉 Goal reached!
-                                        </span>
-                                    )}
-                                </div>
-                            )}
-
-                            <button
-                                onClick={handleDonate}
-                                disabled={!publicKey || amountNum <= 0}
-                                className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200"
-                            >
-                                Donate {amountNum > 0 ? `${amountNum} XLM` : ''}
-                            </button>
-                        </>
-                    )}
-
-                    {/* Pending step */}
-                    {step === 'pending' && (
-                        <div className="flex flex-col items-center gap-4 py-6">
-                            <div className="w-12 h-12 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
-                            <p className="text-zinc-600 dark:text-zinc-400 text-sm text-center">
-                                Waiting for Freighter signature and transaction confirmation…
-                            </p>
-                        </div>
-                    )}
-
-                    {/* Confirmed step */}
-                    {step === 'confirmed' && (
-                        <div className="flex flex-col items-center gap-4 py-4 text-center">
-                            <div className="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-3xl">
-                                ✓
-                            </div>
-                            <div>
-                                <p className="font-semibold text-zinc-900 dark:text-zinc-50">
-                                    {amountNum} XLM donated successfully
-                                </p>
-                                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                                    Thank you for supporting this cause.
-                                </p>
-                            </div>
-                            {txHash && (
-                                <a
-                                    href={`${EXPLORER_BASE}/${txHash}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-sm text-blue-600 dark:text-blue-400 underline underline-offset-2 hover:text-blue-800 dark:hover:text-blue-200 transition-colors"
-                                >
-                                    View on Stellar Explorer →
-                                </a>
-                            )}
-                            <button
-                                onClick={onClose}
-                                className="w-full py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-medium rounded-xl transition-colors"
-                            >
-                                Close
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </div>
+        <div>
+          <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+            <span>{t("percentFunded", { percent: displayedPct })}</span>
+            <span>
+              {displayRaised} / {displayGoal} XLM
+            </span>
+          </div>
+          <div
+            role="progressbar"
+            aria-label={t("percentFunded", { percent: displayedPct })}
+            aria-valuenow={displayedPct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuetext={fundingProgressText}
+            className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2"
+          >
+            <div
+              aria-hidden="true"
+              className="bg-linear-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-[width] duration-[140ms] motion-reduce:transition-none"
+              style={{ width: `${displayedPct}%` }}
+            />
+          </div>
+          <span className="sr-only" aria-live="polite" aria-atomic="true">
+            {fundingProgressText}
+          </span>
         </div>
-    );
+
+        {step === "input" && (
+          <>
+            <div>
+              <label
+                htmlFor="donation-amount"
+                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+              >
+                {t("amountLabel")}
+              </label>
+              <div className="relative">
+                <input
+                  ref={amountInputRef}
+                  id="donation-amount"
+                  type="number"
+                  min="0.0000001"
+                  step="any"
+                  inputMode="decimal"
+                  enterKeyHint="done"
+                  value={amount}
+                  aria-label={t("amountLabel")}
+                  aria-describedby={amountError ? "donation-amount-error" : undefined}
+                  aria-invalid={amountError ? "true" : "false"}
+                  disabled={isFullyFunded}
+                  onChange={(e) => {
+                    // Feed the raw value to validateAmount so invalid input maps
+                    // to its specific i18n error key (scientific notation,
+                    // negatives, malformed decimals) instead of being silently
+                    // coerced into a valid-looking amount.
+                    setAmount(e.target.value);
+                    setError(null);
+                    if (e.target.value && parseFloat(e.target.value) > 0) {
+                      trackEnterAmount(campaign.id);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  placeholder={t("amountPlaceholder")}
+                  className="w-full px-4 py-3 pr-16 rounded-xl border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-zinc-400">
+                  XLM
+                </span>
+              </div>
+
+              <fieldset className="mt-3">
+                <legend className="mb-2 text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  {t("quickAmounts")}
+                </legend>
+                <div className="flex flex-wrap gap-2">
+                  {[5, 10, 25, 50].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      disabled={
+                        BigInt(preset) * 10_000_000n >
+                        liveCampaign.funding_goal - liveCampaign.amount_raised
+                      }
+                      aria-pressed={amount === String(preset)}
+                      onClick={() => {
+                        setAmount(String(preset));
+                        setError(null);
+                        trackEnterAmount(campaign.id);
+                      }}
+                      className={`tap-target focus-ring min-w-12 flex-1 rounded-control border px-3 py-2 text-sm font-semibold transition-colors duration-[140ms] disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none ${amount === String(preset) ? "border-brand bg-brand-subtle text-brand dark:bg-blue-950 dark:text-blue-200" : "border-zinc-300 text-zinc-700 hover:bg-brand/5 dark:border-zinc-600 dark:text-zinc-200"}`}
+                    >
+                      {preset} XLM
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+              {amountError && (
+                <p id="donation-amount-error" role="alert" className="mt-1 text-xs text-red-500">
+                  {formatError(amountError)}
+                </p>
+              )}
+            </div>
+
+            {amountNum > 0 && (
+              <div className="rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
+                {t("afterDonation", { percent: newPct })}
+                {newRaised >= goal && (
+                  <span className="ml-2 font-semibold text-green-600 dark:text-green-400">
+                    🎉 {t("goalReached")}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {amountNum > 0 && (
+              <dl className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 px-4 py-3 text-sm space-y-2">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-zinc-600 dark:text-zinc-400">{t("contributionLine")}</dt>
+                  <dd className="font-medium text-zinc-900 dark:text-zinc-50 tabular-nums">
+                    {amountNum.toLocaleString(undefined, { maximumFractionDigits: 7 })} XLM
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-zinc-600 dark:text-zinc-400">{t("networkFeeLine")}</dt>
+                  <dd className="font-medium text-zinc-900 dark:text-zinc-50 tabular-nums">
+                    {estimatedNetworkFeeXlm.toLocaleString(undefined, {
+                      maximumFractionDigits: 7,
+                    })}{" "}
+                    XLM
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4 border-t border-zinc-200 dark:border-zinc-600 pt-2">
+                  <dt className="font-semibold text-zinc-900 dark:text-zinc-50">
+                    {t("totalLine")}
+                  </dt>
+                  <dd className="font-semibold text-zinc-900 dark:text-zinc-50 tabular-nums">
+                    {totalWalletCost.toLocaleString(undefined, { maximumFractionDigits: 7 })} XLM
+                  </dd>
+                </div>
+              </dl>
+            )}
+
+            {/* Recurring donation opt-in (#671) */}
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 px-4 py-3 space-y-3">
+              {/* The associated checkbox and visible text are nested in this label. */}
+              {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
+              <label htmlFor="recurring-donation" className="flex items-start gap-3 cursor-pointer">
+                <input
+                  id="recurring-donation"
+                  type="checkbox"
+                  checked={isRecurring}
+                  onChange={(e) => setIsRecurring(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-zinc-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm">
+                  <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                    Make it monthly
+                  </span>
+                  <span className="block text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    We&apos;ll remind you when the next donation is due. Nothing is charged
+                    automatically — you sign each one.
+                  </span>
+                </span>
+              </label>
+
+              {isRecurring && (
+                <div>
+                  <label
+                    htmlFor="donation-interval"
+                    className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+                  >
+                    Repeat
+                  </label>
+                  <select
+                    id="donation-interval"
+                    value={recurringInterval}
+                    onChange={(e) => setRecurringInterval(e.target.value as RecurringInterval)}
+                    className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {Object.entries(INTERVAL_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              {t("platformFeeNote", { feePercent: basisPointsToPercentage(platformFeeBps) })}
+            </p>
+            {amountNum > 0 && (
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("networkFeeNote")}</p>
+            )}
+
+            {/* #637 — fiat on-ramp so non-crypto users can buy XLM to donate.
+                Renders nothing unless a provider is configured via env vars. */}
+            <FiatOnrampButton
+              walletAddress={publicKey}
+              fiatAmount={amountNum > 0 ? amountNum : null}
+            />
+          </>
+        )}
+
+        {step === "pending" && (
+          <div
+            ref={statusRef}
+            tabIndex={-1}
+            role="status"
+            className="focus-ring flex flex-col items-center gap-4 rounded-control py-6"
+          >
+            <div className="w-12 h-12 rounded-full border-4 border-blue-500 border-t-transparent motion-safe:animate-spin" />
+            <p className="text-zinc-600 dark:text-zinc-400 text-sm text-center">
+              {txPhase === "signing"
+                ? t("waitingSignature")
+                : txPhase === "confirming"
+                  ? t("waitingConfirmation")
+                  : t("submitting")}
+            </p>
+          </div>
+        )}
+
+        {step === "confirmed" && (
+          <div
+            ref={statusRef}
+            tabIndex={-1}
+            role="status"
+            className="focus-ring flex flex-col items-center gap-4 rounded-control py-4 text-center"
+          >
+            <div className="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-3xl">
+              ✓
+            </div>
+            <div>
+              <p className="font-semibold text-zinc-900 dark:text-zinc-50">
+                {t("donatedSuccess", { amount: amountNum })}
+              </p>
+              {isRecurring && (
+                <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">
+                  {INTERVAL_LABELS[recurringInterval]} donation set up. We&apos;ll remind you when
+                  the next one is due.
+                </p>
+              )}
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t("thankYou")}</p>
+            </div>
+            {txHash && (
+              <>
+                <a
+                  href={explorerTxUrl(txHash)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 dark:text-blue-400 underline underline-offset-2 hover:text-blue-800 dark:hover:text-blue-200 transition-colors"
+                >
+                  {t("viewExplorer")}
+                </a>
+                <button
+                  onClick={() =>
+                    downloadTaxReceipt({
+                      transactionHash: txHash,
+                      campaignTitle: campaign.title,
+                      amountXlm: amountNum.toString(),
+                      donorAddress: publicKey ?? "",
+                      donationDate: new Date().toISOString(),
+                    })
+                  }
+                  className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors"
+                >
+                  {t("downloadReceipt")}
+                </button>
+              </>
+            )}
+            <button
+              onClick={onClose}
+              className="w-full py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-medium rounded-xl transition-colors"
+            >
+              {t("close")}
+            </button>
+          </div>
+        )}
+      </div>
+      {step === "input" && (
+        <div className="contribution-footer shrink-0 border-t border-zinc-200 bg-white/95 px-4 pt-3 backdrop-blur-sm sm:px-6 dark:border-zinc-700 dark:bg-zinc-900/95">
+          <button
+            onClick={handleDonate}
+            disabled={!publicKey || !validation.valid}
+            className="tap-target focus-ring w-full rounded-control bg-linear-to-r from-brand to-accent py-3 font-semibold text-white transition-opacity duration-[140ms] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+          >
+            {amountNum > 0 ? t("donateAmount", { amount: amountNum }) : t("donate")}
+          </button>
+          <p className="mt-2 text-center text-xs text-zinc-600 dark:text-zinc-300">
+            {t("walletApproval")}
+          </p>
+        </div>
+      )}
+    </Modal>
+  );
 }
+
+export default memo(DonationModal);

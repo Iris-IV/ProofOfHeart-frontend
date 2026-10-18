@@ -1,0 +1,321 @@
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { contribute } from "@/lib/contractClient";
+import DonationModal from "@/components/DonationModal";
+import { Category, type Campaign } from "@/types";
+
+const mockGetCampaign = jest.fn();
+const mockEstimateNetworkFee = jest.fn();
+
+jest.mock("@/lib/contractClient", () => ({
+  contribute: jest.fn(),
+  getCampaign: (...args: unknown[]) => mockGetCampaign(...args),
+  estimateContributeNetworkFee: (...args: unknown[]) => mockEstimateNetworkFee(...args),
+}));
+
+jest.mock("@/components/ToastProvider", () => ({
+  useToast: () => ({
+    showError: jest.fn(),
+  }),
+}));
+
+jest.mock("@/components/WalletContext", () => ({
+  useWallet: () => ({
+    publicKey: "GCONTRIB1111111111111111111111111111111111111111111111111",
+  }),
+}));
+
+jest.mock("@/hooks/usePlatformFee", () => ({
+  usePlatformFee: () => ({
+    platformFeeBps: 300,
+    isLoading: false,
+    isFallback: false,
+  }),
+}));
+
+jest.mock("next-intl", () => ({
+  useLocale: () => "en",
+  useTranslations: () => (key: string, values?: Record<string, unknown>) => {
+    const map: Record<string, string> = {
+      title: "Fund This Cause",
+      confirmedTitle: "Donation Confirmed",
+      amountLabel: "Amount (XLM)",
+      amountPlaceholder: "e.g. 10",
+      closeAriaLabel: "Close",
+      percentFunded: `${values?.percent}% funded`,
+      afterDonation: `After your donation: ${values?.percent}% funded`,
+      goalReached: "Goal reached!",
+      contributionLine: "Contribution",
+      networkFeeLine: "Est. network fee",
+      totalLine: "Total from your wallet",
+      donate: "Donate",
+      donateAmount: `Donate ${values?.amount} XLM`,
+      platformFeeNote: `A platform fee of ${values?.feePercent} is deducted from funds when withdrawn by the creator. Your full donation goes toward the campaign total.`,
+      networkFeeNote: "Network fee note",
+      waitingSignature: "Waiting for Freighter signature…",
+      waitingConfirmation: "Waiting for ledger confirmation…",
+      submitting: "Submitting transaction to the network…",
+      donatedSuccess: `${values?.amount} XLM donated successfully`,
+      thankYou: "Thank you for supporting this cause.",
+      viewExplorer: "View on Stellar Explorer →",
+      downloadReceipt: "Download Tax Receipt (PDF)",
+      close: "Close",
+      scientificNotation: "Scientific notation is not allowed.",
+      invalidNumber: "Please enter a valid number.",
+      invalidAmount: "Please enter a valid amount.",
+      amountMustBePositive: "Amount must be greater than zero.",
+      invalidNumberFormat: "Invalid number format.",
+      maxDecimalPlaces: "Maximum 7 decimal places allowed.",
+      amountExceedsRemainingGoal: "Amount exceeds the remaining funding goal.",
+      campaignAlreadyFunded: "This cause is already fully funded.",
+    };
+    // Surface anything that is not a known message key so hard-coded English
+    // strings reaching the translator fail loudly instead of passing through.
+    return map[key] ?? `MISSING(${key})`;
+  },
+}));
+
+jest.mock("@/lib/analytics", () => ({
+  trackClickContribute: jest.fn(),
+  trackEnterAmount: jest.fn(),
+  trackReviewContribution: jest.fn(),
+  trackSignTransaction: jest.fn(),
+  trackContributionConfirmed: jest.fn(),
+  trackContributionError: jest.fn(),
+}));
+
+const mockContribute = contribute as jest.MockedFunction<typeof contribute>;
+
+const CREATOR = "GCREATOR1111111111111111111111111111111111111111111111111";
+const CONTRIBUTOR = "GCONTRIB1111111111111111111111111111111111111111111111111";
+
+function makeCampaign(overrides: Partial<Campaign> = {}): Campaign {
+  return {
+    id: 1,
+    creator: CREATOR,
+    title: "Help Build a School",
+    description: "Desc",
+    created_at: 1,
+    status: "active",
+    funding_goal: BigInt(1_000_000_000),
+    deadline: 9_999_999_999,
+    amount_raised: BigInt(10_000_000),
+    is_active: true,
+    funds_withdrawn: false,
+    is_cancelled: false,
+    is_verified: true,
+    category: Category.Educator,
+    has_revenue_sharing: false,
+    revenue_share_percentage: 0,
+    ...overrides,
+  };
+}
+
+const defaultProps = {
+  campaign: makeCampaign(),
+  onClose: jest.fn(),
+  onSuccess: jest.fn(),
+};
+
+describe("DonationModal", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetCampaign.mockImplementation((id) => Promise.resolve(makeCampaign({ id })));
+    mockEstimateNetworkFee.mockResolvedValue(100_000n);
+  });
+
+  it("selects a quick XLM amount and exposes the same amount for submission", () => {
+    render(<DonationModal {...defaultProps} />);
+    const preset = screen.getByRole("button", { name: "10 XLM" });
+    fireEvent.click(preset);
+    expect(screen.getByLabelText("Amount (XLM)")).toHaveValue(10);
+    expect(preset).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Donate 10 XLM" })).toBeEnabled();
+    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value: "12" } });
+    expect(preset).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("disables presets that exceed the remaining goal", () => {
+    render(
+      <DonationModal {...defaultProps} campaign={makeCampaign({ amount_raised: 950_000_000n })} />,
+    );
+    expect(screen.getByRole("button", { name: "5 XLM" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "10 XLM" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "25 XLM" })).toBeDisabled();
+  });
+
+  it("rejects zero amounts by disabling submit", () => {
+    render(<DonationModal {...defaultProps} />);
+
+    const input = screen.getByLabelText("Amount (XLM)");
+    fireEvent.change(input, { target: { value: "0" } });
+
+    expect(screen.getByRole("button", { name: /donate/i })).toBeDisabled();
+  });
+
+  it("rejects negative and non-numeric amounts", () => {
+    render(<DonationModal {...defaultProps} />);
+
+    const input = screen.getByLabelText("Amount (XLM)");
+    const button = screen.getByRole("button", { name: /donate/i });
+
+    fireEvent.change(input, { target: { value: "-5" } });
+    expect(button).toBeDisabled();
+
+    fireEvent.change(input, { target: { value: "abc" } });
+    expect(button).toBeDisabled();
+  });
+
+  it("associates amount validation errors with the input", () => {
+    render(<DonationModal {...defaultProps} />);
+
+    const input = screen.getByLabelText("Amount (XLM)");
+    fireEvent.change(input, { target: { value: "0" } });
+
+    const error = screen.getByText("Amount must be greater than zero.");
+    expect(error).toHaveAttribute("id", "donation-amount-error");
+    expect(error).toHaveAttribute("role", "alert");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAttribute("aria-describedby", "donation-amount-error");
+  });
+
+  it("gives the donation amount input an explicit aria-label", () => {
+    render(<DonationModal {...defaultProps} />);
+
+    const input = screen.getByLabelText("Amount (XLM)");
+
+    expect(input).toHaveAttribute("aria-label", "Amount (XLM)");
+  });
+
+  it("announces modal funding progress to assistive technology", () => {
+    render(<DonationModal {...defaultProps} />);
+
+    const progressbar = screen.getByRole("progressbar", { name: "1% funded" });
+
+    expect(progressbar).toHaveAttribute("aria-valuenow", "1");
+    expect(progressbar).toHaveAttribute("aria-valuemin", "0");
+    expect(progressbar).toHaveAttribute("aria-valuemax", "100");
+    expect(progressbar.getAttribute("aria-valuetext")).toContain("1% funded");
+    expect(progressbar.getAttribute("aria-valuetext")).toContain("XLM");
+
+    const liveRegion = document.querySelector('[aria-live="polite"]');
+    expect(liveRegion).toHaveAttribute("aria-atomic", "true");
+    expect(liveRegion).toHaveTextContent("1% funded");
+  });
+
+  it.each([
+    ["1e5", "Scientific notation is not allowed."],
+    ["-5", "Amount must be greater than zero."],
+    ["1.12345678", "Maximum 7 decimal places allowed."],
+    ["9999", "Amount exceeds the remaining funding goal."],
+  ])("renders a translated message for %s instead of an untranslated string", (value, expected) => {
+    render(<DonationModal {...defaultProps} />);
+
+    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value } });
+
+    const error = screen.getByRole("alert");
+    expect(error).toHaveTextContent(expected);
+    expect(error.textContent).not.toMatch(/^MISSING\(/);
+    expect(error.textContent).not.toBe("undefined");
+  });
+
+  it("renders the platform fee explanation", () => {
+    render(<DonationModal {...defaultProps} />);
+
+    expect(screen.getByText(/platform fee of 3%/i)).toBeInTheDocument();
+  });
+
+  it("shows estimated network fee and total wallet cost when amount is entered", () => {
+    render(<DonationModal {...defaultProps} />);
+
+    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value: "10" } });
+
+    expect(screen.getByText("Est. network fee")).toBeInTheDocument();
+    expect(screen.getByText("Total from your wallet")).toBeInTheDocument();
+    expect(screen.getByText(/10\.01\s*XLM/)).toBeInTheDocument();
+  });
+
+  it("updates the displayed fee from operation simulation", async () => {
+    mockEstimateNetworkFee.mockResolvedValue(250_000n);
+    render(<DonationModal {...defaultProps} />);
+
+    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value: "10" } });
+
+    await waitFor(() =>
+      expect(mockEstimateNetworkFee).toHaveBeenCalledWith(1, CONTRIBUTOR, 100_000_000n),
+    );
+    expect(screen.getByText(/10\.025\s*XLM/)).toBeInTheDocument();
+  });
+
+  it("calls contribute with amount converted to stroops", async () => {
+    mockContribute.mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve("mock-tx-hash"), 50)),
+    );
+
+    render(<DonationModal {...defaultProps} />);
+
+    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value: "10" } });
+    fireEvent.click(screen.getByRole("button", { name: "Donate 10 XLM" }));
+
+    await waitFor(() =>
+      expect(mockContribute).toHaveBeenCalledWith(1, CONTRIBUTOR, BigInt(100_000_000), {
+        onStatus: expect.any(Function),
+      }),
+    );
+  });
+
+  it("hides submit controls while a transaction is in flight", async () => {
+    mockContribute.mockImplementation(() => new Promise(() => {}));
+
+    render(<DonationModal {...defaultProps} />);
+
+    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value: "5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Donate 5 XLM" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /donate/i })).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("Submitting transaction to the network…")).toBeInTheDocument();
+  });
+
+  it("rejects amounts exceeding the remaining goal", () => {
+    const campaign = makeCampaign({
+      funding_goal: BigInt(1_000_000_000),
+      amount_raised: BigInt(900_000_000),
+    });
+    render(<DonationModal {...defaultProps} campaign={campaign} />);
+
+    const input = screen.getByLabelText("Amount (XLM)");
+    fireEvent.change(input, { target: { value: "15" } });
+
+    expect(screen.getByText("Amount exceeds the remaining funding goal.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /donate/i })).toBeDisabled();
+  });
+
+  it("rejects donations if campaign is already fully funded", () => {
+    const campaign = makeCampaign({
+      funding_goal: BigInt(1_000_000_000),
+      amount_raised: BigInt(1_000_000_000),
+    });
+    render(<DonationModal {...defaultProps} campaign={campaign} />);
+
+    const input = screen.getByLabelText("Amount (XLM)");
+    expect(input).toBeDisabled();
+    expect(screen.getByText("This cause is already fully funded.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /donate/i })).toBeDisabled();
+  });
+
+  it("polls getCampaign on mount and every 2 seconds", async () => {
+    jest.useFakeTimers();
+    render(<DonationModal {...defaultProps} />);
+
+    expect(mockGetCampaign).toHaveBeenCalledTimes(1);
+
+    jest.advanceTimersByTime(2000);
+    expect(mockGetCampaign).toHaveBeenCalledTimes(2);
+
+    jest.advanceTimersByTime(2000);
+    expect(mockGetCampaign).toHaveBeenCalledTimes(3);
+
+    jest.useRealTimers();
+  });
+});
