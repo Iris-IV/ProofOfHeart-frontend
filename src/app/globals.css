@@ -41,6 +41,9 @@ body {
   .campaign-empty-state {
     animation: campaign-empty-enter 120ms ease-out both;
   }
+  .contribution-ticker-entry {
+    animation: campaign-empty-enter 120ms ease-out both;
+  }
 }
 
 /* =========================

@@ -697,5 +697,20 @@
     "retry": "Reintentar",
     "estimate": "Los valores en moneda fiat son estimaciones. Las donaciones siguen en XLM.",
     "updated": "Actualizado a las {time}."
+  },
+  "ContributionTicker": {
+    "title": "Contribuciones de la comunidad",
+    "pause": "Pausar actividad",
+    "resume": "Reanudar actividad",
+    "connecting": "Conectando con las donaciones en directo…",
+    "live": "Donaciones en directo",
+    "reconnecting": "Conexión interrumpida. Reintentando…",
+    "paused": "Actividad pausada",
+    "unavailable": "Las donaciones en directo no están disponibles en este momento.",
+    "mock": "Las donaciones en directo no están disponibles en modo de demostración.",
+    "empty": "Las donaciones recientes aparecerán aquí cuando la comunidad contribuya.",
+    "recent": "Donaciones recientes de la comunidad",
+    "supporter": "Colaborador de la comunidad",
+    "latest": "{donor} ha contribuido {amount} XLM."
   }
 }

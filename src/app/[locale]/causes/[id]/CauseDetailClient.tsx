@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import CampaignTabs from "@/components/CampaignTabs";
 import CampaignCurrencySelector from "@/components/CampaignCurrencySelector";
+import ContributionTicker from "@/components/ContributionTicker";
 const RevenueSharingPanel = dynamic(() => import("@/components/RevenueSharingPanel"), {
   ssr: false,
 });
@@ -77,6 +78,8 @@ export default function CauseDetailClient({ id }: { id: string }) {
     isLoading,
     error,
     refetch,
+    contributionEvents,
+    contributionStatus,
   } = useLiveCampaignFunding(Number(id));
   const { platformFeeBps, isLoading: isPlatformFeeLoading, isFallback } = usePlatformFee();
 
@@ -640,6 +643,12 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 />
               </div>
             )}
+
+            <ContributionTicker
+              key={campaign.id}
+              events={contributionEvents}
+              status={contributionStatus}
+            />
 
             {milestonePayoutPlan && (
               <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">

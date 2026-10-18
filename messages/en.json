@@ -696,5 +696,20 @@
     "retry": "Retry rates",
     "estimate": "Fiat values are estimates. Donations remain in XLM.",
     "updated": "Updated {time}."
+  },
+  "ContributionTicker": {
+    "title": "Community contributions",
+    "pause": "Pause feed",
+    "resume": "Resume feed",
+    "connecting": "Connecting to live donations…",
+    "live": "Live donations",
+    "reconnecting": "Connection interrupted. Retrying…",
+    "paused": "Feed paused",
+    "unavailable": "Live donations are currently unavailable.",
+    "mock": "Live donations are unavailable in demo mode.",
+    "empty": "Recent donations will appear here as the community contributes.",
+    "recent": "Recent community donations",
+    "supporter": "Community supporter",
+    "latest": "{donor} contributed {amount} XLM."
   }
 }

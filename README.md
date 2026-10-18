@@ -174,6 +174,14 @@ reason about and test:
 This keeps one source of truth for data loading while avoiding a single monolithic
 hook with unrelated responsibilities.
 
+Campaign detail pages also show the latest 20 contributions received while the
+page is open. The scrollable feed shares the funding subscription, deduplicates
+replayed events, and pauses network activity when the tab is hidden. Pausing the
+feed freezes its visible entries while funding totals continue to update;
+resuming shows the latest entries. Mock mode displays an explicit notice instead
+of simulated donations. Connection failures retain existing entries while the
+subscription retries.
+
 ## Logging utilities
 
 Shared local-storage log helpers centralize read/write, timestamping and
