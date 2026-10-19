@@ -45,7 +45,10 @@ export function generateContributionHistoryCsv(contributions: ContributionHistor
       }
     } else {
       const amountXlm = stroopsToXlmNumber(item.contribution);
-      const dateStr = formatCsvDate(item.campaign.created_at * 1000);
+      const dateStr =
+        item.campaign.created_at !== undefined
+          ? formatCsvDate(item.campaign.created_at * 1000)
+          : "N/A";
       rows.push([title, amountXlm.toFixed(7).replace(/\.?0+$/, ""), status, "N/A", dateStr]);
     }
   }

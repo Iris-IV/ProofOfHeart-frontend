@@ -358,3 +358,101 @@ export async function waitForConsistentLedgerState(
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Wallet connection persistence (#1532)
+//
+// Persist the connected wallet vendor (Freighter or social) and public key
+// across page reloads and browser restarts. On app reload, the stored vendor
+// preference guides auto-reconnection (re-verify Freighter, or restore the
+// social wallet session). A heartbeat monitor detects stale connections.
+// ---------------------------------------------------------------------------
+
+const WALLET_PREFERENCE_KEY = "stellar_wallet_preference";
+
+/** Persisted wallet connection state. */
+export interface WalletPreference {
+  /** The wallet vendor: "freighter" | "social". */
+  vendor: string;
+  /** The public key that was connected. */
+  publicKey: string;
+  /** Epoch ms when this preference was saved. */
+  savedAt: number;
+}
+
+/**
+ * Saves the wallet vendor and public key to localStorage for auto-reconnect
+ * on the next page load.
+ */
+export function saveWalletPreference(vendor: string, publicKey: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    const preference: WalletPreference = {
+      vendor,
+      publicKey,
+      savedAt: Date.now(),
+    };
+    window.localStorage.setItem(WALLET_PREFERENCE_KEY, JSON.stringify(preference));
+  } catch {
+    // Storage write may fail in private browsing or when quota is exceeded.
+  }
+}
+
+/**
+ * Loads the persisted wallet preference from localStorage. Returns null if
+ * none is saved or the stored data is invalid.
+ */
+export function loadWalletPreference(): WalletPreference | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(WALLET_PREFERENCE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      typeof parsed.vendor === "string" &&
+      typeof parsed.publicKey === "string" &&
+      typeof parsed.savedAt === "number"
+    ) {
+      return parsed as WalletPreference;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Clears the persisted wallet preference. Called on explicit disconnect so
+ * the next page load does not auto-reconnect.
+ */
+export function clearWalletPreference(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(WALLET_PREFERENCE_KEY);
+  } catch {
+    // Ignore removal failures.
+  }
+}
+
+export interface ConnectionHeartbeatOptions {
+  /** How long the preference can be stale before it's discarded. Default: 7 days. */
+  maxAgeMs?: number;
+}
+
+const DEFAULT_PREFERENCE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+/**
+ * Checks if a persisted preference is still fresh enough to attempt
+ * auto-reconnect. A preference older than maxAgeMs is considered stale and
+ * should be discarded.
+ */
+export function isWalletPreferenceFresh(
+  preference: WalletPreference,
+  options?: ConnectionHeartbeatOptions,
+): boolean {
+  const maxAgeMs = options?.maxAgeMs ?? DEFAULT_PREFERENCE_MAX_AGE_MS;
+  const age = Date.now() - preference.savedAt;
+  return age <= maxAgeMs;
+}

@@ -14,6 +14,14 @@ import { isSameAddress } from "@/lib/stellar";
 import { Skeleton } from "@/components/Skeleton";
 import CampaignEmptyState from "@/components/CampaignEmptyState";
 import { Button } from "@/components/ui";
+import CreatorProfileHeader from "@/components/CreatorProfileHeader";
+import VirtualizedCampaignList from "@/components/VirtualizedCampaignList";
+
+/** Matches `grid-cols-1 sm:grid-cols-2` so virtual rows wrap like the grid. */
+const SAVED_GRID_COLUMNS = [
+  { minWidth: 0, columns: 1 },
+  { minWidth: 640, columns: 2 },
+];
 
 export default function ProfileClient() {
   const t = useTranslations("Profile");
@@ -56,7 +64,7 @@ export default function ProfileClient() {
           </p>
         </div>
         <button
-          onClick={connectWallet}
+          onClick={() => void connectWallet()}
           disabled={walletLoading}
           className="px-8 py-3 rounded-full bg-linear-to-r from-red-500 to-pink-600 text-white font-bold hover:from-red-600 hover:to-pink-700 transition-all shadow-lg shadow-red-500/25 disabled:opacity-50"
         >
@@ -70,53 +78,52 @@ export default function ProfileClient() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
-      {/* Profile header */}
-      <div className="rounded-3xl bg-linear-to-br from-zinc-900 to-zinc-800 dark:from-zinc-800 dark:to-zinc-900 border border-zinc-700 p-8 mb-8 shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-          <div className="w-16 h-16 shrink-0 rounded-full bg-linear-to-br from-red-400 to-pink-600 flex items-center justify-center text-white font-black text-xl shadow-lg">
-            {publicKey.slice(1, 3).toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-1">
-              {t("walletAddress")}
-            </p>
-            <p className="font-mono text-zinc-100 text-sm break-all" title={publicKey}>
-              {publicKey}
-            </p>
-          </div>
-        </div>
-
+      <CreatorProfileHeader
+        key={publicKey}
+        address={publicKey}
+        verifiedCampaignCount={createdCampaigns.filter((campaign) => campaign.is_verified).length}
+      >
         {/* Impact stats */}
-        <div className="grid grid-cols-3 gap-4 mt-8 pt-8 border-t border-zinc-700">
+        <div className="grid grid-cols-3 gap-4 mt-8 pt-8 border-t border-zinc-200 dark:border-zinc-700">
           <div className="text-center">
             {isDataLoading ? (
               <Skeleton className="h-7 w-24 mx-auto mb-1" />
             ) : (
-              <p className="text-2xl font-black text-white">
+              <p className="break-words text-xl font-bold text-zinc-900 dark:text-zinc-50 sm:text-2xl">
                 {formatAmount(totalContributed, locale, { maximumFractionDigits: 2 })}
-                <span className="text-sm font-bold text-zinc-400 ml-1">XLM</span>
+                <span className="text-sm font-bold text-zinc-600 dark:text-zinc-300 ml-1">XLM</span>
               </p>
             )}
-            <p className="text-xs text-zinc-400 font-medium mt-1">{t("totalContributed")}</p>
+            <p className="text-xs text-zinc-600 dark:text-zinc-300 font-medium mt-1">
+              {t("totalContributed")}
+            </p>
           </div>
           <div className="text-center">
             {isDataLoading ? (
               <Skeleton className="h-7 w-12 mx-auto mb-1" />
             ) : (
-              <p className="text-2xl font-black text-white">{contributions.length}</p>
+              <p className="break-words text-xl font-bold text-zinc-900 dark:text-zinc-50 sm:text-2xl">
+                {contributions.length}
+              </p>
             )}
-            <p className="text-xs text-zinc-400 font-medium mt-1">{t("campaignsBacked")}</p>
+            <p className="text-xs text-zinc-600 dark:text-zinc-300 font-medium mt-1">
+              {t("campaignsBacked")}
+            </p>
           </div>
           <div className="text-center">
             {isDataLoading ? (
               <Skeleton className="h-7 w-12 mx-auto mb-1" />
             ) : (
-              <p className="text-2xl font-black text-white">{createdCampaigns.length}</p>
+              <p className="break-words text-xl font-bold text-zinc-900 dark:text-zinc-50 sm:text-2xl">
+                {createdCampaigns.length}
+              </p>
             )}
-            <p className="text-xs text-zinc-400 font-medium mt-1">{t("campaignsCreated")}</p>
+            <p className="text-xs text-zinc-600 dark:text-zinc-300 font-medium mt-1">
+              {t("campaignsCreated")}
+            </p>
           </div>
         </div>
-      </div>
+      </CreatorProfileHeader>
 
       {/* Contributions */}
       {(isDataLoading || contributions.length > 0) && (
@@ -205,25 +212,31 @@ export default function ProfileClient() {
             </Link>}
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {savedCampaigns.map((campaign) => (
-              <Link
-                key={campaign.id}
-                href={`/causes/${campaign.id}`}
-                className="group rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 hover:border-red-200 dark:hover:border-red-900/40 hover:shadow-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800"
-              >
-                <p className="font-semibold text-zinc-900 dark:text-zinc-50 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors line-clamp-1">
-                  {campaign.title}
-                </p>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
-                  {campaign.description}
-                </p>
-                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2 font-medium">
-                  by {formatAddress(campaign.creator)}
-                </p>
-              </Link>
-            ))}
-          </div>
+          <VirtualizedCampaignList
+            items={savedCampaigns}
+            columnBreakpoints={SAVED_GRID_COLUMNS}
+            estimateRowHeight={150}
+            rowClassName="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4"
+            renderRow={(row) =>
+              row.map((campaign) => (
+                <Link
+                  key={campaign.id}
+                  href={`/causes/${campaign.id}`}
+                  className="group rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 hover:border-red-200 dark:hover:border-red-900/40 hover:shadow-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800"
+                >
+                  <p className="font-semibold text-zinc-900 dark:text-zinc-50 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors line-clamp-1">
+                    {campaign.title}
+                  </p>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
+                    {campaign.description}
+                  </p>
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2 font-medium">
+                    by {formatAddress(campaign.creator)}
+                  </p>
+                </Link>
+              ))
+            }
+          />
         )}
       </section>
 
@@ -236,10 +249,15 @@ export default function ProfileClient() {
           {campaignsLoading ? (
             <Skeleton className="h-20 rounded-2xl" />
           ) : (
-            <ul className="space-y-3">
-              {createdCampaigns.map((campaign) => (
-                <li key={campaign.id}>
+            <VirtualizedCampaignList
+              items={createdCampaigns}
+              estimateRowHeight={110}
+              rowClassName="pb-3"
+              role="list"
+              renderRow={(row) =>
+                row.map((campaign) => (
                   <Link
+                    key={campaign.id}
                     href={`/causes/${campaign.id}`}
                     className="group flex items-center justify-between gap-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 hover:border-red-200 dark:hover:border-red-900/40 hover:shadow-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800"
                   >
@@ -255,9 +273,9 @@ export default function ProfileClient() {
                       {campaign.status}
                     </span>
                   </Link>
-                </li>
-              ))}
-            </ul>
+                ))
+              }
+            />
           )}
         </section>
       )}

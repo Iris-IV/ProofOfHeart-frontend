@@ -56,7 +56,7 @@ export function useCampaignMetadata(campaignId: number): UseCampaignMetadataResu
           ? { latitude: campaign.latitude, longitude: campaign.longitude }
           : null,
       socialLinks: campaign.social_links ?? null,
-      createdAt: campaign.created_at,
+      createdAt: campaign.created_at ?? null,
     };
   }, [campaign]);
 

@@ -16,7 +16,10 @@ const VestingReservePanel = dynamic(() => import("@/components/VestingReservePan
   ssr: false,
 });
 const DonationModal = dynamic(() => import("@/components/DonationModal"), { ssr: false });
-const ExtendDeadlineModal = dynamic(() => import("@/components/ExtendDeadline/ExtendDeadlineModal"), { ssr: false });
+const ExtendDeadlineModal = dynamic(
+  () => import("@/components/ExtendDeadline/ExtendDeadlineModal"),
+  { ssr: false },
+);
 import CampaignStatusBadge from "@/components/CampaignStatusBadge";
 import DeadlineCountdown from "@/components/DeadlineCountdown";
 import FundingProgressBar from "@/components/FundingProgressBar";
@@ -258,9 +261,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
     setIsVerifyingMilestoneId(milestoneId);
     try {
       await withActionTimeout(verifyMilestone(campaign.id, milestoneId));
-      showSuccess(
-        `Milestone ${milestoneId} verified — the creator can now claim its payout.`,
-      );
+      showSuccess(`Milestone ${milestoneId} verified — the creator can now claim its payout.`);
       await reloadMilestonePlan();
     } catch (error) {
       showError(getAsyncActionErrorMessage(error, parseContractError));
@@ -274,9 +275,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
     setIsClaimingMilestoneId(milestoneId);
     try {
       await withActionTimeout(claimMilestone(campaign.id, milestoneId));
-      showSuccess(
-        `Milestone ${milestoneId} payout claimed successfully.`,
-      );
+      showSuccess(`Milestone ${milestoneId} payout claimed successfully.`);
       await reloadMilestonePlan();
       refetch();
     } catch (error) {
@@ -439,7 +438,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
       <main className="container mx-auto px-4 py-8 max-w-5xl">
         <button
           onClick={() => setIsDonationModalOpen(true)}
-          className='fixed bottom-4 left-1/2 -translate-x-1/2 z-50 md:hidden bg-blue-600 text-white px-6 py-3 rounded-full font-medium shadow-lg'
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 md:hidden bg-blue-600 text-white px-6 py-3 rounded-full font-medium shadow-lg"
         >
           Donate
         </button>
@@ -537,7 +536,13 @@ export default function CauseDetailClient({ id }: { id: string }) {
               {isCreator && !campaign.is_cancelled && (
                 <button
                   onClick={() => setIsExtendModalOpen(true)}
-                  style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)' }}
+                  style={{
+                    marginTop: 12,
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    border: "1px solid var(--border)",
+                    background: "var(--surface)",
+                  }}
                 >
                   Extend Deadline
                 </button>
@@ -670,6 +675,28 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 />
               </div>
             )}
+            <div className="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6">
+              <DonationMilestones
+                amountRaised={campaign.amount_raised}
+                onChainPlan={
+                  milestonePayoutPlan
+                    ? {
+                        milestones: milestonePayoutPlan.milestones,
+                        claimed: milestonePayoutPlan.claimed,
+                        isAdmin: isPlatformAdmin,
+                        isCreator: isCreator,
+                        isFundingGoalMet: campaign.amount_raised >= campaign.funding_goal,
+                        isWithdrawn: campaign.funds_withdrawn,
+                        platformFeeBps: platformFeeBps,
+                        onVerify: handleVerifyMilestone,
+                        onClaim: handleClaimMilestone,
+                        isVerifyingId: isVerifyingMilestoneId,
+                        isClaimingId: isClaimingMilestoneId,
+                      }
+                    : null
+                }
+              />
+            </div>
 
             <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
               <div className="flex items-center justify-between gap-4">

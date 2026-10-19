@@ -209,10 +209,12 @@ function CauseCard({
           <DeadlineCountdown deadline={campaign.deadline} />
         </div>
 
-        {/* Created date */}
-        <p className="text-xs text-zinc-400 dark:text-zinc-500">
-          Created {formatDate(campaign.created_at, locale)}
-        </p>
+        {/* Created date (the contract does not store one, so it may be unknown) */}
+        {campaign.created_at !== undefined && (
+          <p className="text-xs text-zinc-400 dark:text-zinc-500">
+            Created {formatDate(campaign.created_at, locale)}
+          </p>
+        )}
       </div>
 
       {/* ── Actions ── */}

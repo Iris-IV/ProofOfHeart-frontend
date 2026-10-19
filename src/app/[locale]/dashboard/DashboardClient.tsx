@@ -14,6 +14,13 @@ import { isSameAddress } from "@/lib/stellar";
 import { explorerTxUrl } from "@/utils/explorer";
 import { scheduleExpiryChecks } from "@/lib/campaignExpiryNotifier";
 import { useToast } from "@/components/ToastProvider";
+import VirtualizedCampaignList from "@/components/VirtualizedCampaignList";
+
+/** Matches `grid-cols-1 sm:grid-cols-2` so virtual rows wrap like the grid. */
+const SAVED_GRID_COLUMNS = [
+  { minWidth: 0, columns: 1 },
+  { minWidth: 640, columns: 2 },
+];
 
 type DashboardTab = "overview" | "history";
 
@@ -161,22 +168,28 @@ export default function DashboardPage() {
               You haven&apos;t saved any campaigns yet.
             </span>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {savedCampaigns.map((campaign) => (
-                <Link
-                  key={campaign.id}
-                  href={`/causes/${campaign.id}`}
-                  className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
-                >
-                  <div className="font-medium text-zinc-900 dark:text-zinc-50">
-                    {campaign.title}
-                  </div>
-                  <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2 break-words">
-                    {campaign.description}
-                  </div>
-                </Link>
-              ))}
-            </div>
+            <VirtualizedCampaignList
+              items={savedCampaigns}
+              columnBreakpoints={SAVED_GRID_COLUMNS}
+              estimateRowHeight={110}
+              rowClassName="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4"
+              renderRow={(row) =>
+                row.map((campaign) => (
+                  <Link
+                    key={campaign.id}
+                    href={`/causes/${campaign.id}`}
+                    className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
+                  >
+                    <div className="font-medium text-zinc-900 dark:text-zinc-50">
+                      {campaign.title}
+                    </div>
+                    <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2 break-words">
+                      {campaign.description}
+                    </div>
+                  </Link>
+                ))
+              }
+            />
           )}
         </section>
 
@@ -185,21 +198,27 @@ export default function DashboardPage() {
           {submittedCampaigns.length === 0 ? (
             <span className="text-zinc-500 dark:text-zinc-400">{t("noSubmittedCampaigns")}</span>
           ) : (
-            <ul className="space-y-2">
-              {submittedCampaigns.map((campaign) => (
-                <li
-                  key={campaign.id}
-                  className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 min-h-[60px]"
-                >
-                  <div className="font-medium text-zinc-900 dark:text-zinc-50">
-                    {campaign.title}
+            <VirtualizedCampaignList
+              items={submittedCampaigns}
+              estimateRowHeight={110}
+              rowClassName="pb-2"
+              role="list"
+              renderRow={(row) =>
+                row.map((campaign) => (
+                  <div
+                    key={campaign.id}
+                    className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-900 min-h-[60px]"
+                  >
+                    <div className="font-medium text-zinc-900 dark:text-zinc-50">
+                      {campaign.title}
+                    </div>
+                    <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
+                      {campaign.description}
+                    </div>
                   </div>
-                  <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
-                    {campaign.description}
-                  </div>
-                </li>
-              ))}
-            </ul>
+                ))
+              }
+            />
           )}
         </section>
 

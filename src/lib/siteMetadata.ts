@@ -71,3 +71,84 @@ export function getCanonicalUrl(path = "", locale = "en"): string {
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   return `${SITE_URL}/${locale}${cleanPath === "/" ? "" : cleanPath}`;
 }
+
+// ---------------------------------------------------------------------------
+// Dynamic metadata generation for locale-specific canonical URLs (#1565)
+//
+// Each locale route should have its canonical URL pointing to itself to
+// prevent duplicate content indexing. generatePageMetadata creates
+// locale-aware metadata that overrides the default canonical URL.
+// ---------------------------------------------------------------------------
+
+export interface PageMetadataOptions {
+  /** Current locale (e.g., "en", "es"). */
+  locale: string;
+  /** Current path without locale prefix (e.g., "/causes/123"). */
+  path?: string;
+  /** Page-specific title. Falls back to site name. */
+  title?: string;
+  /** Page-specific description. Falls back to site description. */
+  description?: string;
+  /** Additional hreflang alternates beyond the default en/es. */
+  additionalLocales?: Record<string, string>;
+}
+
+/**
+ * Generates Next.js Metadata for a page with the correct canonical URL for
+ * its locale and path. Prevents duplicate content indexing by ensuring each
+ * locale route's canonical points to itself rather than all pointing to /en.
+ *
+ * Usage in page.tsx or layout.tsx:
+ *
+ *   export const metadata = generatePageMetadata({
+ *     locale: "es",
+ *     path: "/causes/123",
+ *     title: "Campaign Title",
+ *   });
+ */
+export function generatePageMetadata(options: PageMetadataOptions): Metadata {
+  const { locale, path = "", title, description, additionalLocales } = options;
+  const canonicalUrl = getCanonicalUrl(path, locale);
+
+  const languages: Record<string, string> = {
+    en: getCanonicalUrl(path, "en"),
+    es: getCanonicalUrl(path, "es"),
+    "x-default": getCanonicalUrl(path, "en"),
+    ...additionalLocales,
+  };
+
+  return {
+    title: title ?? SITE_NAME,
+    description: description ?? SITE_DESCRIPTION,
+    alternates: {
+      canonical: canonicalUrl,
+      languages,
+    },
+    openGraph: {
+      type: "website",
+      siteName: SITE_NAME,
+      url: canonicalUrl,
+      title: title ?? SITE_NAME,
+      description: description ?? SITE_DESCRIPTION,
+      locale: locale === "es" ? "es_ES" : "en_US",
+    },
+  };
+}
+
+/**
+ * Returns minimal Metadata with only the canonical URL set. Useful for
+ * merging with existing metadata objects.
+ */
+export function getCanonicalMetadata(path: string, locale: string): Metadata {
+  const canonicalUrl = getCanonicalUrl(path, locale);
+  return {
+    alternates: {
+      canonical: canonicalUrl,
+      languages: {
+        en: getCanonicalUrl(path, "en"),
+        es: getCanonicalUrl(path, "es"),
+        "x-default": getCanonicalUrl(path, "en"),
+      },
+    },
+  };
+}
