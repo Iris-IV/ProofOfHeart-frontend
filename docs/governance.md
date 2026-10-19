@@ -5,6 +5,36 @@
 
 ---
 
+## Quick Reference
+
+**Core governance parameters:**
+- **Minimum quorum:** Total votes (upvotes + downvotes) must meet threshold
+- **Approval threshold:** Percentage of upvotes must exceed configured basis points
+- **Token requirement:** Only platform token holders can vote
+- **Vote immutability:** Each wallet votes once per campaign (cannot be changed)
+
+**Contract methods:**
+```typescript
+// View calls (read-only)
+getMinVotesQuorum()           // → u32 (e.g., 10)
+getApprovalThresholdBps()     // → u32 (e.g., 5000 = 50%)
+getApproveVotes(campaignId)   // → u32
+getRejectVotes(campaignId)    // → u32
+hasVoted(campaignId, voter)   // → bool
+
+// Write calls (requires signature)
+voteOnCampaign(campaignId, voter, approve)        // Cast vote
+verifyCampaignWithVotes(campaignId)               // Trigger verification
+```
+
+**Verification eligibility:**
+```typescript
+canVerify = (totalVotes >= minQuorum) && 
+            ((upvotes / totalVotes) * 10000 >= approvalThresholdBps)
+```
+
+---
+
 ## Table of Contents
 
 1. [Overview](#1-overview)
