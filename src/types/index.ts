@@ -85,7 +85,12 @@ export interface Campaign {
   creator: string;
   title: string;
   description: string;
-  created_at: number; // Unix timestamp in seconds
+  /**
+   * Unix timestamp in seconds. The contract does not store a creation time, so
+   * decoded campaigns leave this unset. Read the `campaign_created` event if a
+   * creation time is needed.
+   */
+  created_at?: number;
   status: CampaignStatus;
   funding_goal: bigint;
   deadline: number;
@@ -97,6 +102,19 @@ export interface Campaign {
   category: Category;
   has_revenue_sharing: boolean;
   revenue_share_percentage: number; // basis points (e.g. 300 = 3%)
+  // Contract fields mirrored from the `Campaign` struct. Optional so mock and
+  // fixture campaigns that predate them still type-check.
+  first_creator?: string;
+  /** Proposed new creator during a two-step ownership transfer. */
+  pending_creator?: string | null;
+  pending_creator_expiry?: number;
+  /** Per-wallet contribution cap in stroops. `0` means no cap. */
+  max_contribution_per_user?: bigint;
+  /** Per-campaign platform fee override in basis points. `null` uses the global fee. */
+  fee_override?: number | null;
+  deadline_extended?: boolean;
+  /** Raised amount still live after refunds. Used for revenue-sharing pro-rata. */
+  effective_amount_raised?: bigint;
   tags?: string[];
   cover_image_url?: string;
   milestones?: Milestone[];

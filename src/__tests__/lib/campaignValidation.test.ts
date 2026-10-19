@@ -1,4 +1,24 @@
-import { validateForm } from "@/lib/campaignValidation";
+import { validateForm, validateMaxContributionPerWallet } from "@/lib/campaignValidation";
+
+describe("validateMaxContributionPerWallet", () => {
+  it("treats a blank cap as no cap", () => {
+    expect(validateMaxContributionPerWallet("")).toBeUndefined();
+    expect(validateMaxContributionPerWallet("   ")).toBeUndefined();
+  });
+
+  it("accepts non-negative XLM amounts with up to 7 decimal places", () => {
+    expect(validateMaxContributionPerWallet("0")).toBeUndefined();
+    expect(validateMaxContributionPerWallet("250")).toBeUndefined();
+    expect(validateMaxContributionPerWallet("0.0000001")).toBeUndefined();
+  });
+
+  it("rejects negative, malformed and over-precise amounts", () => {
+    expect(validateMaxContributionPerWallet("-5")).toBe("validationMaxContributionInvalid");
+    expect(validateMaxContributionPerWallet("1e3")).toBe("validationMaxContributionInvalid");
+    expect(validateMaxContributionPerWallet("abc")).toBe("validationMaxContributionInvalid");
+    expect(validateMaxContributionPerWallet("1.00000001")).toBe("validationMaxContributionInvalid");
+  });
+});
 
 describe("validateForm", () => {
   const valid = {

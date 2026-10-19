@@ -10,17 +10,18 @@ import { optimizeCoverImage } from "@/lib/imageOptimization";
 import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
 import { useRouter } from "@/i18n/routing";
-import {
-  createCampaign,
-  getCampaignCount,
-  type TransactionLifecyclePhase,
-} from "@/lib/contractClient";
+import { createCampaign, type TransactionLifecyclePhase } from "@/lib/contractClient";
 import { invalidateCampaignsList } from "@/lib/cacheInvalidation";
 import { Category, CATEGORY_LABELS } from "@/types";
 import { xlmToStroops } from "@/lib/stellarAmount";
 import { parseContractError } from "@/utils/contractErrors";
 import { useCampaignFormDraft } from "@/hooks/useCampaignFormDraft";
-import { validateForm, type FormErrorKeys, type ReviewData } from "@/lib/campaignValidation";
+import {
+  validateForm,
+  validateMaxContributionPerWallet,
+  type FormErrorKeys,
+  type ReviewData,
+} from "@/lib/campaignValidation";
 
 // ---------------------------------------------------------------------------
 // Component
@@ -40,6 +41,8 @@ export default function CreateCampaignPage() {
   const [creatorEmail, setCreatorEmail] = useState("");
   const [fundingGoal, setFundingGoal] = useState("");
   const [durationDays, setDurationDays] = useState("");
+  // Optional per-wallet cap in XLM. Blank means no cap, which the contract stores as 0.
+  const [maxContributionPerWallet, setMaxContributionPerWallet] = useState("");
   const [category, setCategory] = useState<Category>(Category.Learner);
   const [hasRevenueSharing, setHasRevenueSharing] = useState(false);
   const [revenueSharePercentage, setRevenueSharePercentage] = useState(5);
@@ -76,6 +79,7 @@ export default function CreateCampaignPage() {
       setTags,
       setCoverImageUrl,
       setMilestones,
+      setMaxContributionPerWallet,
     });
     // Restore must run once on mount; the setters are stable.
   }, []);
@@ -95,6 +99,7 @@ export default function CreateCampaignPage() {
       tags,
       coverImageUrl,
       milestones,
+      maxContributionPerWallet,
     });
   }, [
     title,
@@ -109,6 +114,7 @@ export default function CreateCampaignPage() {
     tags,
     coverImageUrl,
     milestones,
+    maxContributionPerWallet,
     saveDraft,
   ]);
 
@@ -234,7 +240,9 @@ export default function CreateCampaignPage() {
         ? Math.round(reviewData.revenueSharePercentage * 100)
         : 0;
 
-      await createCampaign(
+      const maxContributionStroops = xlmToStroops(reviewData.maxContributionPerWallet ?? "");
+
+      const { campaignId: newCampaignId } = await createCampaign(
         publicKey,
         reviewData.title,
         reviewData.description,
@@ -244,19 +252,13 @@ export default function CreateCampaignPage() {
         reviewData.hasRevenueSharing,
         basisPoints,
         reviewData.tags,
+        maxContributionStroops,
         {
           onStatus: ({ phase }) => setTxPhase(phase),
           coverImageUrl: reviewData.coverImageUrl,
           milestones: reviewData.milestones,
         },
       );
-
-      let newCampaignId: number | null = null;
-      try {
-        newCampaignId = await getCampaignCount();
-      } catch {
-        // Ignore count lookup failures
-      }
 
       await notifyEmailOptIn(newCampaignId, reviewData.creatorEmail, reviewData.title, publicKey);
       invalidateCampaignsList(queryClient);
@@ -308,6 +310,8 @@ export default function CreateCampaignPage() {
       revenueSharePercentage,
       coverImageUrl,
     );
+    const maxContributionError = validateMaxContributionPerWallet(maxContributionPerWallet);
+    if (maxContributionError) keys.maxContributionPerWallet = maxContributionError;
 
     if (Object.keys(keys).length > 0) {
       setErrorKeys(keys);
@@ -338,6 +342,7 @@ export default function CreateCampaignPage() {
       tags,
       coverImageUrl: coverImageUrl.trim(),
       milestones: parsedMilestones,
+      maxContributionPerWallet: maxContributionPerWallet.trim(),
     });
     setIsReviewOpen(true);
   };
@@ -648,6 +653,51 @@ export default function CreateCampaignPage() {
                 </p>
               )}
             </div>
+          </div>
+
+          {/* Max contribution per wallet (optional; blank means no cap) */}
+          <div>
+            <label
+              htmlFor="maxContributionPerWallet"
+              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+            >
+              {t("labelMaxContributionPerWallet")}
+            </label>
+            <input
+              id="maxContributionPerWallet"
+              type="number"
+              value={maxContributionPerWallet}
+              onChange={(e) => {
+                setMaxContributionPerWallet(e.target.value);
+                clearError("maxContributionPerWallet");
+              }}
+              min="0"
+              step="any"
+              aria-invalid={Boolean(errorKeys.maxContributionPerWallet)}
+              aria-describedby={
+                errorKeys.maxContributionPerWallet
+                  ? "max-contribution-error"
+                  : "max-contribution-hint"
+              }
+              placeholder={t("placeholderMaxContributionPerWallet")}
+              className={`w-full px-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+                errorKeys.maxContributionPerWallet
+                  ? "border-red-400 dark:border-red-500"
+                  : "border-zinc-200 dark:border-zinc-600"
+              }`}
+            />
+            {err("maxContributionPerWallet") ? (
+              <p id="max-contribution-error" className="text-xs text-red-500 mt-1">
+                {err("maxContributionPerWallet")}
+              </p>
+            ) : (
+              <p
+                id="max-contribution-hint"
+                className="text-xs text-zinc-500 dark:text-zinc-400 mt-1"
+              >
+                {t("hintMaxContributionPerWallet")}
+              </p>
+            )}
           </div>
 
           {/* Category */}

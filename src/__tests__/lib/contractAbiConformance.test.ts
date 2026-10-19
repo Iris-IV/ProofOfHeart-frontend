@@ -15,7 +15,8 @@
 describe("Contract ABI Conformance", () => {
   describe("create_campaign signature", () => {
     /**
-     * The create_campaign function should accept exactly 8 parameters:
+     * The contract takes one `CreateCampaignParams` struct (#1667), not positional
+     * arguments. Its fields are:
      * 1. creator (Address)
      * 2. title (string)
      * 3. description (string)
@@ -24,25 +25,27 @@ describe("Contract ABI Conformance", () => {
      * 6. category (u32)
      * 7. has_revenue_sharing (bool)
      * 8. revenue_share_percentage (u32)
+     * 9. max_contribution_per_user (i128, 0 = no cap)
      *
-     * Tags, milestones, and cover images are now stored on-chain as native
-     * fields, not encoded in the description blob.
+     * Tags, milestones, and cover images have no contract field. They travel
+     * in the description blob instead.
      */
-    it("should accept 8 parameters with correct types", () => {
+    it("should send one CreateCampaignParams struct with 9 fields", () => {
       // This test verifies the contract signature by checking the contractClient
-      // wrapper function accepts the correct parameter types and order.
+      // wrapper encodes the same fields, in the same order as the struct.
       const expectedParams = [
-        "creator",         // Address
-        "title",           // string
-        "description",     // string
-        "fundingGoal",     // i128 (bigint)
-        "durationDays",    // u64 (number)
-        "category",        // u32 (number)
-        "hasRevenueSharing", // bool
-        "revenueSharePercentage", // u32
+        "creator", // Address
+        "title", // string
+        "description", // string
+        "funding_goal", // i128 (bigint)
+        "duration_days", // u64 (number)
+        "category", // u32 (number)
+        "has_revenue_sharing", // bool
+        "revenue_share_percentage", // u32
+        "max_contribution_per_user", // i128 (bigint)
       ];
 
-      expect(expectedParams).toHaveLength(8);
+      expect(expectedParams).toHaveLength(9);
     });
   });
 
