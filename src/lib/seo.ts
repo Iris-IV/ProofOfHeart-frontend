@@ -55,7 +55,11 @@ export function buildCauseJsonLd(
 ): Record<string, unknown> {
   const url = absoluteUrl(`/${locale}/causes/${campaign.id}`);
   const isAcceptingDonations = campaign.status === "active" || campaign.status === "verified";
-  const createdDate = new Date(campaign.created_at * 1000).toISOString();
+  // Omitted from the schema (JSON.stringify drops undefined) when the creation time is unknown.
+  const createdDate =
+    campaign.created_at !== undefined
+      ? new Date(campaign.created_at * 1000).toISOString()
+      : undefined;
   const deadlineDate = new Date(campaign.deadline * 1000).toISOString();
 
   // Build schema once with all properties

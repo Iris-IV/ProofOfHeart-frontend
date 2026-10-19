@@ -16,6 +16,8 @@ export interface CampaignFormDraftData {
   tags: string[];
   coverImageUrl: string;
   milestones: { targetAmount: string; description: string }[];
+  /** Per-wallet cap in XLM as typed. Empty means no cap. */
+  maxContributionPerWallet?: string;
 }
 
 export interface CampaignFormSetters {
@@ -31,6 +33,7 @@ export interface CampaignFormSetters {
   setTags: (v: string[]) => void;
   setCoverImageUrl: (v: string) => void;
   setMilestones: (v: { targetAmount: string; description: string }[]) => void;
+  setMaxContributionPerWallet?: (v: string) => void;
 }
 
 interface UseCampaignFormDraftOptions {
@@ -77,6 +80,8 @@ export function useCampaignFormDraft({
           if (parsed.tags) setters.setTags(parsed.tags);
           if (parsed.coverImageUrl) setters.setCoverImageUrl(parsed.coverImageUrl);
           if (parsed.milestones) setters.setMilestones(parsed.milestones);
+          if (parsed.maxContributionPerWallet && setters.setMaxContributionPerWallet)
+            setters.setMaxContributionPerWallet(parsed.maxContributionPerWallet);
           setHasDraft(true);
         }
       } catch (e) {

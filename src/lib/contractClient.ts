@@ -24,6 +24,7 @@ import {
   recordObservabilitySuccess,
 } from "./observability";
 import { appendWalletTransaction } from "./transactionLog";
+import { decodeCampaignStatusFlags } from "./campaignStatusFlags";
 import {
   Campaign,
   Category,
@@ -46,6 +47,7 @@ import {
   validateDuration,
   validateRevenueShare,
   validateAmount,
+  validateMaxContributionPerUser,
 } from "../utils/validators";
 
 // ---------------------------------------------------------------------------
@@ -593,10 +595,10 @@ function decodeCampaign(val: xdr.ScVal): Campaign {
   const funding_goal = scValToBigInt(fields["funding_goal"]);
   const deadline = Number(fields["deadline"].u64());
   const amount_raised = scValToBigInt(fields["amount_raised"]);
-  const is_active = fields["is_active"].b();
-  const funds_withdrawn = fields["funds_withdrawn"].b();
-  const is_cancelled = fields["is_cancelled"].b();
-  const is_verified = fields["is_verified"].b();
+  // The contract stores lifecycle state as one `status` bitfield, not booleans.
+  const { is_active, funds_withdrawn, is_cancelled, is_verified } = decodeCampaignStatusFlags(
+    fields["status"].u32(),
+  );
 
   let rawDescription = fields["description"].str().toString();
   let cover_image_url: string | undefined = undefined;
@@ -648,17 +650,40 @@ function decodeCampaign(val: xdr.ScVal): Campaign {
       amount_raised,
       funding_goal,
     }),
-    created_at: Number(fields["created_at"].u64()),
     funds_withdrawn,
     is_cancelled,
     is_verified,
     category: fields["category"].u32() as Category,
     has_revenue_sharing: fields["has_revenue_sharing"].b(),
     revenue_share_percentage: fields["revenue_share_percentage"].u32(),
+    first_creator: Address.fromScVal(fields["first_creator"]).toString(),
+    pending_creator: decodeOptionalAddress(fields["pending_creator"]),
+    pending_creator_expiry: Number(fields["pending_creator_expiry"].u64()),
+    max_contribution_per_user: scValToBigInt(fields["max_contribution_per_user"]),
+    fee_override: decodeOptionalU32(fields["fee_override"]),
+    deadline_extended: fields["deadline_extended"].b(),
+    effective_amount_raised: scValToBigInt(fields["effective_amount_raised"]),
     tags,
     cover_image_url,
     milestones,
   };
+}
+
+/**
+ * Soroban encodes `Option<T>` as void for `None` and as the bare value for
+ * `Some`. Both helpers take the field's ScVal so an absent field still reads
+ * as `None`.
+ */
+function isScValVoid(val: xdr.ScVal | undefined): boolean {
+  return !val || val.switch().name === "scvVoid";
+}
+
+function decodeOptionalAddress(val: xdr.ScVal | undefined): string | null {
+  return isScValVoid(val) ? null : Address.fromScVal(val as xdr.ScVal).toString();
+}
+
+function decodeOptionalU32(val: xdr.ScVal | undefined): number | null {
+  return isScValVoid(val) ? null : (val as xdr.ScVal).u32();
 }
 
 // Exposed for targeted unit tests of XDR decoding behavior.
@@ -1338,6 +1363,51 @@ export async function init(
   }
 }
 
+export interface CreateCampaignResult {
+  txHash: string;
+  /** Id the contract assigned to the new campaign, or `null` if it could not be read. */
+  campaignId: number | null;
+}
+
+interface CreateCampaignFields {
+  creator: string;
+  title: string;
+  description: string;
+  fundingGoal: bigint;
+  durationDays: number;
+  category: Category;
+  hasRevenueSharing: boolean;
+  revenueSharePercentage: number;
+  maxContributionPerUser: bigint;
+}
+
+/**
+ * Encode the arguments of `create_campaign`. The contract takes one
+ * `CreateCampaignParams` struct, which is an ScVal map keyed by symbols. Soroban
+ * requires struct map keys in sorted order, so the keys are sorted here.
+ */
+function encodeCreateCampaignParams(params: CreateCampaignFields): xdr.ScVal {
+  const fields: [string, xdr.ScVal][] = [
+    ["creator", new Address(params.creator).toScVal()],
+    ["title", nativeToScVal(params.title, { type: "string" })],
+    ["description", nativeToScVal(params.description, { type: "string" })],
+    ["funding_goal", nativeToScVal(params.fundingGoal, { type: "i128" })],
+    ["duration_days", nativeToScVal(params.durationDays, { type: "u64" })],
+    ["category", nativeToScVal(params.category, { type: "u32" })],
+    ["has_revenue_sharing", nativeToScVal(params.hasRevenueSharing, { type: "bool" })],
+    ["revenue_share_percentage", nativeToScVal(params.revenueSharePercentage, { type: "u32" })],
+    [
+      "max_contribution_per_user",
+      nativeToScVal(params.maxContributionPerUser, { type: "i128" }),
+    ],
+  ];
+  fields.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+
+  return xdr.ScVal.scvMap(
+    fields.map(([key, val]) => new xdr.ScMapEntry({ key: xdr.ScVal.scvSymbol(key), val })),
+  );
+}
+
 export async function createCampaign(
   creator: string,
   title: string,
@@ -1348,30 +1418,48 @@ export async function createCampaign(
   hasRevenueSharing: boolean,
   revenueSharePercentage: number,
   tags: string[],
+  maxContributionPerUser: bigint = BigInt(0),
   options?: TransactionLifecycleOptions & { coverImageUrl?: string; milestones?: Milestone[] },
-): Promise<string> {
+): Promise<CreateCampaignResult> {
   validateStellarAddress(creator);
   validateFundingGoal(fundingGoal);
   validateDuration(durationDays);
   if (hasRevenueSharing) {
     validateRevenueShare(revenueSharePercentage);
   }
+  validateMaxContributionPerUser(maxContributionPerUser);
 
-  // Tags, cover images, and milestones are now stored on-chain as native fields
-  // instead of being embedded in the description blob. This ensures they are
-  // properly validated and accessible through the contract interface.
-  // For backward compatibility, old campaigns with blob data can still be parsed
-  // by decodeCampaign().
-  const finalDescription = description;
+  // The contract's `CreateCampaignParams` has no field for tags, cover images
+  // or milestones, so they travel in a `===POH_EXT===` suffix on the description.
+  // decodeCampaign() reads the suffix back out. Without this, creating a campaign
+  // silently drops them.
+  let finalDescription = description;
+  if (
+    options?.coverImageUrl ||
+    (options?.milestones && options.milestones.length > 0) ||
+    tags.length > 0
+  ) {
+    const ext = {
+      tags,
+      coverImageUrl: options?.coverImageUrl,
+      milestones: options?.milestones?.map((m) => ({
+        targetAmount: m.targetAmount.toString(),
+        description: m.description,
+      })),
+    };
+    finalDescription = `${description}\n\n===POH_EXT===\n${JSON.stringify(ext)}`;
+  }
 
   if (USE_MOCKS) {
     const txHash = emitMockLifecycle("mock_tx_create_campaign", options);
+    const campaignId = MOCK_CAMPAIGNS.length + 1;
     MOCK_CAMPAIGNS.push(
       makeMockCampaign({
-        id: MOCK_CAMPAIGNS.length + 1,
+        id: campaignId,
         creator,
         title,
-        description: finalDescription,
+        // Mock campaigns hold tags, cover and milestones as fields, not in a blob.
+        description,
         funding_goal: fundingGoal,
         deadline: MOCK_TIMESTAMP_SEC + durationDays * 86400,
         amount_raised: BigInt(0),
@@ -1386,23 +1474,27 @@ export async function createCampaign(
         tags,
         cover_image_url: options?.coverImageUrl,
         milestones: options?.milestones,
+        max_contribution_per_user: maxContributionPerUser,
       }),
     );
-    return txHash;
+    return { txHash, campaignId };
   }
 
   await requireExistingCreatorAccount(creator);
   const contract = new Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     "create_campaign",
-    new Address(creator).toScVal(),
-    nativeToScVal(title, { type: "string" }),
-    nativeToScVal(finalDescription, { type: "string" }),
-    nativeToScVal(fundingGoal, { type: "i128" }),
-    nativeToScVal(durationDays, { type: "u64" }),
-    nativeToScVal(category, { type: "u32" }),
-    nativeToScVal(hasRevenueSharing, { type: "bool" }),
-    nativeToScVal(revenueSharePercentage, { type: "u32" }),
+    encodeCreateCampaignParams({
+      creator,
+      title,
+      description: finalDescription,
+      fundingGoal,
+      durationDays,
+      category,
+      hasRevenueSharing,
+      revenueSharePercentage,
+      maxContributionPerUser,
+    }),
   );
   try {
     const txResult = await buildAndSubmitTransaction(creator, op, {
@@ -1414,7 +1506,12 @@ export async function createCampaign(
     clearContractCacheByMethod("get_campaign_count");
     clearContractCacheByMethod("get_campaign");
 
-    return txResult.txHash;
+    // `create_campaign` returns the new campaign's id as `Result<u32, Error>`.
+    const returned = txResult.returnValue;
+    return {
+      txHash: txResult.txHash,
+      campaignId: returned ? returned.u32() : null,
+    };
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
     const errorCode = getContractErrorCode(err);

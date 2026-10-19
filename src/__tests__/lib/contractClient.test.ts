@@ -1,4 +1,5 @@
 import { Category } from "@/types";
+import { CAMPAIGN_ACTIVE, CAMPAIGN_VALIDATED } from "@/lib/campaignStatusFlags";
 import { parseContractError } from "@/utils/contractErrors";
 
 type LoadClientOptions = {
@@ -12,8 +13,11 @@ const TEST_NEW_ADMIN = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD
 
 function makeScValHelpers() {
   const scVal = {
+    void() {
+      return { switch: () => ({ name: "scvVoid" }), toXDR: () => "void" };
+    },
     u32(value: number) {
-      return { u32: () => value, toXDR: () => `u32:${value}` };
+      return { u32: () => value, switch: () => ({ name: "scvU32" }), toXDR: () => `u32:${value}` };
     },
     u64(value: number) {
       return { u64: () => BigInt(value), toXDR: () => `u64:${value}` };
@@ -28,7 +32,11 @@ function makeScValHelpers() {
       return { __bigint: BigInt(value), toXDR: () => `i128:${BigInt(value)}` };
     },
     address(value: string) {
-      return { __address: value, toXDR: () => `address:${value}` };
+      return {
+        __address: value,
+        switch: () => ({ name: "scvAddress" }),
+        toXDR: () => `address:${value}`,
+      };
     },
     symbol(value: string) {
       return { sym: () => ({ toString: () => value }), toXDR: () => `symbol:${value}` };
@@ -49,6 +57,25 @@ function makeScValHelpers() {
   return scVal;
 }
 
+type MockMapEntry = { key: { sym: () => { toString: () => string } }; val: unknown };
+
+/** Entries of an ScVal map built by the mocked `xdr.ScVal.scvMap`. */
+function mapEntries(scValMap: unknown): MockMapEntry[] {
+  return (scValMap as { __map: MockMapEntry[] }).__map;
+}
+
+function entryValue(entries: MockMapEntry[], name: string): unknown {
+  const entry = entries.find((e) => e.key.sym().toString() === name);
+  if (!entry) throw new Error(`missing map key ${name}`);
+  return entry.val;
+}
+
+function findCreateCall(mockServer: { simulateTransaction: jest.Mock }): unknown[] | undefined {
+  return mockServer.simulateTransaction.mock.calls.find(
+    ([tx]: [{ ops?: Array<{ method?: string }> }]) => tx.ops?.[0]?.method === "create_campaign",
+  );
+}
+
 function makeCampaignFixture() {
   const scVal = makeScValHelpers();
 
@@ -60,15 +87,18 @@ function makeCampaignFixture() {
     funding_goal: scVal.bigint(500_000_000),
     deadline: scVal.u64(1_900_000_000),
     amount_raised: scVal.bigint(125_000_000),
-    is_active: scVal.bool(true),
-    status: scVal.str("active"),
-    created_at: scVal.u64(1_800_000_000),
-    funds_withdrawn: scVal.bool(false),
-    is_cancelled: scVal.bool(false),
-    is_verified: scVal.bool(true),
+    // Active + validated. The contract stores lifecycle state as one bitfield.
+    status: scVal.u32(CAMPAIGN_ACTIVE | CAMPAIGN_VALIDATED),
     category: scVal.u32(Category.EducationalStartup),
     has_revenue_sharing: scVal.bool(true),
     revenue_share_percentage: scVal.u32(350),
+    first_creator: scVal.address(TEST_ADMIN),
+    pending_creator: scVal.void(),
+    pending_creator_expiry: scVal.u64(0),
+    max_contribution_per_user: scVal.bigint(0),
+    fee_override: scVal.u32(300),
+    deadline_extended: scVal.bool(false),
+    effective_amount_raised: scVal.bigint(125_000_000),
     tags: scVal.vec([scVal.str("education"), scVal.str("impact")]),
   });
 }
@@ -130,6 +160,8 @@ async function loadClient(options: LoadClientOptions) {
     getTransaction: jest.fn().mockImplementation((hash: string) => ({
       status: "SUCCESS",
       txHash: hash,
+      // `create_campaign` returns the new campaign id as a u32.
+      returnValue: scVal.u32(42),
     })),
   };
 
@@ -206,6 +238,16 @@ async function loadClient(options: LoadClientOptions) {
     }
   }
 
+  class MockScMapEntry {
+    key: unknown;
+    val: unknown;
+
+    constructor(init: { key: unknown; val: unknown }) {
+      this.key = init.key;
+      this.val = init.val;
+    }
+  }
+
   const stellarSdkMock = {
     BASE_FEE: "100",
     Account: MockAccount,
@@ -245,7 +287,13 @@ async function loadClient(options: LoadClientOptions) {
         }),
       })),
     },
-    xdr: {},
+    xdr: {
+      ScVal: {
+        scvSymbol: (value: string) => scVal.symbol(value),
+        scvMap: (entries: unknown[]) => ({ __map: entries, toXDR: () => `map:${entries.length}` }),
+      },
+      ScMapEntry: MockScMapEntry,
+    },
     __campaignFixture: campaignFixture,
   };
 
@@ -295,7 +343,10 @@ describe("contractClient", () => {
       0,
       ["tag-a", "tag-b"],
     );
-    expect(createdTx).toBe("mock_tx_create_campaign");
+    expect(createdTx).toEqual({
+      txHash: "mock_tx_create_campaign",
+      campaignId: beforeCount + 1,
+    });
     expect(await module.getCampaignCount()).toBe(beforeCount + 1);
 
     expect(await module.getCampaign(1)).not.toBeNull();
@@ -342,6 +393,26 @@ describe("contractClient", () => {
       }),
     );
     expect(decoded.tags).toEqual(["education", "impact"]);
+
+    // Lifecycle state comes from the `status` bitfield (ACTIVE | VALIDATED here).
+    expect(decoded).toEqual(
+      expect.objectContaining({
+        status: "verified",
+        is_active: true,
+        is_verified: true,
+        is_cancelled: false,
+        funds_withdrawn: false,
+        first_creator: TEST_ADMIN,
+        pending_creator: null,
+        pending_creator_expiry: 0,
+        max_contribution_per_user: BigInt(0),
+        fee_override: 300,
+        deadline_extended: false,
+        effective_amount_raised: BigInt(125_000_000),
+      }),
+    );
+    // The contract does not store a creation time.
+    expect(decoded.created_at).toBeUndefined();
   });
 
   it("createCampaign encodes tags into the off-chain POH_EXT blob on the non-mock path", async () => {
@@ -365,16 +436,115 @@ describe("contractClient", () => {
     expect(createCall).toBeDefined();
 
     const [tx] = createCall as [{ ops: Array<{ args: unknown[] }> }];
-    const descriptionScVal = tx.ops[0].args[2] as { str: () => { toString: () => string } };
-    const finalDescription = descriptionScVal.str().toString();
+    const entries = mapEntries(tx.ops[0].args[0]);
+    const description = entryValue(entries, "description") as {
+      str: () => { toString: () => string };
+    };
+    const finalDescription = description.str().toString();
 
     expect(finalDescription).toContain("===POH_EXT===");
     const ext = JSON.parse(finalDescription.split("===POH_EXT===\n")[1]);
     expect(ext.tags).toEqual(["alpha", "beta"]);
 
-    // The contract itself never receives tags as a direct argument — it only
-    // accepts the 8 fields the issue's schema lists.
-    expect(tx.ops[0].args).toHaveLength(8);
+    // Tags travel in the description blob because CreateCampaignParams has no field for them.
+    expect(tx.ops[0].args).toHaveLength(1);
+  });
+
+  it("createCampaign sends one CreateCampaignParams struct with sorted keys and the per-wallet cap", async () => {
+    const { module, mockServer } = await loadClient({ useMocks: false });
+
+    await module.createCampaign(
+      TEST_USER,
+      "Struct campaign",
+      "Description",
+      BigInt(1_000_000_000),
+      30,
+      Category.Learner,
+      false,
+      0,
+      [],
+      BigInt(2_500_000_000),
+    );
+
+    const [tx] = findCreateCall(mockServer) as [{ ops: Array<{ args: unknown[] }> }];
+    const entries = mapEntries(tx.ops[0].args[0]);
+
+    // Soroban requires struct map keys in sorted order.
+    expect(entries.map((entry) => entry.key.sym().toString())).toEqual([
+      "category",
+      "creator",
+      "description",
+      "duration_days",
+      "funding_goal",
+      "has_revenue_sharing",
+      "max_contribution_per_user",
+      "revenue_share_percentage",
+      "title",
+    ]);
+    expect(entryValue(entries, "max_contribution_per_user")).toEqual({
+      __bigint: BigInt(2_500_000_000),
+      toXDR: expect.any(Function),
+    });
+  });
+
+  it("createCampaign defaults the per-wallet cap to 0, the contract's no-cap sentinel", async () => {
+    const { module, mockServer } = await loadClient({ useMocks: false });
+
+    await module.createCampaign(
+      TEST_USER,
+      "Uncapped campaign",
+      "Description",
+      BigInt(1_000_000_000),
+      30,
+      Category.Learner,
+      false,
+      0,
+      [],
+    );
+
+    const [tx] = findCreateCall(mockServer) as [{ ops: Array<{ args: unknown[] }> }];
+    const cap = entryValue(mapEntries(tx.ops[0].args[0]), "max_contribution_per_user") as {
+      __bigint: bigint;
+    };
+    expect(cap.__bigint).toBe(BigInt(0));
+  });
+
+  it("createCampaign returns the campaign id the contract returned", async () => {
+    const { module } = await loadClient({ useMocks: false });
+
+    const result = await module.createCampaign(
+      TEST_USER,
+      "Id campaign",
+      "Description",
+      BigInt(1_000_000_000),
+      30,
+      Category.Learner,
+      false,
+      0,
+      [],
+    );
+
+    expect(result).toEqual({ txHash: "hash-1", campaignId: 42 });
+  });
+
+  it("createCampaign rejects a negative per-wallet cap before simulating", async () => {
+    const { module, mockServer } = await loadClient({ useMocks: false });
+
+    await expect(
+      module.createCampaign(
+        TEST_USER,
+        "Negative cap",
+        "Description",
+        BigInt(1_000_000_000),
+        30,
+        Category.Learner,
+        false,
+        0,
+        [],
+        BigInt(-1),
+      ),
+    ).rejects.toThrow();
+    expect(mockServer.simulateTransaction).not.toHaveBeenCalled();
   });
 
   it("rejects campaign creation before simulation when the creator account does not exist", async () => {
@@ -428,14 +598,18 @@ describe("contractClient", () => {
       funding_goal: scVal.bigint(500_000_000),
       deadline: scVal.u64(1_900_000_000),
       amount_raised: scVal.bigint(0),
-      is_active: scVal.bool(true),
-      created_at: scVal.u64(1_800_000_000),
-      funds_withdrawn: scVal.bool(false),
-      is_cancelled: scVal.bool(false),
-      is_verified: scVal.bool(false),
+      // Active only: no validated, cancelled or succeeded bits.
+      status: scVal.u32(CAMPAIGN_ACTIVE),
       category: scVal.u32(Category.Publisher),
       has_revenue_sharing: scVal.bool(false),
       revenue_share_percentage: scVal.u32(0),
+      first_creator: scVal.address(TEST_ADMIN),
+      pending_creator: scVal.void(),
+      pending_creator_expiry: scVal.u64(0),
+      max_contribution_per_user: scVal.bigint(0),
+      fee_override: scVal.void(),
+      deadline_extended: scVal.bool(false),
+      effective_amount_raised: scVal.bigint(0),
       // Deliberately no `tags` field, matching the real contract's schema.
     });
 
@@ -649,19 +823,18 @@ describe("contractClient", () => {
     expect(await module.getApprovalThresholdBps()).toBe(5000);
 
     expect(await module.init(TEST_ADMIN, TEST_USER, 300)).toMatch(/^hash-/);
-    expect(
-      await module.createCampaign(
-        TEST_USER,
-        "On-chain campaign",
-        "Description",
-        BigInt(1_000_000_000),
-        30,
-        Category.Learner,
-        false,
-        0,
-        ["alpha"],
-      ),
-    ).toMatch(/^hash-/);
+    const createdCampaign = await module.createCampaign(
+      TEST_USER,
+      "On-chain campaign",
+      "Description",
+      BigInt(1_000_000_000),
+      30,
+      Category.Learner,
+      false,
+      0,
+      ["alpha"],
+    );
+    expect(createdCampaign.txHash).toMatch(/^hash-/);
     expect(await module.contribute(1, TEST_USER, BigInt(50_000_000))).toMatch(/^hash-/);
     expect(await module.withdrawFunds(1)).toMatch(/^hash-/);
     expect(await module.cancelCampaign(1)).toMatch(/^hash-/);

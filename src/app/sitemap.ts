@@ -25,7 +25,8 @@ async function getCampaignSitemapEntries(): Promise<
     return capped.flatMap((campaign) =>
       routing.locales.map((locale) => ({
         url: absoluteUrl(`/${locale}/causes/${campaign.id}`),
-        lastModified: new Date(campaign.created_at * 1000),
+        lastModified:
+          campaign.created_at !== undefined ? new Date(campaign.created_at * 1000) : undefined,
         // Active campaigns may receive contributions — crawl them more often.
         changeFrequency: (campaign.is_active ? "hourly" : "weekly") as "hourly" | "weekly",
         priority: campaign.is_active ? 0.9 : 0.7,

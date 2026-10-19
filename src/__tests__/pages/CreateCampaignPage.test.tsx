@@ -122,11 +122,9 @@ jest.mock("@/components/WalletContext", () => ({
 }));
 
 const mockCreateCampaign = jest.fn();
-const mockGetCampaignCount = jest.fn();
 
 jest.mock("@/lib/contractClient", () => ({
   createCampaign: (...args: unknown[]) => mockCreateCampaign(...args),
-  getCampaignCount: () => mockGetCampaignCount(),
 }));
 
 // ---------------------------------------------------------------------------
@@ -182,8 +180,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   localStorage.clear();
   setWalletDisconnected();
-  mockCreateCampaign.mockResolvedValue("mock_tx_hash");
-  mockGetCampaignCount.mockResolvedValue(7);
+  mockCreateCampaign.mockResolvedValue({ txHash: "mock_tx_hash", campaignId: 7 });
 });
 
 // ---------------------------------------------------------------------------
@@ -527,8 +524,42 @@ describe("CreateCampaignPage — submission", () => {
     expect(bps).toBe(500);
   });
 
+  it("passes the per-wallet cap in stroops, and zero when left blank", async () => {
+    renderPage();
+    await fillRequiredFields();
+    await userEvent.type(screen.getByLabelText(/max contribution per wallet/i), "250.5");
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
+
+    await waitFor(() => expect(mockCreateCampaign).toHaveBeenCalledTimes(1));
+    // Argument 9 is the per-wallet cap; 250.5 XLM is 2_505_000_000 stroops.
+    expect(mockCreateCampaign.mock.calls[0][9]).toBe(BigInt(2_505_000_000));
+  });
+
+  it("sends a zero cap, meaning no limit, when the field is left blank", async () => {
+    renderPage();
+    await fillRequiredFields();
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
+
+    await waitFor(() => expect(mockCreateCampaign).toHaveBeenCalledTimes(1));
+    expect(mockCreateCampaign.mock.calls[0][9]).toBe(BigInt(0));
+  });
+
+  it("blocks submission when the per-wallet cap is negative", async () => {
+    renderPage();
+    await fillRequiredFields();
+    await userEvent.type(screen.getByLabelText(/max contribution per wallet/i), "-5");
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+
+    expect(
+      await screen.findByText(/max contribution must be a non-negative/i),
+    ).toBeInTheDocument();
+    expect(mockCreateCampaign).not.toHaveBeenCalled();
+  });
+
   it("shows a success toast and redirects to the new campaign page", async () => {
-    mockGetCampaignCount.mockResolvedValue(7);
+    mockCreateCampaign.mockResolvedValue({ txHash: "mock_tx_hash", campaignId: 7 });
     renderPage();
     await fillRequiredFields();
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
@@ -542,8 +573,8 @@ describe("CreateCampaignPage — submission", () => {
     });
   });
 
-  it("falls back to /causes redirect if getCampaignCount fails", async () => {
-    mockGetCampaignCount.mockRejectedValue(new Error("rpc error"));
+  it("falls back to /causes redirect if the contract returns no campaign id", async () => {
+    mockCreateCampaign.mockResolvedValue({ txHash: "mock_tx_hash", campaignId: null });
     renderPage();
     await fillRequiredFields();
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));

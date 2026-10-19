@@ -31,9 +31,12 @@ export function calculateTrendingScore(
   // Verification bonus
   const verificationBonus = campaign.is_verified ? 20 : 0;
 
-  // Recency bonus: max 30 points for campaigns created within the last 30 days
-  const ageInDays = Math.max(0, (nowSec - campaign.created_at) / 86_400);
-  const recencyBonus = Math.max(0, 30 - ageInDays);
+  // Recency bonus: max 30 points for campaigns created within the last 30 days.
+  // Campaigns without a known creation time get no bonus rather than a guessed one.
+  const recencyBonus =
+    campaign.created_at === undefined
+      ? 0
+      : Math.max(0, 30 - Math.max(0, (nowSec - campaign.created_at) / 86_400));
 
   return progressPct * statusMultiplier + verificationBonus + recencyBonus;
 }

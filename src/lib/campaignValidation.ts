@@ -7,6 +7,7 @@ export interface FormErrorKeys {
   creatorEmail?: string;
   fundingGoal?: string;
   durationDays?: string;
+  maxContributionPerWallet?: string;
   revenueSharePercentage?: string;
   coverImageUrl?: string;
   coverImageAltText?: string;
@@ -26,6 +27,21 @@ export interface ReviewData {
   coverImageUrl: string;
   coverImageAltText?: string;
   milestones: { targetAmount: bigint; description: string }[];
+  /** Per-wallet cap in XLM as typed. Empty or absent means no cap. */
+  maxContributionPerWallet?: string;
+}
+
+/** Up to 7 decimal places, matching the stroop precision `xlmToStroops` accepts. */
+const XLM_AMOUNT_RE = /^\d+(\.\d{1,7})?$/;
+
+/**
+ * Validates the optional per-wallet cap. Blank means no cap, which the contract
+ * stores as `0`. Anything else must be a non-negative XLM amount.
+ */
+export function validateMaxContributionPerWallet(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!trimmed || XLM_AMOUNT_RE.test(trimmed)) return undefined;
+  return "validationMaxContributionInvalid";
 }
 
 const IMAGE_URL_RE = /^https?:\/\/.+\..+/;
