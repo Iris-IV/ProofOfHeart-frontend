@@ -210,6 +210,8 @@ describe("subscribeContributionMadeEvents", () => {
 
     await jest.advanceTimersByTimeAsync(5000);
     expect(mockGetEvents).toHaveBeenCalledTimes(2);
+    expect(onEvents).toHaveBeenCalledTimes(2);
+    expect(onEvents.mock.calls[1][0].events).toHaveLength(0);
 
     subscription?.unsubscribe();
   });

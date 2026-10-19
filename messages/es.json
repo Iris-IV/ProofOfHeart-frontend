@@ -18,7 +18,8 @@
     "continueWithGoogle": "Continuar con Google",
     "continueWithX": "Continuar con X",
     "socialLoginHint": "Crea una billetera Stellar protegida por tu cuenta social, sin necesidad de extensión.",
-    "signedInAs": "Sesión iniciada como {name}"
+    "signedInAs": "Sesión iniciada como {name}",
+    "highContrast": "Alto contraste"
   },
   "PwaInstaller": {
     "installTitle": "Instalar ProofOfHeart",
@@ -311,7 +312,9 @@
     "tryDifferentSearch": "Intenta con otros términos de búsqueda o borra los filtros para ver todas las causas.",
     "tryAgain": "Intentar de nuevo",
     "loadMore": "Cargar más causas",
-    "showingRange": "Mostrando {shown} de {total}"
+    "showingRange": "Mostrando {shown} de {total}",
+    "suggestedCategories": "Prueba una de estas categorías:",
+    "createCampaign": "Crear una campaña"
   },
   "Status": {
     "active": "Activa",
@@ -553,7 +556,10 @@
     "savedCampaigns": "Campañas guardadas",
     "createdCampaigns": "Campañas creadas",
     "noSavedCampaigns": "Aún no tienes campañas guardadas.",
-    "browseCauses": "Explorar causas"
+    "browseCauses": "Explorar causas",
+    "saveCampaignHint": "Guarda aquí las causas que te importan. Usa el botón de marcador de una campaña para verla más tarde.",
+    "savedLoadError": "No se pudieron cargar tus campañas guardadas.",
+    "retrySaved": "Reintentar campañas guardadas"
   },
   "Onboarding": {
     "tourLabel": "Tour de Incorporación",
@@ -690,6 +696,28 @@
     "goToPrevious": "Ir a la página anterior",
     "goToNext": "Ir a la página siguiente"
   },
+  "CampaignCurrency": {
+    "goal": "Meta de la campaña",
+    "loading": "Cargando estimación…",
+    "unavailable": "Tipos de cambio no disponibles. Se muestra el importe en XLM.",
+    "retry": "Reintentar",
+    "estimate": "Los valores en moneda fiat son estimaciones. Las donaciones siguen en XLM.",
+    "updated": "Actualizado a las {time}."
+  },
+  "ContributionTicker": {
+    "title": "Contribuciones de la comunidad",
+    "pause": "Pausar actividad",
+    "resume": "Reanudar actividad",
+    "connecting": "Conectando con las donaciones en directo…",
+    "live": "Donaciones en directo",
+    "reconnecting": "Conexión interrumpida. Reintentando…",
+    "paused": "Actividad pausada",
+    "unavailable": "Las donaciones en directo no están disponibles en este momento.",
+    "mock": "Las donaciones en directo no están disponibles en modo de demostración.",
+    "empty": "Las donaciones recientes aparecerán aquí cuando la comunidad contribuya.",
+    "recent": "Donaciones recientes de la comunidad",
+    "supporter": "Colaborador de la comunidad",
+    "latest": "{donor} ha contribuido {amount} XLM."
   "CreatorProfile": {
     "title": "Perfil del creador",
     "edit": "Personalizar perfil",

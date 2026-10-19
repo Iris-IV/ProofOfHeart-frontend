@@ -18,7 +18,8 @@
     "continueWithGoogle": "Continue with Google",
     "continueWithX": "Continue with X",
     "socialLoginHint": "Creates a Stellar wallet secured by your social account — no extension needed.",
-    "signedInAs": "Signed in as {name}"
+    "signedInAs": "Signed in as {name}",
+    "highContrast": "High contrast"
   },
   "PwaInstaller": {
     "installTitle": "Install ProofOfHeart",
@@ -311,7 +312,9 @@
     "tryDifferentSearch": "Try different search terms or clear the filters to see all causes.",
     "tryAgain": "Try again",
     "loadMore": "Load more causes",
-    "showingRange": "Showing {shown} of {total}"
+    "showingRange": "Showing {shown} of {total}",
+    "suggestedCategories": "Try one of these categories:",
+    "createCampaign": "Create a campaign"
   },
   "Status": {
     "active": "Active",
@@ -552,7 +555,10 @@
     "savedCampaigns": "Saved Campaigns",
     "createdCampaigns": "Created Campaigns",
     "noSavedCampaigns": "No saved campaigns yet.",
-    "browseCauses": "Browse causes"
+    "browseCauses": "Browse causes",
+    "saveCampaignHint": "Keep the causes you care about here. Use the bookmark button on a campaign to save it for later.",
+    "savedLoadError": "Your saved campaigns could not be loaded.",
+    "retrySaved": "Retry saved campaigns"
   },
   "Onboarding": {
     "tourLabel": "Onboarding Tour",
@@ -689,6 +695,28 @@
     "goToPrevious": "Go to previous page",
     "goToNext": "Go to next page"
   },
+  "CampaignCurrency": {
+    "goal": "Campaign goal",
+    "loading": "Loading estimate…",
+    "unavailable": "Rates unavailable. XLM amount shown.",
+    "retry": "Retry rates",
+    "estimate": "Fiat values are estimates. Donations remain in XLM.",
+    "updated": "Updated {time}."
+  },
+  "ContributionTicker": {
+    "title": "Community contributions",
+    "pause": "Pause feed",
+    "resume": "Resume feed",
+    "connecting": "Connecting to live donations…",
+    "live": "Live donations",
+    "reconnecting": "Connection interrupted. Retrying…",
+    "paused": "Feed paused",
+    "unavailable": "Live donations are currently unavailable.",
+    "mock": "Live donations are unavailable in demo mode.",
+    "empty": "Recent donations will appear here as the community contributes.",
+    "recent": "Recent community donations",
+    "supporter": "Community supporter",
+    "latest": "{donor} contributed {amount} XLM."
   "CreatorProfile": {
     "title": "Creator profile",
     "edit": "Customize profile",

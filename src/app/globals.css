@@ -26,6 +26,26 @@ body {
   font-family: var(--font-sans);
 }
 
+@keyframes campaign-empty-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .campaign-empty-state {
+    animation: campaign-empty-enter 120ms ease-out both;
+  }
+  .contribution-ticker-entry {
+    animation: campaign-empty-enter 120ms ease-out both;
+  }
+}
+
 /* =========================
    Blob Animation Fix
    ========================= */
@@ -277,4 +297,73 @@ body {
   .min-h-screen {
     min-height: 100dvh;
   }
+}
+
+/* Daylight mode deliberately removes translucency and decorative gradients.
+   Legacy palette utilities are covered as well as the shared token primitives. */
+html[data-contrast="high"] {
+  color-scheme: light;
+  --background: #ffffff;
+  --foreground: #000000;
+  --color-brand: #000000;
+  --color-brand-strong: #000000;
+  --color-accent: #000000;
+  --color-muted: #000000;
+  --color-muted-strong: #000000;
+  --color-success: #000000;
+  --color-warning: #000000;
+  --color-danger: #000000;
+  --color-info: #000000;
+}
+
+html[data-contrast="high"] :where(body, body *) {
+  color: var(--foreground) !important;
+  background-color: var(--background) !important;
+  background-image: none !important;
+  border-color: var(--foreground) !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+html[data-contrast="high"] :where(p, span, a, label, button, input, select, textarea) {
+  opacity: 1;
+}
+
+html[data-contrast="high"] :where(input, textarea)::placeholder {
+  color: var(--foreground);
+  opacity: 1;
+}
+
+html[data-contrast="high"] :where(button, input, select, textarea, [role="dialog"]) {
+  border: 2px solid var(--foreground);
+}
+
+html[data-contrast="high"] :where(a) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+html[data-contrast="high"] :where(:focus-visible) {
+  outline: 3px solid var(--foreground) !important;
+  outline-offset: 3px;
+}
+
+html[data-contrast="high"] :where([aria-pressed="true"], [aria-selected="true"]) {
+  outline: 2px solid var(--foreground);
+  outline-offset: -5px;
+  font-weight: 700;
+}
+
+html[data-contrast="high"] :where(:disabled) {
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+html[data-contrast="high"] [role="progressbar"] {
+  outline: 1px solid var(--foreground);
+}
+
+html[data-contrast="high"] [role="progressbar"] > * {
+  background-color: var(--foreground) !important;
 }

@@ -10,6 +10,7 @@ import { Link, usePathname } from "@/i18n/routing";
 import { useAdmin } from "@/hooks/useAdmin";
 import { formatAddress } from "@/lib/formatAddress";
 import LanguageSwitcher from "./LanguageSwitcher";
+import ContrastToggle from "./ContrastToggle";
 import NotificationBell from "./NotificationBell";
 import NotificationSettings from "./NotificationSettings";
 import { useCampaigns } from "@/hooks/useCampaigns";
@@ -219,6 +220,8 @@ export default function Navbar() {
 
           <NotificationBell />
 
+          <ContrastToggle className="hidden md:inline-flex" />
+
           {isWalletConnected && <NotificationSettings />}
 
           <button
@@ -346,6 +349,8 @@ export default function Navbar() {
                 })}
               </ul>
             </nav>
+
+            <ContrastToggle className="w-full justify-center md:hidden" />
 
             {isWalletConnected && (
               <Link

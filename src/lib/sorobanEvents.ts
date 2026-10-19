@@ -263,8 +263,9 @@ export function subscribeContributionMadeEvents(
 
       cursor = result.cursor;
 
+      // Empty successful polls also confirm that the live connection is healthy.
+      onEvents(result);
       if (result.events.length > 0) {
-        onEvents(result);
         backoffMs = idleIntervalMs;
         schedule(result.events.length >= CONTRIBUTION_EVENT_BATCH_LIMIT ? 0 : idleIntervalMs);
         return;

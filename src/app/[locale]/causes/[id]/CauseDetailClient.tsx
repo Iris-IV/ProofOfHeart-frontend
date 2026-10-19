@@ -7,6 +7,8 @@ import LazyImage from "@/components/LazyImage";
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import CampaignTabs from "@/components/CampaignTabs";
+import CampaignCurrencySelector from "@/components/CampaignCurrencySelector";
+import ContributionTicker from "@/components/ContributionTicker";
 const RevenueSharingPanel = dynamic(() => import("@/components/RevenueSharingPanel"), {
   ssr: false,
 });
@@ -79,6 +81,8 @@ export default function CauseDetailClient({ id }: { id: string }) {
     isLoading,
     error,
     refetch,
+    contributionEvents,
+    contributionStatus,
   } = useLiveCampaignFunding(Number(id));
   const { platformFeeBps, isLoading: isPlatformFeeLoading, isFallback } = usePlatformFee();
 
@@ -636,6 +640,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                 <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 mb-4">
                   Funding Progress
                 </h2>
+                <CampaignCurrencySelector goal={campaign.funding_goal} />
                 <FundingProgressBar
                   amountRaised={campaign.amount_raised}
                   fundingGoal={campaign.funding_goal}
@@ -644,6 +649,32 @@ export default function CauseDetailClient({ id }: { id: string }) {
               </div>
             )}
 
+            <ContributionTicker
+              key={campaign.id}
+              events={contributionEvents}
+              status={contributionStatus}
+            />
+
+            {milestonePayoutPlan && (
+              <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6">
+                <DonationMilestones
+                  amountRaised={campaign.amount_raised}
+                  onChainPlan={{
+                    milestones: milestonePayoutPlan.milestones,
+                    claimed: milestonePayoutPlan.claimed,
+                    isAdmin: isPlatformAdmin,
+                    isCreator: isCreator,
+                    isFundingGoalMet: campaign.amount_raised >= campaign.funding_goal,
+                    isWithdrawn: campaign.funds_withdrawn,
+                    platformFeeBps: platformFeeBps,
+                    onVerify: handleVerifyMilestone,
+                    onClaim: handleClaimMilestone,
+                    isVerifyingId: isVerifyingMilestoneId,
+                    isClaimingId: isClaimingMilestoneId,
+                  }}
+                />
+              </div>
+            )}
             <div className="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6">
               <DonationMilestones
                 amountRaised={campaign.amount_raised}
