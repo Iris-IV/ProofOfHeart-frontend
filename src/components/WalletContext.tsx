@@ -23,63 +23,15 @@ import {
   type SocialLoginProvider,
   type SocialWalletSession,
 } from "@/lib/socialWallet";
+import {
+  saveWalletPreference,
+  loadWalletPreference,
+  clearWalletPreference,
+  isWalletPreferenceFresh,
+} from "@/lib/stellar";
 import { isFreighterLockedError } from "@/utils/freighterErrors";
 import InstallFreighterModal from "./InstallFreighterModal";
 import SocialLoginButtons from "./SocialLoginButtons";
-
-/**
- * Session-scoped storage key for the wallet public key.
- *
- * Moved from localStorage to sessionStorage (#1139) so the cached address is
- * automatically discarded when the tab is closed.  Only the public key (not a
- * secret) is stored here — all transaction signing is handled by Freighter or
- * the in-memory social wallet keypair.
- */
-const WALLET_STORAGE_KEY = "stellar_wallet_public_key";
-
-/**
- * One-time migration: move any legacy localStorage value into sessionStorage
- * and remove it from localStorage.  This runs once per page load.
- */
-function migrateWalletKeyToSessionStorage(): void {
-  if (typeof window === "undefined") return;
-  try {
-    const legacy = window.localStorage.getItem(WALLET_STORAGE_KEY);
-    if (legacy) {
-      window.sessionStorage.setItem(WALLET_STORAGE_KEY, legacy);
-      window.localStorage.removeItem(WALLET_STORAGE_KEY);
-    }
-  } catch {
-    // Storage may be unavailable in some environments (e.g. private browsing).
-  }
-}
-
-function readWalletKey(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return window.sessionStorage.getItem(WALLET_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function writeWalletKey(key: string): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.sessionStorage.setItem(WALLET_STORAGE_KEY, key);
-  } catch {
-    // Ignore storage write failures.
-  }
-}
-
-function removeWalletKey(): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.sessionStorage.removeItem(WALLET_STORAGE_KEY);
-  } catch {
-    // Ignore storage removal failures.
-  }
-}
 
 interface WalletContextType {
   publicKey: string | null;
@@ -128,28 +80,45 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       : "the app network";
 
   useEffect(() => {
-    migrateWalletKeyToSessionStorage();
-
     if (IS_MOCK_MODE) {
-      const storedKey = readWalletKey();
-      if (storedKey) {
-        setPublicKey(storedKey);
+      const preference = loadWalletPreference();
+      if (preference && isWalletPreferenceFresh(preference)) {
+        setPublicKey(preference.publicKey);
         setIsWalletConnected(true);
-        setWalletKind("freighter");
-        previousPublicKeyRef.current = storedKey;
+        setWalletKind(preference.vendor as WalletKind);
+        previousPublicKeyRef.current = preference.publicKey;
       }
       setWalletNetworkWarning(null);
       return;
     }
 
-    // #649 — Restore an embedded social wallet before touching Freighter. This
-    // never opens a popup; it only rehydrates a session Web3Auth already holds.
-    void restoreSocialWallet().then((restored) => {
-      if (!restored) return;
-      applySocialSession(restored);
-    });
+    // #1532 — Auto-reconnect based on persisted wallet preference. If a fresh
+    // preference exists, attempt to restore that wallet type (Freighter or social).
+    // Stale preferences (older than 7 days) are discarded.
+    const preference = loadWalletPreference();
+    if (preference && isWalletPreferenceFresh(preference)) {
+      if (preference.vendor === "social") {
+        // Restore the embedded social wallet session if Web3Auth still holds it.
+        void restoreSocialWallet().then((restored) => {
+          if (restored) {
+            applySocialSession(restored);
+          } else {
+            // The social session expired; clear the stale preference.
+            clearWalletPreference();
+          }
+        });
+      } else if (preference.vendor === "freighter") {
+        // Re-verify with Freighter. If still connected to the same address, restore.
+        // Otherwise checkWalletConnection will clear the mismatch.
+        void checkWalletConnection();
+      }
+    } else if (preference && !isWalletPreferenceFresh(preference)) {
+      // Discard stale preference.
+      clearWalletPreference();
+    }
 
-    // Always re-verify with Freighter rather than blindly trusting localStorage (#97)
+    // Fallback: even without a stored preference, check if Freighter is connected.
+    // This covers the case where the user granted access but we haven't stored it yet.
     void checkWalletConnection();
 
     // WatchWalletChanges only fires on address/network changes, NOT on external
@@ -190,6 +159,8 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     // to the app network, so a mismatch is not representable here.
     setWalletNetworkWarning(null);
     previousPublicKeyRef.current = restored.publicKey;
+    // #1532 — Persist the social wallet preference for auto-reconnect on reload.
+    saveWalletPreference("social", restored.publicKey);
   };
 
   const checkWalletConnection = async () => {
@@ -198,12 +169,12 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     if (isSocialSessionRef.current) return;
 
     if (IS_MOCK_MODE) {
-      const storedKey = readWalletKey();
-      if (storedKey) {
-        setPublicKey(storedKey);
+      const preference = loadWalletPreference();
+      if (preference) {
+        setPublicKey(preference.publicKey);
         setIsWalletConnected(true);
-        setWalletKind("freighter");
-        previousPublicKeyRef.current = storedKey;
+        setWalletKind(preference.vendor as WalletKind);
+        previousPublicKeyRef.current = preference.publicKey;
       } else {
         setPublicKey(null);
         setIsWalletConnected(false);
@@ -230,7 +201,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
           setWalletNetworkWarning(
             `Switch Freighter to ${appNetworkLabel} to continue. Current wallet network does not match the app network.`,
           );
-          removeWalletKey();
+          clearWalletPreference();
           // Invalidate queries on network mismatch
           invalidateWalletQueries();
           return;
@@ -241,7 +212,8 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         setPublicKey(newPublicKey);
         setIsWalletConnected(true);
         setWalletKind("freighter");
-        writeWalletKey(newPublicKey);
+        // #1532 — Persist Freighter preference for auto-reconnect on reload.
+        saveWalletPreference("freighter", newPublicKey);
 
         // Detect account change and invalidate wallet-scoped queries
         if (
@@ -256,7 +228,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         setPublicKey(null);
         setIsWalletConnected(false);
         setWalletKind(null);
-        removeWalletKey();
+        clearWalletPreference();
         // Invalidate queries when disconnected
         if (previousPublicKeyRef.current !== null) {
           invalidateWalletQueries();
@@ -268,7 +240,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       setPublicKey(null);
       setIsWalletConnected(false);
       setWalletKind(null);
-      removeWalletKey();
+      clearWalletPreference();
       // Invalidate queries on error
       if (previousPublicKeyRef.current !== null) {
         invalidateWalletQueries();
@@ -322,7 +294,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         setIsWalletConnected(true);
         setWalletKind("freighter");
         setWalletNetworkWarning(null);
-        writeWalletKey(mockAddress);
+        saveWalletPreference("freighter", mockAddress);
         previousPublicKeyRef.current = mockAddress;
         showSuccess("Mock wallet connected successfully.");
         return;
@@ -365,7 +337,8 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       setPublicKey(key.address);
       setIsWalletConnected(true);
       setWalletKind("freighter");
-      writeWalletKey(key.address);
+      // #1532 — Persist Freighter preference for auto-reconnect on reload.
+      saveWalletPreference("freighter", key.address);
       showSuccess("Wallet connected successfully.");
     } catch (error) {
       setPublicKey(null);
@@ -431,7 +404,8 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     setWalletKind(null);
     setWalletNetworkWarning(null);
     setSocialProfile(null);
-    removeWalletKey();
+    // #1532 — Clear persisted preference so the next reload does not auto-reconnect.
+    clearWalletPreference();
     // Invalidate wallet-scoped queries on disconnect
     invalidateWalletQueries();
     previousPublicKeyRef.current = null;
