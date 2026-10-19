@@ -147,6 +147,10 @@ local runs.
 - [`docs/CONTRACT_INTEGRATION.md`](docs/CONTRACT_INTEGRATION.md) — frontend ↔ contract
   architecture and function mapping.
 - [`docs/api.md`](docs/api.md) — API route reference.
+- [`docs/state.md`](docs/state.md) — state management architecture and hook dependency standards.
+- [`docs/GAMIFICATION.md`](docs/GAMIFICATION.md) — donor level and badge rules.
+- [`docs/RECURRING_DONATIONS.md`](docs/RECURRING_DONATIONS.md) — recurring donation schedules.
+- [`CHANGELOG.md`](CHANGELOG.md) — versioning, changesets and the release process.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — local setup, workflow and pre-PR checks.
 - [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) — community expectations.
 
