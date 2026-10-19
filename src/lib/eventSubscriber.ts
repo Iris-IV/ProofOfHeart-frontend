@@ -18,11 +18,13 @@ class EventSubscriber {
   private isPolling = false;
   private handlers = new Map<string, EventHandler[]>();
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
+  private abortController: AbortController | null = null;
   private backoffMs = 2000;
   private maxBackoffMs = 60000;
   private consecutiveFailures = 0;
   private lastSuccessTime = 0;
   private minBackoffMs = 1000;
+  private activeSubscriptions = 0;
 
   constructor() {
     this.server = new StellarSdk.rpc.Server(SOROBAN_RPC_URL);
@@ -33,15 +35,21 @@ class EventSubscriber {
       this.handlers.set(topic, []);
     }
     this.handlers.get(topic)!.push(handler);
+    this.activeSubscriptions++;
   }
 
   public off(topic: string, handler: EventHandler) {
     const topicHandlers = this.handlers.get(topic);
     if (topicHandlers) {
-      this.handlers.set(
-        topic,
-        topicHandlers.filter((h) => h !== handler),
-      );
+      const filtered = topicHandlers.filter((h) => h !== handler);
+      this.handlers.set(topic, filtered);
+      this.activeSubscriptions--;
+
+      // Stop polling when no handlers remain
+      if (this.activeSubscriptions <= 0) {
+        this.activeSubscriptions = 0;
+        this.stop();
+      }
     }
   }
 
@@ -68,10 +76,18 @@ class EventSubscriber {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
     }
+    // Cancel in-flight RPC request
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
   }
 
   private async poll() {
     if (!this.isPolling || !CONTRACT_ADDRESS) return;
+
+    // Create new AbortController for this poll cycle
+    this.abortController = new AbortController();
 
     try {
       const baseArgs = {
@@ -94,7 +110,10 @@ class EventSubscriber {
           const latestLedger = await this.server.getLatestLedger();
           requestArgs = { ...baseArgs, startLedger: latestLedger.sequence };
         } catch (e) {
-          // If latest ledger fails, wait for next tick with a default cursor
+          // If latest ledger fails, schedule retry instead of silently dropping
+          if (this.isPolling) {
+            this.timeoutId = setTimeout(() => this.poll(), this.backoffMs);
+          }
           return;
         }
       }
@@ -144,6 +163,11 @@ class EventSubscriber {
       this.consecutiveFailures = 0;
       this.lastSuccessTime = Date.now();
     } catch (error) {
+      // Don't log errors for aborted requests (intentional cleanup)
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
+
       console.warn("Soroban event polling error:", error);
       this.consecutiveFailures++;
 
@@ -154,6 +178,9 @@ class EventSubscriber {
       );
       const jitter = Math.random() * (exponentialBackoff * 0.25);
       this.backoffMs = exponentialBackoff + jitter;
+    } finally {
+      // Clear the abort controller after request completes
+      this.abortController = null;
     }
 
     if (this.isPolling) {
