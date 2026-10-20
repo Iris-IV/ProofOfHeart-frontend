@@ -10,12 +10,11 @@
  *    permanent one nobody remembers approving. Requiring an `expiry` and failing
  *    once it passes turns that decision into a scheduled review.
  *
- * 2. **The `overrides` block must be identical in `package.json` and
- *    `pnpm-workspace.yaml`.** CI installs with npm, contributors may install with
- *    pnpm, and a security pin that exists in only one of them means the two
- *    resolve different versions — so the pin protects CI while leaving a local
- *    checkout, or a pnpm-based deploy, vulnerable. `docs/DEPENDENCY_SECURITY.md`
- *    documents this rule; this script enforces it.
+ * 2. **npm is the only package manager.** CI, the Dockerfile and the docs all
+ *    install with npm. A second lockfile (`pnpm-lock.yaml`, `yarn.lock`, ...)
+ *    drifts silently, gives contributors a different dependency tree from CI,
+ *    and lets a security pin in `overrides` protect one tree but not the other.
+ *    This script fails if one reappears or if `packageManager` stops naming npm.
  *
  * Dependency-free on purpose: it runs in CI without `npm ci`, so a policy check
  * costs a second of Node startup instead of an install.
@@ -27,7 +26,7 @@
  * Exits 0 when the policy holds, 1 otherwise.
  */
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -228,150 +227,44 @@ export function normaliseExpiry(expiry, today = new Date().toISOString().slice(0
   return parsed.toISOString().slice(0, 10);
 }
 
-/**
- * Flatten a nested `overrides` block into `parent>child` path keys.
- *
- * npm expresses a nested override as an object:
- *
- *     "webpack-bundle-analyzer": { "ws": "^7.5.11" }
- *
- * while pnpm expresses the same constraint as a path key:
- *
- *     "webpack-bundle-analyzer>ws": "^7.5.11"
- *
- * Comparing the two literally reports a mismatch that does not exist, so both
- * sides are flattened to the path form before they are compared.
- *
- * @param {Record<string, unknown>} overrides
- * @param {string} [prefix]
- * @returns {Record<string, unknown>}
- */
-export function flattenOverrides(overrides, prefix = "") {
-  /** @type {Record<string, unknown>} */
-  const flat = {};
-
-  for (const [key, value] of Object.entries(overrides)) {
-    const path = prefix === "" ? key : `${prefix}>${key}`;
-    if (value !== null && typeof value === "object" && !Array.isArray(value)) {
-      Object.assign(flat, flattenOverrides(value, path));
-    } else {
-      flat[path] = value;
-    }
-  }
-
-  return flat;
-}
+/** Lockfiles and workspace files that belong to package managers other than npm. */
+export const FOREIGN_LOCKFILES = [
+  "pnpm-lock.yaml",
+  "pnpm-workspace.yaml",
+  "yarn.lock",
+  "bun.lockb",
+  "bun.lock",
+];
 
 /**
- * Check that the `overrides` in `package.json` and `pnpm-workspace.yaml` agree.
+ * Check that the repository installs with npm and nothing else.
  *
- * @param {{ overrides?: unknown, pnpmOverrides?: unknown }} input
+ * @param {{ files: string[], packageManager?: unknown }} input
+ *   `files` is the list of foreign lockfiles present at the repository root.
  * @returns {PolicyIssue[]}
  */
-export function validateOverrideParity({ overrides, pnpmOverrides }) {
+export function validateSinglePackageManager({ files, packageManager }) {
   /** @type {PolicyIssue[]} */
   const issues = [];
 
-  if (overrides === null || typeof overrides !== "object" || Array.isArray(overrides)) {
-    return [
-      {
-        severity: SEVERITY_ERROR,
-        source: "package.json",
-        message: 'has no "overrides" object',
-      },
-    ];
+  for (const file of files) {
+    issues.push({
+      severity: SEVERITY_ERROR,
+      source: file,
+      message:
+        "should not be committed: npm is the only supported package manager, so package-lock.json is the only lockfile",
+    });
   }
 
-  if (pnpmOverrides === null || typeof pnpmOverrides !== "object") {
-    return [
-      {
-        severity: SEVERITY_ERROR,
-        source: "pnpm-workspace.yaml",
-        message:
-          'has no "overrides" block; add the same pins as package.json so pnpm installs resolve identically',
-      },
-    ];
-  }
-
-  const npmEntries = Object.entries(flattenOverrides(overrides)).map(([key, value]) => [
-    key,
-    JSON.stringify(value),
-  ]);
-  const pnpmEntries = new Map(
-    Object.entries(flattenOverrides(pnpmOverrides)).map(([key, value]) => [
-      key,
-      JSON.stringify(value),
-    ]),
-  );
-
-  for (const [key, value] of npmEntries) {
-    if (!pnpmEntries.has(key)) {
-      issues.push({
-        severity: SEVERITY_ERROR,
-        source: "pnpm-workspace.yaml",
-        message: `is missing the "${key}" pin from package.json, so pnpm installs resolve a different version`,
-      });
-      continue;
-    }
-    if (pnpmEntries.get(key) !== value) {
-      issues.push({
-        severity: SEVERITY_ERROR,
-        source: "pnpm-workspace.yaml",
-        message: `pins "${key}" to ${pnpmEntries.get(key)} but package.json pins it to ${value}`,
-      });
-    }
-    pnpmEntries.delete(key);
-  }
-
-  for (const key of pnpmEntries.keys()) {
+  if (typeof packageManager !== "string" || !/^npm@\d/.test(packageManager)) {
     issues.push({
       severity: SEVERITY_ERROR,
       source: "package.json",
-      message: `is missing the "${key}" pin that pnpm-workspace.yaml declares`,
+      message: '"packageManager" must name npm, for example "npm@10.9.0"',
     });
   }
 
   return issues;
-}
-
-/**
- * Read the repository's `overrides` out of `pnpm-workspace.yaml`.
- *
- * A full YAML parser is overkill and would add a dependency to a script whose
- * whole point is to run without installing anything. The `overrides:` block is
- * flat `key: "value"` pairs in this file, and anything that stops being flat
- * should make this fail loudly rather than silently compare the wrong thing.
- *
- * @param {string} yaml
- * @returns {Record<string, unknown> | null}
- */
-export function parsePnpmOverrides(yaml) {
-  const lines = yaml.split("\n");
-  const start = lines.findIndex((line) => /^overrides:\s*$/.test(line));
-  if (start === -1) return null;
-
-  /** @type {Record<string, unknown>} */
-  const overrides = {};
-
-  for (const line of lines.slice(start + 1)) {
-    if (line.trim() === "") continue;
-    // A new top-level key ends the block.
-    if (/^\S/.test(line)) break;
-    if (/^\s+-\s/.test(line)) {
-      throw new Error(
-        "pnpm-workspace.yaml overrides use a nested list, which this script cannot compare. Keep the block flat.",
-      );
-    }
-
-    const match = /^\s{2}("?[^\s:"]+"?):\s*(.+?)\s*$/.exec(line);
-    if (match === null) continue;
-    // YAML allows single or double quotes, and `"brace-expansion@1"` has to
-    // become `brace-expansion@1` to match the key in package.json.
-    const unquote = (value) => value.replace(/^["']|["']$/g, "");
-    overrides[unquote(match[1])] = unquote(match[2]);
-  }
-
-  return overrides;
 }
 
 /**
@@ -390,26 +283,8 @@ export function checkAuditPolicy(options = {}) {
 
   const pkg = readJson(join(root, "package.json"), "package.json", issues);
   if (pkg !== undefined && pkg !== null && typeof pkg === "object") {
-    let pnpmOverrides = null;
-    try {
-      const yaml = readFileSync(join(root, "pnpm-workspace.yaml"), "utf-8");
-      pnpmOverrides = parsePnpmOverrides(yaml);
-    } catch (error) {
-      issues.push({
-        severity: SEVERITY_ERROR,
-        source: "pnpm-workspace.yaml",
-        message: `could not be read: ${error instanceof Error ? error.message : String(error)}`,
-      });
-    }
-    if (pnpmOverrides === null) {
-      issues.push({
-        severity: SEVERITY_ERROR,
-        source: "pnpm-workspace.yaml",
-        message: 'has no "overrides" block',
-      });
-    } else {
-      issues.push(...validateOverrideParity({ overrides: pkg.overrides, pnpmOverrides }));
-    }
+    const files = FOREIGN_LOCKFILES.filter((file) => existsSync(join(root, file)));
+    issues.push(...validateSinglePackageManager({ files, packageManager: pkg.packageManager }));
   }
 
   const allowlist =
