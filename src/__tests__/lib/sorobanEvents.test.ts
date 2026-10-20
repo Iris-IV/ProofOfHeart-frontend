@@ -28,6 +28,7 @@ import {
   isContributionMadeEvent,
   parseContributionAmount,
   sumContributionAmounts,
+  decodeContractEvent,
 } from "@/lib/sorobanEvents";
 
 function makeContributionEvent(id: string, campaignId: number, amount: bigint) {
@@ -75,6 +76,52 @@ describe("sorobanEvents vote cast", () => {
 
     expect(parseContributionAmount(event)).toBe(BigInt(2_500_000));
     expect(sumContributionAmounts([event, event])).toBe(BigInt(5_000_000));
+  });
+});
+
+describe("decodeContractEvent", () => {
+  it("decodes a contribution_made event into a typed object", () => {
+    const decoded = decodeContractEvent(makeContributionEvent("evt-1", 7, BigInt(2_000_000)) as never);
+    expect(decoded).toEqual({
+      type: "contribution_made",
+      campaignId: 7,
+      contributor: "GABC",
+      amount: BigInt(2_000_000),
+    });
+  });
+
+  it("decodes a campaign_vote_cast event into a typed object", () => {
+    const event = {
+      id: "evt-2",
+      topic: [
+        StellarSdk.nativeToScVal("campaign_vote_cast", { type: "symbol" }),
+        StellarSdk.nativeToScVal(9, { type: "u32" }),
+        StellarSdk.nativeToScVal("GVOTER", { type: "address" }),
+      ],
+      value: StellarSdk.nativeToScVal(true, { type: "bool" }),
+    } as never;
+
+    expect(decodeContractEvent(event)).toEqual({
+      type: "campaign_vote_cast",
+      campaignId: 9,
+      voter: "GVOTER",
+      approve: true,
+    });
+  });
+
+  it("returns null for unknown or malformed events", () => {
+    expect(decodeContractEvent({ topic: [] } as never)).toBeNull();
+
+    const unknown = {
+      id: "evt-3",
+      topic: [
+        StellarSdk.nativeToScVal("something_else", { type: "symbol" }),
+        StellarSdk.nativeToScVal(1, { type: "u32" }),
+      ],
+      value: StellarSdk.nativeToScVal(true, { type: "bool" }),
+    } as never;
+
+    expect(decodeContractEvent(unknown)).toBeNull();
   });
 });
 
@@ -163,6 +210,8 @@ describe("subscribeContributionMadeEvents", () => {
 
     await jest.advanceTimersByTimeAsync(5000);
     expect(mockGetEvents).toHaveBeenCalledTimes(2);
+    expect(onEvents).toHaveBeenCalledTimes(2);
+    expect(onEvents.mock.calls[1][0].events).toHaveLength(0);
 
     subscription?.unsubscribe();
   });

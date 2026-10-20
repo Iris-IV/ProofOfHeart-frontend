@@ -1,4 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { render as rtlRender, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactElement } from "react";
 import userEvent from "@testing-library/user-event";
 import type { Campaign } from "@/types";
 
@@ -55,7 +57,23 @@ jest.mock("@/components/ToastProvider", () => ({
   }),
 }));
 
+// Stand-in for the on-chain bookmark list: survives remounts like real contract state.
+const mockChainBookmarks: number[] = [];
+
 jest.mock("@/lib/contractClient", () => ({
+  MAX_BOOKMARKS_PER_WALLET: 10,
+  getSavedCampaigns: jest.fn(() => Promise.resolve([...mockChainBookmarks])),
+  getSavedCampaignsCount: jest.fn(() => Promise.resolve(mockChainBookmarks.length)),
+  saveCampaign: jest.fn((_user: string, id: number) => {
+    mockChainBookmarks.push(id);
+    return Promise.resolve("tx");
+  }),
+  removeSavedCampaign: jest.fn((_user: string, id: number) => {
+    const index = mockChainBookmarks.indexOf(id);
+    if (index >= 0) mockChainBookmarks.splice(index, 1);
+    return Promise.resolve("tx");
+  }),
+  batchSaveCampaigns: jest.fn(),
   cancelCampaign: jest.fn(),
   claimRefund: jest.fn(),
   voteOnCampaign: jest.fn(),
@@ -116,6 +134,12 @@ import CausesClient from "@/app/[locale]/causes/CausesClient";
 
 // ── Test setup ─────────────────────────────────────────────────────────────────
 
+// Each render gets a fresh QueryClient, like a new browser session; only the "chain" persists.
+function render(ui: ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return rtlRender(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
+
 const mockCampaigns: Campaign[] = [
   {
     id: 100,
@@ -159,6 +183,7 @@ describe("Saved campaigns persistence", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
+    mockChainBookmarks.length = 0;
 
     // Provide mock campaigns so CausesContent renders CauseCards
     (

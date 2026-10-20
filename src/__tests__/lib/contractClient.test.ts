@@ -1,4 +1,5 @@
 import { Category } from "@/types";
+import { CAMPAIGN_ACTIVE, CAMPAIGN_VALIDATED } from "@/lib/campaignStatusFlags";
 import { parseContractError } from "@/utils/contractErrors";
 
 type LoadClientOptions = {
@@ -12,8 +13,11 @@ const TEST_NEW_ADMIN = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD
 
 function makeScValHelpers() {
   const scVal = {
+    void() {
+      return { switch: () => ({ name: "scvVoid" }), toXDR: () => "void" };
+    },
     u32(value: number) {
-      return { u32: () => value, toXDR: () => `u32:${value}` };
+      return { u32: () => value, switch: () => ({ name: "scvU32" }), toXDR: () => `u32:${value}` };
     },
     u64(value: number) {
       return { u64: () => BigInt(value), toXDR: () => `u64:${value}` };
@@ -28,7 +32,11 @@ function makeScValHelpers() {
       return { __bigint: BigInt(value), toXDR: () => `i128:${BigInt(value)}` };
     },
     address(value: string) {
-      return { __address: value, toXDR: () => `address:${value}` };
+      return {
+        __address: value,
+        switch: () => ({ name: "scvAddress" }),
+        toXDR: () => `address:${value}`,
+      };
     },
     symbol(value: string) {
       return { sym: () => ({ toString: () => value }), toXDR: () => `symbol:${value}` };
@@ -49,6 +57,25 @@ function makeScValHelpers() {
   return scVal;
 }
 
+type MockMapEntry = { key: { sym: () => { toString: () => string } }; val: unknown };
+
+/** Entries of an ScVal map built by the mocked `xdr.ScVal.scvMap`. */
+function mapEntries(scValMap: unknown): MockMapEntry[] {
+  return (scValMap as { __map: MockMapEntry[] }).__map;
+}
+
+function entryValue(entries: MockMapEntry[], name: string): unknown {
+  const entry = entries.find((e) => e.key.sym().toString() === name);
+  if (!entry) throw new Error(`missing map key ${name}`);
+  return entry.val;
+}
+
+function findCreateCall(mockServer: { simulateTransaction: jest.Mock }): unknown[] | undefined {
+  return mockServer.simulateTransaction.mock.calls.find(
+    ([tx]: [{ ops?: Array<{ method?: string }> }]) => tx.ops?.[0]?.method === "create_campaign",
+  );
+}
+
 function makeCampaignFixture() {
   const scVal = makeScValHelpers();
 
@@ -60,15 +87,18 @@ function makeCampaignFixture() {
     funding_goal: scVal.bigint(500_000_000),
     deadline: scVal.u64(1_900_000_000),
     amount_raised: scVal.bigint(125_000_000),
-    is_active: scVal.bool(true),
-    status: scVal.str("active"),
-    created_at: scVal.u64(1_800_000_000),
-    funds_withdrawn: scVal.bool(false),
-    is_cancelled: scVal.bool(false),
-    is_verified: scVal.bool(true),
+    // Active + validated. The contract stores lifecycle state as one bitfield.
+    status: scVal.u32(CAMPAIGN_ACTIVE | CAMPAIGN_VALIDATED),
     category: scVal.u32(Category.EducationalStartup),
     has_revenue_sharing: scVal.bool(true),
     revenue_share_percentage: scVal.u32(350),
+    first_creator: scVal.address(TEST_ADMIN),
+    pending_creator: scVal.void(),
+    pending_creator_expiry: scVal.u64(0),
+    max_contribution_per_user: scVal.bigint(0),
+    fee_override: scVal.u32(300),
+    deadline_extended: scVal.bool(false),
+    effective_amount_raised: scVal.bigint(125_000_000),
     tags: scVal.vec([scVal.str("education"), scVal.str("impact")]),
   });
 }
@@ -99,6 +129,16 @@ async function loadClient(options: LoadClientOptions) {
         const method = tx.ops?.[0]?.method;
         if (method === "get_campaign_count") return { result: { retval: scVal.u32(1) } };
         if (method === "get_campaign") return { result: { retval: campaignFixture } };
+        if (
+          method === "list_campaigns" ||
+          method === "get_campaigns_by_category" ||
+          method === "get_creator_campaigns"
+        ) {
+          // (Vec<Campaign>, next_cursor): a single short page holding one campaign.
+          return {
+            result: { retval: scVal.vec([scVal.vec([campaignFixture]), scVal.u32(1)]) },
+          };
+        }
         if (method === "get_contribution") return { result: { retval: scVal.bigint(100_000_000) } };
         if (method === "get_revenue_pool") return { result: { retval: scVal.bigint(500_000_000) } };
         if (method === "get_revenue_claimed")
@@ -120,6 +160,8 @@ async function loadClient(options: LoadClientOptions) {
     getTransaction: jest.fn().mockImplementation((hash: string) => ({
       status: "SUCCESS",
       txHash: hash,
+      // `create_campaign` returns the new campaign id as a u32.
+      returnValue: scVal.u32(42),
     })),
   };
 
@@ -196,6 +238,16 @@ async function loadClient(options: LoadClientOptions) {
     }
   }
 
+  class MockScMapEntry {
+    key: unknown;
+    val: unknown;
+
+    constructor(init: { key: unknown; val: unknown }) {
+      this.key = init.key;
+      this.val = init.val;
+    }
+  }
+
   const stellarSdkMock = {
     BASE_FEE: "100",
     Account: MockAccount,
@@ -235,7 +287,13 @@ async function loadClient(options: LoadClientOptions) {
         }),
       })),
     },
-    xdr: {},
+    xdr: {
+      ScVal: {
+        scvSymbol: (value: string) => scVal.symbol(value),
+        scvMap: (entries: unknown[]) => ({ __map: entries, toXDR: () => `map:${entries.length}` }),
+      },
+      ScMapEntry: MockScMapEntry,
+    },
     __campaignFixture: campaignFixture,
   };
 
@@ -285,7 +343,10 @@ describe("contractClient", () => {
       0,
       ["tag-a", "tag-b"],
     );
-    expect(createdTx).toBe("mock_tx_create_campaign");
+    expect(createdTx).toEqual({
+      txHash: "mock_tx_create_campaign",
+      campaignId: beforeCount + 1,
+    });
     expect(await module.getCampaignCount()).toBe(beforeCount + 1);
 
     expect(await module.getCampaign(1)).not.toBeNull();
@@ -332,6 +393,26 @@ describe("contractClient", () => {
       }),
     );
     expect(decoded.tags).toEqual(["education", "impact"]);
+
+    // Lifecycle state comes from the `status` bitfield (ACTIVE | VALIDATED here).
+    expect(decoded).toEqual(
+      expect.objectContaining({
+        status: "verified",
+        is_active: true,
+        is_verified: true,
+        is_cancelled: false,
+        funds_withdrawn: false,
+        first_creator: TEST_ADMIN,
+        pending_creator: null,
+        pending_creator_expiry: 0,
+        max_contribution_per_user: BigInt(0),
+        fee_override: 300,
+        deadline_extended: false,
+        effective_amount_raised: BigInt(125_000_000),
+      }),
+    );
+    // The contract does not store a creation time.
+    expect(decoded.created_at).toBeUndefined();
   });
 
   it("createCampaign encodes tags into the off-chain POH_EXT blob on the non-mock path", async () => {
@@ -355,16 +436,115 @@ describe("contractClient", () => {
     expect(createCall).toBeDefined();
 
     const [tx] = createCall as [{ ops: Array<{ args: unknown[] }> }];
-    const descriptionScVal = tx.ops[0].args[2] as { str: () => { toString: () => string } };
-    const finalDescription = descriptionScVal.str().toString();
+    const entries = mapEntries(tx.ops[0].args[0]);
+    const description = entryValue(entries, "description") as {
+      str: () => { toString: () => string };
+    };
+    const finalDescription = description.str().toString();
 
     expect(finalDescription).toContain("===POH_EXT===");
     const ext = JSON.parse(finalDescription.split("===POH_EXT===\n")[1]);
     expect(ext.tags).toEqual(["alpha", "beta"]);
 
-    // The contract itself never receives tags as a direct argument — it only
-    // accepts the 8 fields the issue's schema lists.
-    expect(tx.ops[0].args).toHaveLength(8);
+    // Tags travel in the description blob because CreateCampaignParams has no field for them.
+    expect(tx.ops[0].args).toHaveLength(1);
+  });
+
+  it("createCampaign sends one CreateCampaignParams struct with sorted keys and the per-wallet cap", async () => {
+    const { module, mockServer } = await loadClient({ useMocks: false });
+
+    await module.createCampaign(
+      TEST_USER,
+      "Struct campaign",
+      "Description",
+      BigInt(1_000_000_000),
+      30,
+      Category.Learner,
+      false,
+      0,
+      [],
+      BigInt(2_500_000_000),
+    );
+
+    const [tx] = findCreateCall(mockServer) as [{ ops: Array<{ args: unknown[] }> }];
+    const entries = mapEntries(tx.ops[0].args[0]);
+
+    // Soroban requires struct map keys in sorted order.
+    expect(entries.map((entry) => entry.key.sym().toString())).toEqual([
+      "category",
+      "creator",
+      "description",
+      "duration_days",
+      "funding_goal",
+      "has_revenue_sharing",
+      "max_contribution_per_user",
+      "revenue_share_percentage",
+      "title",
+    ]);
+    expect(entryValue(entries, "max_contribution_per_user")).toEqual({
+      __bigint: BigInt(2_500_000_000),
+      toXDR: expect.any(Function),
+    });
+  });
+
+  it("createCampaign defaults the per-wallet cap to 0, the contract's no-cap sentinel", async () => {
+    const { module, mockServer } = await loadClient({ useMocks: false });
+
+    await module.createCampaign(
+      TEST_USER,
+      "Uncapped campaign",
+      "Description",
+      BigInt(1_000_000_000),
+      30,
+      Category.Learner,
+      false,
+      0,
+      [],
+    );
+
+    const [tx] = findCreateCall(mockServer) as [{ ops: Array<{ args: unknown[] }> }];
+    const cap = entryValue(mapEntries(tx.ops[0].args[0]), "max_contribution_per_user") as {
+      __bigint: bigint;
+    };
+    expect(cap.__bigint).toBe(BigInt(0));
+  });
+
+  it("createCampaign returns the campaign id the contract returned", async () => {
+    const { module } = await loadClient({ useMocks: false });
+
+    const result = await module.createCampaign(
+      TEST_USER,
+      "Id campaign",
+      "Description",
+      BigInt(1_000_000_000),
+      30,
+      Category.Learner,
+      false,
+      0,
+      [],
+    );
+
+    expect(result).toEqual({ txHash: "hash-1", campaignId: 42 });
+  });
+
+  it("createCampaign rejects a negative per-wallet cap before simulating", async () => {
+    const { module, mockServer } = await loadClient({ useMocks: false });
+
+    await expect(
+      module.createCampaign(
+        TEST_USER,
+        "Negative cap",
+        "Description",
+        BigInt(1_000_000_000),
+        30,
+        Category.Learner,
+        false,
+        0,
+        [],
+        BigInt(-1),
+      ),
+    ).rejects.toThrow();
+    expect(mockServer.simulateTransaction).not.toHaveBeenCalled();
   });
 
   it("rejects campaign creation before simulation when the creator account does not exist", async () => {
@@ -418,14 +598,18 @@ describe("contractClient", () => {
       funding_goal: scVal.bigint(500_000_000),
       deadline: scVal.u64(1_900_000_000),
       amount_raised: scVal.bigint(0),
-      is_active: scVal.bool(true),
-      created_at: scVal.u64(1_800_000_000),
-      funds_withdrawn: scVal.bool(false),
-      is_cancelled: scVal.bool(false),
-      is_verified: scVal.bool(false),
+      // Active only: no validated, cancelled or succeeded bits.
+      status: scVal.u32(CAMPAIGN_ACTIVE),
       category: scVal.u32(Category.Publisher),
       has_revenue_sharing: scVal.bool(false),
       revenue_share_percentage: scVal.u32(0),
+      first_creator: scVal.address(TEST_ADMIN),
+      pending_creator: scVal.void(),
+      pending_creator_expiry: scVal.u64(0),
+      max_contribution_per_user: scVal.bigint(0),
+      fee_override: scVal.void(),
+      deadline_extended: scVal.bool(false),
+      effective_amount_raised: scVal.bigint(0),
       // Deliberately no `tags` field, matching the real contract's schema.
     });
 
@@ -454,28 +638,166 @@ describe("contractClient", () => {
     await expect(module.getCampaignCount()).rejects.toThrow("fetch failed");
   });
 
-  it("listCampaigns drops a page member whose fetch rejects instead of failing the whole page", async () => {
-    const { module, mockServer, stellarSdkMock } = await loadClient({ useMocks: false });
-    const scVal = makeScValHelpers();
+  describe("paginated reads (no N-way fan-out)", () => {
+    type Call = { method?: string; args?: Array<{ u32?: () => number }> };
 
-    mockServer.simulateTransaction.mockImplementation(
-      (tx: { ops?: Array<{ method?: string; args?: unknown[] }> }) => {
+    function methodsCalled(mockServer: { simulateTransaction: jest.Mock }): string[] {
+      return mockServer.simulateTransaction.mock.calls.map(
+        ([tx]: [{ ops?: Call[] }]) => tx.ops?.[0]?.method ?? "",
+      );
+    }
+
+    function pageOf(
+      scVal: ReturnType<typeof makeScValHelpers>,
+      fixture: unknown,
+      n: number,
+      next: number,
+    ) {
+      return {
+        result: {
+          retval: scVal.vec([scVal.vec(Array.from({ length: n }, () => fixture)), scVal.u32(next)]),
+        },
+      };
+    }
+
+    it("listCampaigns issues exactly one list_campaigns view per page", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+
+      const page = await module.listCampaigns({ cursor: 1, limit: 20 });
+
+      expect(methodsCalled(mockServer)).toEqual(["list_campaigns"]);
+      expect(page.campaigns).toHaveLength(1);
+      // Short page => the listing is exhausted.
+      expect(page.nextCursor).toBeNull();
+    });
+
+    it("passes an exclusive id cursor and caps the limit at LIST_MAX_LIMIT", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+
+      await module.listCampaigns({ cursor: 51, limit: 500 });
+
+      const [tx] = mockServer.simulateTransaction.mock.calls[0] as [{ ops?: Call[] }];
+      expect(tx.ops?.[0]?.args?.[0]?.u32?.()).toBe(50);
+      expect(tx.ops?.[0]?.args?.[1]?.u32?.()).toBe(50);
+    });
+
+    it("advances the cursor while pages are full", async () => {
+      const { module, mockServer, stellarSdkMock } = await loadClient({ useMocks: false });
+      const scVal = makeScValHelpers();
+      mockServer.simulateTransaction.mockImplementation(() =>
+        pageOf(scVal, stellarSdkMock.__campaignFixture, 2, 2),
+      );
+
+      const page = await module.listCampaigns({ cursor: 1, limit: 2 });
+
+      expect(page.nextCursor).toBe(3);
+    });
+
+    it("routes category and creator filters to the contract indexes", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+
+      await module.listCampaigns({ category: Category.Educator, limit: 10 });
+      await module.listCampaigns({ creator: TEST_ADMIN, limit: 10 });
+
+      expect(methodsCalled(mockServer)).toEqual([
+        "get_campaigns_by_category",
+        "get_creator_campaigns",
+      ]);
+    });
+
+    it("loading N campaigns costs ceil(N / 50) calls, never N", async () => {
+      const { module, mockServer, stellarSdkMock } = await loadClient({ useMocks: false });
+      const scVal = makeScValHelpers();
+      const total = 120;
+      mockServer.simulateTransaction.mockImplementation((tx: { ops?: Call[] }) => {
         const op = tx.ops?.[0];
-        if (op?.method === "get_campaign_count") return { result: { retval: scVal.u32(3) } };
-        if (op?.method === "get_campaign") {
-          const id = (op.args?.[0] as { u32: () => number }).u32();
-          if (id === 2) throw new Error("simulated RPC blip for campaign 2");
-          return { result: { retval: stellarSdkMock.__campaignFixture } };
-        }
-        return { result: { retval: null } };
-      },
-    );
+        const start = op?.args?.[0]?.u32?.() ?? 0;
+        const n = Math.min(50, total - start);
+        return pageOf(scVal, stellarSdkMock.__campaignFixture, n, start + n);
+      });
 
-    const page = await module.listCampaigns({ cursor: 1, limit: 3 });
+      const all = await module.getAllCampaigns();
 
-    expect(page.campaigns.map((c) => c.id)).toEqual([7, 7]);
-    expect(page.campaigns).toHaveLength(2);
-    expect(page.nextCursor).toBeNull();
+      expect(all).toHaveLength(total);
+      const methods = methodsCalled(mockServer);
+      expect(methods).toHaveLength(Math.ceil(total / 50));
+      expect(new Set(methods)).toEqual(new Set(["list_campaigns"]));
+      expect(methods).not.toContain("get_campaign");
+    });
+
+    it("getPlatformStats reads counts from one get_platform_stats call", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+      const scVal = makeScValHelpers();
+      mockServer.simulateTransaction.mockImplementation(() => ({
+        result: {
+          retval: scVal.map({
+            total_campaigns: scVal.u32(42),
+            active_campaigns: scVal.u32(30),
+            verified_campaigns: scVal.u32(20),
+            cancelled_campaigns: scVal.u32(2),
+            total_amount_raised: scVal.bigint(9_000_000_000),
+            stats_are_partial: scVal.bool(false),
+          }),
+        },
+      }));
+
+      const stats = await module.getPlatformStats();
+
+      expect(stats.totalCampaigns).toBe(42);
+      expect(stats.totalAmountRaised).toBe(BigInt(9_000_000_000));
+      expect(methodsCalled(mockServer)).toEqual(["get_platform_stats"]);
+    });
+  });
+
+  describe("on-chain bookmarks and creator revenue claim", () => {
+    it("reads saved campaigns and the count from the contract", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+      const scVal = makeScValHelpers();
+      mockServer.simulateTransaction.mockImplementation(
+        (tx: { ops?: Array<{ method?: string }> }) => {
+          const method = tx.ops?.[0]?.method;
+          if (method === "get_saved_campaigns") {
+            return { result: { retval: scVal.vec([scVal.u32(3), scVal.u32(9)]) } };
+          }
+          if (method === "get_saved_campaigns_count") return { result: { retval: scVal.u32(2) } };
+          return { result: { retval: null } };
+        },
+      );
+
+      expect(await module.getSavedCampaigns(TEST_USER)).toEqual([3, 9]);
+      expect(await module.getSavedCampaignsCount(TEST_USER)).toBe(2);
+    });
+
+    it("mock mode enforces the bookmark limit and duplicate checks", async () => {
+      const { module } = await loadClient({ useMocks: true });
+
+      await module.saveCampaign(TEST_USER, 1);
+      await expect(module.saveCampaign(TEST_USER, 1)).rejects.toThrow(
+        "ContractErrors.CampaignAlreadyBookmarked",
+      );
+      await module.batchSaveCampaigns(TEST_USER, [2, 3, 4, 5, 6, 7, 8, 9, 10]);
+      expect(await module.getSavedCampaignsCount(TEST_USER)).toBe(module.MAX_BOOKMARKS_PER_WALLET);
+      await expect(module.saveCampaign(TEST_USER, 11)).rejects.toThrow(
+        "ContractErrors.BookmarkLimitReached",
+      );
+
+      await module.removeSavedCampaign(TEST_USER, 1);
+      expect(await module.getSavedCampaigns(TEST_USER)).not.toContain(1);
+      await module.clearSavedCampaigns(TEST_USER);
+      expect(await module.getSavedCampaigns(TEST_USER)).toEqual([]);
+    });
+
+    it("claimCreatorRevenue submits claim_creator_revenue for the campaign id", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+
+      const txHash = await module.claimCreatorRevenue(7, TEST_ADMIN);
+
+      expect(txHash).toMatch(/^hash-/);
+      const methods = mockServer.simulateTransaction.mock.calls.map(
+        ([tx]: [{ ops?: Array<{ method?: string }> }]) => tx.ops?.[0]?.method,
+      );
+      expect(methods).toContain("claim_creator_revenue");
+    });
   });
 
   it("non-mock branch runs core read/write flows with mocked SDK", async () => {
@@ -501,19 +823,18 @@ describe("contractClient", () => {
     expect(await module.getApprovalThresholdBps()).toBe(5000);
 
     expect(await module.init(TEST_ADMIN, TEST_USER, 300)).toMatch(/^hash-/);
-    expect(
-      await module.createCampaign(
-        TEST_USER,
-        "On-chain campaign",
-        "Description",
-        BigInt(1_000_000_000),
-        30,
-        Category.Learner,
-        false,
-        0,
-        ["alpha"],
-      ),
-    ).toMatch(/^hash-/);
+    const createdCampaign = await module.createCampaign(
+      TEST_USER,
+      "On-chain campaign",
+      "Description",
+      BigInt(1_000_000_000),
+      30,
+      Category.Learner,
+      false,
+      0,
+      ["alpha"],
+    );
+    expect(createdCampaign.txHash).toMatch(/^hash-/);
     expect(await module.contribute(1, TEST_USER, BigInt(50_000_000))).toMatch(/^hash-/);
     expect(await module.withdrawFunds(1)).toMatch(/^hash-/);
     expect(await module.cancelCampaign(1)).toMatch(/^hash-/);
@@ -596,6 +917,88 @@ describe("contractClient", () => {
       await module.getAdmin();
 
       expect(serverUrls).toHaveLength(2);
+    });
+  });
+
+  describe("RPC latency fallback", () => {
+    const PRIMARY = "https://example-rpc.invalid";
+    const FALLBACK = "https://fallback-rpc.invalid";
+
+    beforeEach(() => {
+      process.env.NEXT_PUBLIC_SOROBAN_RPC_FALLBACK_URL = FALLBACK;
+      process.env.NEXT_PUBLIC_RPC_LATENCY_THRESHOLD_MS = "50";
+      jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+      delete process.env.NEXT_PUBLIC_SOROBAN_RPC_FALLBACK_URL;
+      delete process.env.NEXT_PUBLIC_RPC_LATENCY_THRESHOLD_MS;
+      jest.restoreAllMocks();
+    });
+
+    function delayed<T>(value: T, ms: number): Promise<T> {
+      return new Promise((resolve) => setTimeout(() => resolve(value), ms));
+    }
+
+    it("retries on the fallback when the primary is slower than the threshold", async () => {
+      const { module, mockServer, serverUrls } = await loadClient({ useMocks: false });
+      const respond = mockServer.simulateTransaction.getMockImplementation()!;
+      mockServer.simulateTransaction.mockImplementationOnce((tx) => delayed(respond(tx), 200));
+
+      await expect(module.getAdmin()).resolves.toBe(TEST_ADMIN);
+
+      expect(serverUrls).toEqual([PRIMARY, FALLBACK]);
+      expect(module.getActiveRpcUrl()).toBe(FALLBACK);
+    });
+
+    it("keeps using the fallback for later calls without re-timing the primary", async () => {
+      const { module, mockServer, serverUrls } = await loadClient({ useMocks: false });
+      const respond = mockServer.simulateTransaction.getMockImplementation()!;
+      mockServer.simulateTransaction.mockImplementationOnce((tx) => delayed(respond(tx), 200));
+
+      await module.getAdmin();
+      await module.getPlatformFee();
+
+      expect(serverUrls).toEqual([PRIMARY, FALLBACK]);
+    });
+
+    it("switches immediately on a primary transport failure", async () => {
+      const { module, mockServer, serverUrls } = await loadClient({ useMocks: false });
+      mockServer.simulateTransaction.mockImplementationOnce(() => {
+        throw new TypeError("fetch failed");
+      });
+
+      const started = Date.now();
+      await expect(module.getAdmin()).resolves.toBe(TEST_ADMIN);
+
+      expect(Date.now() - started).toBeLessThan(400);
+      expect(serverUrls).toEqual([PRIMARY, FALLBACK]);
+    });
+
+    it("goes back to the primary once the retry window has passed", async () => {
+      const { module, mockServer, serverUrls } = await loadClient({ useMocks: false });
+      const respond = mockServer.simulateTransaction.getMockImplementation()!;
+      mockServer.simulateTransaction.mockImplementationOnce((tx) => delayed(respond(tx), 200));
+      await module.getAdmin();
+
+      const now = Date.now();
+      jest.spyOn(Date, "now").mockReturnValue(now + module.RPC_PRIMARY_RETRY_AFTER_MS + 1);
+      module.clearContractCallCache();
+      await module.getAdmin();
+
+      expect(module.getActiveRpcUrl()).toBe(PRIMARY);
+      expect(serverUrls).toEqual([PRIMARY, FALLBACK, PRIMARY]);
+    });
+
+    it("still surfaces contract errors as user-facing messages through the fallback", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+      mockServer.simulateTransaction.mockImplementation(() => {
+        throw new Error("Error(Contract, #6)");
+      });
+
+      await expect(module.getAdmin()).rejects.toThrow(
+        parseContractError(new Error("Error(Contract, #6)")),
+      );
     });
   });
 });

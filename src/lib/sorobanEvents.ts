@@ -84,6 +84,66 @@ export function sumContributionAmounts(events: ApiEventResponse[]): bigint {
   return events.reduce((total, event) => total + parseContributionAmount(event), BigInt(0));
 }
 
+/** Typed form of a decoded contract event payload. */
+export type DecodedContributionMadeEvent = {
+  type: "contribution_made";
+  campaignId: number;
+  contributor: string;
+  amount: bigint;
+};
+
+export type DecodedVoteCastEvent = {
+  type: "campaign_vote_cast";
+  campaignId: number;
+  voter: string;
+  approve: boolean;
+};
+
+export type DecodedContractEvent = DecodedContributionMadeEvent | DecodedVoteCastEvent;
+
+function topicAddressToString(scVal: StellarSdk.xdr.ScVal | undefined): string {
+  if (!scVal) return "";
+  try {
+    return String(StellarSdk.scValToNative(scVal));
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Decode a raw Soroban RPC event into a strongly typed object, dispatching on
+ * the event name in `topic[0]`. Returns `null` for events this client does not
+ * understand (or malformed ones), so callers can ignore foreign events without
+ * throwing.
+ */
+export function decodeContractEvent(event: ApiEventResponse): DecodedContractEvent | null {
+  if (!event.topic || event.topic.length < 2) return null;
+
+  const name = StellarSdk.scValToNative(event.topic[0]);
+  const campaignId = StellarSdk.scValToNative(event.topic[1]);
+  if (typeof campaignId !== "number") return null;
+
+  if (name === CONTRIBUTION_MADE_TOPIC) {
+    return {
+      type: "contribution_made",
+      campaignId,
+      contributor: topicAddressToString(event.topic[2]),
+      amount: parseContributionAmount(event),
+    };
+  }
+
+  if (name === VOTE_CAST_TOPIC) {
+    return {
+      type: "campaign_vote_cast",
+      campaignId,
+      voter: topicAddressToString(event.topic[2]),
+      approve: parseVoteCastApprove(event),
+    };
+  }
+
+  return null;
+}
+
 export interface FetchVoteCastEventsResult {
   events: ApiEventResponse[];
   cursor: string;
@@ -203,8 +263,9 @@ export function subscribeContributionMadeEvents(
 
       cursor = result.cursor;
 
+      // Empty successful polls also confirm that the live connection is healthy.
+      onEvents(result);
       if (result.events.length > 0) {
-        onEvents(result);
         backoffMs = idleIntervalMs;
         schedule(result.events.length >= CONTRIBUTION_EVENT_BATCH_LIMIT ? 0 : idleIntervalMs);
         return;

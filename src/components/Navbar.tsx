@@ -10,9 +10,11 @@ import { Link, usePathname } from "@/i18n/routing";
 import { useAdmin } from "@/hooks/useAdmin";
 import { formatAddress } from "@/lib/formatAddress";
 import LanguageSwitcher from "./LanguageSwitcher";
+import ContrastToggle from "./ContrastToggle";
 import NotificationBell from "./NotificationBell";
 import NotificationSettings from "./NotificationSettings";
 import { useCampaigns } from "@/hooks/useCampaigns";
+import { useSavedCampaignsCount } from "@/hooks/useSavedCampaigns";
 import { useContractVersion } from "@/hooks/useContractVersion";
 import { IS_MOCK_MODE } from "@/lib/runtimeEnv";
 
@@ -45,6 +47,7 @@ export default function Navbar() {
   const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
   const t = useTranslations("Common");
+  const savedCount = useSavedCampaignsCount();
   const { admin: adminAddress } = useAdmin();
   const { isMismatch, version, expectedVersion } = useContractVersion();
 
@@ -176,6 +179,15 @@ export default function Navbar() {
                       {pendingCount}
                     </span>
                   )}
+                  {link.href === "/profile" && savedCount > 0 && (
+                    <span
+                      data-testid="saved-count-badge"
+                      aria-label={`${savedCount} saved campaigns`}
+                      className="ms-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-bold text-white"
+                    >
+                      {savedCount}
+                    </span>
+                  )}
                 </span>
                 <span
                   className={`absolute bottom-1 start-4 end-4 h-0.5 bg-blue-500 transition-transform origin-left rtl:origin-right ${
@@ -207,6 +219,8 @@ export default function Navbar() {
           <LanguageSwitcher />
 
           <NotificationBell />
+
+          <ContrastToggle className="hidden md:inline-flex" />
 
           {isWalletConnected && <NotificationSettings />}
 
@@ -320,6 +334,14 @@ export default function Navbar() {
                               {pendingCount}
                             </span>
                           )}
+                          {link.href === "/profile" && savedCount > 0 && (
+                            <span
+                              aria-label={`${savedCount} saved campaigns`}
+                              className="ms-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-bold text-white"
+                            >
+                              {savedCount}
+                            </span>
+                          )}
                         </span>
                       </Link>
                     </li>
@@ -327,6 +349,8 @@ export default function Navbar() {
                 })}
               </ul>
             </nav>
+
+            <ContrastToggle className="w-full justify-center md:hidden" />
 
             {isWalletConnected && (
               <Link

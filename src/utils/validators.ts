@@ -52,6 +52,13 @@ export function validateRevenueShare(bps: number): void {
   }
 }
 
+/** `0` is the contract's explicit "no cap" sentinel; only negative values are rejected. */
+export function validateMaxContributionPerUser(cap: bigint): void {
+  if (cap < BigInt(0)) {
+    throw new ContractErrorException(ContractError.ValidationFailed);
+  }
+}
+
 export function validateContributorNotCreator(contributor: string, creator: string): void {
   if (contributor && creator && contributor === creator) {
     throw new ContractErrorException(ContractError.NotAuthorized);

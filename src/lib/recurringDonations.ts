@@ -7,6 +7,15 @@
  * No funds move without an explicit signature.
  *
  * Schedules live in `localStorage` keyed by wallet, so they are per-device.
+ *
+ * Lifecycle: `createSchedule` after the first donation settles (that donation is
+ * cycle 1) → `dueSchedules` finds schedules whose `nextRunAt` has passed →
+ * `markCycleCompleted` after the donor signs the next cycle → `cancelSchedule` or
+ * `removeSchedule`. Today the donation modal only calls `createSchedule`; nothing
+ * yet surfaces due schedules.
+ *
+ * Month arithmetic is UTC and clamps to the end of short months. Storage errors
+ * are swallowed on purpose. Full guide: `docs/RECURRING_DONATIONS.md`.
  */
 
 export const RECURRING_STORAGE_KEY = "poh_recurring_donations";
@@ -56,6 +65,7 @@ export function addMonths(timestampMs: number, months: number): number {
   return result.getTime();
 }
 
+/** When the next cycle is due, one `interval` after `from` (Unix ms). */
 export function nextRunAfter(from: number, interval: RecurringInterval): number {
   return addMonths(from, INTERVAL_MONTHS[interval]);
 }
@@ -85,6 +95,11 @@ export function listSchedules(walletAddress: string): RecurringDonation[] {
   return readAll().filter((s) => s.walletAddress === walletAddress);
 }
 
+/**
+ * Create a schedule after its first donation has settled. That donation counts as
+ * cycle 1, so `nextRunAt` is one interval away. Replaces any existing schedule for
+ * the same wallet and campaign.
+ */
 export function createSchedule(input: {
   walletAddress: string;
   campaignId: number;

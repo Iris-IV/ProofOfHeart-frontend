@@ -92,4 +92,41 @@ describe("useCampaigns", () => {
     await waitFor(() => expect(result.current.campaigns).toHaveLength(2));
     expect(mockGetAllCampaigns).toHaveBeenCalledTimes(2);
   });
+
+  it("does not retry when the contract rejects the query", async () => {
+    mockGetAllCampaigns.mockRejectedValue(new Error("ContractErrors.ContractPaused"));
+
+    const { result } = renderHook(() => useCampaigns(), { wrapper: createWrapper() });
+
+    await waitFor(() => expect(result.current.error).toBe("ContractErrors.ContractPaused"));
+    expect(mockGetAllCampaigns).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries once after a transport failure and recovers", async () => {
+    mockGetAllCampaigns
+      .mockRejectedValueOnce(new Error("fetch failed"))
+      .mockResolvedValueOnce([makeCampaign(1)]);
+
+    const { result } = renderHook(() => useCampaigns(), { wrapper: createWrapper() });
+
+    await waitFor(() => expect(result.current.campaigns).toHaveLength(1), { timeout: 3000 });
+    expect(result.current.error).toBeNull();
+    expect(mockGetAllCampaigns).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the last campaign list visible when a refresh fails", async () => {
+    mockGetAllCampaigns
+      .mockResolvedValueOnce([makeCampaign(1), makeCampaign(2)])
+      .mockRejectedValueOnce(new Error("ContractErrors.ContractPaused"));
+
+    const { result } = renderHook(() => useCampaigns(), { wrapper: createWrapper() });
+    await waitFor(() => expect(result.current.campaigns).toHaveLength(2));
+
+    await act(async () => {
+      result.current.refetch();
+    });
+
+    await waitFor(() => expect(result.current.error).toBe("ContractErrors.ContractPaused"));
+    expect(result.current.campaigns).toHaveLength(2);
+  });
 });

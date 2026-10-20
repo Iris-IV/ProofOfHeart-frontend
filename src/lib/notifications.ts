@@ -5,6 +5,42 @@ import { normalizeAddress } from "./stellar";
 import { getArray, setArray } from "./localStorageStore";
 import { AppNotificationSchema, NotificationFeedResponseSchema, parseWithOrNull } from "./schemas";
 
+// ARIA live region for screen reader announcements
+let ariaLiveRegion: HTMLElement | null = null;
+
+function getAriaLiveRegion(): HTMLElement {
+  if (!ariaLiveRegion && typeof document !== "undefined") {
+    ariaLiveRegion = document.getElementById("notification-announcer") ||
+      createAriaLiveRegion();
+  }
+  return ariaLiveRegion!;
+}
+
+function createAriaLiveRegion(): HTMLElement {
+  const region = document.createElement("div");
+  region.id = "notification-announcer";
+  region.setAttribute("aria-live", "polite");
+  region.setAttribute("aria-atomic", "true");
+  region.className = "sr-only";
+  region.style.position = "absolute";
+  region.style.left = "-10000px";
+  region.style.width = "1px";
+  region.style.height = "1px";
+  region.style.overflow = "hidden";
+  document.body.appendChild(region);
+  return region;
+}
+
+export function announceNotification(message: string): void {
+  try {
+    const region = getAriaLiveRegion();
+    region.textContent = message;
+  } catch {
+    // Graceful fallback for SSR or missing DOM
+    console.log("[a11y announcement]", message);
+  }
+}
+
 export type NotificationEventType =
   | "contribution_confirmed"
   | "campaign_funded"

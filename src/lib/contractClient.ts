@@ -24,12 +24,21 @@ import {
   recordObservabilitySuccess,
 } from "./observability";
 import { appendWalletTransaction } from "./transactionLog";
-import { Campaign, Category, deriveStatus, CampaignStatus, Milestone } from "../types";
+import { decodeCampaignStatusFlags } from "./campaignStatusFlags";
+import {
+  Campaign,
+  Category,
+  deriveStatus,
+  CampaignStatus,
+  Milestone,
+  ContractMilestone,
+} from "../types";
 import {
   parseContractError,
   getContractErrorCode,
   normalizeContractError,
   ContractError,
+  ContractErrorException,
 } from "../utils/contractErrors";
 import { wrapFreighterError } from "../utils/freighterErrors";
 import {
@@ -38,6 +47,7 @@ import {
   validateDuration,
   validateRevenueShare,
   validateAmount,
+  validateMaxContributionPerUser,
 } from "../utils/validators";
 
 // ---------------------------------------------------------------------------
@@ -50,6 +60,16 @@ const SOROBAN_RPC_URL =
   process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ??
   process.env.NEXT_PUBLIC_RPC_URL ??
   "https://soroban-testnet.stellar.org";
+
+/** Secondary node used while the primary is slow or unreachable. Optional. */
+const SOROBAN_RPC_FALLBACK_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_FALLBACK_URL?.trim() ?? "";
+
+/** A primary call slower than this switches traffic to the fallback node. */
+export const RPC_LATENCY_THRESHOLD_MS =
+  Number(process.env.NEXT_PUBLIC_RPC_LATENCY_THRESHOLD_MS) || 3_000;
+
+/** How long the fallback is used before the primary is tried again. */
+export const RPC_PRIMARY_RETRY_AFTER_MS = 60_000;
 
 const CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? process.env.NEXT_PUBLIC_CONTRACT_ID ?? "";
@@ -80,12 +100,48 @@ export interface TransactionLifecycleOptions {
 // ---------------------------------------------------------------------------
 
 let _server: rpc.Server | null = null;
+let _serverUrl: string | null = null;
+let primaryDegradedUntil = 0;
+
+/** The RPC endpoint calls currently go to (the fallback while the primary is degraded). */
+export function getActiveRpcUrl(): string {
+  return SOROBAN_RPC_FALLBACK_URL && Date.now() < primaryDegradedUntil
+    ? SOROBAN_RPC_FALLBACK_URL
+    : SOROBAN_RPC_URL;
+}
 
 function getServer(): rpc.Server {
-  if (!_server) {
-    _server = new rpc.Server(SOROBAN_RPC_URL);
+  const url = getActiveRpcUrl();
+  if (!_server || _serverUrl !== url) {
+    _server = new rpc.Server(url);
+    _serverUrl = url;
   }
   return _server;
+}
+
+function markPrimaryDegraded(reason: string): void {
+  primaryDegradedUntil = Date.now() + RPC_PRIMARY_RETRY_AFTER_MS;
+  console.warn(
+    `[contractClient] Primary Soroban RPC ${reason}; using fallback ${SOROBAN_RPC_FALLBACK_URL} for ${RPC_PRIMARY_RETRY_AFTER_MS / 1000}s.`,
+  );
+}
+
+class RpcLatencyExceededError extends Error {
+  constructor() {
+    super(`Soroban RPC did not respond within ${RPC_LATENCY_THRESHOLD_MS}ms`);
+    this.name = "RpcLatencyExceededError";
+  }
+}
+
+/** Rejects with RpcLatencyExceededError if `call` takes longer than the threshold. */
+function withLatencyBudget<T>(call: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const budget = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new RpcLatencyExceededError()), RPC_LATENCY_THRESHOLD_MS);
+  });
+  // The slow call keeps running; swallow its eventual outcome.
+  call.catch(() => undefined);
+  return Promise.race([call, budget]).finally(() => clearTimeout(timer));
 }
 
 // ---------------------------------------------------------------------------
@@ -163,6 +219,8 @@ export function clearContractCacheByMethod(method: string): void {
  */
 export function resetRpcServer(): void {
   _server = null;
+  _serverUrl = null;
+  primaryDegradedUntil = 0;
 }
 
 /**
@@ -221,6 +279,11 @@ function isConnectionError(error: unknown): boolean {
  * the cached client unusable for every later call, so it is dropped before the
  * error propagates and the next call reconnects. Errors the node returned
  * (contract errors, bad requests) keep the client in place.
+ *
+ * When NEXT_PUBLIC_SOROBAN_RPC_FALLBACK_URL is set, a primary call that is
+ * slower than RPC_LATENCY_THRESHOLD_MS or fails at the transport level is
+ * retried on the fallback right away, and the fallback stays active for
+ * RPC_PRIMARY_RETRY_AFTER_MS before the primary is tried again.
  */
 const RPC_RETRY_DELAYS_MS = [500, 1_000, 2_000];
 
@@ -228,16 +291,26 @@ async function withRpcServer<T>(fn: (server: rpc.Server) => Promise<T>): Promise
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= RPC_RETRY_DELAYS_MS.length; attempt += 1) {
+    const onPrimary = Boolean(SOROBAN_RPC_FALLBACK_URL) && getActiveRpcUrl() === SOROBAN_RPC_URL;
     const server = getServer();
     try {
-      return await fn(server);
+      return await (onPrimary ? withLatencyBudget(Promise.resolve(fn(server))) : fn(server));
     } catch (error) {
       lastError = error;
+      if (onPrimary && error instanceof RpcLatencyExceededError) {
+        markPrimaryDegraded(`exceeded ${RPC_LATENCY_THRESHOLD_MS}ms`);
+        continue;
+      }
       if (!isConnectionError(error)) {
         throw error;
       }
+      if (onPrimary) {
+        markPrimaryDegraded("is unreachable");
+        continue;
+      }
 
-      resetRpcServer();
+      _server = null;
+      _serverUrl = null;
       const retryDelay = RPC_RETRY_DELAYS_MS[attempt];
       if (retryDelay === undefined) {
         throw error;
@@ -522,10 +595,10 @@ function decodeCampaign(val: xdr.ScVal): Campaign {
   const funding_goal = scValToBigInt(fields["funding_goal"]);
   const deadline = Number(fields["deadline"].u64());
   const amount_raised = scValToBigInt(fields["amount_raised"]);
-  const is_active = fields["is_active"].b();
-  const funds_withdrawn = fields["funds_withdrawn"].b();
-  const is_cancelled = fields["is_cancelled"].b();
-  const is_verified = fields["is_verified"].b();
+  // The contract stores lifecycle state as one `status` bitfield, not booleans.
+  const { is_active, funds_withdrawn, is_cancelled, is_verified } = decodeCampaignStatusFlags(
+    fields["status"].u32(),
+  );
 
   let rawDescription = fields["description"].str().toString();
   let cover_image_url: string | undefined = undefined;
@@ -533,9 +606,7 @@ function decodeCampaign(val: xdr.ScVal): Campaign {
   // Contract fields carry no `tags`; fall back to that key only for older/mock
   // records that may have stored it directly, otherwise default to [].
   let tags: string[] = fields["tags"]
-    ? fields["tags"]
-        .vec()
-        .map((v: xdr.ScVal) => v.str().toString())
+    ? fields["tags"].vec().map((v: xdr.ScVal) => v.str().toString())
     : [];
 
   const EXT_MARKER = "\n\n===POH_EXT===\n";
@@ -579,17 +650,40 @@ function decodeCampaign(val: xdr.ScVal): Campaign {
       amount_raised,
       funding_goal,
     }),
-    created_at: Number(fields["created_at"].u64()),
     funds_withdrawn,
     is_cancelled,
     is_verified,
     category: fields["category"].u32() as Category,
     has_revenue_sharing: fields["has_revenue_sharing"].b(),
     revenue_share_percentage: fields["revenue_share_percentage"].u32(),
+    first_creator: Address.fromScVal(fields["first_creator"]).toString(),
+    pending_creator: decodeOptionalAddress(fields["pending_creator"]),
+    pending_creator_expiry: Number(fields["pending_creator_expiry"].u64()),
+    max_contribution_per_user: scValToBigInt(fields["max_contribution_per_user"]),
+    fee_override: decodeOptionalU32(fields["fee_override"]),
+    deadline_extended: fields["deadline_extended"].b(),
+    effective_amount_raised: scValToBigInt(fields["effective_amount_raised"]),
     tags,
     cover_image_url,
     milestones,
   };
+}
+
+/**
+ * Soroban encodes `Option<T>` as void for `None` and as the bare value for
+ * `Some`. Both helpers take the field's ScVal so an absent field still reads
+ * as `None`.
+ */
+function isScValVoid(val: xdr.ScVal | undefined): boolean {
+  return !val || val.switch().name === "scvVoid";
+}
+
+function decodeOptionalAddress(val: xdr.ScVal | undefined): string | null {
+  return isScValVoid(val) ? null : Address.fromScVal(val as xdr.ScVal).toString();
+}
+
+function decodeOptionalU32(val: xdr.ScVal | undefined): number | null {
+  return isScValVoid(val) ? null : (val as xdr.ScVal).u32();
 }
 
 // Exposed for targeted unit tests of XDR decoding behavior.
@@ -784,42 +878,150 @@ export const DEFAULT_CAMPAIGNS_PAGE_SIZE: number =
     ? Number(process.env.NEXT_PUBLIC_CAMPAIGNS_PAGE_SIZE)
     : 20;
 
+/** Contract-enforced page size cap (LIST_MAX_LIMIT) for every paginated view. */
+export const LIST_MAX_LIMIT = 50;
+
 export interface CampaignsPage {
   campaigns: Campaign[];
-  /** Id of the next campaign to fetch, or null once every campaign has been returned. */
+  /**
+   * Opaque cursor for the next page, or null once the listing is exhausted.
+   * Unfiltered listings use "next campaign id" (1-based); category/creator
+   * listings use a zero-based position in that index. Seed the first page with
+   * `initialCampaignsCursor(filters)`.
+   */
   nextCursor: number | null;
 }
 
+export interface ListCampaignsParams {
+  cursor?: number;
+  limit?: number;
+  /** Uses the contract's `get_campaigns_by_category` index. */
+  category?: Category;
+  /** Uses the contract's `get_creator_campaigns` index. */
+  creator?: string;
+}
+
+/** First cursor to pass to `listCampaigns` for a given filter combination. */
+export function initialCampaignsCursor(filters: { category?: Category; creator?: string } = {}) {
+  return filters.category !== undefined || filters.creator ? 0 : 1;
+}
+
+/** Decodes a `(Vec<Campaign>, u32)` page tuple returned by the paginated views. */
+function decodeCampaignPage(result: xdr.ScVal | null): { campaigns: Campaign[]; next: number } {
+  const [page, next] = result?.vec() ?? [];
+  if (!page || !next) return { campaigns: [], next: 0 };
+  const campaigns = (page.vec() ?? []).map((c) => decodeCampaign(c));
+  return { campaigns, next: next.u32() };
+}
+
 /**
- * Cursor-paginated campaign listing (issue #593). The contract only exposes
- * sequential numeric ids (`get_campaign_count` + `get_campaign(id)`), so the
- * cursor here is simply "the next id to fetch" — opaque to the caller, which
- * is all `useInfiniteQuery` needs.
+ * Cursor-paginated campaign listing. Each call issues exactly ONE contract
+ * view (never one per campaign):
+ *  - no filter        -> `list_campaigns(start, limit)`
+ *  - `category`       -> `get_campaigns_by_category(category, offset, limit)`
+ *  - `creator`        -> `get_creator_campaigns(creator, start, limit)`
+ * Loading N visible campaigns therefore costs at most ceil(N / LIST_MAX_LIMIT)
+ * RPC simulations.
  */
 export async function listCampaigns({
-  cursor = 1,
+  cursor,
   limit = DEFAULT_CAMPAIGNS_PAGE_SIZE,
-}: { cursor?: number; limit?: number } = {}): Promise<CampaignsPage> {
+  category,
+  creator,
+}: ListCampaignsParams = {}): Promise<CampaignsPage> {
+  const filtered = category !== undefined || !!creator;
+  const position = cursor ?? initialCampaignsCursor({ category, creator });
+  const pageLimit = Math.max(1, Math.min(limit, LIST_MAX_LIMIT));
+
   if (USE_MOCKS) {
-    const startIndex = cursor - 1;
-    const campaigns = MOCK_CAMPAIGNS.slice(startIndex, startIndex + limit);
-    const nextCursor = startIndex + limit < MOCK_CAMPAIGNS.length ? cursor + limit : null;
+    const source = filtered
+      ? MOCK_CAMPAIGNS.filter(
+          (c) =>
+            (category === undefined || c.category === category) &&
+            (!creator || c.creator === creator),
+        )
+      : MOCK_CAMPAIGNS;
+    const startIndex = filtered ? position : position - 1;
+    const campaigns = source.slice(startIndex, startIndex + pageLimit);
+    const nextCursor = startIndex + pageLimit < source.length ? position + pageLimit : null;
     return { campaigns, nextCursor };
   }
+
   try {
-    const count = await getCampaignCount();
-    const lastIdExclusive = Math.min(cursor + limit, count + 1);
-    const ids = Array.from({ length: Math.max(0, lastIdExclusive - cursor) }, (_, i) => cursor + i);
-    const results = await Promise.allSettled(ids.map((id) => getCampaign(id)));
-    const campaigns = results.flatMap((r) => {
-      if (r.status === "rejected") {
-        console.warn("Failed to fetch campaign for listCampaigns page", r.reason);
-        return [];
-      }
-      return r.value !== null ? [r.value] : [];
-    });
-    const nextCursor = cursor + limit <= count ? cursor + limit : null;
-    return { campaigns, nextCursor };
+    if (!filtered) {
+      // list_campaigns' `start` is an exclusive id cursor; our cursor is "next id".
+      const result = await invokeViewMethod("list_campaigns", [
+        nativeToScVal(Math.max(0, position - 1), { type: "u32" }),
+        nativeToScVal(pageLimit, { type: "u32" }),
+      ]);
+      const { campaigns, next } = decodeCampaignPage(result);
+      const exhausted = campaigns.length < pageLimit || next + 1 <= position;
+      return { campaigns, nextCursor: exhausted ? null : next + 1 };
+    }
+
+    const result = creator
+      ? await invokeViewMethod("get_creator_campaigns", [
+          new Address(creator).toScVal(),
+          nativeToScVal(position, { type: "u32" }),
+          nativeToScVal(pageLimit, { type: "u32" }),
+        ])
+      : await invokeViewMethod("get_campaigns_by_category", [
+          nativeToScVal(category, { type: "u32" }),
+          nativeToScVal(position, { type: "u32" }),
+          nativeToScVal(pageLimit, { type: "u32" }),
+        ]);
+    const { campaigns: indexed, next } = decodeCampaignPage(result);
+    // The creator index has no category filter; narrow it client-side when both are set.
+    const campaigns =
+      creator && category !== undefined ? indexed.filter((c) => c.category === category) : indexed;
+    const exhausted = indexed.length < pageLimit || next <= position;
+    return { campaigns, nextCursor: exhausted ? null : next };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export interface ContractPlatformStats {
+  totalCampaigns: number;
+  activeCampaigns: number;
+  verifiedCampaigns: number;
+  cancelledCampaigns: number;
+  totalAmountRaised: bigint;
+  /** True when the contract flags its counters as inconsistent. */
+  statsArePartial: boolean;
+}
+
+/** Aggregate counts from `get_platform_stats` — one RPC call, no campaign scan. */
+export async function getPlatformStats(): Promise<ContractPlatformStats> {
+  if (USE_MOCKS) {
+    return {
+      totalCampaigns: MOCK_CAMPAIGNS.length,
+      activeCampaigns: MOCK_CAMPAIGNS.filter((c) => c.is_active && !c.is_cancelled).length,
+      verifiedCampaigns: MOCK_CAMPAIGNS.filter((c) => c.is_verified).length,
+      cancelledCampaigns: MOCK_CAMPAIGNS.filter((c) => c.is_cancelled).length,
+      totalAmountRaised: MOCK_CAMPAIGNS.reduce((sum, c) => sum + c.amount_raised, BigInt(0)),
+      statsArePartial: false,
+    };
+  }
+  try {
+    const result = await invokeViewMethod("get_platform_stats");
+    const map = result?.map();
+    if (!map) throw new Error("Expected ScVal map for PlatformStats.");
+    const fields: Record<string, xdr.ScVal> = {};
+    for (const entry of map) fields[entry.key().sym().toString()] = entry.val();
+    const field = (name: string): xdr.ScVal => {
+      const value = fields[name];
+      if (!value) throw new Error(`PlatformStats is missing ${name}.`);
+      return value;
+    };
+    return {
+      totalCampaigns: field("total_campaigns").u32(),
+      activeCampaigns: field("active_campaigns").u32(),
+      verifiedCampaigns: field("verified_campaigns").u32(),
+      cancelledCampaigns: field("cancelled_campaigns").u32(),
+      totalAmountRaised: scValToBigInt(field("total_amount_raised")),
+      statsArePartial: fields["stats_are_partial"]?.b() ?? false,
+    };
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -849,15 +1051,21 @@ export async function getCampaign(id: number): Promise<Campaign | null> {
   }
 }
 
+/**
+ * Loads every campaign by walking `list_campaigns` in LIST_MAX_LIMIT pages
+ * (sequentially) — ceil(N / 50) RPC calls instead of one per campaign.
+ * Prefer `listCampaigns` / `useInfiniteCampaigns` for user-facing lists.
+ */
 export async function getAllCampaigns(): Promise<Campaign[]> {
   if (USE_MOCKS) return [...MOCK_CAMPAIGNS];
-  try {
-    const count = await getCampaignCount();
-    const results = await Promise.all(Array.from({ length: count }, (_, i) => getCampaign(i + 1)));
-    return results.filter((c): c is Campaign => c !== null);
-  } catch (err) {
-    throw new Error(parseContractError(err));
+  const all: Campaign[] = [];
+  let cursor: number | null = 1;
+  while (cursor !== null) {
+    const page: CampaignsPage = await listCampaigns({ cursor, limit: LIST_MAX_LIMIT });
+    all.push(...page.campaigns);
+    cursor = page.nextCursor;
   }
+  return all;
 }
 
 export async function getContribution(campaignId: number, contributor: string): Promise<bigint> {
@@ -914,6 +1122,143 @@ export async function getRevenueClaimed(campaignId: number, contributor: string)
     ]);
     if (!result) return BigInt(0);
     return scValToBigInt(result);
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Milestone payout plan (#783 / issue #1672)
+// Mirrors the on-chain Milestone struct: { id, description, payout_bps, verified }
+// ---------------------------------------------------------------------------
+
+export const BPS_DENOMINATOR = 10_000;
+const BPS_CEIL_OFFSET = 9_999;
+
+function decodeMilestone(val: xdr.ScVal): ContractMilestone {
+  const map = val.map();
+  if (!map) throw new Error("Expected ScVal map for Milestone.");
+  const fields: Record<string, xdr.ScVal> = {};
+  for (const entry of map) {
+    const key = entry.key().sym().toString();
+    fields[key] = entry.val();
+  }
+  return {
+    id: fields["id"].u32(),
+    description: fields["description"].str().toString(),
+    payout_bps: fields["payout_bps"].u32(),
+    verified: fields["verified"].b(),
+  };
+}
+
+/**
+ * Fetch the on-chain milestone payout plan for `campaignId`.
+ * Returns an empty array when the creator has not set a plan.
+ */
+export async function getMilestones(campaignId: number): Promise<ContractMilestone[]> {
+  if (USE_MOCKS) return [];
+  try {
+    const result = await invokeViewMethod("get_milestones", [
+      nativeToScVal(campaignId, { type: "u32" }),
+    ]);
+    return result?.vec()?.map(decodeMilestone) ?? [];
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Whether milestone `milestoneId` of `campaignId` has already claimed its payout.
+ */
+export async function isMilestoneClaimed(
+  campaignId: number,
+  milestoneId: number,
+): Promise<boolean> {
+  if (USE_MOCKS) return false;
+  try {
+    const result = await invokeViewMethod("is_milestone_claimed", [
+      nativeToScVal(campaignId, { type: "u32" }),
+      nativeToScVal(milestoneId, { type: "u32" }),
+    ]);
+    return result?.b() ?? false;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * What the creator would receive when claiming a milestone of `payoutBps` out
+ * of `amountRaised`, before any dust absorption on the final milestone.
+ * Mirrors the contract's release math (ceil fee, floor claim).
+ */
+export function expectedMilestonePayout(
+  amountRaised: bigint,
+  payoutBps: number,
+  feeBps: number,
+): bigint {
+  const feeTotal =
+    (amountRaised * BigInt(feeBps) + BigInt(BPS_CEIL_OFFSET)) / BigInt(BPS_DENOMINATOR);
+  const totalAfterFee = amountRaised - feeTotal;
+  return (totalAfterFee * BigInt(payoutBps)) / BigInt(BPS_DENOMINATOR);
+}
+
+/**
+ * Admin: mark milestone `milestoneId` of `campaignId` as verified.
+ * Returns the transaction hash on success.
+ */
+export async function verifyMilestone(
+  campaignId: number,
+  milestoneId: number,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_verify_milestone", options);
+  const callerAddress = await getSignerAddress();
+  const contract = new Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    "verify_milestone",
+    nativeToScVal(campaignId, { type: "u32" }),
+    nativeToScVal(milestoneId, { type: "u32" }),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "verify_milestone",
+    });
+    // The plan's verified flags changed.
+    clearContractCacheByMethod("get_milestones");
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Creator: claim the already-verified milestone `milestoneId` of `campaignId`.
+ * Returns the transaction hash on success.
+ */
+export async function claimMilestone(
+  campaignId: number,
+  milestoneId: number,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_claim_milestone", options);
+  const callerAddress = await getSignerAddress();
+  const contract = new Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    "claim_milestone",
+    nativeToScVal(campaignId, { type: "u32" }),
+    nativeToScVal(milestoneId, { type: "u32" }),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "claim_milestone",
+    });
+    // Claimed flag and (on the final claim) campaign status both changed.
+    clearContractCacheByMethod("get_milestones");
+    clearContractCacheByMethod("is_milestone_claimed");
+    clearContractCacheByMethod("get_campaign");
+    return txResult.txHash;
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -1018,6 +1363,51 @@ export async function init(
   }
 }
 
+export interface CreateCampaignResult {
+  txHash: string;
+  /** Id the contract assigned to the new campaign, or `null` if it could not be read. */
+  campaignId: number | null;
+}
+
+interface CreateCampaignFields {
+  creator: string;
+  title: string;
+  description: string;
+  fundingGoal: bigint;
+  durationDays: number;
+  category: Category;
+  hasRevenueSharing: boolean;
+  revenueSharePercentage: number;
+  maxContributionPerUser: bigint;
+}
+
+/**
+ * Encode the arguments of `create_campaign`. The contract takes one
+ * `CreateCampaignParams` struct, which is an ScVal map keyed by symbols. Soroban
+ * requires struct map keys in sorted order, so the keys are sorted here.
+ */
+function encodeCreateCampaignParams(params: CreateCampaignFields): xdr.ScVal {
+  const fields: [string, xdr.ScVal][] = [
+    ["creator", new Address(params.creator).toScVal()],
+    ["title", nativeToScVal(params.title, { type: "string" })],
+    ["description", nativeToScVal(params.description, { type: "string" })],
+    ["funding_goal", nativeToScVal(params.fundingGoal, { type: "i128" })],
+    ["duration_days", nativeToScVal(params.durationDays, { type: "u64" })],
+    ["category", nativeToScVal(params.category, { type: "u32" })],
+    ["has_revenue_sharing", nativeToScVal(params.hasRevenueSharing, { type: "bool" })],
+    ["revenue_share_percentage", nativeToScVal(params.revenueSharePercentage, { type: "u32" })],
+    [
+      "max_contribution_per_user",
+      nativeToScVal(params.maxContributionPerUser, { type: "i128" }),
+    ],
+  ];
+  fields.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+
+  return xdr.ScVal.scvMap(
+    fields.map(([key, val]) => new xdr.ScMapEntry({ key: xdr.ScVal.scvSymbol(key), val })),
+  );
+}
+
 export async function createCampaign(
   creator: string,
   title: string,
@@ -1028,30 +1418,48 @@ export async function createCampaign(
   hasRevenueSharing: boolean,
   revenueSharePercentage: number,
   tags: string[],
+  maxContributionPerUser: bigint = BigInt(0),
   options?: TransactionLifecycleOptions & { coverImageUrl?: string; milestones?: Milestone[] },
-): Promise<string> {
+): Promise<CreateCampaignResult> {
   validateStellarAddress(creator);
   validateFundingGoal(fundingGoal);
   validateDuration(durationDays);
   if (hasRevenueSharing) {
     validateRevenueShare(revenueSharePercentage);
   }
+  validateMaxContributionPerUser(maxContributionPerUser);
 
-  // Tags, cover images, and milestones are now stored on-chain as native fields
-  // instead of being embedded in the description blob. This ensures they are
-  // properly validated and accessible through the contract interface.
-  // For backward compatibility, old campaigns with blob data can still be parsed
-  // by decodeCampaign().
-  const finalDescription = description;
+  // The contract's `CreateCampaignParams` has no field for tags, cover images
+  // or milestones, so they travel in a `===POH_EXT===` suffix on the description.
+  // decodeCampaign() reads the suffix back out. Without this, creating a campaign
+  // silently drops them.
+  let finalDescription = description;
+  if (
+    options?.coverImageUrl ||
+    (options?.milestones && options.milestones.length > 0) ||
+    tags.length > 0
+  ) {
+    const ext = {
+      tags,
+      coverImageUrl: options?.coverImageUrl,
+      milestones: options?.milestones?.map((m) => ({
+        targetAmount: m.targetAmount.toString(),
+        description: m.description,
+      })),
+    };
+    finalDescription = `${description}\n\n===POH_EXT===\n${JSON.stringify(ext)}`;
+  }
 
   if (USE_MOCKS) {
     const txHash = emitMockLifecycle("mock_tx_create_campaign", options);
+    const campaignId = MOCK_CAMPAIGNS.length + 1;
     MOCK_CAMPAIGNS.push(
       makeMockCampaign({
-        id: MOCK_CAMPAIGNS.length + 1,
+        id: campaignId,
         creator,
         title,
-        description: finalDescription,
+        // Mock campaigns hold tags, cover and milestones as fields, not in a blob.
+        description,
         funding_goal: fundingGoal,
         deadline: MOCK_TIMESTAMP_SEC + durationDays * 86400,
         amount_raised: BigInt(0),
@@ -1066,23 +1474,27 @@ export async function createCampaign(
         tags,
         cover_image_url: options?.coverImageUrl,
         milestones: options?.milestones,
+        max_contribution_per_user: maxContributionPerUser,
       }),
     );
-    return txHash;
+    return { txHash, campaignId };
   }
 
   await requireExistingCreatorAccount(creator);
   const contract = new Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     "create_campaign",
-    new Address(creator).toScVal(),
-    nativeToScVal(title, { type: "string" }),
-    nativeToScVal(finalDescription, { type: "string" }),
-    nativeToScVal(fundingGoal, { type: "i128" }),
-    nativeToScVal(durationDays, { type: "u64" }),
-    nativeToScVal(category, { type: "u32" }),
-    nativeToScVal(hasRevenueSharing, { type: "bool" }),
-    nativeToScVal(revenueSharePercentage, { type: "u32" }),
+    encodeCreateCampaignParams({
+      creator,
+      title,
+      description: finalDescription,
+      fundingGoal,
+      durationDays,
+      category,
+      hasRevenueSharing,
+      revenueSharePercentage,
+      maxContributionPerUser,
+    }),
   );
   try {
     const txResult = await buildAndSubmitTransaction(creator, op, {
@@ -1094,7 +1506,12 @@ export async function createCampaign(
     clearContractCacheByMethod("get_campaign_count");
     clearContractCacheByMethod("get_campaign");
 
-    return txResult.txHash;
+    // `create_campaign` returns the new campaign's id as `Result<u32, Error>`.
+    const returned = txResult.returnValue;
+    return {
+      txHash: txResult.txHash,
+      campaignId: returned ? returned.u32() : null,
+    };
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
     const errorCode = getContractErrorCode(err);
@@ -1359,6 +1776,189 @@ export async function claimRevenue(
   }
 }
 
+/**
+ * Creator withdraws their retained share of the revenue pool. The contract
+ * rejects with NoFundsToWithdraw once the entitlement is fully claimed.
+ */
+export async function claimCreatorRevenue(
+  campaignId: number,
+  creator: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(creator);
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_claim_creator_revenue", options);
+  const contract = new Contract(CONTRACT_ADDRESS);
+  const op = contract.call("claim_creator_revenue", nativeToScVal(campaignId, { type: "u32" }));
+  try {
+    const txResult = await buildAndSubmitTransaction(creator, op, {
+      ...options,
+      operation: "claim_creator_revenue",
+    });
+    clearContractCacheByMethod("get_revenue_pool");
+    clearContractCacheByMethod("get_revenue_claimed");
+    appendWalletTransaction({
+      walletAddress: creator,
+      campaignId,
+      action: "claim_revenue",
+      txHash: txResult.txHash,
+    });
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// On-chain bookmarks (issue #1674)
+// ---------------------------------------------------------------------------
+
+/** Contract limit (MAX_BOOKMARKS_PER_WALLET) on a wallet's saved list. */
+export const MAX_BOOKMARKS_PER_WALLET = 10;
+
+const mockBookmarks = new Map<string, number[]>();
+
+function clearBookmarkCache(): void {
+  clearContractCacheByMethod("get_saved_campaigns");
+  clearContractCacheByMethod("get_saved_campaigns_count");
+}
+
+async function submitBookmarkTx(
+  user: string,
+  method: string,
+  args: xdr.ScVal[],
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  const contract = new Contract(CONTRACT_ADDRESS);
+  try {
+    const txResult = await buildAndSubmitTransaction(user, contract.call(method, ...args), {
+      ...options,
+      operation: method,
+    });
+    clearBookmarkCache();
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/** Campaign ids the wallet has saved (the contract already drops cancelled campaigns). */
+export async function getSavedCampaigns(user: string): Promise<number[]> {
+  if (USE_MOCKS) return [...(mockBookmarks.get(user) ?? [])];
+  try {
+    const result = await invokeViewMethod("get_saved_campaigns", [new Address(user).toScVal()]);
+    return (result?.vec() ?? []).map((v) => v.u32());
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function getSavedCampaignsCount(user: string): Promise<number> {
+  if (USE_MOCKS) return (mockBookmarks.get(user) ?? []).length;
+  try {
+    const result = await invokeViewMethod("get_saved_campaigns_count", [
+      new Address(user).toScVal(),
+    ]);
+    return result ? result.u32() : 0;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function saveCampaign(
+  user: string,
+  campaignId: number,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(user);
+  if (USE_MOCKS) {
+    const saved = mockBookmarks.get(user) ?? [];
+    if (saved.includes(campaignId))
+      throw new Error(
+        parseContractError(new ContractErrorException(ContractError.CampaignAlreadyBookmarked)),
+      );
+    if (saved.length >= MAX_BOOKMARKS_PER_WALLET)
+      throw new Error(
+        parseContractError(new ContractErrorException(ContractError.BookmarkLimitReached)),
+      );
+    mockBookmarks.set(user, [...saved, campaignId]);
+    return emitMockLifecycle("mock_tx_save_campaign", options);
+  }
+  return submitBookmarkTx(
+    user,
+    "save_campaign",
+    [new Address(user).toScVal(), nativeToScVal(campaignId, { type: "u32" })],
+    options,
+  );
+}
+
+/** Saves many campaigns atomically in one transaction (used for local → wallet migration). */
+export async function batchSaveCampaigns(
+  user: string,
+  campaignIds: number[],
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(user);
+  if (USE_MOCKS) {
+    const saved = mockBookmarks.get(user) ?? [];
+    const merged = [...saved];
+    for (const id of campaignIds) {
+      if (merged.includes(id))
+        throw new Error(
+          parseContractError(new ContractErrorException(ContractError.CampaignAlreadyBookmarked)),
+        );
+      if (merged.length >= MAX_BOOKMARKS_PER_WALLET)
+        throw new Error(
+          parseContractError(new ContractErrorException(ContractError.BookmarkLimitReached)),
+        );
+      merged.push(id);
+    }
+    mockBookmarks.set(user, merged);
+    return emitMockLifecycle("mock_tx_batch_save_campaigns", options);
+  }
+  return submitBookmarkTx(
+    user,
+    "batch_save_campaigns",
+    [
+      new Address(user).toScVal(),
+      xdr.ScVal.scvVec(campaignIds.map((id) => nativeToScVal(id, { type: "u32" }))),
+    ],
+    options,
+  );
+}
+
+export async function removeSavedCampaign(
+  user: string,
+  campaignId: number,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(user);
+  if (USE_MOCKS) {
+    mockBookmarks.set(
+      user,
+      (mockBookmarks.get(user) ?? []).filter((id) => id !== campaignId),
+    );
+    return emitMockLifecycle("mock_tx_remove_saved_campaign", options);
+  }
+  return submitBookmarkTx(
+    user,
+    "remove_saved_campaign",
+    [new Address(user).toScVal(), nativeToScVal(campaignId, { type: "u32" })],
+    options,
+  );
+}
+
+export async function clearSavedCampaigns(
+  user: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(user);
+  if (USE_MOCKS) {
+    mockBookmarks.set(user, []);
+    return emitMockLifecycle("mock_tx_clear_saved_campaigns", options);
+  }
+  return submitBookmarkTx(user, "clear_saved_campaigns", [new Address(user).toScVal()], options);
+}
+
 export async function verifyCampaign(
   campaignId: number,
   options?: TransactionLifecycleOptions,
@@ -1500,10 +2100,7 @@ export async function getApprovalThresholdBps(): Promise<number> {
  * the frontend computes that hash with `hashComment` in `./commentHash`.
  * Unknown hashes read as not censured.
  */
-export async function isCommentCensured(
-  campaignId: number,
-  commentHash: string,
-): Promise<boolean> {
+export async function isCommentCensured(campaignId: number, commentHash: string): Promise<boolean> {
   if (USE_MOCKS) return false;
   try {
     const result = await invokeViewMethod("is_comment_censured", [

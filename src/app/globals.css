@@ -26,6 +26,26 @@ body {
   font-family: var(--font-sans);
 }
 
+@keyframes campaign-empty-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .campaign-empty-state {
+    animation: campaign-empty-enter 120ms ease-out both;
+  }
+  .contribution-ticker-entry {
+    animation: campaign-empty-enter 120ms ease-out both;
+  }
+}
+
 /* =========================
    Blob Animation Fix
    ========================= */
@@ -135,6 +155,133 @@ body {
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900;
 }
 
+/* Campaign roadmap: the rail follows the reading order, including on phones. */
+.milestone-roadmap {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.milestone-stop {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.milestone-stop:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 2rem;
+  bottom: -1rem;
+  inset-inline-start: calc(1rem - 1px);
+  width: 2px;
+  background: var(--color-zinc-300);
+}
+
+.milestone-stop[data-complete="true"]::after {
+  background: var(--color-success);
+}
+
+.milestone-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.milestone-progress {
+  display: block;
+  height: 0.5rem;
+  appearance: none;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-zinc-200);
+  accent-color: var(--color-brand);
+}
+
+.milestone-progress::-webkit-progress-bar {
+  background: var(--color-zinc-200);
+}
+
+.milestone-progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: var(--color-brand);
+}
+
+.milestone-progress::-moz-progress-bar {
+  border-radius: 999px;
+  background: var(--color-brand);
+}
+
+.milestone-roadmap summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Keep the primary contribution action above the mobile safe area and keyboard. */
+.contribution-sheet {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 2rem);
+  animation: contribution-enter 140ms ease-out;
+}
+
+.contribution-content {
+  animation: contribution-feedback 140ms ease-out;
+}
+
+.contribution-footer {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+@keyframes contribution-enter {
+  from {
+    transform: translateY(1rem);
+    opacity: 0.7;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes contribution-feedback {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 639px) {
+  .contribution-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .contribution-sheet {
+    max-width: none;
+    max-height: calc(100dvh - max(0.5rem, env(safe-area-inset-top)));
+    border-bottom: 0;
+    border-radius: var(--radius-surface) var(--radius-surface) 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contribution-sheet,
+  .contribution-content {
+    animation: none;
+  }
+}
+
 /* Custom utility utilities for responsive accessibility */
 @utility text-muted {
   @apply text-zinc-500 dark:text-zinc-300;
@@ -150,4 +297,73 @@ body {
   .min-h-screen {
     min-height: 100dvh;
   }
+}
+
+/* Daylight mode deliberately removes translucency and decorative gradients.
+   Legacy palette utilities are covered as well as the shared token primitives. */
+html[data-contrast="high"] {
+  color-scheme: light;
+  --background: #ffffff;
+  --foreground: #000000;
+  --color-brand: #000000;
+  --color-brand-strong: #000000;
+  --color-accent: #000000;
+  --color-muted: #000000;
+  --color-muted-strong: #000000;
+  --color-success: #000000;
+  --color-warning: #000000;
+  --color-danger: #000000;
+  --color-info: #000000;
+}
+
+html[data-contrast="high"] :where(body, body *) {
+  color: var(--foreground) !important;
+  background-color: var(--background) !important;
+  background-image: none !important;
+  border-color: var(--foreground) !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+html[data-contrast="high"] :where(p, span, a, label, button, input, select, textarea) {
+  opacity: 1;
+}
+
+html[data-contrast="high"] :where(input, textarea)::placeholder {
+  color: var(--foreground);
+  opacity: 1;
+}
+
+html[data-contrast="high"] :where(button, input, select, textarea, [role="dialog"]) {
+  border: 2px solid var(--foreground);
+}
+
+html[data-contrast="high"] :where(a) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+html[data-contrast="high"] :where(:focus-visible) {
+  outline: 3px solid var(--foreground) !important;
+  outline-offset: 3px;
+}
+
+html[data-contrast="high"] :where([aria-pressed="true"], [aria-selected="true"]) {
+  outline: 2px solid var(--foreground);
+  outline-offset: -5px;
+  font-weight: 700;
+}
+
+html[data-contrast="high"] :where(:disabled) {
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+html[data-contrast="high"] [role="progressbar"] {
+  outline: 1px solid var(--foreground);
+}
+
+html[data-contrast="high"] [role="progressbar"] > * {
+  background-color: var(--foreground) !important;
 }

@@ -37,3 +37,58 @@ export function getEstimatedContributeNetworkFeeXlm(): number {
 export function formatEstimatedNetworkFeeXlm(maximumFractionDigits = 7): string {
   return formatAmount(getEstimatedContributeNetworkFeeStroops(), "en", { maximumFractionDigits });
 }
+
+/** CPU/memory resource limits requested for a Soroban transaction. */
+export interface SorobanResourceLimits {
+  /** CPU instructions. */
+  instructions: number;
+  /** Bytes of ledger entries read. */
+  readBytes: number;
+  /** Bytes of ledger entries written. */
+  writeBytes: number;
+}
+
+/**
+ * Conservative fallback used when a simulation footprint is unavailable, so a
+ * complex multi-operation transaction still has room to execute instead of
+ * failing on the default (minimal) limits.
+ */
+export const DEFAULT_SOROBAN_RESOURCE_LIMITS: SorobanResourceLimits = {
+  instructions: 2_000_000,
+  readBytes: 20_000,
+  writeBytes: 10_000,
+};
+
+/** Headroom added on top of the simulated footprint (10%). */
+export const RESOURCE_LIMIT_HEADROOM_MULTIPLIER = 1.1;
+
+/**
+ * Derive the CPU/memory resource limits to request from a transaction's
+ * simulated footprint (`SorobanTransactionData.resources()`), padding each
+ * dimension by a safety multiplier so the transaction survives a footprint
+ * that grows slightly between simulation and execution. Missing or non-finite
+ * dimensions fall back to {@link DEFAULT_SOROBAN_RESOURCE_LIMITS}.
+ *
+ * Pre-simulating (via `simulateTransaction`) and feeding its footprint here is
+ * preferred over the flat defaults for complex multi-operation transactions.
+ */
+export function computeResourceLimits(
+  footprint: Partial<SorobanResourceLimits>,
+  options?: { headroomMultiplier?: number; fallback?: SorobanResourceLimits },
+): SorobanResourceLimits {
+  const fallback = options?.fallback ?? DEFAULT_SOROBAN_RESOURCE_LIMITS;
+  const headroom = options?.headroomMultiplier ?? RESOURCE_LIMIT_HEADROOM_MULTIPLIER;
+
+  const scale = (simulated: number | undefined, fallbackValue: number): number => {
+    if (typeof simulated !== "number" || !Number.isFinite(simulated) || simulated <= 0) {
+      return fallbackValue;
+    }
+    return Math.ceil(simulated * headroom);
+  };
+
+  return {
+    instructions: scale(footprint.instructions, fallback.instructions),
+    readBytes: scale(footprint.readBytes, fallback.readBytes),
+    writeBytes: scale(footprint.writeBytes, fallback.writeBytes),
+  };
+}

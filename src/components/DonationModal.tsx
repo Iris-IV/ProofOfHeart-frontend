@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, memo, useRef } from "react";
+import { useState, useEffect, memo, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import Modal from "./ui/Modal";
 import { contribute, estimateContributeNetworkFee, getCampaign } from "../lib/contractClient";
@@ -9,7 +9,6 @@ import { Campaign, basisPointsToPercentage } from "../types";
 import { xlmToStroops, stroopsToXlmNumber } from "@/lib/stellarAmount";
 import { formatAmount } from "@/lib/formatters";
 import { useToast } from "./ToastProvider";
-import { getEnabledTokens, SUPPORTED_TOKENS, type TokenSymbol } from "@/lib/supportedTokens";
 import { useWallet } from "./WalletContext";
 import { usePlatformFee } from "../hooks/usePlatformFee";
 import { parseContractError } from "../utils/contractErrors";
@@ -60,7 +59,6 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
   );
 
   const [amount, setAmount] = useState("");
-  const [selectedToken, setSelectedToken] = useState<TokenSymbol>("USDC");
   const [step, setStep] = useState<Step>("input");
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +67,12 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
 
   const amountInputRef = useRef<HTMLInputElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (step === "input") amountInputRef.current?.focus();
+    else statusRef.current?.focus();
+  }, [step]);
 
   const [liveCampaign, setLiveCampaign] = useState<Campaign>(campaign);
 
@@ -296,8 +300,14 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
       closeOnOverlayClick={step !== "pending"}
       ariaLabelledBy="donation-modal-title"
       initialFocusRef={amountInputRef}
+      className="contribution-sheet"
+      overlayClassName="contribution-overlay"
     >
-      <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
+      <div
+        aria-hidden="true"
+        className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-zinc-300 sm:hidden dark:bg-zinc-600"
+      />
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3 sm:px-6 dark:border-zinc-700">
         <h2
           id="donation-modal-title"
           className="text-lg font-semibold text-zinc-900 dark:text-zinc-50"
@@ -308,14 +318,17 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
           <button
             onClick={onClose}
             aria-label={t("closeAriaLabel")}
-            className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors text-2xl leading-none"
+            className="tap-target focus-ring flex w-11 shrink-0 items-center justify-center rounded-control text-2xl leading-none text-zinc-600 transition-colors duration-[140ms] hover:bg-zinc-100 motion-reduce:transition-none dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
             ×
           </button>
         )}
       </div>
 
-      <div className="px-6 py-5 space-y-5">
+      <div
+        key={step}
+        className="contribution-content min-h-0 space-y-5 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6"
+      >
         <p className="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2">{campaign.title}</p>
 
         <div>
@@ -336,7 +349,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
           >
             <div
               aria-hidden="true"
-              className="bg-linear-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
+              className="bg-linear-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-[width] duration-[140ms] motion-reduce:transition-none"
               style={{ width: `${displayedPct}%` }}
             />
           </div>
@@ -392,31 +405,32 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
                 </span>
               </div>
 
-              {/* Multi-token donation selector */}
-              <div className="mb-4 mt-4">
-                <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
-                  Donation Token
-                </p>
-                <div className="flex gap-2 flex-wrap">
-                  {getEnabledTokens().map((tok) => (
+              <fieldset className="mt-3">
+                <legend className="mb-2 text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  {t("quickAmounts")}
+                </legend>
+                <div className="flex flex-wrap gap-2">
+                  {[5, 10, 25, 50].map((preset) => (
                     <button
-                      key={tok.symbol}
+                      key={preset}
                       type="button"
-                      onClick={() => setSelectedToken(tok.symbol)}
-                      className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${selectedToken === tok.symbol ? "bg-blue-600 text-white border-blue-600" : "bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-600 hover:border-blue-300"}`}
-                      aria-pressed={selectedToken === tok.symbol}
+                      disabled={
+                        BigInt(preset) * 10_000_000n >
+                        liveCampaign.funding_goal - liveCampaign.amount_raised
+                      }
+                      aria-pressed={amount === String(preset)}
+                      onClick={() => {
+                        setAmount(String(preset));
+                        setError(null);
+                        trackEnterAmount(campaign.id);
+                      }}
+                      className={`tap-target focus-ring min-w-12 flex-1 rounded-control border px-3 py-2 text-sm font-semibold transition-colors duration-[140ms] disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none ${amount === String(preset) ? "border-brand bg-brand-subtle text-brand dark:bg-blue-950 dark:text-blue-200" : "border-zinc-300 text-zinc-700 hover:bg-brand/5 dark:border-zinc-600 dark:text-zinc-200"}`}
                     >
-                      <span className="mr-1">{tok.icon}</span>
-                      {tok.symbol}
+                      {preset} XLM
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-zinc-500 mt-1">
-                  Donate in{" "}
-                  {SUPPORTED_TOKENS.find((t) => t.symbol === selectedToken)?.name ?? selectedToken}.
-                  Support for multiple Stellar tokens.
-                </p>
-              </div>
+              </fieldset>
               {amountError && (
                 <p id="donation-amount-error" role="alert" className="mt-1 text-xs text-red-500">
                   {formatError(amountError)}
@@ -516,14 +530,6 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
               <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("networkFeeNote")}</p>
             )}
 
-            <button
-              onClick={handleDonate}
-              disabled={!publicKey || !validation.valid}
-              className="w-full py-3 bg-linear-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200"
-            >
-              {amountNum > 0 ? t("donateAmount", { amount: amountNum }) : t("donate")}
-            </button>
-
             {/* #637 — fiat on-ramp so non-crypto users can buy XLM to donate.
                 Renders nothing unless a provider is configured via env vars. */}
             <FiatOnrampButton
@@ -534,7 +540,12 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
         )}
 
         {step === "pending" && (
-          <div className="flex flex-col items-center gap-4 py-6">
+          <div
+            ref={statusRef}
+            tabIndex={-1}
+            role="status"
+            className="focus-ring flex flex-col items-center gap-4 rounded-control py-6"
+          >
             <div className="w-12 h-12 rounded-full border-4 border-blue-500 border-t-transparent motion-safe:animate-spin" />
             <p className="text-zinc-600 dark:text-zinc-400 text-sm text-center">
               {txPhase === "signing"
@@ -547,7 +558,12 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
         )}
 
         {step === "confirmed" && (
-          <div className="flex flex-col items-center gap-4 py-4 text-center">
+          <div
+            ref={statusRef}
+            tabIndex={-1}
+            role="status"
+            className="focus-ring flex flex-col items-center gap-4 rounded-control py-4 text-center"
+          >
             <div className="w-14 h-14 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-3xl">
               ✓
             </div>
@@ -598,6 +614,20 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
           </div>
         )}
       </div>
+      {step === "input" && (
+        <div className="contribution-footer shrink-0 border-t border-zinc-200 bg-white/95 px-4 pt-3 backdrop-blur-sm sm:px-6 dark:border-zinc-700 dark:bg-zinc-900/95">
+          <button
+            onClick={handleDonate}
+            disabled={!publicKey || !validation.valid}
+            className="tap-target focus-ring w-full rounded-control bg-linear-to-r from-brand to-accent py-3 font-semibold text-white transition-opacity duration-[140ms] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+          >
+            {amountNum > 0 ? t("donateAmount", { amount: amountNum }) : t("donate")}
+          </button>
+          <p className="mt-2 text-center text-xs text-zinc-600 dark:text-zinc-300">
+            {t("walletApproval")}
+          </p>
+        </div>
+      )}
     </Modal>
   );
 }

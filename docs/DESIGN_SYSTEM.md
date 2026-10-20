@@ -154,6 +154,22 @@ panels that fetch (comments, updates) stay unmounted until opened.
 
 ## Adoption
 
+### High contrast daylight mode
+
+The navigation offers a high contrast toggle (inside the menu on mobile).
+It is independent of the light/dark preference and restores that preference when
+disabled. `highContrast` in localStorage overrides `prefers-contrast: more`;
+without a stored choice, the system preference applies. The blocking theme script
+sets `data-contrast="high"` before hydration.
+
+High contrast mode uses opaque white surfaces, black text (21:1), explicit control
+borders, underlined links, and a three-pixel keyboard focus outline. It removes
+decorative gradients and blur, while retaining progress fills and pressed-state
+indicators. This palette exceeds the [WCAG enhanced text contrast target of
+7:1](https://www.w3.org/WAI/WCAG22/Understanding/contrast-enhanced.html).
+Palette contrast alone does not establish whole-page WCAG conformance; review
+images, charts, overlays, and new components in the browser as part of UI changes.
+
 The kit ships alongside the existing components rather than replacing them in
 one sweep — a repo-wide restyle would be unreviewable. Migrated so far:
 

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useCampaign } from "./useCampaign";
 import { useCampaignContributionEvents } from "./useCampaignContributionEvents";
 import type { Campaign } from "../types";
+import type { ContributionFeedEvent, ContributionFeedStatus } from "@/lib/contributionFeed";
 
 export interface UseLiveCampaignFundingResult {
   campaign: Campaign | null;
@@ -11,6 +12,8 @@ export interface UseLiveCampaignFundingResult {
   isLoading: boolean;
   error: string | null;
   refetch: () => void;
+  contributionEvents: ContributionFeedEvent[];
+  contributionStatus: ContributionFeedStatus;
 }
 
 /**
@@ -33,7 +36,7 @@ export function useLiveCampaignFunding(campaignId: number): UseLiveCampaignFundi
     setLiveAmountRaised((current) => (current ?? BigInt(0)) + delta);
   }, []);
 
-  useCampaignContributionEvents({
+  const stream = useCampaignContributionEvents({
     campaignId,
     enabled: Boolean(campaign),
     onContributions: handleContributions,
@@ -51,5 +54,7 @@ export function useLiveCampaignFunding(campaignId: number): UseLiveCampaignFundi
     isLoading,
     error,
     refetch,
+    contributionEvents: stream.events,
+    contributionStatus: stream.status,
   };
 }

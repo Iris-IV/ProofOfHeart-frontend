@@ -68,6 +68,7 @@ export function setNotificationPreferences(
 }
 
 export const THEME_STORAGE_KEY = "theme";
+export const HIGH_CONTRAST_STORAGE_KEY = "highContrast";
 export const LOCALE_STORAGE_KEY = "locale";
 export const LOCALE_COOKIE_NAME = "NEXT_LOCALE";
 export const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
@@ -103,6 +104,16 @@ export function hasStoredTheme(): boolean {
   return readStoredTheme() !== null;
 }
 
+export function resolveInitialHighContrast(): boolean {
+  const stored = getRawItem(HIGH_CONTRAST_STORAGE_KEY);
+  if (stored === "true" || stored === "false") return stored === "true";
+  return typeof window !== "undefined" && window.matchMedia("(prefers-contrast: more)").matches;
+}
+
+export function writeHighContrast(enabled: boolean): void {
+  setRawItem(HIGH_CONTRAST_STORAGE_KEY, String(enabled));
+}
+
 export function writeLocalePreference(locale: string): void {
   const normalized = locale.trim();
   if (!normalized) return;
@@ -126,18 +137,23 @@ export function readStoredLocale(): string | null {
 export function getThemeBlockingScript(): string {
   return `
     (function () {
+      let storedTheme = null;
+      let storedContrast = null;
       try {
         const storageKey = ${JSON.stringify(THEME_STORAGE_KEY)};
-        const storedTheme = window.localStorage.getItem(storageKey);
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        const isDark = storedTheme === "dark" || (!storedTheme && prefersDark);
-
-        if (isDark) {
-          document.documentElement.dataset.theme = "dark";
-        }
+        storedTheme = window.localStorage.getItem(storageKey);
+        storedContrast = window.localStorage.getItem(${JSON.stringify(HIGH_CONTRAST_STORAGE_KEY)});
       } catch {
         // Storage may be disabled or blocked. Graceful fallback.
       }
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const highContrast = storedContrast === "true" ||
+        (storedContrast !== "false" && window.matchMedia("(prefers-contrast: more)").matches);
+      const validTheme = storedTheme === "light" || storedTheme === "dark";
+      const isDark = !highContrast && (storedTheme === "dark" || (!validTheme && prefersDark));
+      document.documentElement.classList.toggle("dark", isDark);
+      document.documentElement.dataset.theme = isDark ? "dark" : "light";
+      document.documentElement.dataset.contrast = highContrast ? "high" : "standard";
     })();
   `;
 }

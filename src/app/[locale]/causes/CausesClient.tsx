@@ -11,6 +11,9 @@ import MapErrorBoundary from "@/components/MapErrorBoundary";
 import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
 import VirtualizedCauseGrid from "@/components/VirtualizedCauseGrid";
+import CampaignEmptyState from "@/components/CampaignEmptyState";
+import { Button } from "@/components/ui";
+import { Link } from "@/i18n/routing";
 import { useInfiniteCampaigns } from "@/hooks/useInfiniteCampaigns";
 import { useRouter } from "@/i18n/routing";
 
@@ -485,35 +488,42 @@ function CausesContent() {
   };
 
   const renderEmptyState = () => (
-    <div className="text-center py-20">
-      <div className="text-5xl mb-4">
-        {campaigns.length === 0 ? "📭" : debouncedSearch ? "🔍" : "🔎"}
-      </div>
-      <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-        {campaigns.length === 0
+    <CampaignEmptyState
+      variant={campaigns.length === 0 ? "campaigns" : "search"}
+      title={campaigns.length === 0
           ? t("noCausesYet")
           : debouncedSearch
             ? t("noSearchResults")
             : t("noCausesFound")}
-      </h2>
-      <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-        {campaigns.length === 0
+      description={campaigns.length === 0
           ? t("beFirstToSubmit")
           : debouncedSearch
             ? t("tryDifferentSearch")
             : t("tryDifferentKeyword")}
-      </p>
+      action={campaigns.length > 0 ? (
+        <Button onClick={clearFilters} className="duration-[120ms] motion-reduce:transition-none">
+          {t("clearAllFilters")}
+        </Button>
+      ) : (
+        <Link href="/causes/new" className="tap-target focus-ring inline-flex items-center rounded-control bg-brand px-5 py-2 text-sm font-semibold text-white transition-colors duration-[120ms] hover:bg-brand-strong motion-reduce:transition-none">
+          {t("createCampaign")}
+        </Link>
+      )}
+    >
       {campaigns.length > 0 && hasActiveFilters && suggestedCategories.length > 0 && (
         <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
           <span className="text-sm text-zinc-500 dark:text-zinc-400">
-            Try one of these categories:
+            {t("suggestedCategories")}
           </span>
           {suggestedCategories.map((cat) => (
-            <button
+            <Button
               key={cat}
               type="button"
               onClick={() => setCategory(String(cat))}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600"
+              aria-label={`${CATEGORY_LABELS[cat]} (${categoryCounts[cat]})`}
+              variant="secondary"
+              size="sm"
+              className="duration-[120ms] motion-reduce:transition-none"
             >
               <span aria-hidden="true">
                 {CATEGORY_ICONS[cat]} {CATEGORY_LABELS[cat]}
@@ -521,19 +531,11 @@ function CausesContent() {
               <span aria-hidden="true" className="tabular-nums text-xs font-semibold px-1.5 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300">
                 {categoryCounts[cat]}
               </span>
-            </button>
+            </Button>
           ))}
         </div>
       )}
-      {campaigns.length > 0 && (
-        <button
-          onClick={clearFilters}
-          className="px-6 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
-        >
-          {t("clearAllFilters")}
-        </button>
-      )}
-    </div>
+    </CampaignEmptyState>
   );
 
   // -------------------------------------------------------------------------

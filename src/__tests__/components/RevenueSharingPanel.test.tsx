@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import RevenueSharingPanel from "@/components/RevenueSharingPanel";
 import { useWallet } from "@/components/WalletContext";
-import { claimRevenue, depositRevenue } from "@/lib/contractClient";
+import { claimCreatorRevenue, claimRevenue, depositRevenue } from "@/lib/contractClient";
 import { useRevenueSharing } from "@/hooks/useRevenueSharing";
 import { Category, type Campaign } from "@/types";
 
@@ -22,6 +22,7 @@ jest.mock("@/hooks/useRevenueSharing", () => ({
 }));
 
 jest.mock("@/lib/contractClient", () => ({
+  claimCreatorRevenue: jest.fn(),
   claimRevenue: jest.fn(),
   depositRevenue: jest.fn(),
 }));
@@ -30,6 +31,9 @@ const mockUseWallet = useWallet as jest.MockedFunction<typeof useWallet>;
 const mockUseRevenueSharing = useRevenueSharing as jest.MockedFunction<typeof useRevenueSharing>;
 const mockDepositRevenue = depositRevenue as jest.MockedFunction<typeof depositRevenue>;
 const mockClaimRevenue = claimRevenue as jest.MockedFunction<typeof claimRevenue>;
+const mockClaimCreatorRevenue = claimCreatorRevenue as jest.MockedFunction<
+  typeof claimCreatorRevenue
+>;
 
 const CREATOR = "GCREATOR1111111111111111111111111111111111111111111111111";
 const CONTRIBUTOR = "GCONTRIBUTOR11111111111111111111111111111111111111111111";
@@ -89,6 +93,8 @@ describe("RevenueSharingPanel", () => {
     jest.clearAllMocks();
     mockDepositRevenue.mockResolvedValue("deposit-tx");
     mockClaimRevenue.mockResolvedValue("claim-tx");
+    mockClaimCreatorRevenue.mockResolvedValue("creator-claim-tx");
+    localStorage.clear();
     mockWallet(CONTRIBUTOR);
     mockRevenueSharing();
   });
@@ -141,6 +147,74 @@ describe("RevenueSharingPanel", () => {
         CONTRIBUTOR,
         expect.objectContaining({ onStatus: expect.any(Function) }),
       );
+    });
+  });
+
+  describe("creator revenue claim (#1675)", () => {
+    it("shows the creator their retained share: pool × (10,000 − share bps) / 10,000", () => {
+      mockWallet(CREATOR);
+      // pool 10 XLM, contributors get 10% => creator keeps 90% = 9 XLM
+      render(<RevenueSharingPanel campaign={makeCampaign()} />);
+
+      expect(screen.getByTestId("creator-claimable")).toHaveTextContent("9 XLM");
+      expect(screen.getByRole("button", { name: "Claim Creator Revenue" })).toBeEnabled();
+    });
+
+    it("calls claimCreatorRevenue with the campaign id and creator wallet, then refetches", async () => {
+      const refetch = jest.fn();
+      mockRevenueSharing({ refetch });
+      mockWallet(CREATOR);
+      render(<RevenueSharingPanel campaign={makeCampaign()} />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Claim Creator Revenue" }));
+
+      await waitFor(() => {
+        expect(mockClaimCreatorRevenue).toHaveBeenCalledWith(
+          7,
+          CREATOR,
+          expect.objectContaining({ onStatus: expect.any(Function) }),
+        );
+      });
+      // revenue pool / claimed queries are invalidated after the claim
+      await waitFor(() => expect(refetch).toHaveBeenCalled());
+      // everything claimed => nothing claimable until more revenue is deposited
+      await waitFor(() =>
+        expect(screen.getByTestId("creator-claimable")).toHaveTextContent("0 XLM"),
+      );
+      expect(screen.getByRole("button", { name: "Claim Creator Revenue" })).toBeDisabled();
+    });
+
+    it("subtracts the amount the creator already claimed", () => {
+      localStorage.setItem(`poh_creator_revenue_claimed_${CREATOR}_7`, "50000000");
+      mockWallet(CREATOR);
+      render(<RevenueSharingPanel campaign={makeCampaign()} />);
+
+      expect(screen.getByTestId("creator-claimable")).toHaveTextContent("4 XLM");
+    });
+
+    it("disables the button when the pool is empty", () => {
+      mockRevenueSharing({ revenuePool: BigInt(0) });
+      mockWallet(CREATOR);
+      render(<RevenueSharingPanel campaign={makeCampaign()} />);
+
+      expect(screen.getByRole("button", { name: "Claim Creator Revenue" })).toBeDisabled();
+    });
+
+    it("is hidden for non-creators", () => {
+      mockWallet(CONTRIBUTOR);
+      render(<RevenueSharingPanel campaign={makeCampaign()} />);
+
+      expect(screen.queryByText("Claim Creator Revenue")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("creator-claimable")).not.toBeInTheDocument();
+    });
+
+    it("is hidden for campaigns without revenue sharing", () => {
+      mockWallet(CREATOR);
+      const { container } = render(
+        <RevenueSharingPanel campaign={makeCampaign({ has_revenue_sharing: false })} />,
+      );
+
+      expect(container).toBeEmptyDOMElement();
     });
   });
 

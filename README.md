@@ -15,12 +15,12 @@ The smart contract lives in a separate repository:
 
 ## Prerequisites
 
-| Tool                                                  | Version     | Notes                                              |
-| ----------------------------------------------------- | ----------- | -------------------------------------------------- |
-| [Node.js](https://nodejs.org/)                        | `>= 22`     | Enforced via `engines` in `package.json`           |
-| npm                                                   | `>= 10`     | Ships with Node 22                                 |
-| [Freighter](https://www.freighter.app/)               | latest      | Browser wallet used to sign transactions           |
-| Git                                                   | any recent  |                                                    |
+| Tool                                    | Version    | Notes                                    |
+| --------------------------------------- | ---------- | ---------------------------------------- |
+| [Node.js](https://nodejs.org/)          | `>= 22`    | Enforced via `engines` in `package.json` |
+| npm                                     | `>= 10`    | Ships with Node 22                       |
+| [Freighter](https://www.freighter.app/) | latest     | Browser wallet used to sign transactions |
+| Git                                     | any recent |                                          |
 
 No Freighter wallet is needed to run the app in mock mode — it is only required for
 real testnet/mainnet transactions.
@@ -82,18 +82,18 @@ fiat on-ramp) need extra variables. Every variable is documented in
 
 ## Scripts
 
-| Command              | What it does                                                        |
-| -------------------- | ------------------------------------------------------------------- |
-| `npm run dev`        | Start the Next.js dev server at <http://localhost:3000>             |
-| `npm run build`      | Production build (runs the production-build validator first)        |
-| `npm run start`      | Serve a production build                                            |
-| `npm run lint`       | Run ESLint across the repo                                          |
-| `npm run typecheck`  | Type-check with `tsc --noEmit`                                      |
-| `npm test`           | Run the Jest unit/integration suite                                 |
-| `npm run test:watch` | Run Jest in watch mode                                              |
-| `npm run test:e2e`   | Run the Playwright end-to-end suite (mock mode)                     |
-| `npm run storybook`  | Start Storybook on <http://localhost:6006>                          |
-| `npm run format`     | Format the repo with Prettier                                       |
+| Command              | What it does                                                 |
+| -------------------- | ------------------------------------------------------------ |
+| `npm run dev`        | Start the Next.js dev server at <http://localhost:3000>      |
+| `npm run build`      | Production build (runs the production-build validator first) |
+| `npm run start`      | Serve a production build                                     |
+| `npm run lint`       | Run ESLint across the repo                                   |
+| `npm run typecheck`  | Type-check with `tsc --noEmit`                               |
+| `npm test`           | Run the Jest unit/integration suite                          |
+| `npm run test:watch` | Run Jest in watch mode                                       |
+| `npm run test:e2e`   | Run the Playwright end-to-end suite (mock mode)              |
+| `npm run storybook`  | Start Storybook on <http://localhost:6006>                   |
+| `npm run format`     | Format the repo with Prettier                                |
 
 See `package.json` for the full list (coverage, bundle-size, audit, changesets, …).
 
@@ -141,15 +141,30 @@ local runs.
 
 ## Documentation
 
+- [`docs/architecture.md`](docs/architecture.md) — frontend architecture, Soroban transaction lifecycle and IPFS data flows.
 - [`docs/`](docs/) — architecture, API reference, environment variables, deployment,
   security, design system and operations guides.
 - [`docs/CONTRACT_INTEGRATION.md`](docs/CONTRACT_INTEGRATION.md) — frontend ↔ contract
   architecture and function mapping.
 - [`docs/api.md`](docs/api.md) — API route reference.
+- [`docs/state.md`](docs/state.md) — state management architecture and hook dependency standards.
+- [`docs/GAMIFICATION.md`](docs/GAMIFICATION.md) — donor level and badge rules.
+- [`docs/RECURRING_DONATIONS.md`](docs/RECURRING_DONATIONS.md) — recurring donation schedules.
+- [`CHANGELOG.md`](CHANGELOG.md) — versioning, changesets and the release process.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — local setup, workflow and pre-PR checks.
 - [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) — community expectations.
 
 ---
+
+## Campaign display currencies
+
+Campaign cards and detail pages offer an XLM/USD/EUR selector for the funding
+target. Fiat values are approximate display values from CoinGecko, refreshed
+every minute while selected; donations and contract amounts remain in XLM.
+The server caches quotes for 60 seconds and rejects invalid quotes or prices
+older than ten minutes. If the provider is unavailable or rate limited, the XLM
+target stays visible and supporters can retry. No provider key is required and
+wallet addresses are never sent to the quote provider.
 
 ## Campaign hook split
 
@@ -163,6 +178,14 @@ reason about and test:
 
 This keeps one source of truth for data loading while avoiding a single monolithic
 hook with unrelated responsibilities.
+
+Campaign detail pages also show the latest 20 contributions received while the
+page is open. The scrollable feed shares the funding subscription, deduplicates
+replayed events, and pauses network activity when the tab is hidden. Pausing the
+feed freezes its visible entries while funding totals continue to update;
+resuming shows the latest entries. Mock mode displays an explicit notice instead
+of simulated donations. Connection failures retain existing entries while the
+subscription retries.
 
 ## Logging utilities
 

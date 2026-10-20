@@ -59,3 +59,16 @@ export function checkContractVersion(liveHash: string): ContractVersionCheck {
 
   return { mismatch, expectedHash, liveHash };
 }
+
+/**
+ * User-facing warning to show when {@link checkContractVersion} reports a
+ * mismatch, or `null` when the versions agree. Kept here (rather than inline
+ * in the UI) so the message and its mismatch logic stay in one place.
+ */
+export function getContractVersionWarning(check: ContractVersionCheck): string | null {
+  if (!check.mismatch) return null;
+  return (
+    "This page is out of date with the deployed contract. " +
+    "Please refresh to avoid submitting a failed transaction."
+  );
+}

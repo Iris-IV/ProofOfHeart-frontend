@@ -52,6 +52,7 @@ describe("useLiveCampaignFunding", () => {
       (globalThis as { __triggerContribution?: (delta: bigint) => void }).__triggerContribution = (
         delta: bigint,
       ) => onContributions?.(delta, 1);
+      return { events: [], status: "live" };
     });
     mockUseCampaign.mockReturnValue({
       campaign: makeCampaign(),
