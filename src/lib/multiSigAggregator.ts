@@ -17,8 +17,35 @@ export interface MultiSigAggregatorState {
   isComplete: boolean;
 }
 
+export type MultiSigListener = () => void;
+
+/**
+ * Session states are replaced, never mutated, on every change, and listeners
+ * are notified afterwards — so `getSnapshot()` can back `useSyncExternalStore`
+ * (see `useMultiSigProposals`).
+ */
 export class MultiSigAggregator {
   private state: Map<number, MultiSigAggregatorState> = new Map();
+  private listeners = new Set<MultiSigListener>();
+  private snapshot: readonly MultiSigAggregatorState[] = [];
+
+  /** Registers `listener` for every session change; returns the unsubscribe function. */
+  subscribe(listener: MultiSigListener): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  /** All sessions (pending and complete). Same array reference until the next change. */
+  getSnapshot(): readonly MultiSigAggregatorState[] {
+    return this.snapshot;
+  }
+
+  private commit(): void {
+    this.snapshot = Array.from(this.state.values());
+    this.listeners.forEach((listener) => listener());
+  }
 
   initiateCampaignCancellation(
     campaignId: number,
@@ -31,6 +58,7 @@ export class MultiSigAggregator {
       isComplete: false,
     };
     this.state.set(campaignId, state);
+    this.commit();
     return state;
   }
 
@@ -42,13 +70,19 @@ export class MultiSigAggregator {
       throw new Error(`Signature from ${signer} already collected`);
     }
 
-    state.collectedSignatures.push({ signer, signatureXdr, timestamp: Date.now() });
+    const collectedSignatures = [
+      ...state.collectedSignatures,
+      { signer, signatureXdr, timestamp: Date.now() },
+    ];
+    const next: MultiSigAggregatorState = {
+      ...state,
+      collectedSignatures,
+      isComplete: collectedSignatures.length >= state.requiredSignatures,
+    };
+    this.state.set(campaignId, next);
+    this.commit();
 
-    if (state.collectedSignatures.length >= state.requiredSignatures) {
-      state.isComplete = true;
-    }
-
-    return state;
+    return next;
   }
 
   getState(campaignId: number): MultiSigAggregatorState | null {
@@ -76,7 +110,7 @@ export class MultiSigAggregator {
   }
 
   clearSession(campaignId: number): void {
-    this.state.delete(campaignId);
+    if (this.state.delete(campaignId)) this.commit();
   }
 
   getPendingSessions(): MultiSigAggregatorState[] {

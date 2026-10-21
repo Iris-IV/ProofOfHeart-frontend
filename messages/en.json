@@ -774,5 +774,23 @@
     "disclaimer": "This receipt records your on-chain donation. Keep it for your records; whether it qualifies for a tax deduction depends on your jurisdiction.",
     "print": "Print or save as PDF",
     "back": "Back"
+  },
+  "MultiSig": {
+    "dashboardTitle": "Multi-Sig Governance",
+    "pendingCount": "{count, plural, other {# pending}}",
+    "readyCount": "{count, plural, other {# ready}}",
+    "campaign": "Campaign #{id}",
+    "threshold": "{signed} of {required} signatures",
+    "remaining": "{count, plural, other {# more needed}}",
+    "thresholdMet": "Threshold met",
+    "progressLabel": "Signature progress for campaign #{id}",
+    "matrixLabel": "Signer approvals",
+    "signedAt": "Signed {time}",
+    "awaitingSigner": "Signer {index} — awaiting",
+    "emptyTitle": "No multi-sig proposals",
+    "emptyBody": "Cancellation proposals that need several signers will appear here.",
+    "statusAwaiting": "Awaiting signatures",
+    "statusCollecting": "Collecting",
+    "statusReady": "Ready to submit"
   }
 }
