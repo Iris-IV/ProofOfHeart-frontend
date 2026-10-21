@@ -75,7 +75,9 @@ export default function VotingComponent({
       setLocalVote(voteType);
     } catch (error) {
       console.error("Voting failed:", error);
-      showError(localizeContractError(getAsyncActionErrorMessage(error, parseContractError)));
+      showError(localizeContractError(getAsyncActionErrorMessage(error, parseContractError)), {
+        action: { label: t("retryVote"), onClick: () => void handleVote(voteType) },
+      });
     }
   };
 

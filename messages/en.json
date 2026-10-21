@@ -524,7 +524,8 @@
     "noVotesYet": "No votes yet",
     "liveTally": "Live",
     "breakdownTitle": "Vote Breakdown",
-    "totalVotesCast": "{count, plural, one {# total vote cast} other {# total votes cast}}"
+    "totalVotesCast": "{count, plural, one {# total vote cast} other {# total votes cast}}",
+    "retryVote": "Retry vote"
   },
   "Observability": {
     "loading": "Loading observability metrics…",
@@ -636,7 +637,8 @@
     "prefContributions": "Contribution confirmations",
     "prefVerified": "Campaign verified",
     "prefRefundAvailable": "Refund available",
-    "prefRevenueDeposited": "Revenue deposits"
+    "prefRevenueDeposited": "Revenue deposits",
+    "openNotifications": "Open notifications"
   },
   "CauseDetail": {
     "noDescription": "No description provided by the creator."

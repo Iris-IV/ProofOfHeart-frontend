@@ -6,7 +6,14 @@ import { Bell, ExternalLink } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useWallet } from "@/components/WalletContext";
 import { useTranslations } from "next-intl";
-import type { AppNotification } from "@/lib/notifications";
+import {
+  NOTIFICATION_TOAST_TYPES,
+  getNewlyArrivedNotifications,
+  shouldToastNotification,
+  type AppNotification,
+} from "@/lib/notifications";
+import { getNotificationPreferences } from "@/lib/preferences";
+import { useToast } from "@/components/ToastProvider";
 
 const EVENT_ICONS: Record<AppNotification["type"], string> = {
   contribution_confirmed: "💜",
@@ -22,8 +29,36 @@ const EVENT_ICONS: Record<AppNotification["type"], string> = {
 export default function NotificationBell() {
   const t = useTranslations("Notifications");
   const { publicKey } = useWallet();
-  const { notifications, unreadCount, markAllRead, markRead } = useNotifications(publicKey);
+  const { notifications, unreadCount, markAllRead, markRead, hasLoaded } =
+    useNotifications(publicKey);
   const [open, setOpen] = useState(false);
+  const { showToast } = useToast();
+  // null until the first feed has loaded, so the backlog isn't toasted.
+  const previousNotificationsRef = useRef<AppNotification[] | null>(null);
+  const previousWalletRef = useRef(publicKey);
+
+  // Surface notifications that arrive while the app is open as toasts with an
+  // action that opens this panel (#1347).
+  useEffect(() => {
+    if (previousWalletRef.current !== publicKey) {
+      previousWalletRef.current = publicKey;
+      previousNotificationsRef.current = null;
+    }
+    if (!publicKey || !hasLoaded) return;
+
+    const arrived = getNewlyArrivedNotifications(previousNotificationsRef.current, notifications);
+    previousNotificationsRef.current = notifications;
+    if (arrived.length === 0) return;
+
+    const prefs = getNotificationPreferences(publicKey);
+    for (const notification of arrived.filter((n) => shouldToastNotification(n, prefs))) {
+      showToast(
+        `${EVENT_ICONS[notification.type]} ${notification.message}`,
+        NOTIFICATION_TOAST_TYPES[notification.type],
+        { action: { label: t("openNotifications"), onClick: () => setOpen(true) } },
+      );
+    }
+  }, [hasLoaded, notifications, publicKey, showToast, t]);
 
   function timeAgo(ts: number): string {
     const diff = Math.floor((Date.now() - ts) / 1000);
@@ -89,7 +124,7 @@ export default function NotificationBell() {
             {unreadCount > 0 && (
               <button
                 type="button"
-                onClick={markAllRead}
+                onClick={() => void markAllRead()}
                 className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
               >
                 {t("markAllRead")}

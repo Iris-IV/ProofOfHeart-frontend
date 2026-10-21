@@ -8,6 +8,7 @@ import {
   useEffect,
   useRef,
   ReactNode,
+  type CSSProperties,
 } from "react";
 
 // ---------------------------------------------------------------------------
@@ -16,23 +17,39 @@ import {
 
 export type ToastType = "error" | "success" | "warning" | "info";
 
+/** A link rendered inline after the message (e.g. "View on Explorer"). */
 export interface ToastAction {
   label: string;
   href: string;
+}
+
+/** A button rendered on the toast, e.g. "Retry" for a failed transaction (#1347). */
+export interface ToastButtonAction {
+  label: string;
+  onClick: () => void;
+}
+
+export interface ToastOptions {
+  /** Auto-dismiss delay in ms. Defaults per type, see TOAST_DURATIONS. */
+  duration?: number;
+  /** Clicking it runs the action and dismisses the toast. */
+  action?: ToastButtonAction;
 }
 
 export interface ToastItem {
   id: string;
   type: ToastType;
   message: ReactNode;
+  duration: number;
+  action?: ToastButtonAction;
 }
 
 interface ToastContextValue {
-  showToast: (message: ReactNode, type?: ToastType) => void;
-  showError: (message: ReactNode) => void;
-  showSuccess: (message: ReactNode) => void;
-  showWarning: (message: ReactNode) => void;
-  showInfo: (message: ReactNode) => void;
+  showToast: (message: ReactNode, type?: ToastType, options?: ToastOptions) => void;
+  showError: (message: ReactNode, options?: ToastOptions) => void;
+  showSuccess: (message: ReactNode, options?: ToastOptions) => void;
+  showWarning: (message: ReactNode, options?: ToastOptions) => void;
+  showInfo: (message: ReactNode, options?: ToastOptions) => void;
   /** Use this when the toast needs a clickable link (e.g. "View on Explorer"). */
   showToastWithAction: (message: string, action: ToastAction, type?: ToastType) => void;
 }
@@ -60,21 +77,26 @@ const ICONS: Record<ToastType, string> = {
   info: "ℹ",
 };
 
-const STYLES: Record<ToastType, string> = {
-  error:
-    "bg-red-50 dark:bg-red-900/80 border-red-300 dark:border-red-700 text-red-900 dark:text-red-100",
-  success:
-    "bg-green-50 dark:bg-green-900/80 border-green-300 dark:border-green-700 text-green-900 dark:text-green-100",
-  warning:
-    "bg-yellow-50 dark:bg-yellow-900/80 border-yellow-300 dark:border-yellow-700 text-yellow-900 dark:text-yellow-100",
-  info: "bg-blue-50 dark:bg-blue-900/80 border-blue-300 dark:border-blue-700 text-blue-900 dark:text-blue-100",
+/** Gradient accent stripe and countdown bar colour per type. */
+const ACCENTS: Record<ToastType, string> = {
+  error: "from-rose-500 to-red-600",
+  success: "from-emerald-400 to-green-600",
+  warning: "from-amber-400 to-orange-500",
+  info: "from-sky-400 to-blue-600",
 };
 
 const ICON_STYLES: Record<ToastType, string> = {
-  error: "bg-red-100 dark:bg-red-800 text-red-600 dark:text-red-300",
-  success: "bg-green-100 dark:bg-green-800 text-green-600 dark:text-green-300",
-  warning: "bg-yellow-100 dark:bg-yellow-800 text-yellow-600 dark:text-yellow-300",
-  info: "bg-blue-100 dark:bg-blue-800 text-blue-600 dark:text-blue-300",
+  error: "bg-red-500/15 text-red-600 ring-red-500/30 dark:text-red-300",
+  success: "bg-green-500/15 text-green-600 ring-green-500/30 dark:text-green-300",
+  warning: "bg-amber-500/15 text-amber-600 ring-amber-500/30 dark:text-amber-300",
+  info: "bg-sky-500/15 text-sky-600 ring-sky-500/30 dark:text-sky-300",
+};
+
+const ACTION_STYLES: Record<ToastType, string> = {
+  error: "text-red-700 ring-red-500/40 hover:bg-red-500/10 dark:text-red-200",
+  success: "text-green-700 ring-green-500/40 hover:bg-green-500/10 dark:text-green-200",
+  warning: "text-amber-700 ring-amber-500/40 hover:bg-amber-500/10 dark:text-amber-200",
+  info: "text-sky-700 ring-sky-500/40 hover:bg-sky-500/10 dark:text-sky-200",
 };
 
 const LINK_STYLES: Record<ToastType, string> = {
@@ -86,63 +108,132 @@ const LINK_STYLES: Record<ToastType, string> = {
   info: "text-blue-700 dark:text-blue-300 underline hover:text-blue-900 dark:hover:text-blue-100",
 };
 
-const AUTO_DISMISS_MS = 5000;
+/** Default auto-dismiss delays. Errors stay longer so there is time to read and retry. */
+export const TOAST_DURATIONS: Record<ToastType, number> = {
+  success: 5000,
+  info: 5000,
+  warning: 6000,
+  error: 8000,
+};
+
+/** Exit animation length before the toast is removed from the DOM. */
+const EXIT_MS = 120;
 
 function Toast({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: string) => void }) {
-  const [visible, setVisible] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [paused, setPaused] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Time left on the auto-dismiss timer, kept across pauses.
+  const remainingRef = useRef(toast.duration);
+  const startedAtRef = useRef(0);
+  const hoveredRef = useRef(false);
+  const focusedRef = useRef(false);
 
-  // Animate in
-  useEffect(() => {
-    const raf = requestAnimationFrame(() => setVisible(true));
-    return () => cancelAnimationFrame(raf);
-  }, []);
+  const handleDismiss = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setLeaving(true);
+    // Wait for the exit transition before removing from the DOM.
+    setTimeout(() => onDismiss(toast.id), EXIT_MS);
+  }, [onDismiss, toast.id]);
 
-  // Auto-dismiss
+  // Auto-dismiss, paused while the toast is hovered or has focus (WCAG 2.2.1),
+  // so an action like Retry can't disappear under the pointer.
   useEffect(() => {
-    timerRef.current = setTimeout(() => handleDismiss(), AUTO_DISMISS_MS);
+    if (paused || leaving) return;
+    startedAtRef.current = Date.now();
+    timerRef.current = setTimeout(handleDismiss, remainingRef.current);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      remainingRef.current = Math.max(
+        0,
+        remainingRef.current - (Date.now() - startedAtRef.current),
+      );
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [paused, leaving, handleDismiss]);
 
-  const handleDismiss = () => {
-    setVisible(false);
-    // Wait for the CSS transition before removing from DOM
-    setTimeout(() => onDismiss(toast.id), 300);
-  };
+  const syncPaused = () => setPaused(hoveredRef.current || focusedRef.current);
 
   const isError = toast.type === "error";
 
   return (
     <div
+      role={isError ? "alert" : undefined}
+      data-type={toast.type}
+      data-paused={paused}
+      onPointerEnter={() => {
+        hoveredRef.current = true;
+        syncPaused();
+      }}
+      onPointerLeave={() => {
+        hoveredRef.current = false;
+        syncPaused();
+      }}
+      onFocus={() => {
+        focusedRef.current = true;
+        syncPaused();
+      }}
+      onBlur={(e) => {
+        if (e.currentTarget.contains(e.relatedTarget)) return;
+        focusedRef.current = false;
+        syncPaused();
+      }}
       className={`
-        flex items-start gap-3 w-full max-w-sm rounded-xl border px-4 py-3 shadow-lg
-        transition-all duration-300 ease-in-out
-        ${STYLES[toast.type]}
-        ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}
+        glass-surface ui-slide-up relative w-full max-w-sm overflow-hidden rounded-xl
+        text-zinc-900 transition-[opacity,transform] duration-(--duration-snappy) ease-out
+        dark:text-zinc-50 sm:w-[22rem]
+        ${leaving ? "translate-y-1 opacity-0" : "translate-y-0 opacity-100"}
       `}
     >
-      {/* Icon */}
+      {/* Accent stripe */}
       <span
-        className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mt-0.5 ${ICON_STYLES[toast.type]}`}
-      >
-        {ICONS[toast.type]}
-      </span>
+        aria-hidden="true"
+        className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b ${ACCENTS[toast.type]}`}
+      />
 
-      {/* Message — rendered as JSX, never as raw HTML */}
-      <p className="flex-1 text-sm leading-snug">{toast.message}</p>
+      <div className="flex items-start gap-3 py-3 pl-5 pr-3">
+        <span
+          aria-hidden="true"
+          className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-1 ${ICON_STYLES[toast.type]}`}
+        >
+          {ICONS[toast.type]}
+        </span>
 
-      {/* Dismiss */}
-      <button
-        type="button"
-        onClick={handleDismiss}
-        aria-label="Dismiss notification"
-        className="shrink-0 opacity-60 hover:opacity-100 transition-opacity text-lg leading-none mt-0.5"
-      >
-        <span aria-hidden="true">×</span>
-      </button>
+        <div className="min-w-0 flex-1">
+          {/* Message — rendered as JSX, never as raw HTML */}
+          <p className="text-sm leading-snug break-words">{toast.message}</p>
+
+          {toast.action && (
+            <button
+              type="button"
+              onClick={() => {
+                toast.action?.onClick();
+                handleDismiss();
+              }}
+              className={`mt-2 inline-flex min-h-8 items-center rounded-full px-3 text-xs font-semibold ring-1 transition-colors duration-(--duration-snappy) focus-ring ${ACTION_STYLES[toast.type]}`}
+            >
+              {toast.action.label}
+            </button>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={handleDismiss}
+          aria-label="Dismiss notification"
+          className="-m-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg leading-none opacity-60 transition-opacity duration-(--duration-snappy) hover:opacity-100 focus-ring"
+        >
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+
+      {/* Countdown: shrinks over the toast's lifetime, pauses with the timer. */}
+      <span
+        aria-hidden="true"
+        data-testid="toast-countdown"
+        data-paused={paused}
+        className={`ui-countdown absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r ${ACCENTS[toast.type]}`}
+        style={{ "--toast-duration": `${toast.duration}ms` } as CSSProperties}
+      />
     </div>
   );
 }
@@ -193,14 +284,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const showToast = useCallback((message: ReactNode, type: ToastType = "info") => {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    setToasts((prev) => {
-      const next = [...prev, { id, type, message }];
-      // Keep only the newest MAX_TOASTS
-      return next.slice(-MAX_TOASTS);
-    });
-  }, []);
+  const showToast = useCallback(
+    (message: ReactNode, type: ToastType = "info", options: ToastOptions = {}) => {
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const toast: ToastItem = {
+        id,
+        type,
+        message,
+        duration: options.duration ?? TOAST_DURATIONS[type],
+        action: options.action,
+      };
+      setToasts((prev) => {
+        const next = [...prev, toast];
+        // Keep only the newest MAX_TOASTS
+        return next.slice(-MAX_TOASTS);
+      });
+    },
+    [],
+  );
 
   const showToastWithAction = useCallback(
     (message: string, action: ToastAction, type: ToastType = "info") => {
@@ -224,10 +325,22 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [showToast],
   );
 
-  const showError = useCallback((msg: ReactNode) => showToast(msg, "error"), [showToast]);
-  const showSuccess = useCallback((msg: ReactNode) => showToast(msg, "success"), [showToast]);
-  const showWarning = useCallback((msg: ReactNode) => showToast(msg, "warning"), [showToast]);
-  const showInfo = useCallback((msg: ReactNode) => showToast(msg, "info"), [showToast]);
+  const showError = useCallback(
+    (msg: ReactNode, options?: ToastOptions) => showToast(msg, "error", options),
+    [showToast],
+  );
+  const showSuccess = useCallback(
+    (msg: ReactNode, options?: ToastOptions) => showToast(msg, "success", options),
+    [showToast],
+  );
+  const showWarning = useCallback(
+    (msg: ReactNode, options?: ToastOptions) => showToast(msg, "warning", options),
+    [showToast],
+  );
+  const showInfo = useCallback(
+    (msg: ReactNode, options?: ToastOptions) => showToast(msg, "info", options),
+    [showToast],
+  );
 
   return (
     <ToastContext.Provider

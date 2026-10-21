@@ -525,7 +525,8 @@
     "noVotesYet": "Aún no hay votos",
     "liveTally": "En vivo",
     "breakdownTitle": "Desglose de votos",
-    "totalVotesCast": "{count, plural, one {# voto emitido en total} other {# votos emitidos en total}}"
+    "totalVotesCast": "{count, plural, one {# voto emitido en total} other {# votos emitidos en total}}",
+    "retryVote": "Reintentar voto"
   },
   "Observability": {
     "loading": "Cargando métricas de observabilidad…",
@@ -637,7 +638,8 @@
     "prefContributions": "Confirmaciones de contribución",
     "prefVerified": "Campaña verificada",
     "prefRefundAvailable": "Reembolso disponible",
-    "prefRevenueDeposited": "Depósitos de ingresos"
+    "prefRevenueDeposited": "Depósitos de ingresos",
+    "openNotifications": "Abrir notificaciones"
   },
   "CauseDetail": {
     "noDescription": "El creador no proporcionó una descripción."
