@@ -521,7 +521,11 @@
     "votedUpvote": "Votaste para aprobar esta causa",
     "votedDownvote": "Votaste para rechazar esta causa",
     "verifyWithVotes": "✓ Verificar Campaña con Votos",
-    "verifying": "Verificando..."
+    "verifying": "Verificando...",
+    "noVotesYet": "Aún no hay votos",
+    "liveTally": "En vivo",
+    "breakdownTitle": "Desglose de votos",
+    "totalVotesCast": "{count, plural, one {# voto emitido en total} other {# votos emitidos en total}}"
   },
   "Observability": {
     "loading": "Cargando métricas de observabilidad…",

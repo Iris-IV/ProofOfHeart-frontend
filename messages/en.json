@@ -520,7 +520,11 @@
     "votedUpvote": "You voted to approve this cause",
     "votedDownvote": "You voted to reject this cause",
     "verifyWithVotes": "✓ Verify Campaign with Votes",
-    "verifying": "Verifying..."
+    "verifying": "Verifying...",
+    "noVotesYet": "No votes yet",
+    "liveTally": "Live",
+    "breakdownTitle": "Vote Breakdown",
+    "totalVotesCast": "{count, plural, one {# total vote cast} other {# total votes cast}}"
   },
   "Observability": {
     "loading": "Loading observability metrics…",
