@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { Info } from "lucide-react";
 
 interface TooltipProps {
@@ -35,6 +35,27 @@ export default function Tooltip({
   const tooltipId = useId();
 
   const isOpen = isHovered || isFocused || isPinned;
+  const bubbleRef = useRef<HTMLDivElement>(null);
+  // Horizontal nudge that keeps a top/bottom bubble inside the viewport, e.g.
+  // for a trigger at the right edge of a 320px screen (#1356).
+  const [shiftX, setShiftX] = useState(0);
+  const shiftRef = useRef(0);
+
+  useLayoutEffect(() => {
+    let next = 0;
+    if (isOpen && (side === "top" || side === "bottom") && bubbleRef.current) {
+      const margin = 8;
+      const rect = bubbleRef.current.getBoundingClientRect();
+      // Measure as if no shift were applied.
+      const left = rect.left - shiftRef.current;
+      const right = rect.right - shiftRef.current;
+      const viewport = document.documentElement.clientWidth;
+      if (right > viewport - margin) next = viewport - margin - right;
+      else if (left < margin) next = margin - left;
+    }
+    shiftRef.current = next;
+    setShiftX(next);
+  }, [isOpen, side, content, title]);
 
   const close = useCallback(() => {
     setIsHovered(false);
@@ -134,8 +155,10 @@ export default function Tooltip({
         // Dark glass in both themes keeps contrast on any background; the
         // gradient hairline and 120ms pop-in are the #1356 treatment.
         <div
+          ref={bubbleRef}
           id={tooltipId}
           role="tooltip"
+          style={shiftX ? { marginLeft: shiftX } : undefined}
           className={`ui-pop-in absolute z-50 w-max max-w-[min(16rem,calc(100vw-2rem))] rounded-xl bg-zinc-900/90 px-3 py-2 text-left text-xs font-medium leading-relaxed text-white shadow-xl shadow-black/20 ring-1 ring-white/10 backdrop-blur-xl sm:max-w-[min(18rem,calc(100vw-2rem))] ${sideClasses[side]} ${bridgeClasses[side]}`}
         >
           <span
@@ -144,7 +167,11 @@ export default function Tooltip({
           />
           {title && <span className="mb-1 block text-[13px] font-semibold">{title}</span>}
           <span className="block font-normal text-zinc-200">{content}</span>
-          <div className={`absolute ${arrowClasses[side]}`} />
+          {/* Counter-shift the arrow so it keeps pointing at the trigger. */}
+          <div
+            className={`absolute ${arrowClasses[side]}`}
+            style={shiftX ? { marginLeft: -shiftX } : undefined}
+          />
         </div>
       )}
     </div>

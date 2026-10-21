@@ -76,6 +76,48 @@ describe("Tooltip rich content", () => {
   });
 });
 
+describe("Tooltip viewport clamping", () => {
+  const rect = (left: number, width: number) =>
+    ({
+      left,
+      right: left + width,
+      width,
+      top: 0,
+      bottom: 40,
+      height: 40,
+      x: left,
+      y: 0,
+    }) as DOMRect;
+
+  afterEach(() => jest.restoreAllMocks());
+
+  function openWithBubbleAt(left: number, width = 200, viewport = 320) {
+    jest.spyOn(document.documentElement, "clientWidth", "get").mockReturnValue(viewport);
+    jest.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.getAttribute("role") === "tooltip" ? rect(left, width) : rect(0, 0);
+    });
+    render(<Tooltip label="Explain" content="Some help" />);
+    return open("Explain");
+  }
+
+  it("nudges a bubble that would overflow the right edge back inside", () => {
+    const tooltip = openWithBubbleAt(200); // right edge 400 > 320 - 8
+    expect(tooltip.style.marginLeft).toBe("-88px");
+    // The arrow moves the other way so it still points at the trigger.
+    expect((tooltip.lastElementChild as HTMLElement).style.marginLeft).toBe("88px");
+  });
+
+  it("nudges a bubble that would overflow the left edge", () => {
+    expect(openWithBubbleAt(-30).style.marginLeft).toBe("38px");
+  });
+
+  it("leaves a bubble that fits alone", () => {
+    expect(openWithBubbleAt(50).style.marginLeft).toBe("");
+  });
+});
+
 describe("Web3Explainer", () => {
   it("explains a specific amount in stroops", () => {
     render(<Web3Explainer topic="stroops" amount={125_000_001n} />);
