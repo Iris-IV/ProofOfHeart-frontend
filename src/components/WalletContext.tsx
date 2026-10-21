@@ -13,6 +13,7 @@ import React, {
 import { useToast } from "./ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
 import { IS_MOCK_MODE } from "@/lib/runtimeEnv";
+import { describeNetwork } from "@/lib/networkLabels";
 import { setActiveWalletSigner, type WalletKind } from "@/lib/walletSigner";
 import {
   connectSocialWallet,
@@ -73,11 +74,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const isSocialSessionRef = useRef(false);
   const connectInFlightRef = useRef(false);
   const appNetworkPassphrase = process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE || "";
-  const appNetworkLabel = appNetworkPassphrase.includes("Public Global")
-    ? "Mainnet"
-    : appNetworkPassphrase.includes("Test SDF")
-      ? "Testnet"
-      : "the app network";
+  const appNetworkLabel = describeNetwork(appNetworkPassphrase);
 
   useEffect(() => {
     if (IS_MOCK_MODE) {
