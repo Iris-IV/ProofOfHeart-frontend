@@ -24,6 +24,40 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  scrollbar-color: rgba(148, 163, 184, 0.8) transparent;
+  scrollbar-width: thin;
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-color: rgba(148, 163, 184, 0.8) transparent;
+  scrollbar-width: thin;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.8) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(251, 146, 60, 0.9), rgba(168, 85, 247, 0.9));
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(249, 115, 22, 1), rgba(147, 51, 234, 1));
+  background-clip: padding-box;
 }
 
 @keyframes campaign-empty-enter {
