@@ -4,7 +4,10 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Info } from "lucide-react";
 
 interface TooltipProps {
-  content: string;
+  /** Plain text, or rich content such as a short explainer (#1356). */
+  content: React.ReactNode;
+  /** Optional bold heading shown above the content. */
+  title?: string;
   children?: React.ReactNode;
   side?: "top" | "bottom" | "left" | "right";
   className?: string;
@@ -14,6 +17,7 @@ interface TooltipProps {
 
 export default function Tooltip({
   content,
+  title,
   children,
   side = "top",
   className = "",
@@ -77,12 +81,12 @@ export default function Tooltip({
   };
 
   const arrowClasses = {
-    top: "top-full left-1/2 -translate-x-1/2 border-t-zinc-700 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent dark:border-t-zinc-200",
+    top: "top-full left-1/2 -translate-x-1/2 border-t-zinc-900/90 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent",
     bottom:
-      "bottom-full left-1/2 -translate-x-1/2 border-b-zinc-700 border-l-4 border-r-4 border-b-4 border-l-transparent border-r-transparent dark:border-b-zinc-200",
-    left: "left-full top-1/2 -translate-y-1/2 border-l-zinc-700 border-t-4 border-b-4 border-l-4 border-t-transparent border-b-transparent dark:border-l-zinc-200",
+      "bottom-full left-1/2 -translate-x-1/2 border-b-zinc-900/90 border-l-4 border-r-4 border-b-4 border-l-transparent border-r-transparent",
+    left: "left-full top-1/2 -translate-y-1/2 border-l-zinc-900/90 border-t-4 border-b-4 border-l-4 border-t-transparent border-b-transparent",
     right:
-      "right-full top-1/2 -translate-y-1/2 border-r-zinc-700 border-t-4 border-b-4 border-r-4 border-t-transparent border-b-transparent dark:border-r-zinc-200",
+      "right-full top-1/2 -translate-y-1/2 border-r-zinc-900/90 border-t-4 border-b-4 border-r-4 border-t-transparent border-b-transparent",
   };
 
   return (
@@ -127,12 +131,19 @@ export default function Tooltip({
       </button>
 
       {isOpen && (
+        // Dark glass in both themes keeps contrast on any background; the
+        // gradient hairline and 120ms pop-in are the #1356 treatment.
         <div
           id={tooltipId}
           role="tooltip"
-          className={`absolute z-50 w-max max-w-[min(12rem,calc(100vw-2rem))] rounded-lg bg-zinc-700 px-3 py-2 text-xs font-medium text-white shadow-lg dark:bg-zinc-200 dark:text-zinc-900 ${sideClasses[side]} ${bridgeClasses[side]}`}
+          className={`ui-pop-in absolute z-50 w-max max-w-[min(16rem,calc(100vw-2rem))] rounded-xl bg-zinc-900/90 px-3 py-2 text-left text-xs font-medium leading-relaxed text-white shadow-xl shadow-black/20 ring-1 ring-white/10 backdrop-blur-xl sm:max-w-[min(18rem,calc(100vw-2rem))] ${sideClasses[side]} ${bridgeClasses[side]}`}
         >
-          {content}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/80 to-transparent"
+          />
+          {title && <span className="mb-1 block text-[13px] font-semibold">{title}</span>}
+          <span className="block font-normal text-zinc-200">{content}</span>
           <div className={`absolute ${arrowClasses[side]}`} />
         </div>
       )}

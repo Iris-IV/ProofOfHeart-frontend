@@ -1,4 +1,4 @@
-import { stroopsToXlm } from "@/lib/stellarAmount";
+import { STROOPS_PER_XLM, stroopsToXlm } from "@/lib/stellarAmount";
 
 /**
  * Locale-aware formatting utilities using Intl APIs.
@@ -48,6 +48,50 @@ export function formatAmount(
     maximumFractionDigits: options?.maximumFractionDigits ?? 2,
     minimumFractionDigits: options?.minimumFractionDigits ?? 0,
   });
+}
+
+/** Format a raw stroops count as a grouped integer, e.g. 125000000n → "125,000,000". */
+export function formatStroops(stroops: bigint, locale: string): string {
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(stroops);
+}
+
+/**
+ * The exact XLM value of a stroops amount, keeping every one of the 7 decimal
+ * places Stellar supports. Works on the bigint directly (no float rounding),
+ * using the locale's grouping and decimal separators.
+ */
+export function formatExactXlm(stroops: bigint, locale: string): string {
+  const negative = stroops < 0n;
+  const abs = negative ? -stroops : stroops;
+  const whole = abs / STROOPS_PER_XLM;
+  const fraction = (abs % STROOPS_PER_XLM).toString().padStart(7, "0").replace(/0+$/, "");
+
+  const formatter = new Intl.NumberFormat(locale);
+  const decimalSeparator =
+    formatter.formatToParts(1.1).find((part) => part.type === "decimal")?.value ?? ".";
+  const formatted = formatter.format(whole) + (fraction ? `${decimalSeparator}${fraction}` : "");
+  return negative ? `-${formatted}` : formatted;
+}
+
+export interface XlmAmountExplanation {
+  /** Exact XLM value, e.g. "12.5000001". */
+  xlm: string;
+  /** The same amount in stroops, e.g. "125,000,001". */
+  stroops: string;
+  /** Stroops in one XLM, formatted: "10,000,000". */
+  stroopsPerXlm: string;
+}
+
+/**
+ * The pieces of the "what is a stroop?" tooltip (#1356): an amount shown
+ * rounded in the UI, its exact XLM value, and its on-chain stroop count.
+ */
+export function getXlmAmountExplanation(stroops: bigint, locale: string): XlmAmountExplanation {
+  return {
+    xlm: formatExactXlm(stroops, locale),
+    stroops: formatStroops(stroops, locale),
+    stroopsPerXlm: formatStroops(STROOPS_PER_XLM, locale),
+  };
 }
 
 /**

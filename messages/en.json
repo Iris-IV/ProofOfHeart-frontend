@@ -766,5 +766,17 @@
     "milestone-1000": "Community Champion",
     "milestone-5000": "Impact Leader",
     "milestone-10000": "Legendary Heart"
+  },
+  "Web3Help": {
+    "stroopsTitle": "What's a stroop?",
+    "stroopsLabel": "What is a stroop?",
+    "stroopsBody": "A stroop is the smallest unit of XLM: 1 XLM = {stroopsPerXlm} stroops. Contracts store every amount in stroops, so nothing is lost to rounding.",
+    "stroopsAmount": "Exactly {xlm} XLM, stored on-chain as {stroops} stroops. A stroop is the smallest unit of XLM: 1 XLM = {stroopsPerXlm} stroops.",
+    "escrowTitle": "How are funds released?",
+    "escrowLabel": "How are contributions held and released?",
+    "escrowBody": "Contributions are held by the campaign's Soroban smart contract, not by the creator. The creator can withdraw once, after the funding goal is reached, and the platform fee is taken at withdrawal. If the campaign is cancelled, or the deadline passes before the goal is met, contributors can claim a refund.",
+    "multiTokenTitle": "Which token do I pay in?",
+    "multiTokenLabel": "Which token are contributions made in?",
+    "multiTokenBody": "Contributions are signed and settled on Stellar in XLM. USD and EUR figures are estimates from live exchange rates, so their value can move; the XLM amount you sign is what you contribute."
   }
 }

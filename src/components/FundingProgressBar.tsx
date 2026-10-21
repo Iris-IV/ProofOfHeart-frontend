@@ -6,6 +6,7 @@ import { useLocale } from "next-intl";
 import { calculateFundingPercentage, Milestone } from "../types";
 import { formatAmount } from "@/lib/formatters";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import Web3Explainer from "./Web3Explainer";
 
 // Framer Motion is isolated here and only loaded when motion is wanted
 const AnimatedProgressFill = dynamic(() => import("./AnimatedProgressFill"), {
@@ -16,12 +17,18 @@ interface FundingProgressBarProps {
   amountRaised: bigint;
   fundingGoal: bigint;
   milestones?: Milestone[];
+  /**
+   * Show tooltips explaining stroops and how escrowed funds are released
+   * (#1356). Off by default so dense lists of cards stay uncluttered.
+   */
+  explain?: boolean;
 }
 
 export default function FundingProgressBar({
   amountRaised,
   fundingGoal,
   milestones,
+  explain = false,
 }: FundingProgressBarProps) {
   const locale = useLocale();
   const targetPct = calculateFundingPercentage(amountRaised, fundingGoal);
@@ -67,11 +74,17 @@ export default function FundingProgressBar({
         {fundingValueText}
       </div>
       <div className="flex justify-between text-xs text-zinc-600 dark:text-zinc-400 mb-1">
-        <span id={fundingLabelId} className="font-medium">
-          {roundedPct}% funded
+        <span className="inline-flex items-center gap-1">
+          <span id={fundingLabelId} className="font-medium">
+            {roundedPct}% funded
+          </span>
+          {explain && <Web3Explainer topic="escrow" side="bottom" />}
         </span>
-        <span>
-          {displayRaised} / {displayGoal} XLM
+        <span className="inline-flex items-center gap-1">
+          <span>
+            {displayRaised} / {displayGoal} XLM
+          </span>
+          {explain && <Web3Explainer topic="stroops" amount={amountRaised} side="bottom" />}
         </span>
       </div>
       <div
@@ -143,11 +156,19 @@ export default function FundingProgressBar({
                 {/* Marker dot */}
                 <div
                   className={`w-3.5 h-3.5 rounded-full border-2 border-white dark:border-zinc-800 shadow-sm transition-colors flex items-center justify-center ${
-                    isReached ? "bg-emerald-500 text-white" : "bg-zinc-300 dark:bg-zinc-600 text-transparent"
+                    isReached
+                      ? "bg-emerald-500 text-white"
+                      : "bg-zinc-300 dark:bg-zinc-600 text-transparent"
                   }`}
                 >
                   {isReached && (
-                    <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
+                    <svg
+                      className="w-2.5 h-2.5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={4}
+                    >
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   )}

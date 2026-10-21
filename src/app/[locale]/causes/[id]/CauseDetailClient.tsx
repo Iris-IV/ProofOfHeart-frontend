@@ -646,6 +646,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                   amountRaised={campaign.amount_raised}
                   fundingGoal={campaign.funding_goal}
                   milestones={campaign.milestones}
+                  explain
                 />
               </div>
             )}
