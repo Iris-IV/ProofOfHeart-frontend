@@ -19,7 +19,8 @@
     "continueWithX": "Continue with X",
     "socialLoginHint": "Creates a Stellar wallet secured by your social account — no extension needed.",
     "signedInAs": "Signed in as {name}",
-    "highContrast": "High contrast"
+    "highContrast": "High contrast",
+    "embeddedWalletBadge": "No extension"
   },
   "PwaInstaller": {
     "installTitle": "Install ProofOfHeart",
