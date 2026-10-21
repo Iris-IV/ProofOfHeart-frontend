@@ -57,7 +57,9 @@ jest.mock("next-intl", () => ({
       donatedSuccess: `${values?.amount} XLM donated successfully`,
       thankYou: "Thank you for supporting this cause.",
       viewExplorer: "View on Stellar Explorer →",
-      downloadReceipt: "Download Tax Receipt (PDF)",
+      downloadReceipt: "View Tax Receipt",
+      print: "Print or save as PDF",
+      back: "Back",
       close: "Close",
       scientificNotation: "Scientific notation is not allowed.",
       invalidNumber: "Please enter a valid number.",
@@ -261,6 +263,27 @@ describe("DonationModal", () => {
         onStatus: expect.any(Function),
       }),
     );
+  });
+
+  it("opens the tax receipt preview after a confirmed donation and returns from it", async () => {
+    mockContribute.mockResolvedValue("mock-tx-hash");
+
+    render(<DonationModal {...defaultProps} />);
+
+    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value: "10" } });
+    fireEvent.click(screen.getByRole("button", { name: "Donate 10 XLM" }));
+
+    fireEvent.click(await screen.findByRole("button", { name: "View Tax Receipt" }));
+
+    const preview = screen.getByTestId("tax-receipt-preview");
+    expect(preview).toHaveTextContent("mock-tx-hash");
+    expect(preview).toHaveTextContent("Help Build a School");
+    expect(preview).toHaveTextContent("10 XLM");
+    expect(screen.getByRole("button", { name: "Print or save as PDF" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.queryByTestId("tax-receipt-preview")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "View Tax Receipt" })).toBeInTheDocument();
   });
 
   it("hides submit controls while a transaction is in flight", async () => {

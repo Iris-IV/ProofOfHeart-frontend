@@ -12,7 +12,8 @@ import { useToast } from "./ToastProvider";
 import { useWallet } from "./WalletContext";
 import { usePlatformFee } from "../hooks/usePlatformFee";
 import { parseContractError } from "../utils/contractErrors";
-import { downloadTaxReceipt } from "../lib/taxReceipt";
+import { type TaxReceiptData } from "../lib/taxReceipt";
+import TaxReceiptPreview from "./TaxReceiptPreview";
 import { INTERVAL_LABELS, RecurringInterval, createSchedule } from "../lib/recurringDonations";
 
 import { type TransactionLifecyclePhase } from "../lib/contractClient";
@@ -61,6 +62,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
   const [amount, setAmount] = useState("");
   const [step, setStep] = useState<Step>("input");
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [receiptData, setReceiptData] = useState<TaxReceiptData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringInterval, setRecurringInterval] = useState<RecurringInterval>("monthly");
@@ -557,7 +559,11 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
           </div>
         )}
 
-        {step === "confirmed" && (
+        {step === "confirmed" && receiptData && (
+          <TaxReceiptPreview data={receiptData} onBack={() => setReceiptData(null)} />
+        )}
+
+        {step === "confirmed" && !receiptData && (
           <div
             ref={statusRef}
             tabIndex={-1}
@@ -591,7 +597,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
                 </a>
                 <button
                   onClick={() =>
-                    downloadTaxReceipt({
+                    setReceiptData({
                       transactionHash: txHash,
                       campaignTitle: campaign.title,
                       amountXlm: amountNum.toString(),

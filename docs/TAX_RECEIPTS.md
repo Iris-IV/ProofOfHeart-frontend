@@ -21,10 +21,13 @@ must be reviewed before they are presented to donors as tax documentation.
 
 ## Overview
 
-After a successful contribution, the donation dialog offers **Download receipt**. Clicking it calls
-`downloadTaxReceipt()` (`src/lib/taxReceipt.ts`), which builds a self-contained HTML page in the
-browser, opens it in a new window and triggers the browser's print dialog so the donor can print it
-or "Save as PDF". There is **no server involvement and no receipt is stored**: nothing is persisted,
+After a successful contribution, the donation dialog offers **View Tax Receipt**. Clicking it swaps
+the success view for `TaxReceiptPreview` (`src/components/TaxReceiptPreview.tsx`): a frosted-glass
+card with the receipt rows, a warning badge when the Tax ID is the placeholder, and **Print or save
+as PDF** / **Back** buttons. Printing calls `downloadTaxReceipt()` (`src/lib/taxReceipt.ts`), which
+builds a self-contained HTML page in the browser, opens it in a new window and triggers the
+browser's print dialog so the donor can print it or "Save as PDF". The preview and the printed
+page render the same rows (`getTaxReceiptFields()`), so what the donor reviews is what they print. There is **no server involvement and no receipt is stored**: nothing is persisted,
 numbered or emailed, and the platform cannot re-issue a receipt later (the donor can only generate
 one again from the same dialog session).
 
@@ -32,13 +35,14 @@ one again from the same dialog session).
 
 ```
 DonationModal (success state, txHash present)
-  └─ downloadTaxReceipt({ transactionHash, campaignTitle, amountXlm, donorAddress, donationDate })
-       ├─ builds HTML string (inline CSS, no external requests)
-       ├─ Blob(text/html) → URL.createObjectURL
-       ├─ window.open(url, "_blank", "width=700,height=800")
-       │    ├─ opened: onload → revoke the object URL after 1 s; page runs window.print()
-       │    └─ blocked by the browser: revoke the object URL immediately (no receipt is shown)
-       └─ returns void
+  └─ "View Tax Receipt" → TaxReceiptPreview({ transactionHash, campaignTitle, amountXlm, donorAddress, donationDate })
+       └─ "Print or save as PDF" → downloadTaxReceipt(data)
+            ├─ buildTaxReceiptHtml(data): escaped values, inline CSS, no scripts, no external requests
+            ├─ Blob(text/html) → URL.createObjectURL
+            ├─ window.open(url, "_blank", "width=700,height=800")
+            │    ├─ opened: onload → opener calls w.print(), then revokes the object URL after 1 s
+            │    └─ blocked by the browser: revoke the object URL immediately (no receipt is shown)
+            └─ returns void
 ```
 
 `src/components/DonationModal.tsx` supplies the values: the on-chain transaction hash, the campaign
@@ -71,6 +75,10 @@ interface TaxReceiptData {
 }
 
 function downloadTaxReceipt(data: TaxReceiptData): void;
+function buildTaxReceiptHtml(data: TaxReceiptData, issuedAt?: Date): string; // printable page
+function getTaxReceiptFields(data: TaxReceiptData, issuedAt?: Date): TaxReceiptField[]; // shared rows
+function escapeHtml(value: string): string;
+function getPlatformTaxId(): string; // NEXT_PUBLIC_PLATFORM_TAX_ID or "XX-XXXXXXX"
 ```
 
 - Browser-only: it uses `Blob`, `URL.createObjectURL` and `window.open`. Do not call it during SSR.
@@ -95,8 +103,11 @@ in the production build environment; **never ship production with the placeholde
 - **Time:** the "Donation Date" is the moment the receipt is generated after success, not the
   ledger close time of the transaction.
 - **Recurring donations:** a receipt covers one transaction hash; there is no annual summary.
-- **Printing:** the page calls `window.print()` as soon as it loads; the user can cancel and print
-  later from the window.
+- **Printing:** the opener calls `print()` on the receipt window as soon as it loads; the user can
+  cancel and print later from the window.
+- **Layout:** on screen the receipt is a frosted card on a brand gradient with a 120 ms entrance
+  (skipped under `prefers-reduced-motion`) and stacks label/value below 480 px; in print it is
+  plain black on white with `@page` margins and rows that never split across pages.
 - **No integrity protection:** the receipt is unsigned and editable HTML. The transaction hash is
   the verifiable part; a recipient organisation should verify it on-chain, not trust the document.
 
@@ -104,17 +115,16 @@ in the production build environment; **never ship production with the placeholde
 
 These are properties of the current implementation that maintainers should know:
 
-1. **Unescaped interpolation.** `campaignTitle`, `donorAddress` and `transactionHash` are inserted
-   into the HTML template without escaping. `campaignTitle` is written by the campaign creator, so
-   a title containing markup is rendered as markup in the receipt window, and that window is a
-   `blob:` URL that shares the application's origin. Escape `& < > " '` in every interpolated value
-   (or build the DOM with `textContent`) before relying on this feature for untrusted campaigns.
+1. **Escaped interpolation.** Every value inserted into the printable template goes through
+   `escapeHtml()` (`& < > " '`). This matters because `campaignTitle` is written by the campaign
+   creator and the receipt window is a `blob:` URL that shares the application's origin. The
+   in-app preview renders values as React text, which is escaped by construction. Keep both
+   properties when adding fields.
 2. **Content Security Policy.** Documents opened from a `blob:` URL inherit the policy of the page
-   that created them. The production policy forbids inline scripts without a nonce
-   (see [PRE_COMMIT_SETUP.md](../PRE_COMMIT_SETUP.md#content-security-policy-csp-maintenance)), so the
-   inline `window.print()` call in the template may be blocked in production, leaving the donor to
-   print manually. Verify in a production build and, if needed, call `w.print()` from the opener
-   instead of an inline script.
+   that created them (see
+   [PRE_COMMIT_SETUP.md](../PRE_COMMIT_SETUP.md#content-security-policy-csp-maintenance)). The
+   template contains **no script at all**; printing is triggered by the opener calling `w.print()`,
+   so it keeps working under a policy that forbids inline scripts.
 3. **Object URL lifetime.** The blob URL is revoked one second after the window loads (or at once
    if the pop-up was blocked), so it cannot be reopened.
 4. **Personal data.** The receipt contains the donor's wallet address only. It is generated and
@@ -149,21 +159,22 @@ When adding fields (asset code, fiat value, receipt number, issuer registration 
 
 1. Add the field to `TaxReceiptData`, make the caller in `DonationModal.tsx` pass it, and update the
    table in [Receipt contents](#receipt-contents).
-2. Escape every interpolated value (see Security considerations).
+2. Add it to `getTaxReceiptFields()` (both views pick it up) and an i18n label under the
+   `TaxReceipt` namespace for the preview; values are escaped for you (see Security considerations).
 3. Keep the template self-contained — no external fonts, images or scripts — so it works offline and
    under the CSP.
 4. Add tests (below) and, for new legal wording, link the approval in the PR.
 
 ## Testing
 
-There is currently no dedicated unit test for `src/lib/taxReceipt.ts`; `DonationModal.test.tsx`
-covers the dialog around it. A good test mocks `window.open`, `URL.createObjectURL` and
-`URL.revokeObjectURL`, calls `downloadTaxReceipt` with fixed data and asserts:
-
-- the generated Blob contains the campaign title, amount, donor address, hash and the Tax ID;
-- the placeholder `XX-XXXXXXX` appears only when `NEXT_PUBLIC_PLATFORM_TAX_ID` is unset;
-- markup in `campaignTitle` is escaped (add this together with the escaping fix);
-- the object URL is revoked immediately when `window.open` returns `null`.
+- `src/__tests__/lib/taxReceipt.test.ts` covers escaping, the Tax ID fallback, field order and
+  dates, the printable template (values present, markup escaped, no `<script>`, print and
+  responsive rules) and `downloadTaxReceipt` (prints from the opener, revokes the object URL after
+  load or immediately when the pop-up is blocked).
+- `src/__tests__/components/TaxReceiptPreview.test.tsx` covers the in-app view, the placeholder
+  warning, printing and going back.
+- `src/__tests__/components/DonationModal.test.tsx` covers opening the preview from the success
+  state and returning from it.
 
 ## Related
 

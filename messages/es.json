@@ -110,7 +110,7 @@
     "donatedSuccess": "{amount} XLM donados correctamente",
     "thankYou": "Gracias por apoyar esta causa.",
     "viewExplorer": "Ver en Stellar Explorer →",
-    "downloadReceipt": "Descargar Recibo Fiscal (PDF)",
+    "downloadReceipt": "Ver Recibo Fiscal",
     "close": "Cerrar",
     "quickAmounts": "Elige un importe",
     "walletApproval": "Apruebas esta contribución en tu billetera."
@@ -761,5 +761,19 @@
     "milestone-1000": "Campeón de la comunidad",
     "milestone-5000": "Líder de impacto",
     "milestone-10000": "Corazón legendario"
+  },
+  "TaxReceipt": {
+    "receiptTitle": "Recibo Fiscal de Donación",
+    "issuedBy": "Emitido por {platform} — ID fiscal: {taxId}",
+    "issueDate": "Fecha de emisión",
+    "donationDate": "Fecha de donación",
+    "campaign": "Campaña",
+    "amount": "Importe donado",
+    "donor": "Dirección del donante",
+    "transaction": "Hash de la transacción",
+    "placeholderTaxId": "ID fiscal de la plataforma no configurado",
+    "disclaimer": "Este recibo registra tu donación en la cadena. Consérvalo; que sea deducible depende de tu jurisdicción.",
+    "print": "Imprimir o guardar como PDF",
+    "back": "Volver"
   }
 }

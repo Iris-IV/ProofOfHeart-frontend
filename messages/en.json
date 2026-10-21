@@ -110,7 +110,7 @@
     "donatedSuccess": "{amount} XLM donated successfully",
     "thankYou": "Thank you for supporting this cause.",
     "viewExplorer": "View on Stellar Explorer →",
-    "downloadReceipt": "Download Tax Receipt (PDF)",
+    "downloadReceipt": "View Tax Receipt",
     "close": "Close",
     "quickAmounts": "Choose an amount",
     "walletApproval": "You approve this contribution in your wallet."
@@ -760,5 +760,19 @@
     "milestone-1000": "Community Champion",
     "milestone-5000": "Impact Leader",
     "milestone-10000": "Legendary Heart"
+  },
+  "TaxReceipt": {
+    "receiptTitle": "Donation Tax Receipt",
+    "issuedBy": "Issued by {platform} — Tax ID: {taxId}",
+    "issueDate": "Receipt issue date",
+    "donationDate": "Donation date",
+    "campaign": "Campaign",
+    "amount": "Donation amount",
+    "donor": "Donor address",
+    "transaction": "Transaction hash",
+    "placeholderTaxId": "Platform Tax ID not configured",
+    "disclaimer": "This receipt records your on-chain donation. Keep it for your records; whether it qualifies for a tax deduction depends on your jurisdiction.",
+    "print": "Print or save as PDF",
+    "back": "Back"
   }
 }
