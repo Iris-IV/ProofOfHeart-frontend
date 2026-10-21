@@ -117,20 +117,21 @@ function CauseCard({
   };
 
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition-transform duration-200 hover:motion-safe:-translate-y-0.5 hover:border-blue-200 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-blue-800">
+    <article className="group flex h-full flex-col overflow-hidden rounded-[24px] border border-zinc-200/80 bg-gradient-to-b from-white to-zinc-50/90 shadow-[0_20px_50px_-28px_rgba(15,23,42,0.34)] transition-all duration-200 hover:-translate-y-1 hover:border-orange-200 hover:shadow-[0_26px_70px_-28px_rgba(249,115,22,0.28)] dark:border-zinc-700/80 dark:from-zinc-800 dark:to-zinc-900/90 dark:hover:border-orange-800/70">
       {/* ── Cover image ── */}
-      <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-700">
+      <div className="relative aspect-video w-full overflow-hidden bg-zinc-100 dark:bg-zinc-700">
         {campaign.cover_image_url ? (
           <LazyImage
             src={campaign.cover_image_url}
             alt={campaign.title}
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-4xl select-none">
             {categoryIcon || "💡"}
           </div>
         )}
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/20 via-transparent to-white/5" />
         <button
           onClick={(e) => {
             e.preventDefault();
@@ -141,11 +142,11 @@ function CauseCard({
             }
             toggleSaved(campaign.id);
           }}
-          className="absolute top-2 right-2 p-2 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm rounded-full text-zinc-700 dark:text-zinc-200 hover:bg-white dark:hover:bg-zinc-800 transition-colors shadow-sm"
+          className="absolute right-2.5 top-2.5 rounded-full border border-white/60 bg-white/75 p-2 text-zinc-700 shadow-sm backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-white dark:border-zinc-700 dark:bg-zinc-900/75 dark:text-zinc-200 dark:hover:bg-zinc-900"
           title={isSaved(campaign.id) ? "Remove from saved" : "Save campaign"}
         >
           <Bookmark
-            className={`w-5 h-5 ${isSaved(campaign.id) ? "text-blue-500" : ""}`}
+            className={`h-5 w-5 ${isSaved(campaign.id) ? "text-orange-500" : ""}`}
             fill={isSaved(campaign.id) ? "currentColor" : "none"}
             aria-hidden="true"
           />
@@ -163,7 +164,7 @@ function CauseCard({
         </div>
 
         {/* Title */}
-        <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 leading-snug line-clamp-2 break-words h-[3rem]">
+        <h3 className="h-12 line-clamp-2 wrap-break-word font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
           {campaign.title}
         </h3>
 
