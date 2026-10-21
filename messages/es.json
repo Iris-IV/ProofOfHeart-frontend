@@ -718,6 +718,7 @@
     "recent": "Donaciones recientes de la comunidad",
     "supporter": "Colaborador de la comunidad",
     "latest": "{donor} ha contribuido {amount} XLM."
+  },
   "CreatorProfile": {
     "title": "Perfil del creador",
     "edit": "Personalizar perfil",

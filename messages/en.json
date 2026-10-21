@@ -717,6 +717,7 @@
     "recent": "Recent community donations",
     "supporter": "Community supporter",
     "latest": "{donor} contributed {amount} XLM."
+  },
   "CreatorProfile": {
     "title": "Creator profile",
     "edit": "Customize profile",
