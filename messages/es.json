@@ -423,7 +423,10 @@
     "noCausesInCategory": "No hay causas en esta categoría",
     "checkBackSoon": "Vuelve pronto — la comunidad está comenzando.",
     "tryDifferentCategory": "Intenta seleccionar otra categoría.",
-    "tryAgain": "Intentar de nuevo"
+    "tryAgain": "Intentar de nuevo",
+    "layoutLabel": "Diseño del listado",
+    "viewCompact": "Lista compacta",
+    "viewGrid": "Cuadrícula"
   },
   "DonationModal": {
     "titleConfirmed": "Donación Confirmada",
@@ -718,6 +721,7 @@
     "recent": "Donaciones recientes de la comunidad",
     "supporter": "Colaborador de la comunidad",
     "latest": "{donor} ha contribuido {amount} XLM."
+  },
   "CreatorProfile": {
     "title": "Perfil del creador",
     "edit": "Personalizar perfil",

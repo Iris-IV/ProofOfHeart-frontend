@@ -8,9 +8,15 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import CampaignStatusBadge from "@/components/CampaignStatusBadge";
 import FundingProgressBar from "@/components/FundingProgressBar";
 import { CampaignRowSkeleton } from "@/components/Skeleton";
+import VirtualizedCampaignList from "@/components/VirtualizedCampaignList";
 import { useInfiniteCampaigns } from "@/hooks/useInfiniteCampaigns";
 import { formatAddress } from "@/lib/formatAddress";
-import { Category, CATEGORY_LABELS } from "@/types";
+import {
+  loadExploreDensity,
+  saveExploreDensity,
+  type ExploreDensity,
+} from "@/lib/explorePreferences";
+import { Campaign, Category, CATEGORY_LABELS } from "@/types";
 import { formatAmount } from "@/lib/formatters";
 
 const CATEGORY_ICONS: Record<Category, string> = {
@@ -21,6 +27,13 @@ const CATEGORY_ICONS: Record<Category, string> = {
 };
 
 const ESTIMATED_ROW_HEIGHT = 120;
+const ESTIMATED_GRID_ROW_HEIGHT = 300;
+/** Column counts mirror the `sm:` (640px) and `lg:` (1024px) classes on the grid row. */
+const GRID_COLUMN_BREAKPOINTS = [
+  { minWidth: 0, columns: 1 },
+  { minWidth: 640, columns: 2 },
+  { minWidth: 1024, columns: 3 },
+];
 /** Start fetching the next page this many rows before the end of the loaded list. */
 const PREFETCH_ROW_THRESHOLD = 4;
 
@@ -44,6 +57,17 @@ export default function ExplorePage() {
   const { campaigns, isLoading, error, refetch, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useInfiniteCampaigns();
   const [activeCategory, setActiveCategory] = useState<"all" | Category>("all");
+  // Starts compact so the server and first client render match; the saved choice applies after mount.
+  const [density, setDensity] = useState<ExploreDensity>("compact");
+
+  useEffect(() => {
+    setDensity(loadExploreDensity());
+  }, []);
+
+  const changeDensity = (next: ExploreDensity) => {
+    setDensity(next);
+    saveExploreDensity(next);
+  };
 
   const categories = useMemo(() => {
     const seen = new Set(campaigns.map((c) => c.category));
@@ -137,6 +161,36 @@ export default function ExplorePage() {
         </div>
       )}
 
+      {/* Layout toggle */}
+      {!isLoading && !error && sorted.length > 0 && (
+        <div
+          role="group"
+          aria-label={t("layoutLabel")}
+          className="mt-6 inline-flex rounded-full bg-zinc-100 dark:bg-zinc-800 p-1"
+        >
+          {(
+            [
+              { value: "compact", label: t("viewCompact") },
+              { value: "grid", label: t("viewGrid") },
+            ] as const
+          ).map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={density === option.value}
+              onClick={() => changeDensity(option.value)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                density === option.value
+                  ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 shadow-sm"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Error */}
       {error && (
         <div className="mt-8 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-6 text-center">
@@ -172,8 +226,32 @@ export default function ExplorePage() {
         </div>
       )}
 
+      {/* Campaign grid */}
+      {!isLoading && !error && sorted.length > 0 && density === "grid" && (
+        <div className="mt-6">
+          <VirtualizedCampaignList
+            items={sorted}
+            estimateRowHeight={ESTIMATED_GRID_ROW_HEIGHT}
+            columnBreakpoints={GRID_COLUMN_BREAKPOINTS}
+            rowClassName="pb-4"
+            renderRow={(rowItems) => (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {rowItems.map(({ campaign, rank }) => (
+                  <ExploreGridCard
+                    key={campaign.id}
+                    campaign={campaign}
+                    rank={rank}
+                    locale={locale}
+                  />
+                ))}
+              </div>
+            )}
+          />
+        </div>
+      )}
+
       {/* Campaign list */}
-      {!isLoading && !error && sorted.length > 0 && (
+      {!isLoading && !error && sorted.length > 0 && density === "compact" && (
         <div ref={containerRef} className="mt-6">
           <div style={{ position: "relative", height: rowVirtualizer.getTotalSize() }}>
             {virtualRows.map((virtualRow) => {
@@ -262,5 +340,60 @@ export default function ExplorePage() {
         </div>
       )}
     </div>
+  );
+}
+
+function ExploreGridCard({
+  campaign,
+  rank,
+  locale,
+}: {
+  campaign: Campaign;
+  rank: number;
+  locale: string;
+}) {
+  return (
+    <Link
+      href={`/causes/${campaign.id}`}
+      className="flex flex-col gap-3 p-4 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm transition-all group"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-bold text-zinc-400 dark:text-zinc-500">#{rank}</span>
+        <CampaignStatusBadge campaign={campaign} />
+      </div>
+
+      {campaign.cover_image_url ? (
+        <span className="relative block w-full aspect-video rounded-md overflow-hidden">
+          <Image
+            src={campaign.cover_image_url}
+            alt={campaign.title}
+            fill
+            unoptimized
+            loading="lazy"
+            className="object-cover"
+          />
+        </span>
+      ) : (
+        <span className="flex aspect-video w-full items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-900 text-4xl">
+          {CATEGORY_ICONS[campaign.category] ?? "💡"}
+        </span>
+      )}
+
+      <div className="min-w-0">
+        <p className="font-semibold text-zinc-900 dark:text-zinc-50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
+          {campaign.title}
+        </p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+          By {formatAddress(campaign.creator)} ·{" "}
+          {formatAmount(campaign.amount_raised, locale, { maximumFractionDigits: 1 })} /{" "}
+          {formatAmount(campaign.funding_goal, locale, { maximumFractionDigits: 1 })} XLM
+        </p>
+      </div>
+
+      <FundingProgressBar
+        amountRaised={campaign.amount_raised}
+        fundingGoal={campaign.funding_goal}
+      />
+    </Link>
   );
 }
