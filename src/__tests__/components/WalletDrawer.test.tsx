@@ -34,7 +34,12 @@ describe("Modal drawer variant", () => {
     );
     const panel = screen.getByRole("dialog", { name: "Drawer" });
     expect(panel).toHaveAttribute("data-variant", "drawer");
-    expect(panel).toHaveClass("glass-surface", "ui-slide-up", "rounded-t-3xl", "sm:rounded-l-3xl");
+    expect(panel).toHaveClass(
+      "backdrop-blur-xl",
+      "ui-slide-up",
+      "rounded-t-3xl",
+      "sm:rounded-l-3xl",
+    );
     expect(panel).not.toHaveClass("bg-white");
     expect(screen.getByTestId("modal-overlay")).toHaveClass("items-end", "sm:justify-end");
   });

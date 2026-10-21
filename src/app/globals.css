@@ -177,19 +177,17 @@ body {
 /* Gradient hairline border (brand → accent → success) around a glass panel.
    The padding-box layer keeps the fill; the border-box layer paints the ring. */
 @utility gradient-border {
+  --glass-fill: rgb(255 255 255 / 0.85);
   border: 1px solid transparent;
   background:
-    linear-gradient(
-        var(--glass-fill, rgb(255 255 255 / 0.85)),
-        var(--glass-fill, rgb(255 255 255 / 0.85))
-      )
-      padding-box,
+    linear-gradient(var(--glass-fill), var(--glass-fill)) padding-box,
     linear-gradient(135deg, var(--color-brand), var(--color-accent), var(--color-success))
       border-box;
-}
 
-html.dark .gradient-border {
-  --glass-fill: rgb(24 24 27 / 0.85);
+  /* Same dark rule as every `dark:` utility, so the fill always matches the text. */
+  @variant dark {
+    --glass-fill: rgb(24 24 27 / 0.85);
+  }
 }
 
 @keyframes ui-pop-in {

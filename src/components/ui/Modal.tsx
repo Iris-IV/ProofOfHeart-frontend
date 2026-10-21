@@ -37,7 +37,7 @@ const PANEL_VARIANTS = {
   dialog:
     "w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden",
   drawer:
-    "glass-surface ui-slide-up w-full max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-t-3xl pb-[max(1rem,env(safe-area-inset-bottom))] sm:h-full sm:max-h-none sm:max-w-md sm:rounded-none sm:rounded-l-3xl",
+    "ui-slide-up border border-white/60 bg-white/90 shadow-2xl backdrop-blur-xl backdrop-saturate-150 dark:border-white/10 dark:bg-zinc-900/90 w-full max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-t-3xl pb-[max(1rem,env(safe-area-inset-bottom))] sm:h-full sm:max-h-none sm:max-w-md sm:rounded-none sm:rounded-l-3xl",
 } as const;
 
 /**
