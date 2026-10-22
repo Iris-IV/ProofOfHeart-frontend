@@ -21,7 +21,24 @@ export interface ModalProps {
   closeOnEscape?: boolean;
   role?: "dialog" | "alertdialog";
   initialFocusRef?: React.RefObject<HTMLElement | null>;
+  /**
+   * "dialog" (default) is a centred card. "drawer" is a glass panel that rises
+   * from the bottom on phones and slides in from the right from `sm` up (#1349).
+   */
+  variant?: "dialog" | "drawer";
 }
+
+const OVERLAY_VARIANTS = {
+  dialog: "items-center justify-center p-4",
+  drawer: "items-end justify-center p-0 sm:items-stretch sm:justify-end",
+} as const;
+
+const PANEL_VARIANTS = {
+  dialog:
+    "w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden",
+  drawer:
+    "ui-slide-up border border-white/60 bg-white/90 shadow-2xl backdrop-blur-xl backdrop-saturate-150 dark:border-white/10 dark:bg-zinc-900/90 w-full max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-t-3xl pb-[max(1rem,env(safe-area-inset-bottom))] sm:h-full sm:max-h-none sm:max-w-md sm:rounded-none sm:rounded-l-3xl",
+} as const;
 
 /**
  * Shared Modal Shell Component
@@ -44,6 +61,7 @@ function Modal({
   closeOnEscape = true,
   role = "dialog",
   initialFocusRef,
+  variant = "dialog",
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -134,7 +152,8 @@ function Modal({
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4",
+        "fixed inset-0 z-50 flex bg-black/60 backdrop-blur-sm",
+        OVERLAY_VARIANTS[variant],
         overlayClassName,
       )}
       onClick={handleOverlayClick}
@@ -147,10 +166,8 @@ function Modal({
         aria-labelledby={ariaLabelledBy}
         aria-describedby={ariaDescribedBy}
         tabIndex={-1}
-        className={cn(
-          "w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden focus:outline-none",
-          className,
-        )}
+        data-variant={variant}
+        className={cn(PANEL_VARIANTS[variant], "focus:outline-none", className)}
         onClick={(e) => e.stopPropagation()}
       >
         {children}

@@ -65,6 +65,24 @@ same way `bg-brand` survives a rebrand.
 `duration-(--duration-fast)`. Anything decorative must respect
 `motion-reduce:`.
 
+`--duration-snappy` (120ms, with `--ease-snappy`) is for micro-interactions on
+floating UI: tooltips, toasts, the wallet drawer and the vote breakdown bar.
+Keep them under 150ms. The `ui-pop-in` and `ui-slide-up` classes apply the
+entrance animations only under `prefers-reduced-motion: no-preference`.
+`ui-countdown` is the toast timer bar (`--toast-duration`); set
+`data-paused="true"` to pause it.
+
+### Glass surfaces
+
+- `glass-surface` — the frosted panel: translucent fill, `backdrop-blur-xl`,
+  hairline border and soft shadow, with a dark-mode variant.
+- `gradient-border` — a 1px brand → accent → success ring around a panel. It
+  paints its own fill, so use it on its own and not together with
+  `glass-surface`'s border.
+
+Daylight (high-contrast) mode strips backdrop filters, gradients and shadows,
+so both utilities fall back to plain bordered surfaces there.
+
 ### Utilities
 
 - `tap-target` — 44px minimum height (WCAG 2.5.5). Every interactive primitive

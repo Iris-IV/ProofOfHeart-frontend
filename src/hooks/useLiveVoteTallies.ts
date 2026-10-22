@@ -16,6 +16,36 @@ export interface UseLiveVoteTalliesOptions {
   enabled?: boolean;
 }
 
+export interface VoteBreakdown {
+  /** Whole-number shares that always add up to 100 (both 0 with no votes). */
+  approvePct: number;
+  rejectPct: number;
+  hasVotes: boolean;
+  leading: "approve" | "reject" | "tie" | "none";
+}
+
+/**
+ * Approve/Reject shares for the vote breakdown bar (#1354). With no votes both
+ * shares are 0 rather than a misleading 50/50 split.
+ */
+export function getVoteBreakdown({
+  upvotes,
+  downvotes,
+}: Pick<VoteTallies, "upvotes" | "downvotes">): VoteBreakdown {
+  const approves = Math.max(0, upvotes);
+  const rejects = Math.max(0, downvotes);
+  const total = approves + rejects;
+  if (total === 0) return { approvePct: 0, rejectPct: 0, hasVotes: false, leading: "none" };
+
+  const approvePct = Math.round((approves / total) * 100);
+  return {
+    approvePct,
+    rejectPct: 100 - approvePct,
+    hasVotes: true,
+    leading: approves === rejects ? "tie" : approves > rejects ? "approve" : "reject",
+  };
+}
+
 const POLL_FALLBACK_INTERVAL = Number(process.env.NEXT_PUBLIC_VOTE_TALLIES_POLL_MS) || 30_000;
 
 async function fetchOnChainTallies(campaignId: number): Promise<VoteTallies> {

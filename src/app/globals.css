@@ -189,6 +189,101 @@ html {
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900;
 }
 
+/* =========================================================================
+   Glass surfaces and micro-interactions (#1347 #1349 #1354 #1356)
+   -------------------------------------------------------------------------
+   Translucent "glass" panels for floating UI (toasts, tooltips, the wallet
+   drawer, the vote breakdown). Every animation stays under 150ms
+   (`--duration-snappy`) and is dropped under prefers-reduced-motion. Daylight
+   (high-contrast) mode already strips backdrop-filter, gradients and shadows
+   below, so these degrade to plain bordered surfaces there.
+   ========================================================================= */
+@theme {
+  --duration-snappy: 120ms;
+  --ease-snappy: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Frosted panel: translucent fill, blur, hairline border, soft elevation. */
+@utility glass-surface {
+  @apply border border-white/60 bg-white/70 shadow-lg shadow-zinc-900/10 backdrop-blur-xl backdrop-saturate-150 dark:border-white/10 dark:bg-zinc-900/70 dark:shadow-black/40;
+}
+
+/* Gradient hairline border (brand → accent → success) around a glass panel.
+   The padding-box layer keeps the fill; the border-box layer paints the ring. */
+@utility gradient-border {
+  --glass-fill: rgb(255 255 255 / 0.85);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--glass-fill), var(--glass-fill)) padding-box,
+    linear-gradient(135deg, var(--color-brand), var(--color-accent), var(--color-success))
+      border-box;
+
+  /* Same dark rule as every `dark:` utility, so the fill always matches the text. */
+  @variant dark {
+    --glass-fill: rgb(24 24 27 / 0.85);
+  }
+}
+
+@keyframes ui-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes ui-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Countdown bar for auto-dismissing toasts: shrinks from full to empty over
+   the toast's lifetime (set per toast with --toast-duration). */
+@keyframes ui-countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ui-pop-in {
+    animation: ui-pop-in var(--duration-snappy) var(--ease-snappy) both;
+  }
+  .ui-slide-up {
+    animation: ui-slide-up var(--duration-snappy) var(--ease-snappy) both;
+  }
+}
+
+.ui-countdown {
+  transform-origin: left;
+  animation: ui-countdown var(--toast-duration, 5000ms) linear forwards;
+}
+
+/* Paused while the toast is hovered or focused (WCAG 2.2.1). */
+.ui-countdown[data-paused="true"] {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The timer still runs; only the moving bar is hidden. */
+  .ui-countdown {
+    animation-name: none;
+    transform: scaleX(1);
+  }
+}
+
 /* Campaign roadmap: the rail follows the reading order, including on phones. */
 .milestone-roadmap {
   display: flex;

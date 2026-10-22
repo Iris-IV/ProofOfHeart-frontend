@@ -22,6 +22,18 @@ import type { WalletSigner } from "@/lib/walletSigner";
 /** The providers named in #649. Web3Auth supports more; these are the ones we surface. */
 export type SocialLoginProvider = "google" | "twitter";
 
+/**
+ * The social options the wallet drawer offers, in display order (#1349).
+ * `labelKey` is a `Common` message key.
+ */
+export const SOCIAL_LOGIN_PROVIDERS: readonly {
+  id: SocialLoginProvider;
+  labelKey: "continueWithGoogle" | "continueWithX";
+}[] = [
+  { id: "google", labelKey: "continueWithGoogle" },
+  { id: "twitter", labelKey: "continueWithX" },
+];
+
 export interface SocialWalletSession {
   provider: SocialLoginProvider;
   publicKey: string;
@@ -208,14 +220,20 @@ export async function disconnectSocialWallet(): Promise<void> {
  */
 export const socialSigner: WalletSigner = {
   kind: "social",
-  async getAddress() {
-    if (!keypair) throw new Error("Social wallet is not connected.");
-    return keypair.publicKey();
+  // Signing is synchronous, so these return settled promises. Failures still
+  // surface as rejections, never as synchronous throws.
+  getAddress() {
+    if (!keypair) return Promise.reject(new Error("Social wallet is not connected."));
+    return Promise.resolve(keypair.publicKey());
   },
-  async signTransaction(xdr, { networkPassphrase }) {
-    if (!keypair) throw new Error("Social wallet is not connected.");
-    const tx = StellarSdk.TransactionBuilder.fromXDR(xdr, networkPassphrase);
-    tx.sign(keypair);
-    return tx.toXDR();
+  signTransaction(xdr, { networkPassphrase }) {
+    try {
+      if (!keypair) throw new Error("Social wallet is not connected.");
+      const tx = StellarSdk.TransactionBuilder.fromXDR(xdr, networkPassphrase);
+      tx.sign(keypair);
+      return Promise.resolve(tx.toXDR());
+    } catch (error) {
+      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+    }
   },
 };

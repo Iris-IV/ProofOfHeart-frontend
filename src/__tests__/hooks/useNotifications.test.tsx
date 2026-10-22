@@ -61,4 +61,29 @@ describe("useNotifications", () => {
 
     rerender({ wallet: WALLET });
   });
+
+  it("reports hasLoaded once the wallet's feed has loaded, even when empty", async () => {
+    mockFetchNotifications.mockResolvedValue([]);
+    const initialProps: { wallet: string | null } = { wallet: WALLET };
+    const { result, rerender } = renderHook(({ wallet }) => useNotifications(wallet), {
+      initialProps,
+    });
+
+    expect(result.current.hasLoaded).toBe(false);
+    await waitFor(() => expect(result.current.hasLoaded).toBe(true));
+
+    // A different wallet starts over until its own feed loads.
+    let resolveOther: (value: Awaited<ReturnType<typeof fetchNotifications>>) => void;
+    mockFetchNotifications.mockReturnValue(new Promise((resolve) => (resolveOther = resolve)));
+    rerender({ wallet: "GOTHER" });
+    expect(result.current.hasLoaded).toBe(false);
+    await act(async () => {
+      resolveOther!([]);
+      await Promise.resolve();
+    });
+    expect(result.current.hasLoaded).toBe(true);
+
+    rerender({ wallet: null });
+    expect(result.current.hasLoaded).toBe(false);
+  });
 });

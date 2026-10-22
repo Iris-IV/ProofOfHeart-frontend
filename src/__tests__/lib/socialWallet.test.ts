@@ -329,3 +329,63 @@ describe("socialSigner", () => {
     expect(parsedTx.signatures.length).toBe(1);
   });
 });
+
+describe("SOCIAL_LOGIN_PROVIDERS", () => {
+  it("lists Google then X with their Common message keys", () => {
+    const mod = loadWithClientId("BP-client-id");
+    expect(mod.SOCIAL_LOGIN_PROVIDERS).toEqual([
+      { id: "google", labelKey: "continueWithGoogle" },
+      { id: "twitter", labelKey: "continueWithX" },
+    ]);
+  });
+});
+
+describe("socialSigner", () => {
+  beforeEach(() => {
+    mockInit.mockReset().mockResolvedValue(undefined);
+    mockLogin.mockReset().mockResolvedValue(undefined);
+    mockGetUserInfo.mockReset().mockResolvedValue({});
+    mockEd25519PrivKey = SEED_HEX;
+    mockState = { ed25519PrivKey: SEED_HEX, userInfo: { authConnection: "google" } };
+  });
+
+  it("rejects (rather than throwing) before a social wallet is connected", async () => {
+    const mod = loadWithClientId("BP-client-id");
+    const address = mod.socialSigner.getAddress();
+    expect(address).toBeInstanceOf(Promise);
+    await expect(address).rejects.toThrow("Social wallet is not connected.");
+    await expect(
+      mod.socialSigner.signTransaction("AAAA", { networkPassphrase: StellarSdk.Networks.TESTNET }),
+    ).rejects.toThrow("Social wallet is not connected.");
+  });
+
+  it("returns the address and signs transactions once connected", async () => {
+    const mod = loadWithClientId("BP-client-id");
+    const session = await mod.connectSocialWallet("google");
+    await expect(mod.socialSigner.getAddress()).resolves.toBe(session.publicKey);
+
+    const tx = new StellarSdk.TransactionBuilder(new StellarSdk.Account(session.publicKey, "1"), {
+      fee: "100",
+      networkPassphrase: StellarSdk.Networks.TESTNET,
+    })
+      .addOperation(StellarSdk.Operation.bumpSequence({ bumpTo: "2" }))
+      .setTimeout(0)
+      .build();
+
+    const signed = await mod.socialSigner.signTransaction(tx.toXDR(), {
+      networkPassphrase: StellarSdk.Networks.TESTNET,
+    });
+    const parsed = StellarSdk.TransactionBuilder.fromXDR(signed, StellarSdk.Networks.TESTNET);
+    expect(parsed.signatures).toHaveLength(1);
+  });
+
+  it("turns malformed XDR into a rejection", async () => {
+    const mod = loadWithClientId("BP-client-id");
+    await mod.connectSocialWallet("google");
+    await expect(
+      mod.socialSigner.signTransaction("not-xdr", {
+        networkPassphrase: StellarSdk.Networks.TESTNET,
+      }),
+    ).rejects.toBeInstanceOf(Error);
+  });
+});

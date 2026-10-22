@@ -12,6 +12,8 @@ const POLL_INTERVAL_MS = 30_000;
 
 export function useNotifications(walletAddress: string | null) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  /** Wallet whose feed has loaded at least once; tells "empty" apart from "not loaded yet". */
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const refresh = useCallback(async () => {
@@ -27,6 +29,7 @@ export function useNotifications(walletAddress: string | null) {
     const nextNotifications = await fetchNotifications(walletAddress, controller.signal);
     if (controller.signal.aborted) return;
     setNotifications(nextNotifications);
+    setLoadedFor(walletAddress);
   }, [walletAddress]);
 
   useEffect(() => {
@@ -64,5 +67,7 @@ export function useNotifications(walletAddress: string | null) {
     [walletAddress],
   );
 
-  return { notifications, unreadCount, markAllRead, markRead, refresh };
+  const hasLoaded = walletAddress !== null && loadedFor === walletAddress;
+
+  return { notifications, unreadCount, markAllRead, markRead, refresh, hasLoaded };
 }

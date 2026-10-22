@@ -4,14 +4,14 @@ import { getWalletTransactions, type WalletTransactionLogEntry } from "./transac
 import { normalizeAddress } from "./stellar";
 import { getArray, setArray } from "./localStorageStore";
 import { AppNotificationSchema, NotificationFeedResponseSchema, parseWithOrNull } from "./schemas";
+import type { NotificationPreferences } from "./preferences";
 
 // ARIA live region for screen reader announcements
 let ariaLiveRegion: HTMLElement | null = null;
 
 function getAriaLiveRegion(): HTMLElement {
   if (!ariaLiveRegion && typeof document !== "undefined") {
-    ariaLiveRegion = document.getElementById("notification-announcer") ||
-      createAriaLiveRegion();
+    ariaLiveRegion = document.getElementById("notification-announcer") || createAriaLiveRegion();
   }
   return ariaLiveRegion!;
 }
@@ -60,6 +60,66 @@ export interface AppNotification {
   href: string;
   timestamp: number;
   read: boolean;
+}
+
+/** Toast style used when a notification arrives while the app is open (#1347). */
+export const NOTIFICATION_TOAST_TYPES: Record<
+  NotificationEventType,
+  "success" | "info" | "warning" | "error"
+> = {
+  contribution_confirmed: "success",
+  campaign_funded: "success",
+  campaign_cancelled: "warning",
+  refund_available: "info",
+  revenue_deposited: "success",
+  revenue_claimed: "success",
+  new_update: "info",
+  campaign_verified: "success",
+};
+
+/** Event types with their own on/off switch in Notification Preferences. */
+const PREFERENCE_FOR_EVENT: Partial<
+  Record<
+    NotificationEventType,
+    keyof Pick<
+      NotificationPreferences,
+      "contributions" | "verified" | "refundAvailable" | "revenueDeposited"
+    >
+  >
+> = {
+  contribution_confirmed: "contributions",
+  campaign_verified: "verified",
+  refund_available: "refundAvailable",
+  revenue_deposited: "revenueDeposited",
+};
+
+/**
+ * Whether a newly arrived notification should pop up as a toast: only for
+ * users on "instant" in-app delivery, and never for an event they turned off.
+ */
+export function shouldToastNotification(
+  notification: Pick<AppNotification, "type">,
+  prefs: Pick<NotificationPreferences, "frequency" | "channels"> & Partial<NotificationPreferences>,
+): boolean {
+  if (prefs.frequency !== "instant" || !prefs.channels.includes("inApp")) return false;
+  const pref = PREFERENCE_FOR_EVENT[notification.type];
+  return pref ? prefs[pref] !== false : true;
+}
+
+/**
+ * Unread notifications in `next` that were not in `previous`, newest first.
+ * `previous === null` means this is the first load, which returns nothing so
+ * the existing backlog doesn't arrive as a burst of toasts.
+ */
+export function getNewlyArrivedNotifications(
+  previous: readonly AppNotification[] | null,
+  next: readonly AppNotification[],
+): AppNotification[] {
+  if (previous === null) return [];
+  const seen = new Set(previous.map((notification) => notification.id));
+  return next
+    .filter((notification) => !notification.read && !seen.has(notification.id))
+    .sort((a, b) => b.timestamp - a.timestamp);
 }
 
 export interface NotificationFeedResponse {

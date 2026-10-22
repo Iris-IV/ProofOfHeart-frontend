@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Campaign, Vote } from "../types";
 import AsyncButtonContent from "./AsyncButtonContent";
+import VoteTallyBreakdown from "./VoteTallyBreakdown";
 import { useToast } from "./ToastProvider";
 import { parseContractError } from "../utils/contractErrors";
 import { getAsyncActionErrorMessage, withActionTimeout } from "../utils/asyncAction";
@@ -22,6 +23,8 @@ interface VotingComponentProps {
   isTokenHolder?: boolean;
   onVerifyWithVotes?: () => Promise<void>;
   isVerifying?: boolean;
+  /** Tallies stream live from contract events (shows a "Live" indicator). */
+  isLive?: boolean;
 }
 
 export default function VotingComponent({
@@ -38,6 +41,7 @@ export default function VotingComponent({
   isTokenHolder = true,
   onVerifyWithVotes,
   isVerifying = false,
+  isLive = false,
 }: VotingComponentProps) {
   const t = useTranslations("Voting");
   const tContractErrors = useTranslations("ContractErrors");
@@ -71,7 +75,9 @@ export default function VotingComponent({
       setLocalVote(voteType);
     } catch (error) {
       console.error("Voting failed:", error);
-      showError(localizeContractError(getAsyncActionErrorMessage(error, parseContractError)));
+      showError(localizeContractError(getAsyncActionErrorMessage(error, parseContractError)), {
+        action: { label: t("retryVote"), onClick: () => void handleVote(voteType) },
+      });
     }
   };
 
@@ -108,8 +114,6 @@ export default function VotingComponent({
     approvalThresholdBps && approvalThresholdBps > 0
       ? Math.min(100, Math.round((currentApprovalBps / approvalThresholdBps) * 100))
       : null;
-  const approvePercent = totalVotes > 0 ? Math.round((upvotes / totalVotes) * 100) : 50;
-  const rejectPercent = 100 - approvePercent;
 
   const canVerify =
     !!onVerifyWithVotes &&
@@ -132,12 +136,12 @@ export default function VotingComponent({
   const votedType = userVote?.voteType ?? localVote;
 
   return (
-    <div className="flex flex-col items-center gap-4 p-4 bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-700">
+    <div className="glass-surface flex flex-col items-center gap-4 rounded-surface p-4 sm:p-5">
       <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{t("title")}</h3>
 
       <div className="flex gap-3 w-full">
         <button
-          onClick={() => handleVote("upvote")}
+          onClick={() => void handleVote("upvote")}
           disabled={voteDisabled}
           aria-label={t("approveCampaignAria")}
           title={getDisabledTitle()}
@@ -156,7 +160,7 @@ export default function VotingComponent({
         </button>
 
         <button
-          onClick={() => handleVote("downvote")}
+          onClick={() => void handleVote("downvote")}
           disabled={voteDisabled}
           aria-label={t("rejectCampaignAria")}
           title={getDisabledTitle()}
@@ -184,23 +188,7 @@ export default function VotingComponent({
         </div>
       </div>
 
-      <div className="w-full bg-red-300 dark:bg-red-900/60 rounded-full h-2">
-        <div
-          className="bg-green-500 h-2 rounded-full transition-all duration-300"
-          style={{
-            width: `${approvePercent}%`,
-          }}
-        />
-      </div>
-
-      <p className="w-full text-center text-xs text-zinc-600 dark:text-zinc-400">
-        {t("approveRejectPercent", { approve: approvePercent, reject: rejectPercent })}
-      </p>
-
-      <div className="flex justify-between w-full text-sm text-zinc-600 dark:text-zinc-400">
-        <span>{t("approveCount", { count: upvotes })}</span>
-        <span>{t("rejectCount", { count: downvotes })}</span>
-      </div>
+      <VoteTallyBreakdown upvotes={upvotes} downvotes={downvotes} live={isLive} />
 
       {quorumPct !== null && (
         <div className="w-full space-y-1">
@@ -263,7 +251,7 @@ export default function VotingComponent({
 
       {canVerify && (
         <button
-          onClick={onVerifyWithVotes}
+          onClick={() => void onVerifyWithVotes?.()}
           disabled={isVerifying}
           className="w-full min-h-[44px] py-2 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-semibold rounded-xl transition-colors text-sm inline-flex items-center justify-center gap-2"
         >
