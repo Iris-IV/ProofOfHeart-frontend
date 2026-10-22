@@ -16,6 +16,7 @@ import { Category, CATEGORY_LABELS } from "@/types";
 import { xlmToStroops } from "@/lib/stellarAmount";
 import { parseContractError } from "@/utils/contractErrors";
 import { useCampaignFormDraft } from "@/hooks/useCampaignFormDraft";
+import { CheckCircle2 } from "lucide-react";
 import {
   validateForm,
   validateMaxContributionPerWallet,
@@ -62,7 +63,7 @@ export default function CreateCampaignPage() {
   // Creator email webhook URL is server-only — client calls /api/notify-creator instead
 
   // ── Draft management hook ──
-  const { restoreDraft, saveDraft, clearDraft } = useCampaignFormDraft({ publicKey });
+  const { restoreDraft, saveDraft, clearDraft, lastSavedAt } = useCampaignFormDraft({ publicKey });
 
   // Restore draft on mount
   useEffect(() => {
@@ -370,6 +371,22 @@ export default function CreateCampaignPage() {
             {t("pageTitle")}
           </h1>
           <p className="text-zinc-600 dark:text-zinc-400 text-sm">{t("pageSubtitle")}</p>
+          {lastSavedAt !== null && (
+            <p
+              role="status"
+              aria-live="polite"
+              data-testid="draft-saved-badge"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50/80 dark:bg-emerald-900/30 px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300 backdrop-blur-sm"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+              {t("draftSavedAt", {
+                time: new Date(lastSavedAt).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              })}
+            </p>
+          )}
         </div>
 
         {/* Wallet guard banner */}

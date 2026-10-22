@@ -38,13 +38,7 @@ import { Campaign, Vote, CATEGORY_LABELS, CampaignStatus, Category } from "@/typ
 import { getAsyncActionErrorMessage, withActionTimeout } from "@/utils/asyncAction";
 import { parseContractError } from "@/utils/contractErrors";
 import { explorerTxUrl } from "@/utils/explorer";
-
-const CATEGORY_ICONS: Record<Category, string> = {
-  [Category.Learner]: "🎓",
-  [Category.EducationalStartup]: "🚀",
-  [Category.Educator]: "👩‍🏫",
-  [Category.Publisher]: "📚",
-};
+import CategoryIcon from "@/components/CategoryIcon";
 
 const CATEGORY_VALUES = Object.values(Category).filter(
   (value): value is Category => typeof value === "number",
@@ -257,13 +251,13 @@ function CausesContent() {
   }, [campaigns]);
 
   useEffect(() => {
-    if (userWalletAddress) loadUserVotes();
+    if (userWalletAddress) void loadUserVotes();
     else setUserVotes({});
   }, [userWalletAddress, loadUserVotes]);
 
   useEffect(() => {
     if (campaigns.length > 0) {
-      loadVoteCounts();
+      void loadVoteCounts();
       return;
     }
     // Reset the seen-IDs tracker when the list is cleared so a fresh fetch
@@ -490,25 +484,34 @@ function CausesContent() {
   const renderEmptyState = () => (
     <CampaignEmptyState
       variant={campaigns.length === 0 ? "campaigns" : "search"}
-      title={campaigns.length === 0
+      title={
+        campaigns.length === 0
           ? t("noCausesYet")
           : debouncedSearch
             ? t("noSearchResults")
-            : t("noCausesFound")}
-      description={campaigns.length === 0
+            : t("noCausesFound")
+      }
+      description={
+        campaigns.length === 0
           ? t("beFirstToSubmit")
           : debouncedSearch
             ? t("tryDifferentSearch")
-            : t("tryDifferentKeyword")}
-      action={campaigns.length > 0 ? (
-        <Button onClick={clearFilters} className="duration-[120ms] motion-reduce:transition-none">
-          {t("clearAllFilters")}
-        </Button>
-      ) : (
-        <Link href="/causes/new" className="tap-target focus-ring inline-flex items-center rounded-control bg-brand px-5 py-2 text-sm font-semibold text-white transition-colors duration-[120ms] hover:bg-brand-strong motion-reduce:transition-none">
-          {t("createCampaign")}
-        </Link>
-      )}
+            : t("tryDifferentKeyword")
+      }
+      action={
+        campaigns.length > 0 ? (
+          <Button onClick={clearFilters} className="duration-[120ms] motion-reduce:transition-none">
+            {t("clearAllFilters")}
+          </Button>
+        ) : (
+          <Link
+            href="/causes/new"
+            className="tap-target focus-ring inline-flex items-center rounded-control bg-brand px-5 py-2 text-sm font-semibold text-white transition-colors duration-[120ms] hover:bg-brand-strong motion-reduce:transition-none"
+          >
+            {t("createCampaign")}
+          </Link>
+        )
+      }
     >
       {campaigns.length > 0 && hasActiveFilters && suggestedCategories.length > 0 && (
         <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
@@ -523,12 +526,16 @@ function CausesContent() {
               aria-label={`${CATEGORY_LABELS[cat]} (${categoryCounts[cat]})`}
               variant="secondary"
               size="sm"
-              className="duration-[120ms] motion-reduce:transition-none"
+              className="group duration-[120ms] motion-reduce:transition-none"
             >
-              <span aria-hidden="true">
-                {CATEGORY_ICONS[cat]} {CATEGORY_LABELS[cat]}
+              <span aria-hidden="true" className="inline-flex items-center gap-1.5">
+                <CategoryIcon category={cat} />
+                {CATEGORY_LABELS[cat]}
               </span>
-              <span aria-hidden="true" className="tabular-nums text-xs font-semibold px-1.5 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300">
+              <span
+                aria-hidden="true"
+                className="tabular-nums text-xs font-semibold px-1.5 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300"
+              >
                 {categoryCounts[cat]}
               </span>
             </Button>
@@ -598,16 +605,15 @@ function CausesContent() {
 
           {/* Category filter chips */}
           {!isLoading && !error && mounted && (
-            <div role="group" aria-label={t("labelCategory")} className="flex flex-wrap gap-2">
+            <div
+              role="group"
+              aria-label={t("labelCategory")}
+              className="flex gap-2 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
               {(["all", ...CATEGORY_VALUES] as CategoryFilter[]).map((cat) => {
                 const selected = isCategorySelected(cat);
-                const count = cat === "all" ? categoryCounts.all : categoryCounts[cat as Category];
-                const label =
-                  cat === "all"
-                    ? t("allCategories")
-                    : `${CATEGORY_ICONS[cat]} ${CATEGORY_LABELS[cat]}`;
-                const accessibleName =
-                  cat === "all" ? t("allCategories") : CATEGORY_LABELS[cat as Category];
+                const count = cat === "all" ? categoryCounts.all : categoryCounts[cat];
+                const label = cat === "all" ? t("allCategories") : CATEGORY_LABELS[cat];
 
                 return (
                   <button
@@ -616,16 +622,19 @@ function CausesContent() {
                     aria-pressed={selected}
                     aria-label={t(
                       selected ? "categoryChipAriaSelected" : "categoryChipAriaUnselected",
-                      { label: accessibleName, count },
+                      { label, count },
                     )}
                     onClick={() => setCategory(cat === "all" ? "all" : String(cat))}
-                    className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800 ${
+                    className={`group snap-start shrink-0 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-[120ms] motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800 ${
                       selected
-                        ? "bg-blue-600 text-white"
+                        ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-2 ring-blue-400/60"
                         : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600"
                     }`}
                   >
-                    <span aria-hidden="true">{label}</span>
+                    <span aria-hidden="true" className="inline-flex items-center gap-1.5">
+                      {cat !== "all" && <CategoryIcon category={cat} />}
+                      {label}
+                    </span>
                     <span
                       className={`tabular-nums text-xs font-semibold px-1.5 py-0.5 rounded-full ${
                         selected
@@ -809,15 +818,14 @@ function CausesContent() {
             )}
 
             {/* Map view */}
-            {viewMode === "map" && (
-              filteredCampaigns.length > 0 ? (
+            {viewMode === "map" &&
+              (filteredCampaigns.length > 0 ? (
                 <MapErrorBoundary>
                   <CampaignMap campaigns={filteredCampaigns} />
                 </MapErrorBoundary>
               ) : (
                 renderEmptyState()
-              )
-            )}
+              ))}
           </div>
         )}
       </main>

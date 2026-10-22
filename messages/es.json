@@ -328,6 +328,7 @@
   "CreateCampaign": {
     "pageTitle": "Crear una Campaña",
     "pageSubtitle": "Completa los detalles a continuación para lanzar tu campaña en la cadena mediante Freighter.",
+    "draftSavedAt": "Borrador guardado automáticamente a las {time}",
     "walletGuard": "Conecta tu wallet Freighter para crear una campaña.",
     "connectWallet": "Conectar Wallet",
     "connecting": "Conectando…",
@@ -621,7 +622,13 @@
     "optOutState": "Exclusión voluntaria",
     "optOutTooltip": "Los contribuyentes pueden excluirse en cualquier momento para permanecer anónimos.",
     "disableAnon": "Deshabilitar modo anónimo",
-    "enableAnon": "Habilitar modo anónimo"
+    "enableAnon": "Habilitar modo anónimo",
+    "columnSupporter": "Apoyador",
+    "columnAmount": "Monto",
+    "paginationLabel": "Paginación de apoyadores",
+    "previousPage": "Página anterior",
+    "nextPage": "Página siguiente",
+    "pageOf": "Página {page} de {total}"
   },
   "Notifications": {
     "title": "Notificaciones",
