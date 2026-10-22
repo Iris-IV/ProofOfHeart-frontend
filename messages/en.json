@@ -327,6 +327,7 @@
   "CreateCampaign": {
     "pageTitle": "Create a Campaign",
     "pageSubtitle": "Fill in the details below to launch your campaign on-chain via Freighter.",
+    "draftSavedAt": "Draft auto-saved at {time}",
     "walletGuard": "Connect your Freighter wallet to create a campaign.",
     "connectWallet": "Connect Wallet",
     "connecting": "Connecting…",
@@ -614,7 +615,13 @@
     "optOutState": "Opt out",
     "optOutTooltip": "Contributors can opt out at any time to remain anonymous on public leaderboards.",
     "disableAnon": "Disable anonymous mode",
-    "enableAnon": "Enable anonymous mode"
+    "enableAnon": "Enable anonymous mode",
+    "columnSupporter": "Supporter",
+    "columnAmount": "Amount",
+    "paginationLabel": "Supporters pagination",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "pageOf": "Page {page} of {total}"
   },
   "Notifications": {
     "title": "Notifications",
