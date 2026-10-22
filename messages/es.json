@@ -19,7 +19,8 @@
     "continueWithX": "Continuar con X",
     "socialLoginHint": "Crea una billetera Stellar protegida por tu cuenta social, sin necesidad de extensión.",
     "signedInAs": "Sesión iniciada como {name}",
-    "highContrast": "Alto contraste"
+    "highContrast": "Alto contraste",
+    "embeddedWalletBadge": "Sin extensión"
   },
   "PwaInstaller": {
     "installTitle": "Instalar ProofOfHeart",
@@ -521,7 +522,12 @@
     "votedUpvote": "Votaste para aprobar esta causa",
     "votedDownvote": "Votaste para rechazar esta causa",
     "verifyWithVotes": "✓ Verificar Campaña con Votos",
-    "verifying": "Verificando..."
+    "verifying": "Verificando...",
+    "noVotesYet": "Aún no hay votos",
+    "liveTally": "En vivo",
+    "breakdownTitle": "Desglose de votos",
+    "totalVotesCast": "{count, plural, one {# voto emitido en total} other {# votos emitidos en total}}",
+    "retryVote": "Reintentar voto"
   },
   "Observability": {
     "loading": "Cargando métricas de observabilidad…",
@@ -633,7 +639,8 @@
     "prefContributions": "Confirmaciones de contribución",
     "prefVerified": "Campaña verificada",
     "prefRefundAvailable": "Reembolso disponible",
-    "prefRevenueDeposited": "Depósitos de ingresos"
+    "prefRevenueDeposited": "Depósitos de ingresos",
+    "openNotifications": "Abrir notificaciones"
   },
   "CauseDetail": {
     "noDescription": "El creador no proporcionó una descripción."
@@ -793,5 +800,16 @@
     "statusAwaiting": "Esperando firmas",
     "statusCollecting": "Recopilando",
     "statusReady": "Lista para enviar"
+  "Web3Help": {
+    "stroopsTitle": "¿Qué es un stroop?",
+    "stroopsLabel": "¿Qué es un stroop?",
+    "stroopsBody": "Un stroop es la unidad más pequeña de XLM: 1 XLM = {stroopsPerXlm} stroops. Los contratos guardan cada monto en stroops, así que no se pierde nada por redondeo.",
+    "stroopsAmount": "Exactamente {xlm} XLM, guardado en la cadena como {stroops} stroops. Un stroop es la unidad más pequeña de XLM: 1 XLM = {stroopsPerXlm} stroops.",
+    "escrowTitle": "¿Cómo se liberan los fondos?",
+    "escrowLabel": "¿Cómo se guardan y liberan las contribuciones?",
+    "escrowBody": "Las contribuciones las guarda el contrato inteligente Soroban de la campaña, no el creador. El creador puede retirar una sola vez, después de alcanzar la meta, y la comisión de la plataforma se cobra al retirar. Si la campaña se cancela, o vence el plazo sin alcanzar la meta, los contribuyentes pueden reclamar un reembolso.",
+    "multiTokenTitle": "¿Con qué token pago?",
+    "multiTokenLabel": "¿En qué token se hacen las contribuciones?",
+    "multiTokenBody": "Las contribuciones se firman y liquidan en Stellar en XLM. Las cifras en USD y EUR son estimaciones según tipos de cambio en vivo, así que su valor puede variar; el monto en XLM que firmas es lo que contribuyes."
   }
 }

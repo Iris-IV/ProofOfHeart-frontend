@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui";
 import Amount from "@/components/Amount";
+import Web3Explainer from "@/components/Web3Explainer";
 import {
   exchangeRatesSchema,
   hasFreshRates,
@@ -13,9 +14,7 @@ import {
 import { stroopsToXlmNumber } from "@/lib/stellarAmount";
 
 type QuoteState =
-  | { status: "loading" }
-  | { status: "error" }
-  | { status: "ready"; rates: ExchangeRates };
+  { status: "loading" } | { status: "error" } | { status: "ready"; rates: ExchangeRates };
 
 export default function CampaignCurrencySelector({ goal }: { goal: bigint }) {
   const t = useTranslations("CampaignCurrency");
@@ -55,11 +54,7 @@ export default function CampaignCurrencySelector({ goal }: { goal: bigint }) {
   }, [currency, attempt]);
 
   const rate =
-    quote.status === "ready"
-      ? currency === "EUR"
-        ? quote.rates.eur
-        : quote.rates.usd
-      : null;
+    quote.status === "ready" ? (currency === "EUR" ? quote.rates.eur : quote.rates.usd) : null;
   const fiat =
     rate === null
       ? null
@@ -118,23 +113,26 @@ export default function CampaignCurrencySelector({ goal }: { goal: bigint }) {
           {t("retry")}
         </Button>
       )}
-      <p id={`${id}-hint`} className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-        {t("estimate")}
-        {currency !== "XLM" && quote.status === "ready" && (
-          <>
-            {" "}
-            {t("updated", {
-              time: new Intl.DateTimeFormat(locale, {
-                hour: "2-digit",
-                minute: "2-digit",
-              }).format(quote.rates.last_updated_at * 1000),
-            })}{" "}
-            <a className="focus-ring underline" href="https://www.coingecko.com/en/coins/stellar">
-              CoinGecko
-            </a>
-          </>
-        )}
-      </p>
+      <div className="mt-1 flex items-start gap-1">
+        <p id={`${id}-hint`} className="text-xs text-zinc-500 dark:text-zinc-400">
+          {t("estimate")}
+          {currency !== "XLM" && quote.status === "ready" && (
+            <>
+              {" "}
+              {t("updated", {
+                time: new Intl.DateTimeFormat(locale, {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }).format(quote.rates.last_updated_at * 1000),
+              })}{" "}
+              <a className="focus-ring underline" href="https://www.coingecko.com/en/coins/stellar">
+                CoinGecko
+              </a>
+            </>
+          )}
+        </p>
+        <Web3Explainer topic="multiToken" side="bottom" className="-mt-0.5 shrink-0" />
+      </div>
     </div>
   );
 }

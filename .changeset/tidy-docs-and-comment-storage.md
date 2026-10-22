@@ -2,4 +2,4 @@
 "proofofheart-frontend": patch
 ---
 
-Rewrite README and contract-integration docs, remove dead badge/multi-sig components and stale artifacts, and persist off-chain comments, reports and rate limits in a shared store with on-chain censure filtering
+Rewrite README and contract docs, remove dead badge and multi-sig components, and persist off-chain comments, reports and rate limits in a shared store with censure filtering.

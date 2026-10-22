@@ -35,6 +35,7 @@ import DonationMilestones from "@/components/DonationMilestones";
 import AsyncButtonContent from "@/components/AsyncButtonContent";
 import { useToast } from "@/components/ToastProvider";
 import VotingComponent from "@/components/VotingComponent";
+import VoteTallyBreakdown from "@/components/VoteTallyBreakdown";
 import { useWallet } from "@/components/WalletContext";
 import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
 import { useFollowedCreators } from "@/hooks/useFollowedCreators";
@@ -75,6 +76,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const { publicKey: userWalletAddress } = useWallet();
   const tContractErrors = useTranslations("ContractErrors");
   const tCauseDetail = useTranslations("CauseDetail");
+  const tVoting = useTranslations("Voting");
   const locale = useLocale();
   const {
     campaign: fetchedCampaign,
@@ -94,6 +96,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
     voteCounts,
     applyOptimisticVote,
     reconcile: reconcileVoteTallies,
+    streamingAvailable: voteTalliesLive,
   } = useLiveVoteTallies({
     campaignId: Number(id),
     enabled: Number(id) > 0,
@@ -231,7 +234,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
         // silently ignore
       }
     };
-    load();
+    void load();
   }, [campaign]);
 
   // Check whether the connected wallet has already voted
@@ -253,7 +256,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
         // ignore
       }
     };
-    check();
+    void check();
   }, [userWalletAddress, campaign]);
 
   const handleVerifyMilestone = async (milestoneId: number) => {
@@ -296,7 +299,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
         // ignore
       }
     };
-    loadContribution();
+    void loadContribution();
   }, [userWalletAddress, campaign, refundTxHash]);
 
   const handleVote = async (campaignId: number, voteType: "upvote" | "downvote") => {
@@ -418,8 +421,6 @@ export default function CauseDetailClient({ id }: { id: string }) {
   const fundingPct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
   const approvalRate =
     voteCounts.totalVotes > 0 ? Math.round((voteCounts.upvotes / voteCounts.totalVotes) * 100) : 0;
-  const voteBreakdownApprovePct = voteCounts.totalVotes > 0 ? approvalRate : 50;
-  const voteBreakdownRejectPct = 100 - voteBreakdownApprovePct;
   const categoryLabel = CATEGORY_LABELS[campaign.category] ?? "Other";
   const localizedDescription = getLocalizedDescription(campaign.description, locale);
   const platformFeePercent = platformFeeBps / 100;
@@ -645,6 +646,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                   amountRaised={campaign.amount_raised}
                   fundingGoal={campaign.funding_goal}
                   milestones={campaign.milestones}
+                  explain
                 />
               </div>
             )}
@@ -754,7 +756,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
                       <span className="font-semibold">{formatXlm(refundableXlm, locale)} XLM</span>
                     </p>
                     <button
-                      onClick={handleClaimRefund}
+                      onClick={() => void handleClaimRefund()}
                       disabled={isClaimingRefund}
                       className="w-full min-h-[44px] py-2 px-4 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white font-semibold rounded-xl transition-colors text-sm inline-flex items-center justify-center gap-2"
                     >
@@ -791,6 +793,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
               approvalThresholdBps={approvalThresholdBps}
               onVerifyWithVotes={handleVerifyWithVotes}
               isVerifying={isVerifying}
+              isLive={voteTalliesLive}
             />
 
             {campaign.is_active && campaign.is_verified && !campaign.is_cancelled && (
@@ -880,31 +883,25 @@ export default function CauseDetailClient({ id }: { id: string }) {
               userWalletAddress={userWalletAddress}
             />
 
-            <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">
-                Vote Breakdown
+            <section
+              aria-labelledby="vote-breakdown-title"
+              className="glass-surface rounded-surface p-5"
+            >
+              <h2
+                id="vote-breakdown-title"
+                className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3"
+              >
+                {tVoting("breakdownTitle")}
               </h2>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-green-600 dark:text-green-400 font-medium">
-                  ✓ Approve ({voteCounts.upvotes})
-                </span>
-                <span className="text-red-500 dark:text-red-400 font-medium">
-                  ✗ Reject ({voteCounts.downvotes})
-                </span>
-              </div>
-              <div className="w-full bg-red-200 dark:bg-red-900/40 rounded-full h-2">
-                <div
-                  className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${voteBreakdownApprovePct}%` }}
-                />
-              </div>
+              <VoteTallyBreakdown
+                upvotes={voteCounts.upvotes}
+                downvotes={voteCounts.downvotes}
+                live={voteTalliesLive}
+              />
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
-                {voteBreakdownApprovePct}% Approve / {voteBreakdownRejectPct}% Reject
+                {tVoting("totalVotesCast", { count: voteCounts.totalVotes })}
               </p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
-                {voteCounts.totalVotes} total votes cast
-              </p>
-            </div>
+            </section>
 
             <Link
               href="/causes"

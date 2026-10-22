@@ -83,57 +83,83 @@ export function BrandOgCard({
         height: "100%",
         width: "100%",
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: OG_COLORS.background,
+        background: `radial-gradient(circle at top left, rgba(251,146,60,0.24), transparent 30%), radial-gradient(circle at bottom right, rgba(168,85,247,0.18), transparent 28%), linear-gradient(135deg, #fff7ed 0%, #ffffff 42%, #fdf2f8 100%)`,
         fontFamily: "system-ui, sans-serif",
-        padding: "80px",
+        padding: "64px",
       }}
     >
       <div
         style={{
           display: "flex",
+          width: "1040px",
+          maxWidth: "calc(100% - 32px)",
           alignItems: "center",
           justifyContent: "center",
-          width: "140px",
-          height: "140px",
-          borderRadius: "36px",
-          marginBottom: "40px",
-          background: `linear-gradient(135deg, ${OG_COLORS.accentFrom} 0%, ${OG_COLORS.accentTo} 100%)`,
-          color: "white",
-          fontSize: "86px",
+          padding: "42px 52px",
+          borderRadius: "40px",
+          border: "1px solid rgba(255,255,255,0.7)",
+          background: "rgba(255,255,255,0.66)",
+          boxShadow: "0 30px 80px -30px rgba(15,23,42,0.35)",
+          backdropFilter: "blur(18px)",
         }}
       >
-        ♥
-      </div>
-      <div
-        style={{
-          display: "flex",
-          fontSize: "68px",
-          fontWeight: 700,
-          color: OG_COLORS.foreground,
-          textAlign: "center",
-          lineHeight: 1.15,
-          maxWidth: "1000px",
-        }}
-      >
-        {truncate(title, 70)}
-      </div>
-      {subtitle && (
         <div
           style={{
             display: "flex",
-            fontSize: "34px",
-            color: OG_COLORS.muted,
-            marginTop: "28px",
-            textAlign: "center",
-            maxWidth: "900px",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "140px",
+            height: "140px",
+            borderRadius: "36px",
+            marginRight: "38px",
+            background: `linear-gradient(135deg, ${OG_COLORS.accentFrom} 0%, ${OG_COLORS.accentTo} 100%)`,
+            color: "white",
+            fontSize: "86px",
+            boxShadow: "0 22px 50px -18px rgba(236,72,153,0.7)",
           }}
         >
-          {truncate(subtitle, 110)}
+          ♥
         </div>
-      )}
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+            justifyContent: "center",
+            textAlign: "left",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              fontSize: "68px",
+              fontWeight: 700,
+              color: OG_COLORS.foreground,
+              lineHeight: 1.1,
+              maxWidth: "780px",
+            }}
+          >
+            {truncate(title, 70)}
+          </div>
+          {subtitle && (
+            <div
+              style={{
+                display: "flex",
+                fontSize: "34px",
+                color: OG_COLORS.muted,
+                marginTop: "18px",
+                maxWidth: "780px",
+                lineHeight: 1.25,
+              }}
+            >
+              {truncate(subtitle, 110)}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

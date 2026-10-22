@@ -3,9 +3,11 @@ import userEvent from "@testing-library/user-event";
 import VotingComponent from "@/components/VotingComponent";
 import { Campaign, Category } from "@/types";
 
+const mockShowError = jest.fn();
+
 jest.mock("@/components/ToastProvider", () => ({
   useToast: () => ({
-    showError: jest.fn(),
+    showError: mockShowError,
     showWarning: jest.fn(),
   }),
 }));
@@ -34,7 +36,6 @@ function makeCampaign(overrides: Partial<Campaign> = {}): Campaign {
 
 describe("VotingComponent Accessibility & Interaction", () => {
   const mockOnVote = jest.fn();
-  const mockOnVerifyWithVotes = jest.fn();
   const campaign = makeCampaign();
 
   beforeEach(() => {
@@ -189,5 +190,35 @@ describe("VotingComponent Accessibility & Interaction", () => {
     expect(approveBtn).toBeDisabled();
     expect(rejectBtn).toBeDisabled();
     expect(screen.getByText("connectWalletPrompt")).toBeInTheDocument();
+  });
+
+  it("offers a retry action on the error toast when a vote fails (#1347)", async () => {
+    const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    const onVote = jest
+      .fn()
+      .mockRejectedValueOnce(new Error("RPC timeout"))
+      .mockResolvedValueOnce(undefined);
+    render(
+      <VotingComponent
+        campaign={campaign}
+        userWalletAddress="GUSER11111111111111111111111111111111111111111111111111"
+        onVote={onVote}
+        isVoting={false}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "rejectCampaignAria" }));
+
+    expect(mockShowError).toHaveBeenCalledTimes(1);
+    const [, options] = mockShowError.mock.calls[0] as [
+      unknown,
+      { action: { label: string; onClick: () => void } },
+    ];
+    expect(options.action.label).toBe("retryVote");
+
+    options.action.onClick();
+    await screen.findByText("votedDownvote");
+    expect(onVote).toHaveBeenNthCalledWith(2, campaign.id, "downvote");
+    consoleSpy.mockRestore();
   });
 });
