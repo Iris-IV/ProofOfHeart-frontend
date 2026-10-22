@@ -96,7 +96,8 @@
     "storybook": "^8",
     "tailwindcss": "^4.3.3",
     "ts-node": "^10.9.2",
-    "typescript": "^6"
+    "typescript": "^6",
+    "typescript-eslint": "^8.68.0"
   },
   "overrides": {
     "axios": "1.18.0",
