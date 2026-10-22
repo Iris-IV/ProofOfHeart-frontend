@@ -29,6 +29,7 @@ const CampaignMap = dynamic(() => import("@/components/CampaignMap"), {
   ssr: false,
 });
 import MapErrorBoundary from "@/components/MapErrorBoundary";
+import MultiSigProposalDashboard from "@/components/MultiSigProposalDashboard";
 
 const TransferAdminModal = dynamic(() => import("@/components/TransferAdminModal"), {
   ssr: false,
@@ -779,6 +780,11 @@ export default function AdminDashboard() {
           <AdminTwoFactorSetup adminAddress={publicKey} />
         </section>
       )}
+
+      {/* ── Multi-Sig Governance ── */}
+      <section className="mt-12">
+        <MultiSigProposalDashboard />
+      </section>
 
       {/* ── Reports Queue ── */}
       <section className="mt-12">
