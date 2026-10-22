@@ -8,7 +8,7 @@ are anchored in a Soroban smart contract; the frontend is a wallet-connected UI 
 that contract. All on-chain interactions are signed by the user's Freighter wallet —
 the frontend never holds private keys.
 
-The smart contract lives in a separate repository:
+The smart contract lives in a separate repository;
 [**Iris-IV/ProofOfHeart-stellar**](https://github.com/Iris-IV/ProofOfHeart-stellar).
 
 ---
