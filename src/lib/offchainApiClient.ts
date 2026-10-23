@@ -10,8 +10,23 @@ const NETWORK_PASSPHRASE =
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_RETRIES = 2;
 
+/**
+ * Error thrown by the off-chain client for network failures, non-2xx responses
+ * and missing configuration.
+ *
+ * @example
+ * try {
+ *   await requestOffchainJson("/api/reports");
+ * } catch (error) {
+ *   if (error instanceof OffchainApiError && error.status === 404) {
+ *     // handle a missing resource
+ *   }
+ * }
+ */
 export class OffchainApiError extends Error {
+  /** HTTP status code of the failed response. Undefined for network and config errors. */
   status?: number;
+  /** Parsed JSON error body, or the raw response text when it is not JSON. */
   details?: unknown;
 
   constructor(message: string, options?: { status?: number; details?: unknown }) {
@@ -22,23 +37,40 @@ export class OffchainApiError extends Error {
   }
 }
 
+/** Wallet-signed authentication attached to a request. */
 export interface OffchainRequestAuth {
+  /** Label for the signed action, such as `"create-report"`. Sent as `X-Request-Purpose`. */
   purpose: string;
+  /** Data to sign. Defaults to the request body when omitted. */
   payload?: unknown;
 }
 
+/**
+ * Options for {@link requestOffchainJson}. Extends `RequestInit` except for `body`.
+ */
 export interface OffchainRequestOptions extends Omit<RequestInit, "body"> {
+  /** When set, the request is signed with the connected wallet and the signature is sent in headers. */
   auth?: OffchainRequestAuth;
+  /** Retries after a network error or a retryable status (408, 425, 429, 5xx). Defaults to `2`. */
   retries?: number;
+  /** Request body. Objects are JSON-encoded and `Content-Type` is set to `application/json`. Strings are sent as-is. */
   body?: unknown;
 }
 
+/** Wallet signature and metadata returned by {@link signOffchainPayload}. */
 export interface SignedOffchainPayload {
+  /** Stellar public key (`G…`) of the signing wallet. */
   walletAddress: string;
+  /** Hex-encoded signature of the signed transaction. */
   signature: string;
+  /** Unix timestamp in seconds at which the payload was signed. */
   timestamp: number;
 }
 
+/**
+ * Returns `true` when `NEXT_PUBLIC_API_URL` is set. Check this before making
+ * requests so the UI can disable off-chain features instead of throwing.
+ */
 export function hasOffchainApiBaseUrl(): boolean {
   return OFFCHAIN_API_BASE_URL.length > 0;
 }
@@ -74,6 +106,21 @@ function buildAuthEnvelope(path: string, method: string, payload: unknown, times
   };
 }
 
+/**
+ * Signs `payload` with the connected wallet (Freighter or the embedded social wallet).
+ *
+ * The payload is wrapped in `{ purpose, timestamp, payload }`, hashed, and that hash is
+ * stored in a `manageData` operation on an unsubmitted transaction. The transaction is
+ * never submitted to the network. The returned signature is sent in request headers for
+ * the server to verify against `walletAddress`.
+ *
+ * @param payload - JSON-serializable data to bind to the signature.
+ * @param purpose - Action label. Becomes part of the signed envelope and the operation name.
+ * @returns The wallet address, hex signature and timestamp.
+ * @throws {OffchainApiError} If the wallet returns no signature.
+ * @throws If the wallet rejects or fails the signing request. Freighter errors are
+ *   normalized by `wrapFreighterError`.
+ */
 export async function signOffchainPayload(
   payload: unknown,
   purpose: string,
@@ -129,6 +176,32 @@ export async function signOffchainPayload(
   };
 }
 
+/**
+ * Sends a JSON request to the off-chain API and returns the parsed response.
+ *
+ * - `path` may be relative (`/api/reports`) or absolute (`https://…`). Relative paths
+ *   are joined to `NEXT_PUBLIC_API_URL`.
+ * - Each attempt times out after 15 seconds.
+ * - Failed attempts are retried after a linear backoff of 250 ms × attempt number, up to
+ *   `retries` times. Retryable statuses (408, 425, 429, 5xx) are retried by design. Note
+ *   that the current implementation also retries other non-2xx responses, because the
+ *   status check runs inside the same `try` block as the retry `catch`.
+ * - A `204 No Content` response resolves to `undefined`.
+ * - When `auth` is set, the request is signed with {@link signOffchainPayload} and the
+ *   `X-Wallet-Address`, `X-Request-Signature`, `X-Request-Timestamp` and
+ *   `X-Request-Purpose` headers are added.
+ *
+ * @example
+ * const report = await requestOffchainJson<Report>("/api/reports", {
+ *   method: "POST",
+ *   body: { campaignId: 42, reason: "spam" },
+ *   auth: { purpose: "create-report" },
+ * });
+ *
+ * @typeParam T - Expected shape of the JSON response body.
+ * @throws {OffchainApiError} When `NEXT_PUBLIC_API_URL` is unset, the server returns a
+ *   non-2xx status after retries, or all attempts fail to reach the service.
+ */
 export async function requestOffchainJson<T>(
   path: string,
   options: OffchainRequestOptions = {},
@@ -186,9 +259,13 @@ export async function requestOffchainJson<T>(
               }
             })()
           : undefined;
-        const errorMessage =
+        const bodyMessage =
           details && typeof details === "object" && details !== null && "message" in details
-            ? String((details as { message?: unknown }).message ?? response.statusText)
+            ? (details as { message?: unknown }).message
+            : undefined;
+        const errorMessage =
+          typeof bodyMessage === "string"
+            ? bodyMessage
             : response.statusText || "Off-chain request failed.";
         const error = new OffchainApiError(errorMessage, {
           status: response.status,
