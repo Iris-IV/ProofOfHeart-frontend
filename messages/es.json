@@ -800,6 +800,7 @@
     "statusAwaiting": "Esperando firmas",
     "statusCollecting": "Recopilando",
     "statusReady": "Lista para enviar"
+  },
   "Web3Help": {
     "stroopsTitle": "¿Qué es un stroop?",
     "stroopsLabel": "¿Qué es un stroop?",

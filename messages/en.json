@@ -799,6 +799,7 @@
     "statusAwaiting": "Awaiting signatures",
     "statusCollecting": "Collecting",
     "statusReady": "Ready to submit"
+  },
   "Web3Help": {
     "stroopsTitle": "What's a stroop?",
     "stroopsLabel": "What is a stroop?",
