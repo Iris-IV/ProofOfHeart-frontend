@@ -17,6 +17,7 @@ import { useCampaigns } from "@/hooks/useCampaigns";
 import { useSavedCampaignsCount } from "@/hooks/useSavedCampaigns";
 import { useContractVersion } from "@/hooks/useContractVersion";
 import { IS_MOCK_MODE } from "@/lib/runtimeEnv";
+import { isSwipeUpToClose, type TouchPoint } from "@/lib/mobileMenuGesture";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -24,6 +25,23 @@ export default function Navbar() {
   const menuRef = useRef<HTMLDivElement>(null);
   const menuToggleButtonRef = useRef<HTMLButtonElement>(null);
   const connectButtonRef = useRef<HTMLButtonElement>(null);
+  const touchStartRef = useRef<TouchPoint | null>(null);
+
+  const handleMenuTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    touchStartRef.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+  };
+
+  const handleMenuTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    const touch = event.changedTouches[0];
+    if (!start || !touch) return;
+    if (isSwipeUpToClose(start, { x: touch.clientX, y: touch.clientY })) {
+      setMenuOpen(false);
+      menuToggleButtonRef.current?.focus();
+    }
+  };
 
   // #1214 — a rejected/closed Freighter prompt must hand focus back to the
   // trigger so the retry is reachable with Tab/Enter only.
@@ -163,7 +181,7 @@ export default function Navbar() {
             return (
               <Link
                 key={link.href}
-                href={link.href as Parameters<typeof Link>[0]["href"]}
+                href={link.href}
                 aria-current={isActive ? "page" : undefined}
                 className={`relative rounded-lg px-4 py-2 text-sm font-medium transition-all group focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
                   isActive
@@ -244,7 +262,7 @@ export default function Navbar() {
               <button
                 type="button"
                 ref={connectButtonRef}
-                onClick={handleConnect}
+                onClick={() => void handleConnect()}
                 disabled={isLoading}
                 className="h-10 items-center justify-center rounded-full bg-linear-to-r from-red-500 to-pink-500 px-6 text-sm font-bold text-white transition-all hover:motion-safe:scale-105 hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-red-500/20"
               >
@@ -291,7 +309,7 @@ export default function Navbar() {
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((o) => !o)}
             aria-label="Toggle menu"
-            className="inline-flex size-10 items-center justify-center rounded-lg border border-black/10 bg-white text-zinc-950 hover:bg-black/5 dark:border-white/15 dark:bg-zinc-900 dark:text-white dark:hover:bg-white/10 md:hidden transition-colors shadow-sm"
+            className="inline-flex size-11 items-center justify-center rounded-lg border border-black/10 bg-white text-zinc-950 hover:bg-black/5 dark:border-white/15 dark:bg-zinc-900 dark:text-white dark:hover:bg-white/10 md:hidden transition-colors shadow-sm"
           >
             <span className="sr-only">Toggle menu</span>
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -304,6 +322,8 @@ export default function Navbar() {
         <div
           ref={menuRef}
           id="mobile-menu"
+          onTouchStart={handleMenuTouchStart}
+          onTouchEnd={handleMenuTouchEnd}
           className="border-t border-black/5 dark:border-white/10 md:hidden bg-white dark:bg-zinc-900 motion-safe:animate-in motion-safe:slide-in-from-top duration-300"
         >
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
@@ -315,10 +335,10 @@ export default function Navbar() {
                   return (
                     <li key={link.href}>
                       <Link
-                        href={link.href as Parameters<typeof Link>[0]["href"]}
+                        href={link.href}
                         onClick={() => setMenuOpen(false)}
                         aria-current={isActive ? "page" : undefined}
-                        className={`block rounded-xl px-4 py-3 text-base font-semibold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
+                        className={`flex min-h-11 items-center rounded-xl px-4 py-3 text-base font-semibold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
                           isActive
                             ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
                             : link.href === "/admin"
@@ -366,7 +386,7 @@ export default function Navbar() {
             {!isWalletConnected ? (
               <button
                 type="button"
-                onClick={connectWallet}
+                onClick={() => void connectWallet()}
                 disabled={isLoading}
                 className="h-12 w-full rounded-xl bg-linear-to-r from-red-500 to-pink-500 px-4 text-base font-bold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
               >
