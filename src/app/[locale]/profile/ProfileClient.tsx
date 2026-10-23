@@ -7,6 +7,8 @@ import { Link } from "@/i18n/routing";
 import { useWallet } from "@/components/WalletContext";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { useContributions } from "@/hooks/useContributions";
+import { toDonationRecords } from "@/lib/donorBadgeInputs";
+import DonorBadges from "@/components/DonorBadges";
 import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
 import { formatAddress } from "@/lib/formatAddress";
 import { formatAmount } from "@/lib/formatters";
@@ -29,9 +31,15 @@ export default function ProfileClient() {
   const { publicKey, isWalletConnected, connectWallet, isLoading: walletLoading } = useWallet();
   const { campaigns, isLoading: campaignsLoading } = useCampaigns();
   const { contributions, isLoading: contributionsLoading } = useContributions(publicKey);
+  const donations = useMemo(() => toDonationRecords(contributions), [contributions]);
   const {
-    savedIds, localBookmarks, syncLocalBookmarks, isSyncing,
-    isLoading: savedLoading, error: savedError, refetch: refetchSaved,
+    savedIds,
+    localBookmarks,
+    syncLocalBookmarks,
+    isSyncing,
+    isLoading: savedLoading,
+    error: savedError,
+    refetch: refetchSaved,
   } = useSavedCampaigns();
 
   const savedCampaigns = useMemo(
@@ -164,6 +172,13 @@ export default function ProfileClient() {
         </section>
       )}
 
+      {/* Donor badges */}
+      {!contributionsLoading && (
+        <div className="mb-8">
+          <DonorBadges donations={donations} />
+        </div>
+      )}
+
       {/* Saved campaigns */}
       <section className="mb-8">
         <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">
@@ -191,7 +206,14 @@ export default function ProfileClient() {
         {savedError ? (
           <div role="alert" className="rounded-surface border border-danger p-4 text-danger">
             <p>{t("savedLoadError")}</p>
-            <Button variant="secondary" onClick={() => { void refetchSaved(); }}>{t("retrySaved")}</Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                void refetchSaved();
+              }}
+            >
+              {t("retrySaved")}
+            </Button>
           </div>
         ) : campaignsLoading || savedLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -204,12 +226,14 @@ export default function ProfileClient() {
             variant="bookmarks"
             title={t("noSavedCampaigns")}
             description={t("saveCampaignHint")}
-            action={<Link
-              href="/explore"
-              className="tap-target focus-ring inline-flex items-center rounded-control bg-brand px-5 py-2 text-sm font-semibold text-white transition-colors duration-[120ms] hover:bg-brand-strong motion-reduce:transition-none"
-            >
-              {t("browseCauses")}
-            </Link>}
+            action={
+              <Link
+                href="/explore"
+                className="tap-target focus-ring inline-flex items-center rounded-control bg-brand px-5 py-2 text-sm font-semibold text-white transition-colors duration-[120ms] hover:bg-brand-strong motion-reduce:transition-none"
+              >
+                {t("browseCauses")}
+              </Link>
+            }
           />
         ) : (
           <VirtualizedCampaignList
