@@ -1,6 +1,8 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import OnboardingTour from "@/components/OnboardingTour";
 
+const STORAGE_KEY = "onboarding_tour_dismissed";
+
 jest.mock("next-intl", () => ({
   useTranslations: () => (key: string, values?: Record<string, unknown>) => {
     const map: Record<string, string> = {
@@ -9,7 +11,7 @@ jest.mock("next-intl", () => ({
       back: "Back",
       next: "Next",
       done: "Get started",
-      stepProgress: `Step ${values?.current} of ${values?.total}`,
+      stepProgress: `Step ${String(values?.current)} of ${String(values?.total)}`,
       step_connect_icon: "🔗",
       step_connect_title: "Connect your wallet",
       step_connect_body: "Connect body",
@@ -27,59 +29,51 @@ jest.mock("next-intl", () => ({
   },
 }));
 
-jest.mock("@/hooks/useOnboardingTour", () => ({
-  useOnboardingTour: jest.fn(),
-}));
-
-import { useOnboardingTour } from "@/hooks/useOnboardingTour";
-
-const mockDismiss = jest.fn();
-
 beforeEach(() => {
-  jest.clearAllMocks();
-  (useOnboardingTour as jest.Mock).mockReturnValue({ show: true, dismiss: mockDismiss });
+  localStorage.clear();
 });
 
 describe("OnboardingTour", () => {
-  it("renders the first step", () => {
+  it("renders the first step for a first-time visitor", async () => {
     render(<OnboardingTour />);
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("Connect your wallet")).toBeInTheDocument();
   });
 
-  it("does not render when show is false", () => {
-    (useOnboardingTour as jest.Mock).mockReturnValue({ show: false, dismiss: mockDismiss });
+  it("does not render once the tour has been dismissed", () => {
+    localStorage.setItem(STORAGE_KEY, "1");
     render(<OnboardingTour />);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("advances to next step", () => {
+  it("advances to the next step", async () => {
     render(<OnboardingTour />);
-    fireEvent.click(screen.getByText("Next"));
+    fireEvent.click(await screen.findByText("Next"));
     expect(screen.getByText("Choose a cause")).toBeInTheDocument();
   });
 
-  it("goes back to previous step", () => {
+  it("goes back to the previous step", async () => {
     render(<OnboardingTour />);
-    fireEvent.click(screen.getByText("Next"));
+    fireEvent.click(await screen.findByText("Next"));
     fireEvent.click(screen.getByText("Back"));
     expect(screen.getByText("Connect your wallet")).toBeInTheDocument();
   });
 
-  it("calls dismiss when Skip is clicked", () => {
+  it("hides the tour and remembers the dismissal when Skip is clicked", async () => {
     render(<OnboardingTour />);
-    fireEvent.click(screen.getByText("Skip"));
-    expect(mockDismiss).toHaveBeenCalledTimes(1);
+    fireEvent.click(await screen.findByText("Skip"));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(localStorage.getItem(STORAGE_KEY)).toBe("1");
   });
 
-  it("shows Get started on the last step and calls dismiss", () => {
+  it("finishes the tour on the last step", async () => {
     render(<OnboardingTour />);
-    // advance through all steps
-    fireEvent.click(screen.getByText("Next")); // step 2
-    fireEvent.click(screen.getByText("Next")); // step 3
-    fireEvent.click(screen.getByText("Next")); // step 4
+    fireEvent.click(await screen.findByText("Next"));
+    fireEvent.click(screen.getByText("Next"));
+    fireEvent.click(screen.getByText("Next"));
     expect(screen.getByText("Get started")).toBeInTheDocument();
     fireEvent.click(screen.getByText("Get started"));
-    expect(mockDismiss).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(localStorage.getItem(STORAGE_KEY)).toBe("1");
   });
 });
