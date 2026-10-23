@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { validateImageFile } from "@/lib/imageValidation";
 import { optimizeCoverImage } from "@/lib/imageOptimization";
+import { cropCoverToAspect } from "@/lib/coverCrop";
 import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
 import { useRouter } from "@/i18n/routing";
@@ -55,6 +56,13 @@ export default function CreateCampaignPage() {
   const [tagInput, setTagInput] = useState("");
   const [descriptionTab, setDescriptionTab] = useState<"write" | "preview">("write");
   const [coverImageUrl, setCoverImageUrl] = useState("");
+  // Local thumbnail of the file being uploaded, shown before the IPFS URL exists.
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!coverPreviewUrl) return;
+    return () => URL.revokeObjectURL(coverPreviewUrl);
+  }, [coverPreviewUrl]);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const coverFileInputRef = useRef<HTMLInputElement>(null);
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
@@ -137,11 +145,14 @@ export default function CreateCampaignPage() {
       return;
     }
 
+    setCoverPreviewUrl(URL.createObjectURL(file));
     setIsUploadingCover(true);
     try {
-      // Downscale + re-encode to WebP (JPEG fallback) in the browser so viewers
-      // don't download multi-MB originals — see src/lib/imageOptimization.ts.
-      const optimized = await optimizeCoverImage(file);
+      // Centre-crop to the 16:9 the cards display, then downscale + re-encode to
+      // WebP (JPEG fallback) so viewers don't download multi-MB originals — see
+      // src/lib/coverCrop.ts and src/lib/imageOptimization.ts.
+      const cropped = await cropCoverToAspect(file);
+      const optimized = await optimizeCoverImage(cropped);
       const uploadValidation = validateImageFile(optimized);
       if (!uploadValidation.valid) {
         showError(uploadValidation.error ?? t("coverImageUploadFailed"));
@@ -711,7 +722,7 @@ export default function CreateCampaignPage() {
             <select
               id="category"
               value={category}
-              onChange={(e) => handleCategoryChange(Number(e.target.value) as Category)}
+              onChange={(e) => handleCategoryChange(Number(e.target.value))}
               className="w-full px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-600 text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {Object.entries(CATEGORY_LABELS).map(([val, label]) => (
@@ -883,7 +894,15 @@ export default function CreateCampaignPage() {
               {t("labelCoverImage")}{" "}
               <span className="text-xs font-normal text-zinc-400">({t("optional")})</span>
             </label>
-            <div className="flex gap-2">
+            <div
+              className="flex gap-2"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const file = e.dataTransfer.files[0];
+                if (file && !isUploadingCover) void handleCoverImageUpload(file);
+              }}
+            >
               <input
                 id="coverImageUrl"
                 type="url"
@@ -922,6 +941,14 @@ export default function CreateCampaignPage() {
             <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1">
               {t("coverImageHelpText")}
             </p>
+            {coverPreviewUrl && (
+              <img
+                src={coverPreviewUrl}
+                alt=""
+                aria-hidden="true"
+                className="mt-2 aspect-video w-full max-w-xs rounded-lg object-cover"
+              />
+            )}
             {errorKeys.coverImageUrl && (
               <p id="cover-image-error" role="alert" className="text-xs text-red-500 mt-1">
                 {t("invalidCoverImageUrl")}
@@ -934,7 +961,7 @@ export default function CreateCampaignPage() {
                 loading="lazy"
                 className="mt-2 w-full aspect-video object-cover rounded-lg border border-zinc-200 dark:border-zinc-600"
                 onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                  e.currentTarget.style.display = "none";
                 }}
               />
             )}
