@@ -15,15 +15,25 @@ The smart contract lives in a separate repository;
 
 ## Prerequisites
 
-| Tool                                    | Version    | Notes                                    |
-| --------------------------------------- | ---------- | ---------------------------------------- |
-| [Node.js](https://nodejs.org/)          | `>= 22`    | Enforced via `engines` in `package.json` |
-| npm                                     | `>= 10`    | Ships with Node 22                       |
-| [Freighter](https://www.freighter.app/) | latest     | Browser wallet used to sign transactions |
-| Git                                     | any recent |                                          |
+| Tool                                          | Version    | Notes                                                  |
+| --------------------------------------------- | ---------- | ------------------------------------------------------ |
+| [Node.js](https://nodejs.org/)                | `>= 22`    | Enforced via `engines` in `package.json`               |
+| npm                                           | `>= 10`    | Ships with Node 22                                     |
+| [Freighter](https://www.freighter.app/)       | latest     | Browser wallet used to sign transactions               |
+| Git                                           | any recent |                                                        |
+| [Docker](https://docs.docker.com/get-docker/) | any recent | Optional. Only for the `docker compose` workflow below |
 
 No Freighter wallet is needed to run the app in mock mode — it is only required for
 real testnet/mainnet transactions.
+
+> **Package manager:** use **npm**. CI installs with `npm ci` and the Docker image is
+> built from `package-lock.json`. The repo also contains a `pnpm-workspace.yaml` and a
+> `pnpm-lock.yaml` that mirror the npm overrides, so pnpm works for local development,
+> but do not commit lockfile changes from pnpm.
+>
+> **Rust and the Soroban CLI are not needed here.** This repo is the TypeScript frontend.
+> Contract development (Rust, `cargo`, `stellar` CLI) happens in
+> [Iris-IV/ProofOfHeart-stellar](https://github.com/Iris-IV/ProofOfHeart-stellar).
 
 ---
 
@@ -51,6 +61,36 @@ comments.
 
 `NEXT_PUBLIC_USE_MOCKS=true` (already the default in `.env.example`) is the only
 variable required for this path.
+
+### Running with Docker Compose
+
+`docker-compose.yml` runs the dev server in a container, mounting the working tree so
+edits hot-reload. It does not load `.env.local` through `env_file`; the mounted
+directory is what makes `.env.local` visible to Next.js.
+
+```bash
+# Build and start the dev server on http://localhost:3000
+docker compose up --build
+
+# Stop and remove the containers
+docker compose down
+```
+
+The compose file runs `npm run dev`, not a production build. For a production image,
+see the `Dockerfile` header and [`docs/DEPLOYMENT_PLAYBOOK.md`](docs/DEPLOYMENT_PLAYBOOK.md).
+`NEXT_PUBLIC_*` values are baked into the client bundle at build time, so changing them
+requires a rebuild.
+
+---
+
+## Troubleshooting setup
+
+| Symptom                                      | Cause and fix                                                                                                      |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Install or build errors after cloning        | Check the Node version. `package.json` requires Node `>=22` (`node -v`).                                           |
+| `npm run build` fails with a mock-mode error | `NEXT_PUBLIC_USE_MOCKS=true` is set. Set it to `false` and configure the contract variables, or use `npm run dev`. |
+| Off-chain features disabled or failing       | `NEXT_PUBLIC_API_URL` is unset. See [`docs/ENVIRONMENT_VARIABLES.md`](docs/ENVIRONMENT_VARIABLES.md).              |
+| Env changes are ignored                      | Restart `npm run dev`. Next.js reads `.env.local` at startup.                                                      |
 
 ---
 
@@ -147,6 +187,7 @@ local runs.
 - [`docs/CONTRACT_INTEGRATION.md`](docs/CONTRACT_INTEGRATION.md) — frontend ↔ contract
   architecture and function mapping.
 - [`docs/api.md`](docs/api.md) — API route reference.
+- [`docs/I18N.md`](docs/I18N.md) — translations, locale routing and adding a language.
 - [`docs/state.md`](docs/state.md) — state management architecture and hook dependency standards.
 - [`docs/GAMIFICATION.md`](docs/GAMIFICATION.md) — donor level and badge rules.
 - [`docs/RECURRING_DONATIONS.md`](docs/RECURRING_DONATIONS.md) — recurring donation schedules.

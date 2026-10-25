@@ -55,32 +55,50 @@ export default function DeadlineCountdown({ deadline }: DeadlineCountdownProps) 
     });
   }, [deadline]);
 
+  // Base classes shared by both states. `glass-surface` is the frosted panel from globals.css.
+  // Text sizes step up at sm (640px) so the pill stays readable from 320px to desktop.
+  const containerBase =
+    "glass-surface inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-xl px-3 py-2 text-xs sm:text-sm";
+
   if (!timeLeft) {
     return (
-      <div className="flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-        <Clock className="w-4 h-4" aria-hidden="true" />
+      <div className={`${containerBase} text-zinc-500 dark:text-zinc-400`}>
+        <Clock className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span>Campaign ended</span>
       </div>
     );
   }
 
+  const format = (value: number) => new Intl.NumberFormat(locale).format(value);
+
+  // Each value is keyed by its number, so a change remounts the element and replays the
+  // `countdown-digit` tick (under 150ms, disabled for prefers-reduced-motion).
   return (
-    <div className="flex items-center gap-1.5 text-sm text-zinc-700 dark:text-zinc-300">
-      <Clock className="w-4 h-4 text-blue-500" aria-hidden="true" />
-      <span>
+    <div className={`${containerBase} text-zinc-700 dark:text-zinc-300`}>
+      <Clock className="h-4 w-4 shrink-0 text-blue-500" aria-hidden="true" />
+      <span className="flex flex-wrap items-baseline gap-x-1">
         {timeLeft.days > 0 && (
           <>
-            <strong>{new Intl.NumberFormat(locale).format(timeLeft.days)}</strong>d{" "}
+            <strong key={`d-${timeLeft.days}`} className="countdown-digit tabular-nums">
+              {format(timeLeft.days)}
+            </strong>
+            <span>d</span>
           </>
         )}
-        <strong>{new Intl.NumberFormat(locale).format(timeLeft.hours)}</strong>h{" "}
+        <strong key={`h-${timeLeft.hours}`} className="countdown-digit tabular-nums">
+          {format(timeLeft.hours)}
+        </strong>
+        <span>h</span>
         {/* Show minutes only when < 1 day remains; far deadlines only need hourly updates */}
         {timeLeft.days === 0 && (
           <>
-            <strong>{new Intl.NumberFormat(locale).format(timeLeft.minutes)}</strong>m{" "}
+            <strong key={`m-${timeLeft.minutes}`} className="countdown-digit tabular-nums">
+              {format(timeLeft.minutes)}
+            </strong>
+            <span>m</span>
           </>
         )}
-        remaining
+        <span>remaining</span>
       </span>
     </div>
   );

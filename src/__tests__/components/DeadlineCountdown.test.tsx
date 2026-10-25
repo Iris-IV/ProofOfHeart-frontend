@@ -30,6 +30,17 @@ describe("DeadlineCountdown", () => {
     expect(screen.getByText(/remaining/)).toBeInTheDocument();
   });
 
+  it("renders the glass container and animated digits for a future deadline", () => {
+    const futureDeadline = Math.floor(Date.now() / 1000) + 3 * 3600 + 30 * 60; // 3h 30m
+    const { container } = render(<DeadlineCountdown deadline={futureDeadline} />);
+
+    expect(container.firstElementChild).toHaveClass("glass-surface", "rounded-xl");
+    const digits = container.querySelectorAll("strong.countdown-digit.tabular-nums");
+    expect(digits).toHaveLength(2); // hours and minutes only, under one day
+    expect(digits[0]).toHaveTextContent("3");
+    expect(digits[1]).toHaveTextContent("30");
+  });
+
   it('updates to "Campaign ended" after the deadline passes', () => {
     const futureDeadline = Math.floor(Date.now() / 1000) + 120; // 2 minutes from now
     render(<DeadlineCountdown deadline={futureDeadline} />);
