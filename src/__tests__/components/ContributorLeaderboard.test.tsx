@@ -117,3 +117,76 @@ describe("ContributorLeaderboard component", () => {
     expect(screen.getByRole("button", { name: "disableAnon" })).toBeInTheDocument();
   });
 });
+
+describe("ContributorLeaderboard pagination and header", () => {
+  const makeContributors = (count: number) =>
+    Array.from({ length: count }, (_, i) => ({
+      walletAddress: `WALLET_${i + 1}`,
+      truncatedAddress: `ADDR${i + 1}`,
+      totalAmountStroops: BigInt(10_000_000 * (i + 1)),
+      isAnonymous: false,
+      rank: i + 1,
+    }));
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    localStorage.clear();
+  });
+
+  it("renders sticky column labels above the supporter list", () => {
+    mockUseTopContributors.mockReturnValue({
+      contributors: makeContributors(2),
+      isLoading: false,
+      refetch: jest.fn(),
+    });
+
+    render(<ContributorLeaderboard campaignId={1} userWalletAddress={null} />);
+
+    expect(screen.getByText("columnSupporter")).toBeInTheDocument();
+    expect(screen.getByText("columnAmount")).toBeInTheDocument();
+  });
+
+  it("hides pagination controls when all supporters fit on one page", () => {
+    mockUseTopContributors.mockReturnValue({
+      contributors: makeContributors(5),
+      isLoading: false,
+      refetch: jest.fn(),
+    });
+
+    render(<ContributorLeaderboard campaignId={1} userWalletAddress={null} />);
+
+    expect(screen.queryByRole("navigation", { name: "paginationLabel" })).not.toBeInTheDocument();
+  });
+
+  it("pages through supporters five at a time", () => {
+    mockUseTopContributors.mockReturnValue({
+      contributors: makeContributors(7),
+      isLoading: false,
+      refetch: jest.fn(),
+    });
+
+    render(<ContributorLeaderboard campaignId={1} userWalletAddress={null} />);
+
+    const previous = screen.getByRole("button", { name: "previousPage" });
+    const next = screen.getByRole("button", { name: "nextPage" });
+
+    expect(screen.getByText("ADDR1")).toBeInTheDocument();
+    expect(screen.getByText("ADDR5")).toBeInTheDocument();
+    expect(screen.queryByText("ADDR6")).not.toBeInTheDocument();
+    expect(previous).toBeDisabled();
+    expect(next).toBeEnabled();
+
+    fireEvent.click(next);
+
+    expect(screen.queryByText("ADDR1")).not.toBeInTheDocument();
+    expect(screen.getByText("ADDR6")).toBeInTheDocument();
+    expect(screen.getByText("ADDR7")).toBeInTheDocument();
+    expect(previous).toBeEnabled();
+    expect(next).toBeDisabled();
+
+    fireEvent.click(previous);
+
+    expect(screen.getByText("ADDR1")).toBeInTheDocument();
+    expect(previous).toBeDisabled();
+  });
+});
