@@ -20,6 +20,7 @@ import FundingProgressBar from "./FundingProgressBar";
 import { useToast } from "./ToastProvider";
 import VotingComponent from "./VotingComponent";
 import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
+import { useCardTilt } from "@/hooks/useCardTilt";
 
 interface CauseCardProps {
   priority?: boolean;
@@ -46,13 +47,11 @@ function formatDate(ts: number, locale: string) {
 }
 
 function CauseCard({
-  priority = false,
   campaign,
   userWalletAddress,
   onVote,
   onCancel,
   onClaimRefund,
-  onTagClick,
   userVote,
   upvotes = 0,
   downvotes = 0,
@@ -116,8 +115,12 @@ function CauseCard({
     }
   };
 
+  const tilt = useCardTilt();
+
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-[24px] border border-zinc-200/80 bg-gradient-to-b from-white to-zinc-50/90 shadow-[0_20px_50px_-28px_rgba(15,23,42,0.34)] transition-all duration-200 hover:-translate-y-1 hover:border-orange-200 hover:shadow-[0_26px_70px_-28px_rgba(249,115,22,0.28)] dark:border-zinc-700/80 dark:from-zinc-800 dark:to-zinc-900/90 dark:hover:border-orange-800/70">
+    <article
+      {...tilt}
+      className="group flex h-full flex-col overflow-hidden rounded-[24px] border border-zinc-200/80 bg-gradient-to-b from-white to-zinc-50/90 shadow-[0_20px_50px_-28px_rgba(15,23,42,0.34)] transition-all duration-200 hover:-translate-y-1 hover:border-orange-200 hover:shadow-[0_26px_70px_-28px_rgba(249,115,22,0.28)] dark:border-zinc-700/80 dark:from-zinc-800 dark:to-zinc-900/90 dark:hover:border-orange-800/70">
       {/* ── Cover image ── */}
       <div className="relative aspect-video w-full overflow-hidden bg-zinc-100 dark:bg-zinc-700">
         {campaign.cover_image_url ? (
@@ -245,7 +248,7 @@ function CauseCard({
         {showClaimRefund && (
           <button
             type="button"
-            onClick={handleClaimRefund}
+            onClick={() => void handleClaimRefund()}
             disabled={isClaimingRefund}
             className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
           >

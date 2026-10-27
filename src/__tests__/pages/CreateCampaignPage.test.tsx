@@ -527,7 +527,7 @@ describe("CreateCampaignPage — submission", () => {
   it("passes the per-wallet cap in stroops, and zero when left blank", async () => {
     renderPage();
     await fillRequiredFields();
-    await userEvent.type(screen.getByLabelText(/max contribution per wallet/i), "250.5");
+    await userEvent.type(screen.getByLabelText(/labelMaxContributionPerWallet/i), "250.5");
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
     await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
 
@@ -549,12 +549,10 @@ describe("CreateCampaignPage — submission", () => {
   it("blocks submission when the per-wallet cap is negative", async () => {
     renderPage();
     await fillRequiredFields();
-    await userEvent.type(screen.getByLabelText(/max contribution per wallet/i), "-5");
+    await userEvent.type(screen.getByLabelText(/labelMaxContributionPerWallet/i), "-5");
     await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
 
-    expect(
-      await screen.findByText(/max contribution must be a non-negative/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/validationMaxContributionInvalid/i)).toBeInTheDocument();
     expect(mockCreateCampaign).not.toHaveBeenCalled();
   });
 
@@ -651,6 +649,11 @@ describe("CreateCampaignPage — character counters", () => {
 // Cover image upload
 // ---------------------------------------------------------------------------
 
+// jsdom cannot decode images, so the optimizer is a passthrough in these tests.
+jest.mock("@/lib/imageOptimization", () => ({
+  optimizeCoverImage: (file: File) => Promise.resolve(file),
+}));
+
 describe("CreateCampaignPage — cover image upload", () => {
   const originalFetch = global.fetch;
 
@@ -659,9 +662,14 @@ describe("CreateCampaignPage — cover image upload", () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ url: "https://ipfs.io/ipfs/QmUploadedHash" }),
-    }) as unknown as typeof fetch;
+    });
+    // jsdom has no object URLs; the cover preview needs them.
+    URL.createObjectURL = jest.fn(() => "blob:cover-preview");
+    URL.revokeObjectURL = jest.fn();
   });
 
+  // The page revokes its preview URL on unmount, which runs after afterEach, so the
+  // object-URL stubs are kept for the rest of this file rather than restored.
   afterEach(() => {
     global.fetch = originalFetch;
   });
@@ -711,7 +719,7 @@ describe("CreateCampaignPage — cover image upload", () => {
       ok: false,
       statusText: "Server Error",
       json: () => Promise.resolve(null),
-    }) as unknown as typeof fetch;
+    });
 
     renderPage();
 
