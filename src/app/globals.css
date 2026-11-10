@@ -265,6 +265,15 @@ html {
   }
 }
 
+@keyframes modal-backdrop-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* Countdown bar for auto-dismissing toasts: shrinks from full to empty over
    the toast's lifetime (set per toast with --toast-duration). */
 @keyframes ui-countdown {
@@ -282,6 +291,9 @@ html {
   }
   .ui-slide-up {
     animation: ui-slide-up var(--duration-snappy) var(--ease-snappy) both;
+  }
+  .modal-backdrop-enter {
+    animation: modal-backdrop-fade var(--duration-snappy) var(--ease-snappy) both;
   }
 }
 

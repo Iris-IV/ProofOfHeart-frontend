@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useEffect, useRef, memo } from "react";
+import {
+  computeNextFocusTrapTarget,
+  getFocusableModalElements,
+  resolveInitialModalFocusTarget,
+} from "@/lib/preferences";
 import { cn } from "./cn";
-
-const FOCUSABLE_SELECTOR =
-  'a[href]:not([tabindex="-1"]), button:not([disabled]):not([tabindex="-1"]), input:not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"]), [tabindex]:not([tabindex="-1"])';
-
-const FORM_FIELD_SELECTOR =
-  'input:not([disabled]):not([tabindex="-1"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]), select:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"])';
 
 export interface ModalProps {
   isOpen?: boolean;
@@ -35,7 +34,7 @@ const OVERLAY_VARIANTS = {
 
 const PANEL_VARIANTS = {
   dialog:
-    "w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden",
+    "ui-pop-in w-full max-w-md rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl backdrop-saturate-150 shadow-2xl border border-zinc-200/80 dark:border-zinc-700/80 overflow-hidden",
   drawer:
     "ui-slide-up border border-white/60 bg-white/90 shadow-2xl backdrop-blur-xl backdrop-saturate-150 dark:border-white/10 dark:bg-zinc-900/90 w-full max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-t-3xl pb-[max(1rem,env(safe-area-inset-bottom))] sm:h-full sm:max-h-none sm:max-w-md sm:rounded-none sm:rounded-l-3xl",
 } as const;
@@ -76,21 +75,11 @@ function Modal({
 
     // Set initial focus to provided ref, first form field, first focusable, or modal
     const timer = setTimeout(() => {
-      if (initialFocusRef?.current) {
-        initialFocusRef.current.focus();
-      } else if (modalRef.current) {
-        const formField = modalRef.current.querySelector<HTMLElement>(FORM_FIELD_SELECTOR);
-        if (formField) {
-          formField.focus();
-          return;
-        }
-        const focusable = modalRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
-        if (focusable.length > 0) {
-          focusable[0].focus();
-        } else {
-          modalRef.current.focus();
-        }
-      }
+      const target = resolveInitialModalFocusTarget(
+        modalRef.current,
+        initialFocusRef?.current ?? null,
+      );
+      target?.focus();
     }, 0);
 
     return () => {
@@ -115,24 +104,21 @@ function Modal({
 
       if (e.key === "Tab" && modalRef.current) {
         const scope = modalRef.current;
-        const focusable = Array.from(scope.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+        const focusable = getFocusableModalElements(scope);
         if (focusable.length === 0) {
           e.preventDefault();
           return;
         }
 
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        const active = document.activeElement;
-
-        if (e.shiftKey) {
-          if (active === first || !scope.contains(active)) {
-            e.preventDefault();
-            last.focus();
-          }
-        } else if (active === last || !scope.contains(active)) {
+        const nextTarget = computeNextFocusTrapTarget(
+          focusable,
+          document.activeElement,
+          e.shiftKey,
+          scope,
+        );
+        if (nextTarget) {
           e.preventDefault();
-          first.focus();
+          nextTarget.focus();
         }
       }
     };
@@ -152,7 +138,7 @@ function Modal({
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex bg-black/60 backdrop-blur-sm",
+        "modal-backdrop-enter fixed inset-0 z-50 flex bg-black/60 backdrop-blur-sm",
         OVERLAY_VARIANTS[variant],
         overlayClassName,
       )}
