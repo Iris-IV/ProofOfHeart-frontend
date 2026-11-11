@@ -171,3 +171,167 @@ export function getTouchTargetStyles(): { minWidth: string; minHeight: string } 
     minHeight: `${MIN_TOUCH_TARGET_SIZE_PX}px`,
   };
 }
+
+/** Snappy modal & backdrop micro-interaction duration (<150ms) (#1343). */
+export const MODAL_ANIMATION_DURATION_MS = 120;
+
+export const MODAL_FOCUSABLE_SELECTOR =
+  'a[href]:not([tabindex="-1"]), button:not([disabled]):not([tabindex="-1"]), input:not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"]), [tabindex]:not([tabindex="-1"])';
+
+export const MODAL_FORM_FIELD_SELECTOR =
+  'input:not([disabled]):not([tabindex="-1"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]), select:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"])';
+
+export type ModalBreakpointTier = "mobile" | "tablet" | "desktop";
+
+export const MODAL_BREAKPOINTS: Record<ModalBreakpointTier, number> = {
+  mobile: 320,
+  tablet: 768,
+  desktop: 1280,
+};
+
+export interface ModalGlassTokens {
+  backdropFill: string;
+  backdropBlur: string;
+  surfaceFillLight: string;
+  surfaceFillDark: string;
+  glassGradientHighlight: string;
+  backdropTransitionCss: string;
+  panelAnimationDurationMs: number;
+}
+
+export const MODAL_GLASS_TOKENS: ModalGlassTokens = Object.freeze({
+  backdropFill: "rgba(9, 9, 11, 0.6)",
+  backdropBlur: "blur(12px) saturate(150%)",
+  surfaceFillLight: "rgba(255, 255, 255, 0.92)",
+  surfaceFillDark: "rgba(24, 24, 27, 0.92)",
+  glassGradientHighlight:
+    "linear-gradient(135deg, rgba(37, 99, 235, 0.16), rgba(124, 58, 237, 0.14), rgba(21, 128, 61, 0.1))",
+  backdropTransitionCss: `opacity ${MODAL_ANIMATION_DURATION_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1), backdrop-filter ${MODAL_ANIMATION_DURATION_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1)`,
+  panelAnimationDurationMs: MODAL_ANIMATION_DURATION_MS,
+});
+
+export interface ResponsiveModalLayoutConfig {
+  tier: ModalBreakpointTier;
+  viewportWidth: number;
+  maxWidthPx: number;
+  paddingPx: number;
+  borderRadiusRem: number;
+  backdropBlurPx: number;
+  animationDurationMs: number;
+  sheetPresentation: "bottom-sheet" | "centered-dialog";
+}
+
+/**
+ * Computes responsive modal dialog layout and animation tokens across mobile (320px),
+ * tablet (768px), and desktop (1280px+) screen widths (#1343).
+ */
+export function getResponsiveModalLayoutConfig(
+  viewportWidth: number,
+  options: { prefersReducedMotion?: boolean; highContrast?: boolean } = {},
+): ResponsiveModalLayoutConfig {
+  const safeWidth = Math.max(MODAL_BREAKPOINTS.mobile, Math.round(viewportWidth || 0));
+  const tier: ModalBreakpointTier =
+    safeWidth >= MODAL_BREAKPOINTS.desktop
+      ? "desktop"
+      : safeWidth >= MODAL_BREAKPOINTS.tablet
+        ? "tablet"
+        : "mobile";
+
+  const prefersReducedMotion = options.prefersReducedMotion ?? false;
+  const highContrast = options.highContrast ?? false;
+
+  const maxWidthPx = tier === "desktop" ? 560 : tier === "tablet" ? 480 : safeWidth - 32;
+  const paddingPx = tier === "desktop" ? 28 : tier === "tablet" ? 24 : 16;
+  const borderRadiusRem = tier === "mobile" ? 1.25 : 1;
+  const backdropBlurPx = highContrast ? 0 : tier === "desktop" ? 16 : 12;
+
+  return {
+    tier,
+    viewportWidth: safeWidth,
+    maxWidthPx,
+    paddingPx,
+    borderRadiusRem,
+    backdropBlurPx,
+    animationDurationMs: prefersReducedMotion ? 0 : MODAL_ANIMATION_DURATION_MS,
+    sheetPresentation: tier === "mobile" ? "bottom-sheet" : "centered-dialog",
+  };
+}
+
+function isElementVisibleForFocusTrap(el: HTMLElement): boolean {
+  if (el.hidden || el.getAttribute("aria-hidden") === "true") return false;
+  if (el.closest('[aria-hidden="true"], [hidden]')) return false;
+  if (typeof window !== "undefined" && typeof window.getComputedStyle === "function") {
+    const style = window.getComputedStyle(el);
+    if (style.display === "none" || style.visibility === "hidden") return false;
+  }
+  return true;
+}
+
+/**
+ * Returns all currently focusable, visible elements inside a modal container (#1343).
+ */
+export function getFocusableModalElements(container: ParentNode | null): HTMLElement[] {
+  if (!container) return [];
+  return Array.from(container.querySelectorAll<HTMLElement>(MODAL_FOCUSABLE_SELECTOR)).filter(
+    isElementVisibleForFocusTrap,
+  );
+}
+
+/**
+ * Resolves the initial focus target when opening a modal dialog (#1343).
+ * Prefers an explicit ref target, then the first visible form field, then the first
+ * focusable element, and finally the modal container itself.
+ */
+export function resolveInitialModalFocusTarget(
+  container: HTMLElement | null,
+  explicitTarget?: HTMLElement | null,
+): HTMLElement | null {
+  if (explicitTarget && isElementVisibleForFocusTrap(explicitTarget)) {
+    return explicitTarget;
+  }
+  if (!container) return null;
+
+  const formFields = Array.from(
+    container.querySelectorAll<HTMLElement>(MODAL_FORM_FIELD_SELECTOR),
+  ).filter(isElementVisibleForFocusTrap);
+  if (formFields.length > 0) {
+    return formFields[0];
+  }
+
+  const focusable = getFocusableModalElements(container);
+  if (focusable.length > 0) {
+    return focusable[0];
+  }
+
+  return container;
+}
+
+/**
+ * Computes the next element to receive focus when cycling with Tab / Shift+Tab inside
+ * a modal focus trap (#1343). Returns `null` when default browser tabbing should proceed.
+ */
+export function computeNextFocusTrapTarget(
+  focusableElements: HTMLElement[],
+  activeElement: Element | null,
+  shiftKey: boolean,
+  scope?: Node | null,
+): HTMLElement | null {
+  if (focusableElements.length === 0) return null;
+
+  const first = focusableElements[0];
+  const last = focusableElements[focusableElements.length - 1];
+  const isOutsideScope = scope ? !scope.contains(activeElement) : false;
+
+  if (shiftKey) {
+    if (activeElement === first || isOutsideScope) {
+      return last;
+    }
+    return null;
+  }
+
+  if (activeElement === last || isOutsideScope) {
+    return first;
+  }
+
+  return null;
+}

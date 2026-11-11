@@ -94,7 +94,7 @@ describe("Modal shell component", () => {
     expect(handleClose).not.toHaveBeenCalled();
   });
 
-  it("traps Tab focus within the modal", async () => {
+  it("traps Tab focus within the modal", () => {
     jest.useFakeTimers();
     render(
       <Modal isOpen={true} onClose={jest.fn()}>
@@ -157,6 +157,42 @@ describe("Modal shell component", () => {
     });
 
     expect(document.activeElement).toBe(screen.getByPlaceholderText("Target Input"));
+    jest.useRealTimers();
+  });
+
+  it("dynamically updates focus trap when focusable elements are added or hidden (#1343)", () => {
+    jest.useFakeTimers();
+    const { rerender } = render(
+      <Modal isOpen={true} onClose={jest.fn()}>
+        <button>Step 1</button>
+        <button hidden>Hidden Step</button>
+        <button>Step 2</button>
+      </Modal>,
+    );
+
+    act(() => {
+      jest.runAllTimers();
+    });
+
+    const step1 = screen.getByRole("button", { name: "Step 1" });
+    const step2 = screen.getByRole("button", { name: "Step 2" });
+
+    step2.focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(document.activeElement).toBe(step1);
+
+    rerender(
+      <Modal isOpen={true} onClose={jest.fn()}>
+        <button>Step 1</button>
+        <button>Step 2</button>
+        <button>Step 3</button>
+      </Modal>,
+    );
+
+    const step3 = screen.getByRole("button", { name: "Step 3" });
+    step3.focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(document.activeElement).toBe(step1);
     jest.useRealTimers();
   });
 });
