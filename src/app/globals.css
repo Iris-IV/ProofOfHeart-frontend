@@ -3,11 +3,39 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --theme-transition-duration: 120ms;
 }
 
 html.dark {
   --background: #0a0a0a;
   --foreground: #ededed;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-theme-transitioning="true"],
+  html[data-theme-transitioning="true"] body,
+  html[data-theme-transitioning="true"]
+    :where(
+      header,
+      nav,
+      main,
+      footer,
+      section,
+      article,
+      aside,
+      div,
+      button,
+      a,
+      input,
+      select,
+      textarea,
+      span,
+      svg
+    ) {
+    transition-property: background-color, color, border-color, box-shadow, fill, stroke;
+    transition-duration: var(--theme-transition-duration, 120ms);
+    transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
 }
 
 @theme inline {

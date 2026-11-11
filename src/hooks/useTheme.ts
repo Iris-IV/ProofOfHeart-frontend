@@ -33,6 +33,147 @@ export interface ThemeContrastAuditReport {
   items: TokenContrastReportItem[];
 }
 
+export type ThemeBreakpointTier = "mobile" | "tablet" | "desktop";
+
+export interface ThemeGlassSurfaceTokens {
+  surfaceFill: string;
+  surfaceBorder: string;
+  backdropBlur: string;
+  highlightGradient: string;
+  shadowColor: string;
+  transitionCss: string;
+}
+
+export interface ResponsiveThemeLayoutTokens {
+  tier: ThemeBreakpointTier;
+  viewportWidth: number;
+  transitionDurationMs: number;
+  backdropBlurPx: number;
+  toggleTargetSizePx: number;
+  fontScale: number;
+  containLayoutShift: true;
+}
+
+/**
+ * Snappy micro-interaction duration (<150ms) for theme color variable transitions (#1340).
+ */
+export const THEME_TRANSITION_DURATION_MS = 120;
+
+export const THEME_TRANSITION_EASING = "cubic-bezier(0.2, 0.8, 0.2, 1)";
+
+export const THEME_TRANSITION_PROPERTIES = [
+  "background-color",
+  "color",
+  "border-color",
+  "box-shadow",
+  "fill",
+  "stroke",
+] as const;
+
+export const THEME_BREAKPOINTS: Record<ThemeBreakpointTier, number> = {
+  mobile: 320,
+  tablet: 768,
+  desktop: 1280,
+};
+
+/**
+ * Glassmorphism surface tokens and gradient highlights per theme (#1340).
+ */
+export const THEME_GLASS_SURFACE_TOKENS: Record<Theme, ThemeGlassSurfaceTokens> = {
+  light: {
+    surfaceFill: "rgba(255, 255, 255, 0.78)",
+    surfaceBorder: "rgba(255, 255, 255, 0.65)",
+    backdropBlur: "blur(16px) saturate(150%)",
+    highlightGradient:
+      "linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(124, 58, 237, 0.12), rgba(21, 128, 61, 0.08))",
+    shadowColor: "rgba(24, 24, 27, 0.08)",
+    transitionCss: THEME_TRANSITION_PROPERTIES.map(
+      (prop) => `${prop} ${THEME_TRANSITION_DURATION_MS}ms ${THEME_TRANSITION_EASING}`,
+    ).join(", "),
+  },
+  dark: {
+    surfaceFill: "rgba(24, 24, 27, 0.76)",
+    surfaceBorder: "rgba(255, 255, 255, 0.12)",
+    backdropBlur: "blur(20px) saturate(160%)",
+    highlightGradient:
+      "linear-gradient(135deg, rgba(96, 165, 250, 0.18), rgba(192, 132, 252, 0.16), rgba(74, 222, 128, 0.1))",
+    shadowColor: "rgba(0, 0, 0, 0.45)",
+    transitionCss: THEME_TRANSITION_PROPERTIES.map(
+      (prop) => `${prop} ${THEME_TRANSITION_DURATION_MS}ms ${THEME_TRANSITION_EASING}`,
+    ).join(", "),
+  },
+};
+
+/**
+ * Resolves the responsive breakpoint tier across mobile (320px), tablet (768px),
+ * and desktop (1280px+) screen widths (#1340).
+ */
+export function resolveThemeBreakpointTier(viewportWidth: number): ThemeBreakpointTier {
+  if (viewportWidth >= THEME_BREAKPOINTS.desktop) return "desktop";
+  if (viewportWidth >= THEME_BREAKPOINTS.tablet) return "tablet";
+  return "mobile";
+}
+
+/**
+ * Computes responsive theme layout and micro-interaction tokens without layout shift (#1340).
+ */
+export function getResponsiveThemeLayoutTokens(
+  viewportWidth: number,
+  options: { prefersReducedMotion?: boolean } = {},
+): ResponsiveThemeLayoutTokens {
+  const safeWidth = Math.max(THEME_BREAKPOINTS.mobile, Math.round(viewportWidth || 0));
+  const tier = resolveThemeBreakpointTier(safeWidth);
+  const prefersReducedMotion = options.prefersReducedMotion ?? false;
+
+  const backdropBlurPx = tier === "desktop" ? 20 : tier === "tablet" ? 16 : 12;
+  const fontScale = tier === "desktop" ? 1.05 : tier === "tablet" ? 1 : 0.975;
+
+  return {
+    tier,
+    viewportWidth: safeWidth,
+    transitionDurationMs: prefersReducedMotion ? 0 : THEME_TRANSITION_DURATION_MS,
+    backdropBlurPx,
+    toggleTargetSizePx: 44,
+    fontScale,
+    containLayoutShift: true,
+  };
+}
+
+/**
+ * Orchestrates a smooth (<150ms) CSS color variable transition on the document root
+ * when toggling themes, while respecting `prefers-reduced-motion` and high-contrast mode (#1340).
+ */
+export function applySmoothThemeTransition(
+  root: HTMLElement | null = typeof document !== "undefined" ? document.documentElement : null,
+  options: { durationMs?: number; prefersReducedMotion?: boolean } = {},
+): () => void {
+  if (!root) return () => {};
+
+  const reducedMotion =
+    options.prefersReducedMotion ??
+    (typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+  if (reducedMotion || root.dataset.contrast === "high") {
+    delete root.dataset.themeTransitioning;
+    return () => {};
+  }
+
+  const durationMs = Math.min(150, Math.max(0, options.durationMs ?? THEME_TRANSITION_DURATION_MS));
+  root.style.setProperty("--theme-transition-duration", `${durationMs}ms`);
+  root.dataset.themeTransitioning = "true";
+
+  const timer = setTimeout(() => {
+    delete root.dataset.themeTransitioning;
+  }, durationMs);
+
+  return () => {
+    clearTimeout(timer);
+    delete root.dataset.themeTransitioning;
+  };
+}
+
 /**
  * WCAG 2.1 AA minimum contrast ratio for normal body text (4.5:1).
  */
@@ -126,7 +267,7 @@ export function getContrastRatio(foregroundHex: string, backgroundHex: string): 
 export function auditThemeTokenContrast(
   theme: Theme,
   tokens: ThemeColorTokens = THEME_COLOR_TOKENS[theme],
-  minimumRatio: number = WCAG_AA_NORMAL_TEXT_MIN_RATIO
+  minimumRatio: number = WCAG_AA_NORMAL_TEXT_MIN_RATIO,
 ): ThemeContrastAuditReport {
   const tokenKeys: Array<keyof Omit<ThemeColorTokens, "background">> = [
     "foreground",

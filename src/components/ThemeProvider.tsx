@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import {
   hasStoredTheme,
   HIGH_CONTRAST_STORAGE_KEY,
@@ -10,6 +10,7 @@ import {
   writeStoredTheme,
   type Theme,
 } from "@/lib/preferences";
+import { applySmoothThemeTransition } from "@/hooks/useTheme";
 
 export type { Theme };
 
@@ -28,12 +29,16 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [hasExplicitChoice, setHasExplicitChoice] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [highContrast, setHighContrastState] = useState(false);
+  const cleanupTransitionRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     setThemeState(resolveInitialTheme());
     setHasExplicitChoice(hasStoredTheme());
     setHighContrastState(resolveInitialHighContrast());
     setMounted(true);
+    return () => {
+      cleanupTransitionRef.current?.();
+    };
   }, []);
 
   useEffect(() => {
@@ -73,6 +78,10 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   }, [theme, hasExplicitChoice]);
 
   const setTheme = (nextTheme: Theme) => {
+    if (mounted && typeof document !== "undefined") {
+      cleanupTransitionRef.current?.();
+      cleanupTransitionRef.current = applySmoothThemeTransition(document.documentElement);
+    }
     setThemeState(nextTheme);
     setHasExplicitChoice(true);
   };
