@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import {
   hasStoredTheme,
   HIGH_CONTRAST_STORAGE_KEY,
@@ -12,6 +12,9 @@ import {
 } from "@/lib/preferences";
 
 export type { Theme };
+
+/** Duration of the colour cross-fade applied when the theme switches (kept under 150ms feel budget). */
+const THEME_TRANSITION_MS = 140;
 
 interface ThemeContextType {
   theme: Theme;
@@ -28,6 +31,8 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [hasExplicitChoice, setHasExplicitChoice] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [highContrast, setHighContrastState] = useState(false);
+  const hasAppliedThemeRef = useRef(false);
+  const transitionTimerRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     setThemeState(resolveInitialTheme());
@@ -57,6 +62,19 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     if (!mounted) return;
     const root = window.document.documentElement;
     const isDark = theme === "dark" && !highContrast;
+
+    // Cross-fade colours on user-initiated switches only. The first apply is
+    // the initial paint, and reduced-motion users get an instant change.
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (hasAppliedThemeRef.current && !reduceMotion) {
+      window.clearTimeout(transitionTimerRef.current);
+      root.classList.add("theme-transition");
+      transitionTimerRef.current = window.setTimeout(() => {
+        root.classList.remove("theme-transition");
+      }, THEME_TRANSITION_MS + 40);
+    }
+    hasAppliedThemeRef.current = true;
+
     root.dataset.theme = isDark ? "dark" : "light";
     root.dataset.contrast = highContrast ? "high" : "standard";
     if (isDark) {
@@ -65,6 +83,10 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       root.classList.remove("dark");
     }
   }, [theme, mounted, highContrast]);
+
+  useEffect(() => {
+    return () => window.clearTimeout(transitionTimerRef.current);
+  }, []);
 
   useEffect(() => {
     if (hasExplicitChoice) {
