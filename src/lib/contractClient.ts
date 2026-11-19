@@ -1689,6 +1689,10 @@ export async function createCampaign(
 ): Promise<CreateCampaignResult> {
   validateStellarAddress(creator);
   validateFundingGoal(fundingGoal);
+  // Entry-point safety net when callers bypass the new-cause form.
+  // Read admin-adjusted limits fresh; a stale cached limit could lead to a
+  // failed wallet simulation after the user finishes the workflow.
+  if (!USE_MOCKS) validateFundingGoal(fundingGoal, await getFundingGoalBounds(true));
   validateDuration(durationDays);
   if (hasRevenueSharing) {
     validateRevenueShare(revenueSharePercentage);
