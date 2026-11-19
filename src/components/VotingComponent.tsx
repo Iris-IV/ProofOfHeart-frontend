@@ -25,6 +25,9 @@ interface VotingComponentProps {
   isVerifying?: boolean;
   /** Tallies stream live from contract events (shows a "Live" indicator). */
   isLive?: boolean;
+  /** Delegators whose vote can be cast by the connected delegate. */
+  delegatedVoters?: string[];
+  onCastDelegatedVote?: (delegator: string, voteType: "upvote" | "downvote") => Promise<void>;
 }
 
 export default function VotingComponent({
@@ -42,12 +45,15 @@ export default function VotingComponent({
   onVerifyWithVotes,
   isVerifying = false,
   isLive = false,
+  delegatedVoters = [],
+  onCastDelegatedVote,
 }: VotingComponentProps) {
   const t = useTranslations("Voting");
   const tContractErrors = useTranslations("ContractErrors");
   const [localVote, setLocalVote] = useState<"upvote" | "downvote" | null>(
     userVote?.voteType ?? null,
   );
+  const [delegatedVote, setDelegatedVote] = useState<string | null>(null);
   const { showError, showWarning } = useToast();
 
   const localizeContractError = (message: string) =>
@@ -189,6 +195,43 @@ export default function VotingComponent({
       </div>
 
       <VoteTallyBreakdown upvotes={upvotes} downvotes={downvotes} live={isLive} />
+
+      {onCastDelegatedVote && delegatedVoters.length > 0 && (
+        <div className="w-full rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/50 dark:bg-blue-950/30">
+          <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">
+            {t("delegatedVotesTitle")}
+          </p>
+          <div className="mt-3 space-y-2">
+            {delegatedVoters.map((delegator) => (
+              <div
+                key={delegator}
+                className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <span className="break-all font-mono text-xs text-blue-800 dark:text-blue-300">
+                  {delegator}
+                </span>
+                <div className="flex gap-2">
+                  {(["upvote", "downvote"] as const).map((voteType) => (
+                    <button
+                      key={voteType}
+                      type="button"
+                      disabled={delegatedVote === delegator}
+                      onClick={() =>
+                        void onCastDelegatedVote(delegator, voteType).then(() =>
+                          setDelegatedVote(delegator),
+                        )
+                      }
+                      className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                    >
+                      {voteType === "upvote" ? t("approve") : t("reject")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {quorumPct !== null && (
         <div className="w-full space-y-1">
