@@ -37,8 +37,10 @@ export async function POST(req: NextRequest) {
   const { campaignId, campaignTitle, reason, notes, reporterAddress } = parsed.data;
   const repository = getReportRepository();
 
-  // Rate limit: keyed by reporter address or IP
-  const rateLimitKey = rateLimitKeyFromRequest(req, reporterAddress);
+  // Rate limit: always keyed by IP — a self-declared reporterAddress is not
+  // verified and must not be used as the key, since rotating it trivially
+  // bypasses the limit (#1880).
+  const rateLimitKey = rateLimitKeyFromRequest(req);
   if (!(await reportRateLimiter.check(rateLimitKey))) {
     return NextResponse.json(
       { message: "Too many reports. Please wait before reporting again." },
