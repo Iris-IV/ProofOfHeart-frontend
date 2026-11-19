@@ -8,6 +8,7 @@ import VoteTallyBreakdown from "./VoteTallyBreakdown";
 import { useToast } from "./ToastProvider";
 import { parseContractError } from "../utils/contractErrors";
 import { getAsyncActionErrorMessage, withActionTimeout } from "../utils/asyncAction";
+import { usePlatformStatus } from "../hooks/usePlatformStatus";
 
 interface VotingComponentProps {
   campaign: Campaign;
@@ -49,14 +50,16 @@ export default function VotingComponent({
     userVote?.voteType ?? null,
   );
   const { showError, showWarning } = useToast();
+  const { isWriteDisabled, isPaused } = usePlatformStatus();
 
   const localizeContractError = (message: string) =>
     message.startsWith("ContractErrors.") ? tContractErrors(message) : message;
 
   const hasAlreadyVoted = !!userVote || !!localVote;
-  const voteDisabled = isVoting || !userWalletAddress || !isTokenHolder || hasAlreadyVoted;
+  const voteDisabled = isWriteDisabled || isVoting || !userWalletAddress || !isTokenHolder || hasAlreadyVoted;
 
   const handleVote = async (voteType: "upvote" | "downvote") => {
+    if (isWriteDisabled) { showWarning("The platform is temporarily unavailable for voting."); return; }
     if (!userWalletAddress) {
       showWarning(t("connectWalletToVote"));
       return;
@@ -139,6 +142,7 @@ export default function VotingComponent({
     <div className="glass-surface flex flex-col items-center gap-4 rounded-surface p-4 sm:p-5">
       <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{t("title")}</h3>
 
+      {isPaused && <p role="alert" className="w-full text-center text-sm text-amber-700 dark:text-amber-300">Voting is temporarily unavailable while the platform is paused.</p>}
       <div className="flex gap-3 w-full">
         <button
           onClick={() => void handleVote("upvote")}
@@ -252,7 +256,7 @@ export default function VotingComponent({
       {canVerify && (
         <button
           onClick={() => void onVerifyWithVotes?.()}
-          disabled={isVerifying}
+          disabled={isVerifying || isWriteDisabled}
           className="w-full min-h-[44px] py-2 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-semibold rounded-xl transition-colors text-sm inline-flex items-center justify-center gap-2"
         >
           <AsyncButtonContent
