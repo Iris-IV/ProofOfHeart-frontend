@@ -18,6 +18,32 @@ export interface RateLimiter {
   check: (key: string) => Promise<boolean>;
 }
 
+const UNKNOWN_CLIENT_IP = "unknown-client";
+
+/**
+ * Resolve the address supplied by the hosting platform or trusted proxy.
+ * The left-most X-Forwarded-For value is client-controlled, so use the
+ * right-most proxy hop when the platform does not expose a direct address.
+ */
+export function getClientIp(req: {
+  headers: { get(name: string): string | null };
+  ip?: string;
+}): string {
+  const directIp = req.ip?.trim();
+  if (directIp) return directIp;
+
+  const platformIp = req.headers.get("x-vercel-ip")?.trim();
+  if (platformIp) return platformIp;
+
+  const forwarded = req.headers.get("x-forwarded-for");
+  const hops = forwarded
+    ?.split(",")
+    .map((hop) => hop.trim())
+    .filter(Boolean);
+  const rightMostHop = hops?.at(-1);
+  return rightMostHop || UNKNOWN_CLIENT_IP;
+}
+
 /**
  * Create a rate limiter that allows at most `max` requests per `windowMs`
  * milliseconds for a given key.
@@ -51,13 +77,9 @@ export function createRateLimiter(name: string, windowMs: number, max: number): 
  * and falling back to the client IP.
  */
 export function rateLimitKeyFromRequest(
-  req: { headers: { get(name: string): string | null } },
+  req: { headers: { get(name: string): string | null }; ip?: string },
   walletAddress?: string | null,
 ): string {
   if (walletAddress) return walletAddress;
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    req.headers.get("x-real-ip") ??
-    "anon"
-  );
+  return getClientIp(req);
 }

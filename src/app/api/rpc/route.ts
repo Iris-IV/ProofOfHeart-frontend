@@ -1,36 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createRateLimiter, getClientIp } from "@/lib/rateLimit";
 
 // Server-side RPC URL with API key (never exposed to browser)
 const MAINNET_RPC_URL = process.env.MAINNET_RPC_URL;
 const TESTNET_RPC_URL = process.env.TESTNET_RPC_URL || "https://soroban-testnet.stellar.org";
 const NETWORK = process.env.NEXT_PUBLIC_STELLAR_NETWORK || "testnet";
 
-// Rate limiting: simple in-memory store (use Redis for production)
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-const RATE_LIMIT_WINDOW = 60_000; // 1 minute
-const RATE_LIMIT_MAX_REQUESTS = 60; // 60 requests per minute per IP
-
-/**
- * Simple rate limiter for RPC proxy.
- * In production, replace with Redis or a dedicated rate-limiting service.
- */
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const record = rateLimitMap.get(ip);
-
-  if (!record || now > record.resetTime) {
-    // First request or window expired
-    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
-    return true;
-  }
-
-  if (record.count >= RATE_LIMIT_MAX_REQUESTS) {
-    return false;
-  }
-
-  record.count++;
-  return true;
-}
+const rpcRateLimiter = createRateLimiter("rpc", 60_000, 60);
+const MAX_RPC_BODY_BYTES = 64 * 1024;
+const ALLOWED_METHODS = new Set([
+  "simulateTransaction",
+  "sendTransaction",
+  "getTransaction",
+  "getLedgerEntries",
+  "getEvents",
+  "getLatestLedger",
+  "getHealth",
+]);
 
 /**
  * RPC proxy endpoint.
@@ -48,13 +34,7 @@ function checkRateLimit(ip: string): boolean {
  */
 export async function POST(request: NextRequest) {
   // Get client IP for rate limiting
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0] ||
-    request.headers.get("x-real-ip") ||
-    "unknown";
-
-  // Check rate limit
-  if (!checkRateLimit(ip)) {
+  if (!(await rpcRateLimiter.check(getClientIp(request)))) {
     return NextResponse.json(
       { error: "Rate limit exceeded. Please try again later." },
       { status: 429 },
@@ -69,10 +49,22 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
+    const rawBody = await request.text();
+    if (new TextEncoder().encode(rawBody).byteLength > MAX_RPC_BODY_BYTES) {
+      return NextResponse.json({ error: "RPC request body too large" }, { status: 400 });
+    }
+    const body: unknown = JSON.parse(rawBody);
 
     // Validate JSON-RPC request
-    if (!body.jsonrpc || !body.method) {
+    if (
+      typeof body !== "object" ||
+      body === null ||
+      !("jsonrpc" in body) ||
+      body.jsonrpc !== "2.0" ||
+      !("method" in body) ||
+      typeof body.method !== "string" ||
+      !ALLOWED_METHODS.has(body.method)
+    ) {
       return NextResponse.json({ error: "Invalid JSON-RPC request" }, { status: 400 });
     }
 
