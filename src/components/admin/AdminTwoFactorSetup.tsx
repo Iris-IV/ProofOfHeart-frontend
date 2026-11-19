@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { ShieldCheck, KeyRound, CheckCircle2, Copy, RefreshCw } from "lucide-react";
 
 // TOTP setup steps
@@ -25,6 +26,7 @@ interface Props {
 }
 
 export default function AdminTwoFactorSetup({ adminAddress }: Props) {
+  const t = useTranslations("Accessibility");
   const [step, setStep] = useState<Step>("intro");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -90,7 +92,7 @@ export default function AdminTwoFactorSetup({ adminAddress }: Props) {
         <div className="flex flex-col items-center gap-4 mb-6">
           <div
             className="w-48 h-48 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 flex flex-col items-center justify-center gap-2 p-4"
-            aria-label="QR code placeholder"
+            aria-label={t("qrCodePlaceholder")}
           >
             <svg viewBox="0 0 9 9" className="w-32 h-32" aria-hidden="true">
               {/* Finder pattern top-left */}
@@ -218,7 +220,7 @@ export default function AdminTwoFactorSetup({ adminAddress }: Props) {
             <button
               onClick={handleCopy}
               className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-              aria-label="Copy secret"
+              aria-label={t("copySecret")}
             >
               {copied ? (
                 <CheckCircle2 size={14} className="text-emerald-500" />
@@ -272,7 +274,7 @@ export default function AdminTwoFactorSetup({ adminAddress }: Props) {
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
             placeholder="000000"
             className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-4 py-3 text-center text-2xl font-mono tracking-[0.5em] text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            aria-label="One-time password"
+            aria-label={t("oneTimePassword")}
             aria-invalid={Boolean(error)}
             aria-describedby={error ? "totp-code-error" : undefined}
             autoComplete="one-time-code"

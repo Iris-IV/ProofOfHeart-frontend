@@ -1,6 +1,7 @@
 "use client";
 
 import { Flame, ArrowRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import CauseCard from "./CauseCard";
 import { CauseCardSkeleton } from "./Skeleton";
@@ -19,6 +20,7 @@ export default function TrendingCampaigns({
   userWalletAddress,
   limit = 3,
 }: TrendingCampaignsProps) {
+  const t = useTranslations("Accessibility");
   const { trendingCampaigns, isLoading } = useTrendingCampaigns(limit);
   const { showError, showSuccess, showWarning } = useToast();
 
@@ -105,10 +107,10 @@ export default function TrendingCampaigns({
               id="trending-causes-heading"
               className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50"
             >
-              Trending Causes
+              {t("trendingCauses")}
             </h2>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Community causes gaining high momentum
+              {t("trendingCausesDescription")}
             </p>
           </div>
         </div>
@@ -116,7 +118,7 @@ export default function TrendingCampaigns({
           href="/explore"
           className="group inline-flex items-center gap-1.5 self-start rounded-full border border-orange-200 bg-white/80 px-3.5 py-2 text-sm font-semibold text-orange-600 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-300 hover:bg-white hover:text-orange-700 dark:border-orange-800/70 dark:bg-zinc-900/70 dark:text-orange-300 dark:hover:border-orange-700 dark:hover:text-orange-200 sm:self-auto"
         >
-          <span>View all causes</span>
+          <span>{t("viewAllCauses")}</span>
           <ArrowRight size={16} className="transition-transform duration-200 group-hover:translate-x-0.5" />
         </Link>
       </div>

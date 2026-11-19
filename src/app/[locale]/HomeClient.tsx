@@ -56,7 +56,7 @@ export default function HomeClient() {
               }}
               className="group flex items-center justify-center gap-2 px-6 sm:px-10 py-4 bg-white dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-bold rounded-2xl transition-all shadow-sm hover:shadow-md hover:motion-safe:-translate-y-0.5 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {isLoading && !isWalletConnected ? "Connecting..." : t("startCampaign")}
+              {isLoading && !isWalletConnected ? t("connecting") : t("startCampaign")}
               <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
             </Link>
           </div>
@@ -90,31 +90,31 @@ export default function HomeClient() {
         {/* Features Section */}
         <section aria-labelledby="features-heading" className="mt-32">
           <h2 id="features-heading" className="sr-only">
-            Key features
+            {t("keyFeatures")}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <FeatureCard
               icon={<Globe className="text-blue-500" />}
-              title="Community First"
-              description="Causes are validated by the people, not by a corporate board."
+              title={t("featureCommunityTitle")}
+              description={t("featureCommunityDescription")}
               delay="delay-100"
             />
             <FeatureCard
               icon={<Shield className="text-green-500" />}
-              title="Radical Transparency"
-              description="Every decision and transaction lives on-chain for anyone to verify."
+              title={t("featureTransparencyTitle")}
+              description={t("featureTransparencyDescription")}
               delay="delay-200"
             />
             <FeatureCard
               icon={<ArrowRight className="text-orange-500" />}
-              title="Permissionless"
-              description="Anyone can propose, support, or challenge a cause."
+              title={t("featurePermissionlessTitle")}
+              description={t("featurePermissionlessDescription")}
               delay="delay-300"
             />
             <FeatureCard
               icon={<Code className="text-purple-500" />}
-              title="Trust Through Code"
-              description="Smart contracts enforce the rules, removing the need for intermediaries."
+              title={t("featureTrustTitle")}
+              description={t("featureTrustDescription")}
               delay="delay-400"
             />
           </div>
