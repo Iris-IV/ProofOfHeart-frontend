@@ -4,6 +4,8 @@ import {
   isValidStellarPublicKey,
   validateAmount,
   validateFundingGoal,
+  fundingGoalBoundsError,
+  formatGoalStroops,
   validateDuration,
   validateRevenueShare,
   validateContributorNotCreator,
@@ -80,5 +82,17 @@ describe("Validators", () => {
       new ContractErrorException(ContractError.NotAuthorized),
     );
     expect(() => validateContributorNotCreator("G456", creator)).not.toThrow();
+  }); 
+  it("rejects goals outside admin-adjusted limits in exact stroops (#1759)", () => {
+    const limits = { min: 200_000n, max: 1_500_000_000n };
+    expect(fundingGoalBoundsError(199_999n, limits)).toContain("0.02");
+    expect(fundingGoalBoundsError(1_500_000_001n, limits)).toContain("150");
+    expect(fundingGoalBoundsError(200_000n, limits)).toBeNull();
+    expect(fundingGoalBoundsError(1_500_000_000n, limits)).toBeNull();
+    expect(() => validateFundingGoal(199_999n, limits)).toThrow(/between 0.02 and 150 XLM/);
+    expect(() => validateFundingGoal(200_000n, limits)).not.toThrow();
+    expect(() => validateFundingGoal(Number.NaN)).toThrow();
+    expect(formatGoalStroops(100_001n)).toBe("0.0100001");
   });
+
 });

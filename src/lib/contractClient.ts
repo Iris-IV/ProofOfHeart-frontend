@@ -451,6 +451,23 @@ async function buildAndSubmitTransaction(
     .assembleTransaction(builtTx, simulated as rpc.Api.SimulateTransactionSuccessResponse)
     .build();
 
+  // Pause/creation checks are re-read immediately before signing. This is a
+  // second line of defence for any write path that did not render a disabled
+  // button; a failed status lookup fails closed rather than prompting a wallet.
+  // Administrative recovery/configuration transactions remain allowed to
+  // change pause state.
+  const adminRecoveryOperations = new Set([
+    "init", "unpause", "pause", "set_paused", "emergency_pause",
+    "set_creation_disabled",
+  ]);
+  if (!adminRecoveryOperations.has(operation)) {
+    const { isPaused, isCreationDisabled } = await getPlatformStatus(true);
+    if (isPaused) throw new Error("The platform is temporarily paused. Transactions are disabled.");
+    if (operation === "create_campaign" && isCreationDisabled) {
+      throw new Error("Campaign creation is temporarily disabled.");
+    }
+  }
+
   options?.onStatus?.({ phase: "signing" });
   let signedTxXdr: string;
   try {
@@ -545,12 +562,17 @@ function emitMockLifecycle(txHash: string, options?: TransactionLifecycleOptions
   return txHash;
 }
 
-async function invokeViewMethod(method: string, args: xdr.ScVal[] = []): Promise<xdr.ScVal | null> {
-  // Check cache first
+async function invokeViewMethod(
+  method: string,
+  args: xdr.ScVal[] = [],
+  options: { fresh?: boolean } = {},
+): Promise<xdr.ScVal | null> {
+  // Bounds use the existing 30-second cache; safety-critical pre-sign checks
+  // bypass it so a just-paused contract is not represented as writable.
   const cacheKey = getCacheKey(method, args);
-  const cached = getCachedValue<xdr.ScVal | null>(cacheKey);
-  if (cached !== null) {
-    return cached;
+  if (!options.fresh) {
+    const cached = getCachedValue<xdr.ScVal | null>(cacheKey);
+    if (cached !== null) return cached;
   }
 
   const contract = new Contract(CONTRACT_ADDRESS);
@@ -1197,9 +1219,12 @@ export async function getCampaignCount(): Promise<number> {
   }
 }
 
-export async function getCampaign(id: number): Promise<Campaign | null> {
+export async function getCampaign(id: number, fresh = false): Promise<Campaign | null> {
   if (USE_MOCKS) return MOCK_CAMPAIGNS.find((c) => c.id === id) ?? null;
   try {
+    const result = await invokeViewMethod("get_campaign", [nativeToScVal(id, { type: "u32" })], { fresh });
+    if (!result) return null;
+    return decodeCampaign(result);
     const spec = await generated.getCampaign(id);
     if (!spec) return null;
     return campaignFromSpec(spec);
@@ -1241,10 +1266,15 @@ export async function getContribution(campaignId: number, contributor: string): 
  * Fetch the personal contribution cap for a contributor on a specific campaign.
  * Returns the cap in stroops, or 0 if no cap is set (unlimited).
  */
-export async function getPersonalCap(campaignId: number, contributor: string): Promise<bigint> {
+export async function getPersonalCap(campaignId: number, contributor: string, fresh = false): Promise<bigint> {
   if (USE_MOCKS) return mockPersonalCaps.get(contributionKey(campaignId, contributor)) ?? BigInt(0);
   try {
-    return await generated.getPersonalCap(campaignId, contributor);
+    const result = await invokeViewMethod("get_personal_cap", [
+      nativeToScVal(campaignId, { type: "u32" }),
+      new Address(contributor).toScVal(),
+    ], { fresh });
+    if (!result) return BigInt(0);
+    return scValToBigInt(result);
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -1447,6 +1477,80 @@ export async function getVersion(): Promise<number> {
 /**
  * Fetches the platform fee in basis points.
  */
+/**
+ * Administrator-configured campaign goal range, in contract-native stroops.
+ * View calls are cached for 30 seconds; use fresh=true immediately before
+ * opening a wallet signature prompt to avoid stale administrative limits.
+ */
+export interface FundingGoalBounds {
+  min: bigint;
+  max: bigint;
+}
+
+export async function getFundingGoalBounds(fresh = false): Promise<FundingGoalBounds> {
+  if (USE_MOCKS) return { min: 100_000n, max: 1_000_000_000_000_000n };
+  const [minValue, maxValue] = await Promise.all([
+    invokeViewMethod("get_min_campaign_funding_goal", [], { fresh }),
+    invokeViewMethod("get_max_campaign_funding_goal", [], { fresh }),
+  ]);
+  if (!minValue || !maxValue) throw new Error("Unable to read campaign funding-goal bounds.");
+  const min = scValToBigInt(minValue);
+  const max = scValToBigInt(maxValue);
+  if (min <= 0n || max < min) throw new Error("The contract returned an invalid funding-goal range.");
+  return { min, max };
+}
+
+export interface PlatformStatus {
+  isPaused: boolean;
+  isCreationDisabled: boolean;
+}
+
+export async function getPlatformStatus(fresh = false): Promise<PlatformStatus> {
+  if (USE_MOCKS) return { isPaused: false, isCreationDisabled: false };
+  const [paused, creationDisabled] = await Promise.all([
+    invokeViewMethod("is_paused", [], { fresh }),
+    invokeViewMethod("is_creation_disabled", [], { fresh }),
+  ]);
+  if (!paused || !creationDisabled) throw new Error("Unable to verify platform status.");
+  return { isPaused: paused.b(), isCreationDisabled: creationDisabled.b() };
+}
+
+export async function getMaxContributionPerTx(fresh = false): Promise<bigint> {
+  if (USE_MOCKS) return 0n;
+  const value = await invokeViewMethod("get_max_contribution_per_tx", [], { fresh });
+  if (!value) throw new Error("Unable to read per-transaction contribution cap.");
+  return scValToBigInt(value);
+}
+
+/** Lifetime includes refunded contributions; unlike get_contribution, it never decreases. */
+export async function getLifetimeContribution(
+  campaignId: number,
+  contributor: string,
+  fresh = false,
+): Promise<bigint> {
+  if (USE_MOCKS) return mockContributions.get(contributionKey(campaignId, contributor)) ?? 0n;
+  const value = await invokeViewMethod("get_lifetime_contribution", [
+    nativeToScVal(campaignId, { type: "u32" }),
+    new Address(contributor).toScVal(),
+  ], { fresh });
+  if (!value) throw new Error("Unable to read lifetime contribution.");
+  return scValToBigInt(value);
+}
+
+/** One batched read for donation allowance, always in stroops. */
+export async function getDonationLimits(
+  campaignId: number,
+  contributor: string,
+  fresh = false,
+): Promise<{ maxPerTx: bigint; lifetime: bigint; personalCap: bigint }> {
+  const [maxPerTx, lifetime, personalCap] = await Promise.all([
+    getMaxContributionPerTx(fresh),
+    getLifetimeContribution(campaignId, contributor, fresh),
+    getPersonalCap(campaignId, contributor, fresh),
+  ]);
+  return { maxPerTx, lifetime, personalCap };
+}
+
 export async function getPlatformFee(): Promise<number> {
   if (USE_MOCKS) return 250;
 
@@ -1655,6 +1759,9 @@ export async function createCampaign(
   }
 
   await requireExistingCreatorAccount(creator);
+  // Entry-point safety net for non-form callers; preserve the existing
+  // account-not-found validation before making administrative view calls.
+  validateFundingGoal(fundingGoal, await getFundingGoalBounds(true));
   const contract = new Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     "create_campaign",
@@ -1848,6 +1955,7 @@ export async function contribute(
     // Invalidate cache for this campaign and contribution
     clearContractCacheByMethod("get_campaign");
     clearContractCacheByMethod("get_contribution");
+    clearContractCacheByMethod("get_lifetime_contribution");
 
     return txResult.txHash;
   } catch (err) {
