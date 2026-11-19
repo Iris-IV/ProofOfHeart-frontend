@@ -1,0 +1,229 @@
+{
+  "contract": "proof_of_heart",
+  "specVersion": 1,
+  "description": "Normalized Soroban interface for the contract read surface consumed by contractClient.ts. Produced by scripts/generate-contract-bindings.mjs from the contract's published interface (Iris-IV/ProofOfHeart-stellar CI artifact, see Iris-IV/ProofOfHeart-stellar#1473) or from a local wasm via `stellar contract info interface --output json`. Do not edit by hand — regenerate with `npm run bindings:generate`.",
+  "functions": [
+    {
+      "name": "list_campaigns",
+      "mutability": "view",
+      "args": [
+        { "name": "start", "type": "u32" },
+        { "name": "limit", "type": "u32" }
+      ],
+      "ret": { "type": "page", "struct": "Campaign" }
+    },
+    {
+      "name": "get_creator_campaigns",
+      "mutability": "view",
+      "args": [
+        { "name": "creator", "type": "address" },
+        { "name": "start", "type": "u32" },
+        { "name": "limit", "type": "u32" }
+      ],
+      "ret": { "type": "page", "struct": "Campaign" }
+    },
+    {
+      "name": "get_campaigns_by_category",
+      "mutability": "view",
+      "args": [
+        { "name": "category", "type": "u32" },
+        { "name": "offset", "type": "u32" },
+        { "name": "limit", "type": "u32" }
+      ],
+      "ret": { "type": "page", "struct": "Campaign" }
+    },
+    {
+      "name": "get_campaign",
+      "mutability": "view",
+      "args": [{ "name": "campaign_id", "type": "u32" }],
+      "ret": { "type": "option", "value": "Campaign" }
+    },
+    {
+      "name": "get_campaign_count",
+      "mutability": "view",
+      "args": [],
+      "ret": { "type": "u32" }
+    },
+    {
+      "name": "get_platform_stats",
+      "mutability": "view",
+      "args": [],
+      "ret": { "type": "PlatformStats" }
+    },
+    {
+      "name": "get_contribution",
+      "mutability": "view",
+      "args": [
+        { "name": "campaign_id", "type": "u32" },
+        { "name": "contributor", "type": "address" }
+      ],
+      "ret": { "type": "i128" }
+    },
+    {
+      "name": "get_personal_cap",
+      "mutability": "view",
+      "args": [
+        { "name": "campaign_id", "type": "u32" },
+        { "name": "contributor", "type": "address" }
+      ],
+      "ret": { "type": "i128" }
+    },
+    {
+      "name": "get_revenue_pool",
+      "mutability": "view",
+      "args": [{ "name": "campaign_id", "type": "u32" }],
+      "ret": { "type": "i128" }
+    },
+    {
+      "name": "get_revenue_claimed",
+      "mutability": "view",
+      "args": [
+        { "name": "campaign_id", "type": "u32" },
+        { "name": "contributor", "type": "address" }
+      ],
+      "ret": { "type": "i128" }
+    },
+    {
+      "name": "get_milestones",
+      "mutability": "view",
+      "args": [{ "name": "campaign_id", "type": "u32" }],
+      "ret": { "type": "vec", "value": "Milestone" }
+    },
+    {
+      "name": "is_milestone_claimed",
+      "mutability": "view",
+      "args": [
+        { "name": "campaign_id", "type": "u32" },
+        { "name": "milestone_id", "type": "u32" }
+      ],
+      "ret": { "type": "bool" }
+    },
+    {
+      "name": "get_admin",
+      "mutability": "view",
+      "args": [],
+      "ret": { "type": "address" }
+    },
+    {
+      "name": "get_version",
+      "mutability": "view",
+      "args": [],
+      "ret": { "type": "u32" }
+    },
+    {
+      "name": "get_platform_fee",
+      "mutability": "view",
+      "args": [],
+      "ret": { "type": "u32" }
+    },
+    {
+      "name": "get_saved_campaigns",
+      "mutability": "view",
+      "args": [{ "name": "user", "type": "address" }],
+      "ret": { "type": "vec", "value": "u32" }
+    },
+    {
+      "name": "get_saved_campaigns_count",
+      "mutability": "view",
+      "args": [{ "name": "user", "type": "address" }],
+      "ret": { "type": "u32" }
+    },
+    {
+      "name": "get_approve_votes",
+      "mutability": "view",
+      "args": [{ "name": "campaign_id", "type": "u32" }],
+      "ret": { "type": "u32" }
+    },
+    {
+      "name": "get_reject_votes",
+      "mutability": "view",
+      "args": [{ "name": "campaign_id", "type": "u32" }],
+      "ret": { "type": "u32" }
+    },
+    {
+      "name": "has_voted",
+      "mutability": "view",
+      "args": [
+        { "name": "campaign_id", "type": "u32" },
+        { "name": "voter", "type": "address" }
+      ],
+      "ret": { "type": "bool" }
+    },
+    {
+      "name": "get_min_votes_quorum",
+      "mutability": "view",
+      "args": [],
+      "ret": { "type": "u32" }
+    },
+    {
+      "name": "get_approval_threshold_bps",
+      "mutability": "view",
+      "args": [],
+      "ret": { "type": "u32" }
+    },
+    {
+      "name": "is_comment_censured",
+      "mutability": "view",
+      "args": [
+        { "name": "campaign_id", "type": "u32" },
+        { "name": "comment_hash", "type": "bytes32" }
+      ],
+      "ret": { "type": "bool" }
+    },
+    {
+      "name": "get_campaign_reserve",
+      "mutability": "view",
+      "args": [{ "name": "campaign_id", "type": "u32" }],
+      "ret": { "type": "option", "value": "CampaignReserve" }
+    }
+  ],
+  "types": {
+    "Campaign": {
+      "fields": [
+        { "name": "id", "type": "u32" },
+        { "name": "creator", "type": "address" },
+        { "name": "first_creator", "type": "address" },
+        { "name": "pending_creator", "type": { "type": "option", "value": "address" } },
+        { "name": "pending_creator_expiry", "type": "u64" },
+        { "name": "title", "type": "string" },
+        { "name": "description", "type": "string" },
+        { "name": "funding_goal", "type": "i128" },
+        { "name": "deadline", "type": "u64" },
+        { "name": "amount_raised", "type": "i128" },
+        { "name": "status", "type": "u32" },
+        { "name": "category", "type": "u32" },
+        { "name": "has_revenue_sharing", "type": "bool" },
+        { "name": "revenue_share_percentage", "type": "u32" },
+        { "name": "max_contribution_per_user", "type": "i128" },
+        { "name": "fee_override", "type": { "type": "option", "value": "u32" } },
+        { "name": "deadline_extended", "type": "bool" },
+        { "name": "effective_amount_raised", "type": "i128" }
+      ]
+    },
+    "PlatformStats": {
+      "fields": [
+        { "name": "total_campaigns", "type": "u32" },
+        { "name": "active_campaigns", "type": "u32" },
+        { "name": "verified_campaigns", "type": "u32" },
+        { "name": "cancelled_campaigns", "type": "u32" },
+        { "name": "total_amount_raised", "type": "i128" },
+        { "name": "stats_are_partial", "type": "bool" }
+      ]
+    },
+    "Milestone": {
+      "fields": [
+        { "name": "id", "type": "u32" },
+        { "name": "description", "type": "string" },
+        { "name": "payout_bps", "type": "u32" },
+        { "name": "verified", "type": "bool" }
+      ]
+    },
+    "CampaignReserve": {
+      "fields": [
+        { "name": "amount", "type": "i128" },
+        { "name": "release_timestamp", "type": "u64" },
+        { "name": "released", "type": "bool" }
+      ]
+    }
+  }
+}

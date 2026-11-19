@@ -304,9 +304,9 @@ npm run audit:ci                    # the gate CI runs
 node scripts/check-audit-policy.mjs # allowlist expiry + overrides parity
 ```
 
-Security pins live in the `overrides` block of **both** `package.json` and
-`pnpm-workspace.yaml`; the two must stay identical, and
-`node scripts/check-audit-policy.mjs` fails if they drift. See
+Security pins live in the `overrides` block of `package.json`
+(`package-lock.json` is the only lockfile — see #1787), and
+`node scripts/check-audit-policy.mjs` enforces the policy. See
 [docs/DEPENDENCY_SECURITY.md](docs/DEPENDENCY_SECURITY.md).
 
 ### Validation
