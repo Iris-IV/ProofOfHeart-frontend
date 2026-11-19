@@ -20,6 +20,7 @@ const ACTION_BADGE_CLASSES: Record<WalletTransactionAction, string> = {
   withdraw: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
   vote: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
   set_personal_cap: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
+  remove_personal_cap: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
 };
 
 function getActionLabelKey(action: WalletTransactionAction): string {
@@ -34,6 +35,8 @@ function getActionLabelKey(action: WalletTransactionAction): string {
       return "actionDepositRevenue";
     case "vote":
       return "actionVote";
+    case "remove_personal_cap":
+      return "actionRemovePersonalCap";
     default:
       return "actionTransaction";
   }

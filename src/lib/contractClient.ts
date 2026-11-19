@@ -686,6 +686,20 @@ function decodeOptionalU32(val: xdr.ScVal | undefined): number | null {
   return isScValVoid(val) ? null : (val as xdr.ScVal).u32();
 }
 
+function decodeScValMap(result: xdr.ScVal | null, label: string): Record<string, xdr.ScVal> {
+  const map = result?.map();
+  if (!map) throw new Error(`Expected ScVal map for ${label}.`);
+  const fields: Record<string, xdr.ScVal> = {};
+  for (const entry of map) fields[entry.key().sym().toString()] = entry.val();
+  return fields;
+}
+
+function requiredField(fields: Record<string, xdr.ScVal>, name: string, label: string): xdr.ScVal {
+  const value = fields[name];
+  if (!value) throw new Error(`${label} is missing ${name}.`);
+  return value;
+}
+
 // Exposed for targeted unit tests of XDR decoding behavior.
 export const __testUtils = {
   decodeCampaign,
@@ -861,6 +875,13 @@ for (let i = 0; i < GENERATED_MOCK_COUNT; i++) {
   );
 }
 
+const mockPersonalCaps = new Map<string, bigint>();
+const mockContributions = new Map<string, bigint>();
+
+function contributionKey(campaignId: number, contributor: string): string {
+  return `${campaignId}:${contributor.toLowerCase()}`;
+}
+
 // ---------------------------------------------------------------------------
 // Public API — Read (view) functions
 // ---------------------------------------------------------------------------
@@ -1027,6 +1048,157 @@ export async function getPlatformStats(): Promise<ContractPlatformStats> {
   }
 }
 
+export interface ContractPlatformReport {
+  totalCampaigns: number;
+  activeCampaigns: number;
+  totalRaised: bigint;
+  totalContributors: number;
+  platformFeeBps: number;
+  isPaused: boolean;
+  token: string;
+}
+
+export interface ContributorPortfolioPosition {
+  campaignId: number;
+  amount: bigint;
+  status: string;
+  refundable: boolean;
+}
+
+export interface ContributorPortfolio {
+  positions: ContributorPortfolioPosition[];
+  nextCursor: number;
+}
+
+export async function getPlatformReport(): Promise<ContractPlatformReport> {
+  if (USE_MOCKS) {
+    return {
+      totalCampaigns: MOCK_CAMPAIGNS.length,
+      activeCampaigns: MOCK_CAMPAIGNS.filter((c) => c.is_active && !c.is_cancelled).length,
+      totalRaised: MOCK_CAMPAIGNS.reduce((sum, c) => sum + c.amount_raised, BigInt(0)),
+      totalContributors: MOCK_CAMPAIGNS.length * 7,
+      platformFeeBps: 250,
+      isPaused: false,
+      token: "GTOKEN123456789012345678901234567890123456789012345678901234567890",
+    };
+  }
+  try {
+    const result = await invokeViewMethod("get_platform_report");
+    const fields = decodeScValMap(result, "PlatformReport");
+    const field = (name: string): xdr.ScVal => requiredField(fields, name, "PlatformReport");
+    return {
+      totalCampaigns: field("total_campaigns").u32(),
+      activeCampaigns: field("active_campaigns").u32(),
+      totalRaised: scValToBigInt(field("total_raised")),
+      totalContributors: field("total_contributors").u32(),
+      platformFeeBps: field("platform_fee_bps").u32(),
+      isPaused: field("is_paused").b(),
+      token: Address.fromScVal(field("token")).toString(),
+    };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export interface ContractCreatorStats {
+  isKnownCreator: boolean;
+  totalCampaigns: number;
+  activeCampaigns: number;
+  totalRaised: bigint;
+  totalContributors: number;
+}
+
+export async function getCreatorStats(creator: string): Promise<ContractCreatorStats> {
+  if (USE_MOCKS) {
+    const owned = MOCK_CAMPAIGNS.filter((c) => c.creator === creator);
+    return {
+      isKnownCreator: owned.length > 0,
+      totalCampaigns: owned.length,
+      activeCampaigns: owned.filter((c) => c.is_active && !c.is_cancelled).length,
+      totalRaised: owned.reduce((sum, c) => sum + c.amount_raised, BigInt(0)),
+      totalContributors: owned.length * 7,
+    };
+  }
+  try {
+    const result = await invokeViewMethod("get_creator_stats", [new Address(creator).toScVal()]);
+    const fields = decodeScValMap(result, "CreatorStats");
+    const field = (name: string): xdr.ScVal => requiredField(fields, name, "CreatorStats");
+    return {
+      isKnownCreator: field("is_known_creator").b(),
+      totalCampaigns: field("total_campaigns").u32(),
+      activeCampaigns: field("active_campaigns").u32(),
+      totalRaised: scValToBigInt(field("total_raised")),
+      totalContributors: field("total_contributors").u32(),
+    };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function getContributorPortfolio(
+  contributor: string,
+  start = 0,
+  limit = LIST_MAX_LIMIT,
+): Promise<ContributorPortfolio> {
+  const pageLimit = Math.max(1, Math.min(limit, LIST_MAX_LIMIT));
+
+  if (USE_MOCKS) {
+    const rows: ContributorPortfolioPosition[] = [];
+    let cursor = start;
+    for (let id = start + 1; id <= MOCK_CAMPAIGNS.length; id += 1) {
+      const amount = mockContributions.get(contributionKey(id, contributor)) ?? BigInt(0);
+      if (amount <= BigInt(0)) continue;
+      const c = MOCK_CAMPAIGNS[id - 1]!;
+      rows.push({
+        campaignId: id,
+        amount,
+        status: c.is_cancelled
+          ? "cancelled"
+          : c.funds_withdrawn
+            ? "withdrawn"
+            : !c.is_active
+              ? "inactive"
+              : c.is_verified
+                ? "verified"
+                : "active",
+        refundable: c.is_cancelled || c.deadline < Math.floor(Date.now() / 1000),
+      });
+      cursor = id;
+      if (rows.length >= pageLimit) break;
+    }
+    const exhausted = cursor >= MOCK_CAMPAIGNS.length;
+    return { positions: rows, nextCursor: exhausted ? 0 : cursor + 1 };
+  }
+
+  try {
+    const result = await invokeViewMethod("get_contributor_portfolio", [
+      new Address(contributor).toScVal(),
+      nativeToScVal(start, { type: "u32" }),
+      nativeToScVal(pageLimit, { type: "u32" }),
+    ]);
+    const [rows, next] = result?.vec() ?? [];
+    const positions = (rows?.vec() ?? []).map((row): ContributorPortfolioPosition => {
+      const values = row.vec() ?? [];
+      const campaignId = values[0];
+      const amount = values[1];
+      const status = values[2];
+      const refundable = values[3];
+      if (!campaignId || !amount || !status || !refundable) {
+        throw new Error("Contributor portfolio row is missing fields.");
+      }
+      return {
+        campaignId: campaignId.u32(),
+        amount: scValToBigInt(amount),
+        status: status.str().toString(),
+        refundable: refundable.b(),
+      };
+    });
+    return { positions, nextCursor: next?.u32() ?? 0 };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
 export async function getCampaignCount(): Promise<number> {
   if (USE_MOCKS) return MOCK_CAMPAIGNS.length;
   try {
@@ -1069,7 +1241,8 @@ export async function getAllCampaigns(): Promise<Campaign[]> {
 }
 
 export async function getContribution(campaignId: number, contributor: string): Promise<bigint> {
-  if (USE_MOCKS) return BigInt(0);
+  if (USE_MOCKS)
+    return mockContributions.get(contributionKey(campaignId, contributor)) ?? BigInt(0);
   try {
     const result = await invokeViewMethod("get_contribution", [
       nativeToScVal(campaignId, { type: "u32" }),
@@ -1087,7 +1260,7 @@ export async function getContribution(campaignId: number, contributor: string): 
  * Returns the cap in stroops, or 0 if no cap is set (unlimited).
  */
 export async function getPersonalCap(campaignId: number, contributor: string): Promise<bigint> {
-  if (USE_MOCKS) return BigInt(0);
+  if (USE_MOCKS) return mockPersonalCaps.get(contributionKey(campaignId, contributor)) ?? BigInt(0);
   try {
     const result = await invokeViewMethod("get_personal_cap", [
       nativeToScVal(campaignId, { type: "u32" }),
@@ -1396,10 +1569,7 @@ function encodeCreateCampaignParams(params: CreateCampaignFields): xdr.ScVal {
     ["category", nativeToScVal(params.category, { type: "u32" })],
     ["has_revenue_sharing", nativeToScVal(params.hasRevenueSharing, { type: "bool" })],
     ["revenue_share_percentage", nativeToScVal(params.revenueSharePercentage, { type: "u32" })],
-    [
-      "max_contribution_per_user",
-      nativeToScVal(params.maxContributionPerUser, { type: "i128" }),
-    ],
+    ["max_contribution_per_user", nativeToScVal(params.maxContributionPerUser, { type: "i128" })],
   ];
   fields.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
 
@@ -1573,7 +1743,11 @@ export async function contribute(
   validateStellarAddress(contributor);
   validateAmount(amount);
 
-  if (USE_MOCKS) return emitMockLifecycle("mock_tx_contribute", options);
+  if (USE_MOCKS) {
+    const key = contributionKey(campaignId, contributor);
+    mockContributions.set(key, (mockContributions.get(key) ?? BigInt(0)) + amount);
+    return emitMockLifecycle("mock_tx_contribute", options);
+  }
   const contract = new Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     "contribute",
@@ -2127,7 +2301,10 @@ export async function setPersonalCap(
 ): Promise<string> {
   validateStellarAddress(contributor);
 
-  if (USE_MOCKS) return emitMockLifecycle("mock_tx_set_personal_cap", options);
+  if (USE_MOCKS) {
+    mockPersonalCaps.set(contributionKey(campaignId, contributor), capAmount);
+    return emitMockLifecycle("mock_tx_set_personal_cap", options);
+  }
   const contract = new Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     "set_personal_cap",
@@ -2140,6 +2317,7 @@ export async function setPersonalCap(
       ...options,
       operation: "set_personal_cap",
     });
+    clearContractCacheByMethod("get_personal_cap");
     appendWalletTransaction({
       walletAddress: contributor,
       campaignId,
@@ -2152,6 +2330,56 @@ export async function setPersonalCap(
     const errorCode = getContractErrorCode(err);
     captureTransactionError(
       "set_personal_cap",
+      campaignId,
+      error,
+      errorCode ? String(errorCode) : undefined,
+    );
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function removePersonalCap(
+  campaignId: number,
+  contributor: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(contributor);
+
+  if (USE_MOCKS) {
+    const key = contributionKey(campaignId, contributor);
+    if (!mockPersonalCaps.has(key)) {
+      throw new Error(
+        parseContractError(new ContractErrorException(ContractError.PersonalCapNotFound)),
+      );
+    }
+    mockPersonalCaps.delete(key);
+    return emitMockLifecycle("mock_tx_remove_personal_cap", options);
+  }
+
+  const contract = new Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    "remove_personal_cap",
+    nativeToScVal(campaignId, { type: "u32" }),
+    new Address(contributor).toScVal(),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(contributor, op, {
+      ...options,
+      operation: "remove_personal_cap",
+    });
+    clearContractCacheByMethod("get_personal_cap");
+    appendWalletTransaction({
+      walletAddress: contributor,
+      campaignId,
+      action: "remove_personal_cap",
+      txHash: txResult.txHash,
+    });
+    return txResult.txHash;
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    const errorCode = getContractErrorCode(err);
+    captureTransactionError(
+      "remove_personal_cap",
       campaignId,
       error,
       errorCode ? String(errorCode) : undefined,

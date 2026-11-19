@@ -56,6 +56,8 @@ export enum ContractError {
   CampaignAlreadyBookmarked = 44,
   /** Campaign is not in the wallet's saved list (bookmarks, #1674). */
   CampaignNotBookmarked = 45,
+  /** No personal cap exists to remove (personal caps, #1772). */
+  PersonalCapNotFound = 46,
   /** Wallet reached the on-chain saved-list size limit (bookmarks, #1674). */
   BookmarkLimitReached = 47,
   /** Milestone has not been verified yet (milestone payouts, #1671/#1672). */
@@ -114,6 +116,7 @@ export const errorTranslationKeys: Record<ContractError, string> = {
   [ContractError.InvalidVestingDelay]: "ContractErrors.InvalidVestingDelay",
   [ContractError.CampaignAlreadyBookmarked]: "ContractErrors.CampaignAlreadyBookmarked",
   [ContractError.CampaignNotBookmarked]: "ContractErrors.CampaignNotBookmarked",
+  [ContractError.PersonalCapNotFound]: "ContractErrors.PersonalCapNotFound",
   [ContractError.BookmarkLimitReached]: "ContractErrors.BookmarkLimitReached",
   [ContractError.MilestoneNotVerified]: "ContractErrors.MilestoneNotVerified",
   [ContractError.MilestoneAlreadyClaimed]: "ContractErrors.MilestoneAlreadyClaimed",

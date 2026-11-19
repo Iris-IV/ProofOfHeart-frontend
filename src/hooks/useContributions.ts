@@ -3,10 +3,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getCampaign,
-  getCampaignCount,
-  getContribution,
+  getContributorPortfolio,
   getRevenueClaimed,
   getRevenuePool,
+  type ContributorPortfolioPosition,
 } from "../lib/contractClient";
 import { WalletTransactionLogEntry } from "../lib/transactionLog";
 import { Campaign, CampaignStatus, deriveCampaignStatus } from "../types";
@@ -51,42 +51,41 @@ function getCampaignDisplayName(campaign: Campaign, campaignId: number): string 
   return `Campaign #${campaignId}`;
 }
 
+const MAX_PORTFOLIO_PAGES = 100;
+
 export async function fetchContributionHistory(
   walletAddress: string,
   txLog: WalletTransactionLogEntry[],
 ): Promise<ContributionHistoryItem[]> {
-  const campaignCount = await getCampaignCount();
-  const campaignIds = Array.from({ length: campaignCount }, (_, i) => i + 1);
+  const positions: ContributorPortfolioPosition[] = [];
+  let start = 0;
 
-  const contributionAmounts = await Promise.all(
-    campaignIds.map(async (id) => {
-      try {
-        return await getContribution(id, walletAddress);
-      } catch {
-        return BigInt(0);
-      }
-    }),
-  );
-
-  const contributedIds = campaignIds.filter((_, i) => contributionAmounts[i] > BigInt(0));
+  for (let page = 0; page < MAX_PORTFOLIO_PAGES; page += 1) {
+    const result = await getContributorPortfolio(walletAddress, start);
+    positions.push(...result.positions);
+    if (!result.nextCursor || result.nextCursor <= start) break;
+    start = result.nextCursor;
+  }
 
   const campaignsData = await Promise.all(
-    contributedIds.map(async (campaignId) => {
-      try {
-        const campaign = await getCampaign(campaignId);
-        return { id: campaignId, campaign };
-      } catch {
-        return { id: campaignId, campaign: null };
-      }
+    positions.map(async (position) => {
+      const campaign = await getCampaign(position.campaignId).catch(() => null);
+      return { position, campaign };
     }),
   );
 
-  const campaignsToProcess = campaignsData.filter((c) => c.campaign !== null);
+  const campaignsToProcess = campaignsData.filter(
+    (entry): entry is { position: ContributorPortfolioPosition; campaign: Campaign } =>
+      entry.campaign !== null,
+  );
 
-  const campaignsWithRevenue = campaignsToProcess.filter((c) => c.campaign!.has_revenue_sharing);
+  const campaignsWithRevenue = campaignsToProcess.filter(
+    (entry) => entry.campaign.has_revenue_sharing,
+  );
 
   const revenueData = await Promise.all(
-    campaignsWithRevenue.map(async ({ id }) => {
+    campaignsWithRevenue.map(async ({ position }) => {
+      const id = position.campaignId;
       try {
         const [pool, claimed] = await Promise.all([
           getRevenuePool(id),
@@ -101,12 +100,11 @@ export async function fetchContributionHistory(
 
   const revenueMap = new Map(revenueData.map((r) => [r.id, r]));
 
-  const records: ContributionHistoryItem[] = campaignsToProcess.map(({ id, campaign }) => {
-    const c = campaign!;
-    const contribution = contributionAmounts[id - 1];
+  const records: ContributionHistoryItem[] = campaignsToProcess.map(({ position, campaign: c }) => {
+    const id = position.campaignId;
+    const contribution = position.amount;
     const status = deriveCampaignStatus(c);
-    const canClaimRefund =
-      contribution > BigInt(0) && (status === "failed" || status === "cancelled");
+    const canClaimRefund = contribution > BigInt(0) && position.refundable;
 
     let claimableRevenue = BigInt(0);
     if (c.has_revenue_sharing && contribution > BigInt(0)) {
