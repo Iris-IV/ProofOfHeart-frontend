@@ -16,6 +16,7 @@ import NotificationSettings from "./NotificationSettings";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { useSavedCampaignsCount } from "@/hooks/useSavedCampaigns";
 import { useContractVersion } from "@/hooks/useContractVersion";
+import { usePlatformStatus } from "@/hooks/usePlatformStatus";
 import { IS_MOCK_MODE } from "@/lib/runtimeEnv";
 import { isSwipeUpToClose, type TouchPoint } from "@/lib/mobileMenuGesture";
 
@@ -68,6 +69,7 @@ export default function Navbar() {
   const savedCount = useSavedCampaignsCount();
   const { admin: adminAddress } = useAdmin();
   const { isMismatch, version, expectedVersion } = useContractVersion();
+  const { isPaused, isCreationBlocked, isError: platformStatusError } = usePlatformStatus();
 
   const { campaigns } = useCampaigns();
   const pendingCount = useMemo(() => {
@@ -152,6 +154,16 @@ export default function Navbar() {
             <strong>c{expectedVersion}</strong>. Some features may be disabled or behave
             unexpectedly.
           </span>
+        </div>
+      )}
+      {isPaused && (
+        <div role="alert" data-testid="platform-paused-banner" className="border-b border-amber-300 bg-amber-100 px-4 py-2 text-center text-sm font-semibold text-amber-900 dark:bg-amber-950/70 dark:text-amber-200">
+          The platform is temporarily paused. Donations, voting, campaign creation, and withdrawals are disabled.
+        </div>
+      )}
+      {platformStatusError && (
+        <div role="alert" className="border-b border-amber-300 bg-amber-50 px-4 py-2 text-center text-xs text-amber-900 dark:bg-amber-950/70 dark:text-amber-200">
+          Platform availability cannot be verified. Transactions are temporarily disabled.
         </div>
       )}
       {walletNetworkWarning && (
@@ -270,14 +282,14 @@ export default function Navbar() {
               </button>
             ) : (
               <div className="flex items-center gap-3 ps-2">
-                <Link
+                {!isCreationBlocked && <Link
                   href="/causes/new"
                   className="inline-flex items-center gap-1.5 h-9 px-3 lg:px-4 rounded-full bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/20"
                   title={t("createCampaign")}
                 >
                   <Plus size={14} />
                   <span className="hidden lg:inline">{t("createCampaign")}</span>
-                </Link>
+                </Link>}
                 <div className="flex flex-col items-end">
                   <span className="hidden lg:block text-[10px] uppercase tracking-wider font-bold text-zinc-400 dark:text-zinc-500 leading-none mb-1">
                     {/* #649 — Social users recognise their account name, not a G… address. */}
@@ -372,7 +384,7 @@ export default function Navbar() {
 
             <ContrastToggle className="w-full justify-center md:hidden" />
 
-            {isWalletConnected && (
+            {isWalletConnected && !isCreationBlocked && (
               <Link
                 href="/causes/new"
                 onClick={() => setMenuOpen(false)}
