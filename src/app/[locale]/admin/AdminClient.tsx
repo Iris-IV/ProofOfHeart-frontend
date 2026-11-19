@@ -66,6 +66,18 @@ import {
 const CancelCampaignModal = dynamic(() => import("@/components/cancelCampaignModal"), {
   ssr: false,
 });
+const BatchVerificationSection = dynamic(() => import("@/components/admin/BatchVerificationSection"), {
+  ssr: false,
+});
+const ModerationSection = dynamic(() => import("@/components/admin/ModerationSection"), {
+  ssr: false,
+});
+const GovernanceSection = dynamic(() => import("@/components/admin/GovernanceSection"), {
+  ssr: false,
+});
+const LimitsFeesSection = dynamic(() => import("@/components/admin/LimitsFeesSection"), {
+  ssr: false,
+});
 import { AdminSkeleton } from "@/components/Skeleton";
 import Pagination from "@/components/Pagination";
 import { Campaign } from "@/types";
@@ -873,6 +885,17 @@ export default function AdminDashboard() {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* ── New Admin Features ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 my-12 motion-safe:animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <BatchVerificationSection />
+        <GovernanceSection />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12 motion-safe:animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <LimitsFeesSection />
+        <ModerationSection />
       </div>
 
       {/* ── Campaign Map ── */}

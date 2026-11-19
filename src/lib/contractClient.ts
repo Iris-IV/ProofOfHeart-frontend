@@ -2871,3 +2871,245 @@ export async function getCancellationPenaltyBps(): Promise<number> {
     return 0;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Batch verification — issue #1782
+// ---------------------------------------------------------------------------
+
+/**
+ * Verify multiple campaigns in a single batch transaction (up to 50).
+ * Returns the transaction hash and result with verified/failed IDs.
+ */
+export async function verifyCampaigns(
+  campaignIds: number[],
+  options?: TransactionLifecycleOptions,
+): Promise<{ txHash: string; verified: number[]; failed: number[] }> {
+  if (campaignIds.length === 0) {
+    throw new Error("At least one campaign must be selected");
+  }
+  if (campaignIds.length > 50) {
+    throw new Error("Maximum 50 campaigns per batch");
+  }
+
+  if (USE_MOCKS) {
+    await emitMockLifecycle("mock_tx_verify_campaigns", options);
+    return { txHash: "mock_tx_hash", verified: campaignIds, failed: [] };
+  }
+
+  const callerAddress = await getSignerAddress();
+  const contract = new Contract(CONTRACT_ADDRESS);
+
+  const idsAsScVal = campaignIds.map((id) => nativeToScVal(id, { type: "u32" }));
+  const vectorArg = xdr.ScVal.scvVec(idsAsScVal);
+
+  const op = contract.call("verify_campaigns", vectorArg);
+
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "verify_campaigns",
+    });
+
+    // Parse return value: (Vec<u32>, Vec<u32>) = (verified_ids, failed_ids)
+    const returnVal = txResult.returnValue;
+    const verified = parseIdVector(returnVal?.[0]);
+    const failed = parseIdVector(returnVal?.[1]);
+
+    return { txHash: txResult.txHash, verified, failed };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Batch verify all milestones for a campaign.
+ */
+export async function batchVerifyMilestones(
+  campaignId: number,
+  options?: TransactionLifecycleOptions,
+): Promise<{ txHash: string; verifiedIds: number[] }> {
+  if (USE_MOCKS) {
+    await emitMockLifecycle("mock_tx_batch_verify_milestones", options);
+    return { txHash: "mock_tx_hash", verifiedIds: [] };
+  }
+
+  const callerAddress = await getSignerAddress();
+  const contract = new Contract(CONTRACT_ADDRESS);
+
+  const op = contract.call(
+    "batch_verify_milestones",
+    nativeToScVal(campaignId, { type: "u32" }),
+  );
+
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "batch_verify_milestones",
+    });
+
+    const verifiedIds = parseIdVector(txResult.returnValue);
+    return { txHash: txResult.txHash, verifiedIds };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+// Helper to parse vector of u32s from ScVal
+function parseIdVector(scval: xdr.ScVal | undefined): number[] {
+  if (!scval) return [];
+  if (scval.kind() !== xdr.ScValType.scvVec()) return [];
+  return scval.vec()?.map((item) => item.u32() ?? 0) ?? [];
+}
+
+// ---------------------------------------------------------------------------
+// Admin moderation — issue #1781
+// ---------------------------------------------------------------------------
+
+/**
+ * Cancel a campaign as admin.
+ */
+export async function adminCancelCampaign(
+  campaignId: number,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_admin_cancel_campaign", options);
+
+  const callerAddress = await getSignerAddress();
+  const contract = new Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    "admin_cancel_campaign",
+    nativeToScVal(campaignId, { type: "u32" }),
+  );
+
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "admin_cancel_campaign",
+    });
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Censure a comment by its hash (hides it from view).
+ */
+export async function censureComment(
+  commentHash: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (!commentHash || commentHash.length !== 64) {
+    throw new Error("Invalid comment hash format");
+  }
+
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_censure_comment", options);
+
+  const callerAddress = await getSignerAddress();
+  const contract = new Contract(CONTRACT_ADDRESS);
+
+  const hashBuffer = Buffer.from(commentHash, "hex");
+  const hashScVal = xdr.ScVal.scvBytes(hashBuffer);
+
+  const op = contract.call("censure_comment", hashScVal);
+
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "censure_comment",
+    });
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Uncensure a comment (make it visible again).
+ */
+export async function uncensureComment(
+  commentHash: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (!commentHash || commentHash.length !== 64) {
+    throw new Error("Invalid comment hash format");
+  }
+
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_uncensure_comment", options);
+
+  const callerAddress = await getSignerAddress();
+  const contract = new Contract(CONTRACT_ADDRESS);
+
+  const hashBuffer = Buffer.from(commentHash, "hex");
+  const hashScVal = xdr.ScVal.scvBytes(hashBuffer);
+
+  const op = contract.call("uncensure_comment", hashScVal);
+
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "uncensure_comment",
+    });
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Check if a comment is censured (view method).
+ */
+export async function isCommentCensured(commentHash: string): Promise<boolean> {
+  if (!commentHash || commentHash.length !== 64) {
+    throw new Error("Invalid comment hash format");
+  }
+
+  if (USE_MOCKS) return false;
+
+  try {
+    const hashBuffer = Buffer.from(commentHash, "hex");
+    const hashScVal = xdr.ScVal.scvBytes(hashBuffer);
+
+    const result = await invokeViewMethod("is_comment_censured", [hashScVal]);
+    return result ? result.bool() : false;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Get the count of censured comments (view method).
+ */
+export async function getCensuredCommentCount(): Promise<number> {
+  if (USE_MOCKS) return 0;
+
+  try {
+    const result = await invokeViewMethod("get_censured_comment_count", []);
+    return result ? result.u32() : 0;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Re-exports from specialized modules
+// ---------------------------------------------------------------------------
+
+export {
+  setVotingParams,
+  setMinVotingBalance,
+  setCategoryVotingThreshold,
+  removeCategoryVotingThreshold,
+  purgeVotingState,
+} from "./contractClient.governance";
+
+export {
+  setCampaignFeeOverride,
+  setCategoryDurationCap,
+  removeCategoryDurationCap,
+  setMinCampaignFundingGoal,
+  setMaxCampaignFundingGoal,
+  setMaxContributionPerTx,
+  setCancellationPenaltyBps,
+  setVestingParams,
+} from "./contractClient.limits-fees";
