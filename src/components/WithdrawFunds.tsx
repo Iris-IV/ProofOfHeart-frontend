@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { withdrawFunds } from "../lib/contractClient";
+import { Link } from "@/i18n/routing";
+import { withdrawFunds, checkSettlementStatus, getMilestones } from "../lib/contractClient";
 import { Campaign, basisPointsToPercentage } from "../types";
 import { formatNumber } from "@/lib/formatters";
 import { stroopsToXlmNumber } from "@/lib/stellarAmount";
@@ -40,6 +41,53 @@ export default function WithdrawFunds({
   const { invoke, isPending } = useWriteGuard();
   const isWithdrawing = isPending("withdrawFunds", campaign.id);
 
+  // Settlement status from the contract (issue #1763)
+  const [settlementStatus, setSettlementStatus] = useState<{
+    deadline_passed: boolean;
+    goal_met: boolean;
+    ready_for_withdrawal: boolean;
+  } | null>(null);
+  const [settlementLoading, setSettlementLoading] = useState(true);
+
+  // Whether this campaign uses on-chain milestones (issue #1763)
+  const [hasMilestones, setHasMilestones] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchStatus() {
+      setSettlementLoading(true);
+      try {
+        const [status, milestones] = await Promise.all([
+          checkSettlementStatus(campaign.id),
+          getMilestones(campaign.id),
+        ]);
+        if (!cancelled) {
+          setSettlementStatus(status);
+          setHasMilestones(milestones.length > 0);
+        }
+      } catch {
+        // If the contract call fails fall back to client-side logic (non-fatal)
+        if (!cancelled) {
+          const now = Math.floor(Date.now() / 1000);
+          const deadline_passed = campaign.deadline < now;
+          const goal_met = campaign.amount_raised >= campaign.funding_goal;
+          setSettlementStatus({
+            deadline_passed,
+            goal_met,
+            ready_for_withdrawal: deadline_passed && goal_met,
+          });
+          setHasMilestones((campaign.milestones?.length ?? 0) > 0);
+        }
+      } finally {
+        if (!cancelled) setSettlementLoading(false);
+      }
+    }
+    void fetchStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [campaign.id, campaign.deadline, campaign.amount_raised, campaign.funding_goal, campaign.milestones]);
+
   const localizeContractError = (message: string) =>
     message.startsWith("ContractErrors.") ? tContractErrors(message) : message;
 
@@ -47,25 +95,47 @@ export default function WithdrawFunds({
 
   if (!isCreator) return null;
 
-  const now = Math.floor(Date.now() / 1000);
-  const deadlinePassed = campaign.deadline < now;
-  const goalReached = campaign.amount_raised >= campaign.funding_goal;
+  // Milestone campaigns use milestone claims, not bulk withdrawal (issue #1763)
+  if (hasMilestones) {
+    return (
+      <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
+        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
+          {t("title")}
+        </h3>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-3">
+          {t("milestoneCampaignNote")}
+        </p>
+        <Link
+          href={`/causes/${campaign.id}#milestones`}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+        >
+          {t("viewMilestoneClaims")}
+        </Link>
+      </div>
+    );
+  }
+
+  // Use contract-derived settlement status when available, otherwise fall back to client-side
+  const readyForWithdrawal = settlementStatus?.ready_for_withdrawal ?? false;
+  const goalReached = settlementStatus?.goal_met ?? campaign.amount_raised >= campaign.funding_goal;
 
   const isDisabled =
+    settlementLoading ||
     campaign.is_cancelled ||
     campaign.funds_withdrawn ||
-    !goalReached ||
-    (campaign.is_active && !deadlinePassed);
+    !readyForWithdrawal;
 
   const disabledReason = campaign.is_cancelled
     ? t("disabledCancelled")
     : campaign.funds_withdrawn
       ? t("disabledAlreadyWithdrawn")
-      : !goalReached
-        ? t("disabledGoalNotReached")
-        : campaign.is_active && !deadlinePassed
-          ? t("disabledStillActive")
-          : null;
+      : settlementLoading
+        ? t("checkingStatus")
+        : !settlementStatus?.goal_met
+          ? t("disabledGoalNotReached")
+          : !settlementStatus?.deadline_passed
+            ? t("disabledStillActive")
+            : null;
 
   const totalRaised = stroopsToXlmNumber(campaign.amount_raised);
   const feeAmount = totalRaised * (platformFeeBps / 10000);
@@ -196,7 +266,7 @@ export default function WithdrawFunds({
             disabled={isDisabled}
             className="w-full px-4 py-3 min-h-[44px] bg-linear-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-sm font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:from-zinc-400 disabled:to-zinc-400"
           >
-            {t("withdrawFunds")}
+            {settlementLoading ? t("checkingStatus") : t("withdrawFunds")}
           </button>
           {disabledReason && (
             <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400 text-center">

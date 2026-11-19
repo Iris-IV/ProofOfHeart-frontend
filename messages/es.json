@@ -434,7 +434,10 @@
     "labelTags": "Etiquetas",
     "tagsLimitTip": "hasta 5",
     "placeholderTags": "Añade una etiqueta y pulsa Enter",
-    "tagsHelpText": "Las etiquetas ayudan a otros a descubrir tu campaña."
+    "tagsHelpText": "Las etiquetas ayudan a otros a descubrir tu campaña.",
+    "milestonesSetFailed": "Campaña creada, pero el plan de hitos no se pudo guardar en la cadena. Puedes reintentarlo desde la página de la campaña.",
+    "milestoneTarget": "Objetivo (XLM)",
+    "milestoneDescription": "Descripción"
   },
   "Footer": {
     "tagline": "Una plataforma de lanzamiento descentralizada donde la comunidad valida causas y las contribuciones se registran en la cadena.",
@@ -455,12 +458,16 @@
     "all": "Todas",
     "noCausesYet": "Aún no hay causas",
     "noCausesInCategory": "No hay causas en esta categoría",
+    "noTagResults": "No hay causas con esta etiqueta",
     "checkBackSoon": "Vuelve pronto — la comunidad está comenzando.",
     "tryDifferentCategory": "Intenta seleccionar otra categoría.",
+    "tryDifferentTag": "Intenta con otra etiqueta o borra el filtro.",
     "tryAgain": "Intentar de nuevo",
     "layoutLabel": "Diseño del listado",
     "viewCompact": "Lista compacta",
-    "viewGrid": "Cuadrícula"
+    "viewGrid": "Cuadrícula",
+    "filteringByTag": "Filtrado por etiqueta: #{tag}",
+    "clearTagFilter": "Borrar filtro de etiqueta"
   },
   "DonationModal": {
     "titleConfirmed": "Donación Confirmada",
@@ -509,7 +516,25 @@
     "disabledCancelled": "La campaña ha sido cancelada",
     "disabledAlreadyWithdrawn": "Los fondos ya han sido retirados",
     "disabledGoalNotReached": "No se ha alcanzado la meta de financiación",
-    "disabledStillActive": "La campaña aún está activa"
+    "disabledStillActive": "La campaña aún está activa",
+    "checkingStatus": "Verificando estado…",
+    "milestoneCampaignNote": "Esta campaña usa pagos por hitos. Usa los reclamos de hitos para retirar tus fondos.",
+    "viewMilestoneClaims": "Ver Reclamos de Hitos"
+  },
+  "CancelCampaignModal": {
+    "title": "¿Cancelar Campaña?",
+    "irreversibleWarning": "Esta acción no se puede deshacer. Todos los contribuyentes podrán reclamar reembolsos completos una vez que la campaña sea cancelada.",
+    "campaignLabel": "Campaña",
+    "loadingPenalty": "Verificando penalización por cancelación…",
+    "penaltyTitle": "Penalización por Cancelación",
+    "penaltyDescription": "Se cobrará una penalización del {pct}% del monto recaudado de tu wallet.",
+    "penaltyAmount": "Monto de penalización: {amount} XLM",
+    "noPenalty": "No aplica penalización por cancelación.",
+    "lowBalanceWarning": "Saldo de wallet insuficiente",
+    "lowBalanceDetail": "El saldo de tu wallet es insuficiente para cubrir la penalización de cancelación de {amount} XLM. Recarga antes de cancelar.",
+    "keepActive": "Mantener Activa",
+    "confirmCancel": "Cancelar Campaña",
+    "cancelling": "Cancelando…"
   },
   "EditCampaignMetadata": {
     "editMetadata": "Editar metadatos",

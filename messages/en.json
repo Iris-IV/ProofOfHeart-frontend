@@ -433,7 +433,10 @@
     "labelTags": "Tags",
     "tagsLimitTip": "up to 5",
     "placeholderTags": "Add a tag and press Enter",
-    "tagsHelpText": "Tags help others discover your campaign."
+    "tagsHelpText": "Tags help others discover your campaign.",
+    "milestonesSetFailed": "Campaign created, but milestone plan could not be saved on-chain. You can retry from the campaign page.",
+    "milestoneTarget": "Target (XLM)",
+    "milestoneDescription": "Description"
   },
   "Footer": {
     "tagline": "A decentralised launchpad where the community validates causes and contributions are accounted for on-chain.",
@@ -454,12 +457,16 @@
     "all": "All",
     "noCausesYet": "No causes yet",
     "noCausesInCategory": "No causes in this category",
+    "noTagResults": "No causes with this tag",
     "checkBackSoon": "Check back soon — the community is just getting started.",
     "tryDifferentCategory": "Try selecting a different category above.",
+    "tryDifferentTag": "Try selecting a different tag or clear the filter.",
     "tryAgain": "Try again",
     "layoutLabel": "Listing layout",
     "viewCompact": "Compact list",
-    "viewGrid": "Grid"
+    "viewGrid": "Grid",
+    "filteringByTag": "Filtered by tag: #{tag}",
+    "clearTagFilter": "Clear tag filter"
   },
   "DonationModal": {
     "titleConfirmed": "Donation Confirmed",
@@ -508,7 +515,25 @@
     "disabledCancelled": "Campaign has been cancelled",
     "disabledAlreadyWithdrawn": "Funds have already been withdrawn",
     "disabledGoalNotReached": "Funding goal has not been reached",
-    "disabledStillActive": "Campaign is still active"
+    "disabledStillActive": "Campaign is still active",
+    "checkingStatus": "Checking status…",
+    "milestoneCampaignNote": "This campaign uses milestone-based payouts. Use milestone claims to withdraw your funds.",
+    "viewMilestoneClaims": "View Milestone Claims"
+  },
+  "CancelCampaignModal": {
+    "title": "Cancel Campaign?",
+    "irreversibleWarning": "This action cannot be undone. All contributors will be able to claim full refunds once the campaign is cancelled.",
+    "campaignLabel": "Campaign",
+    "loadingPenalty": "Checking cancellation penalty…",
+    "penaltyTitle": "Cancellation Penalty",
+    "penaltyDescription": "A penalty of {pct}% of the amount raised will be charged from your wallet.",
+    "penaltyAmount": "Penalty amount: {amount} XLM",
+    "noPenalty": "No cancellation penalty applies.",
+    "lowBalanceWarning": "Insufficient wallet balance",
+    "lowBalanceDetail": "Your wallet balance is too low to cover the {amount} XLM cancellation penalty. Please top up before cancelling.",
+    "keepActive": "Keep Active",
+    "confirmCancel": "Cancel Campaign",
+    "cancelling": "Cancelling…"
   },
   "EditCampaignMetadata": {
     "editMetadata": "Edit metadata",

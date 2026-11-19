@@ -2558,3 +2558,316 @@ export async function claimReserve(
     throw new Error(parseContractError(err));
   }
 }
+
+// ---------------------------------------------------------------------------
+// Campaign tags — issue #1766
+// Wraps add_campaign_tag, get_campaign_tags, get_campaigns_by_tag
+// ---------------------------------------------------------------------------
+
+/** In-memory mock store: campaignId → Set<tag> */
+const mockCampaignTags = new Map<number, Set<string>>();
+
+/**
+ * Add a tag to a campaign on-chain (creator only).
+ * Returns the transaction hash on success.
+ *
+ * ScVal shape: add_campaign_tag(campaign_id: u32, tag: string)
+ */
+export async function addCampaignTag(
+  campaignId: number,
+  tag: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) {
+    const tags = mockCampaignTags.get(campaignId) ?? new Set<string>();
+    tags.add(tag.toLowerCase().trim());
+    mockCampaignTags.set(campaignId, tags);
+    // Also update the in-memory mock campaign so tag renders immediately.
+    const mockCampaign = MOCK_CAMPAIGNS.find((c) => c.id === campaignId);
+    if (mockCampaign) {
+      mockCampaign.tags = Array.from(tags);
+    }
+    return emitMockLifecycle(`mock_tx_add_tag_${campaignId}`, options);
+  }
+  const callerAddress = await getSignerAddress();
+  const contract = new Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    "add_campaign_tag",
+    nativeToScVal(campaignId, { type: "u32" }),
+    nativeToScVal(tag, { type: "string" }),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "add_campaign_tag",
+    });
+    clearContractCacheByMethod("get_campaign_tags");
+    clearContractCacheByMethod("get_campaigns_by_tag");
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Fetch all tags for a campaign.
+ * Returns an empty array when the campaign has no tags.
+ *
+ * ScVal shape: get_campaign_tags(campaign_id: u32) -> Vec<String>
+ */
+export async function getCampaignTags(campaignId: number): Promise<string[]> {
+  if (USE_MOCKS) {
+    const stored = mockCampaignTags.get(campaignId);
+    if (stored) return Array.from(stored);
+    // Fall back to tags on the mock campaign object itself.
+    return MOCK_CAMPAIGNS.find((c) => c.id === campaignId)?.tags ?? [];
+  }
+  try {
+    const result = await invokeViewMethod("get_campaign_tags", [
+      nativeToScVal(campaignId, { type: "u32" }),
+    ]);
+    return (result?.vec() ?? []).map((v) => v.str().toString());
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * List campaigns that carry a given tag (paginated).
+ * Returns a page of campaign ids so callers can fetch full campaign data
+ * via getCampaign() as needed.
+ *
+ * ScVal shape:
+ *   get_campaigns_by_tag(tag: string, offset: u32, limit: u32) -> (Vec<u32>, u32)
+ *   where the second element is the next offset (0 when exhausted).
+ */
+export async function getCampaignsByTag(
+  tag: string,
+  offset = 0,
+  limit = DEFAULT_CAMPAIGNS_PAGE_SIZE,
+): Promise<{ campaignIds: number[]; nextOffset: number | null }> {
+  if (USE_MOCKS) {
+    const normalised = tag.toLowerCase().trim();
+    const matching = MOCK_CAMPAIGNS.filter((c) => c.tags?.includes(normalised)).map((c) => c.id);
+    const slice = matching.slice(offset, offset + limit);
+    const nextOffset = offset + limit < matching.length ? offset + limit : null;
+    return { campaignIds: slice, nextOffset };
+  }
+  try {
+    const result = await invokeViewMethod("get_campaigns_by_tag", [
+      nativeToScVal(tag, { type: "string" }),
+      nativeToScVal(offset, { type: "u32" }),
+      nativeToScVal(Math.min(limit, LIST_MAX_LIMIT), { type: "u32" }),
+    ]);
+    if (!result) return { campaignIds: [], nextOffset: null };
+    const [idsVec, nextVal] = result.vec() ?? [];
+    if (!idsVec) return { campaignIds: [], nextOffset: null };
+    const campaignIds = (idsVec.vec() ?? []).map((v) => v.u32());
+    const next = nextVal ? nextVal.u32() : 0;
+    return { campaignIds, nextOffset: next > 0 ? next : null };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// set_milestones — issue #1765
+// Called after create_campaign to register the on-chain milestone plan.
+// ---------------------------------------------------------------------------
+
+export interface MilestoneInput {
+  description: string;
+  /** Payout share in basis points. All milestones for a campaign must sum to 10 000. */
+  payout_bps: number;
+}
+
+/**
+ * Register the milestone payout plan for `campaignId` on-chain.
+ *
+ * The contract expects `set_milestones(campaign_id: u32, milestones: Vec<{description: String, payout_bps: u32}>)`.
+ * `payout_bps` values must sum to 10 000 (BPS_DENOMINATOR).
+ *
+ * @param campaignId - The id returned by create_campaign.
+ * @param milestones - Array of milestone inputs; payout_bps must sum to 10 000.
+ */
+export async function setMilestones(
+  campaignId: number,
+  milestones: MilestoneInput[],
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) {
+    // Update the in-memory mock so getMilestones returns the plan immediately.
+    const mockCampaign = MOCK_CAMPAIGNS.find((c) => c.id === campaignId);
+    if (mockCampaign) {
+      mockCampaign.milestones = milestones.map((m, i) => ({
+        targetAmount: BigInt(0), // payout_bps is used on-chain; targetAmount is UI-only
+        description: m.description,
+      }));
+    }
+    return emitMockLifecycle(`mock_tx_set_milestones_${campaignId}`, options);
+  }
+  const callerAddress = await getSignerAddress();
+  const contract = new Contract(CONTRACT_ADDRESS);
+
+  // Encode each milestone as an ScVal map { description: String, payout_bps: u32 }
+  const encodedMilestones = xdr.ScVal.scvVec(
+    milestones.map((m) => {
+      const fields: [string, xdr.ScVal][] = [
+        ["description", nativeToScVal(m.description, { type: "string" })],
+        ["payout_bps", nativeToScVal(m.payout_bps, { type: "u32" })],
+      ];
+      fields.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+      return xdr.ScVal.scvMap(
+        fields.map(
+          ([key, val]) => new xdr.ScMapEntry({ key: xdr.ScVal.scvSymbol(key), val }),
+        ),
+      );
+    }),
+  );
+
+  const op = contract.call(
+    "set_milestones",
+    nativeToScVal(campaignId, { type: "u32" }),
+    encodedMilestones,
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "set_milestones",
+    });
+    clearContractCacheByMethod("get_milestones");
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Convert an array of milestone form entries (targetAmount in stroops, description)
+ * into MilestoneInput objects with payout_bps derived proportionally.
+ *
+ * Rules:
+ * - If total target is 0 or milestones are empty, returns [].
+ * - Distributes bps proportionally to targetAmount, rounding down.
+ * - Gives any remaining bps (due to rounding) to the last milestone.
+ *
+ * The result always sums to exactly BPS_DENOMINATOR (10 000) when non-empty.
+ */
+export function milestoneFormEntriesToInputs(
+  entries: { targetAmount: bigint; description: string }[],
+): MilestoneInput[] {
+  const valid = entries.filter((e) => e.targetAmount > BigInt(0) && e.description.trim());
+  if (valid.length === 0) return [];
+
+  const total = valid.reduce((sum, e) => sum + e.targetAmount, BigInt(0));
+  if (total === BigInt(0)) return [];
+
+  const bpsValues: number[] = valid.map((e) =>
+    Number((e.targetAmount * BigInt(BPS_DENOMINATOR)) / total),
+  );
+
+  // Fix rounding: assign remainder to last milestone.
+  const assigned = bpsValues.reduce((s, v) => s + v, 0);
+  const remainder = BPS_DENOMINATOR - assigned;
+  if (bpsValues.length > 0) {
+    bpsValues[bpsValues.length - 1] += remainder;
+  }
+
+  return valid.map((e, i) => ({
+    description: e.description.trim(),
+    payout_bps: bpsValues[i],
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// check_settlement_status — issue #1763
+// ---------------------------------------------------------------------------
+
+export interface SettlementStatus {
+  /** True when the campaign deadline has passed. */
+  deadline_passed: boolean;
+  /** True when amount_raised >= funding_goal. */
+  goal_met: boolean;
+  /** True when funds can be withdrawn right now. */
+  ready_for_withdrawal: boolean;
+}
+
+/**
+ * Ask the contract whether a campaign is ready for withdrawal.
+ *
+ * ScVal shape: check_settlement_status(campaign_id: u32) -> (bool, bool, bool)
+ * Returns (deadline_passed, goal_met, ready_for_withdrawal).
+ *
+ * Falls back to client-side derivation when mocks are active so tests do not
+ * require a live RPC node.
+ */
+export async function checkSettlementStatus(campaignId: number): Promise<SettlementStatus> {
+  if (USE_MOCKS) {
+    const campaign = MOCK_CAMPAIGNS.find((c) => c.id === campaignId);
+    if (!campaign) {
+      return { deadline_passed: false, goal_met: false, ready_for_withdrawal: false };
+    }
+    const now = Math.floor(Date.now() / 1000);
+    const deadline_passed = campaign.deadline < now;
+    const goal_met = campaign.amount_raised >= campaign.funding_goal;
+    const ready_for_withdrawal =
+      deadline_passed && goal_met && !campaign.funds_withdrawn && !campaign.is_cancelled;
+    return { deadline_passed, goal_met, ready_for_withdrawal };
+  }
+  try {
+    const result = await invokeViewMethod("check_settlement_status", [
+      nativeToScVal(campaignId, { type: "u32" }),
+    ]);
+    if (!result) {
+      return { deadline_passed: false, goal_met: false, ready_for_withdrawal: false };
+    }
+    // The contract returns a tuple encoded as a Vec of three bools.
+    const vec = result.vec();
+    if (vec && vec.length >= 3) {
+      return {
+        deadline_passed: vec[0].b(),
+        goal_met: vec[1].b(),
+        ready_for_withdrawal: vec[2].b(),
+      };
+    }
+    // Fallback: try struct map encoding.
+    const map = result.map();
+    if (map) {
+      const fields: Record<string, boolean> = {};
+      for (const entry of map) fields[entry.key().sym().toString()] = entry.val().b();
+      return {
+        deadline_passed: fields["deadline_passed"] ?? false,
+        goal_met: fields["goal_met"] ?? false,
+        ready_for_withdrawal: fields["ready_for_withdrawal"] ?? false,
+      };
+    }
+    return { deadline_passed: false, goal_met: false, ready_for_withdrawal: false };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// get_cancellation_penalty_bps — issue #1764
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the cancellation penalty in basis points.
+ *
+ * ScVal shape: get_cancellation_penalty_bps() -> u32
+ *
+ * This is a global contract setting; the actual charge applied to the creator
+ * on cancel_campaign() is:
+ *   penalty_amount = amount_raised * penalty_bps / 10_000
+ */
+export async function getCancellationPenaltyBps(): Promise<number> {
+  if (USE_MOCKS) return 500; // 5% mock penalty
+  try {
+    const result = await invokeViewMethod("get_cancellation_penalty_bps");
+    return result ? result.u32() : 0;
+  } catch (err) {
+    // Non-fatal: if contract doesn't expose this yet, default to 0.
+    console.warn("[contractClient] get_cancellation_penalty_bps not available:", err);
+    return 0;
+  }
+}
