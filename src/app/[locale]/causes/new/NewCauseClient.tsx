@@ -23,7 +23,7 @@ import {
 import { invalidateCampaignsList } from "@/lib/cacheInvalidation";
 import { Category, CATEGORY_LABELS } from "@/types";
 import { xlmToStroops } from "@/lib/stellarAmount";
-import { fundingGoalBoundsError } from "@/utils/validators";
+import { fundingGoalBoundsError, formatGoalStroops } from "@/utils/validators";
 import { usePlatformStatus } from "@/hooks/usePlatformStatus";
 import { parseContractError } from "@/utils/contractErrors";
 import { useCampaignFormDraft } from "@/hooks/useCampaignFormDraft";
@@ -277,6 +277,8 @@ export default function CreateCampaignPage() {
           ? "The platform is temporarily paused. Campaign creation is unavailable."
           : "Campaign creation is temporarily disabled.");
         setIsReviewOpen(false);
+        setIsSubmitting(false);
+        setTxPhase(null);
         return;
       }
       const latestRangeError = fundingGoalBoundsError(fundingGoalStroops, latestBounds);
@@ -284,6 +286,8 @@ export default function CreateCampaignPage() {
         setGoalRangeError(latestRangeError);
         setIsReviewOpen(false);
         showError(latestRangeError);
+        setIsSubmitting(false);
+        setTxPhase(null);
         return;
       }
       const basisPoints = reviewData.hasRevenueSharing
@@ -758,7 +762,7 @@ export default function CreateCampaignPage() {
               )}
               {goalBounds && !goalRangeError && (
                 <p className="mt-1 text-xs text-zinc-500">
-                  Allowed range: {String(Number(goalBounds.min) / 10_000_000)}–{String(Number(goalBounds.max) / 10_000_000)} XLM
+                  Allowed range: {formatGoalStroops(goalBounds.min)}–{formatGoalStroops(goalBounds.max)} XLM
                 </p>
               )}
             </div>
