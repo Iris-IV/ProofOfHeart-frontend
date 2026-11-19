@@ -5,11 +5,17 @@ import { Category, type Campaign } from "@/types";
 
 const mockGetCampaign = jest.fn();
 const mockEstimateNetworkFee = jest.fn();
+const mockGetDonationLimits = jest.fn();
+const mockGetPlatformStatus = jest.fn();
+let mockIsPaused = false;
+let mockDonationLimitsValue = { maxPerTx: 0n, lifetime: 0n, personalCap: 0n };
 
 jest.mock("@/lib/contractClient", () => ({
   contribute: jest.fn(),
   getCampaign: (...args: unknown[]) => mockGetCampaign(...args),
   estimateContributeNetworkFee: (...args: unknown[]) => mockEstimateNetworkFee(...args),
+  getDonationLimits: (...args: unknown[]) => mockGetDonationLimits(...args),
+  getPlatformStatus: (...args: unknown[]) => mockGetPlatformStatus(...args),
 }));
 
 jest.mock("@/components/ToastProvider", () => ({
@@ -21,6 +27,23 @@ jest.mock("@/components/ToastProvider", () => ({
 jest.mock("@/components/WalletContext", () => ({
   useWallet: () => ({
     publicKey: "GCONTRIB1111111111111111111111111111111111111111111111111",
+  }),
+}));
+
+jest.mock("@/hooks/useDonationLimits", () => ({
+  useDonationLimits: () => ({
+    limits: mockDonationLimitsValue,
+    isLoading: false,
+    error: null,
+    refetch: jest.fn(),
+  }),
+}));
+jest.mock("@/hooks/usePlatformStatus", () => ({
+  usePlatformStatus: () => ({
+    isPaused: mockIsPaused,
+    isWriteDisabled: mockIsPaused,
+    isCreationBlocked: mockIsPaused,
+    isCreationDisabled: false,
   }),
 }));
 
@@ -69,6 +92,10 @@ jest.mock("next-intl", () => ({
       maxDecimalPlaces: "Maximum 7 decimal places allowed.",
       amountExceedsRemainingGoal: "Amount exceeds the remaining funding goal.",
       campaignAlreadyFunded: "This cause is already fully funded.",
+      amountExceedsAllowance: "Amount exceeds your remaining contribution allowance.",
+      limitsLoading: "Checking your contribution limits…",
+      limitsUnavailable: "Unable to verify contribution limits.",
+      platformPaused: "The platform is temporarily paused.",
     };
     // Surface anything that is not a known message key so hard-coded English
     // strings reaching the translator fail loudly instead of passing through.
@@ -121,6 +148,10 @@ const defaultProps = {
 describe("DonationModal", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockIsPaused = false;
+    mockDonationLimitsValue = { maxPerTx: 0n, lifetime: 0n, personalCap: 0n };
+    mockGetDonationLimits.mockResolvedValue(mockDonationLimitsValue);
+    mockGetPlatformStatus.mockResolvedValue({ isPaused: false, isCreationDisabled: false });
     mockGetCampaign.mockImplementation((id) => Promise.resolve(makeCampaign({ id })));
     mockEstimateNetworkFee.mockResolvedValue(100_000n);
   });
@@ -341,4 +372,39 @@ describe("DonationModal", () => {
 
     jest.useRealTimers();
   });
+  it("shows the minimum of campaign lifetime, personal and per-tx allowances (#1760)", () => {
+    mockDonationLimitsValue = {
+      maxPerTx: 100_000_000n,
+      lifetime: 50_000_000n,
+      personalCap: 70_000_000n,
+    };
+    render(<DonationModal {...defaultProps} campaign={makeCampaign({ max_contribution_per_user: 80_000_000n })} />);
+    expect(screen.getByTestId("donation-remaining-allowance")).toHaveTextContent("2 XLM");
+    expect(screen.getByRole("button", { name: "5 XLM" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value: "3" } });
+    expect(screen.getByText("Amount exceeds your remaining contribution allowance.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /donate/i })).toBeDisabled();
+  });
+
+  it("disables donation and shows pause guidance without signing (#1761)", () => {
+    mockIsPaused = true;
+    render(<DonationModal {...defaultProps} />);
+    expect(screen.getByText(/platform is temporarily paused\. Donations are unavailable/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("Amount (XLM)")).toBeDisabled();
+    expect(mockContribute).not.toHaveBeenCalled();
+  });
+
+  it("rechecks the on-chain cap before submitting a stale modal amount (#1760)", async () => {
+    mockGetDonationLimits.mockResolvedValue({
+      maxPerTx: 10_000_000n,
+      lifetime: 0n,
+      personalCap: 0n,
+    });
+    render(<DonationModal {...defaultProps} />);
+    fireEvent.change(screen.getByLabelText("Amount (XLM)"), { target: { value: "5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Donate 5 XLM" }));
+    await waitFor(() => expect(screen.getByText("Amount exceeds your remaining contribution allowance.")).toBeInTheDocument());
+    expect(mockContribute).not.toHaveBeenCalled();
+  });
+
 });
