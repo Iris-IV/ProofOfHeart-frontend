@@ -1232,10 +1232,10 @@ export async function getCampaignCount(): Promise<number> {
   }
 }
 
-export async function getCampaign(id: number): Promise<Campaign | null> {
+export async function getCampaign(id: number, fresh = false): Promise<Campaign | null> {
   if (USE_MOCKS) return MOCK_CAMPAIGNS.find((c) => c.id === id) ?? null;
   try {
-    const result = await invokeViewMethod("get_campaign", [nativeToScVal(id, { type: "u32" })]);
+    const result = await invokeViewMethod("get_campaign", [nativeToScVal(id, { type: "u32" })], { fresh });
     if (!result) return null;
     return decodeCampaign(result);
   } catch (err) {
@@ -1866,6 +1866,7 @@ export async function contribute(
     // Invalidate cache for this campaign and contribution
     clearContractCacheByMethod("get_campaign");
     clearContractCacheByMethod("get_contribution");
+    clearContractCacheByMethod("get_lifetime_contribution");
 
     return txResult.txHash;
   } catch (err) {
