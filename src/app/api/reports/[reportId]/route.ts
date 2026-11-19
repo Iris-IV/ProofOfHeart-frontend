@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getReportRepository } from "@/lib/reportRepository";
 import { z } from "zod";
+import { requireAdmin } from "@/lib/adminAuth";
 
 const PatchReportBodySchema = z.object({
   status: z.literal("reviewed"),
@@ -11,6 +12,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ reportId: string }> },
 ) {
+  const auth = await requireAdmin(req);
+  if (!auth.ok) return auth.response;
+
   const { reportId } = await params;
 
   let rawBody: unknown;
