@@ -5,6 +5,13 @@ import type React from "react";
 globalThis.TextEncoder ??= TextEncoder;
 globalThis.TextDecoder ??= TextDecoder;
 
+// jsdom does not implement crypto.subtle — polyfill with Node's webcrypto so
+// tests that call computeMetadataHash / validateCampaignMetadataHash work.
+if (typeof globalThis.crypto === "undefined" || !globalThis.crypto.subtle) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Object.defineProperty(globalThis, "crypto", { value: require("node:crypto").webcrypto });
+}
+
 // jsdom does not implement matchMedia — stub it so components that use
 // motion / framer-motion don't throw. Some suites run under
 // `@jest-environment node` (e.g. API route tests), where `window` is

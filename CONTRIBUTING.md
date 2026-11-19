@@ -244,7 +244,27 @@ Commits are validated:
 
 If a commit message is invalid, you'll see a helpful error message explaining what needs to be fixed.
 
-## 7) Pull Request Conventions
+## 7) Branch Protection and Required CI Checks
+
+The `main` branch requires all four CI jobs to pass before a PR can be merged:
+
+| Required check | What it runs |
+|---|---|
+| `Lint` | `npm run lint` |
+| `Type Check` | `npm run typecheck` |
+| `Test` | `npm run test:coverage` |
+| `Build` | `npm run build` |
+
+**Admin bypass is disabled** — maintainers and bots are subject to the same rules.
+A PR with a type error, lint failure, or failing test cannot be merged regardless of who opens it.
+
+To verify locally before pushing:
+
+```bash
+npm run lint && npm run typecheck && npm run test && npm run build
+```
+
+## 8) Pull Request Conventions
 
 PR titles must follow the same Conventional Commits format as commit messages. This ensures consistency and enables automated changelog generation.
 
