@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
 import dynamic from "next/dynamic";
@@ -40,12 +40,18 @@ import { appendAdminAuditLog, AdminAuditLogEntry, getAdminAuditLog } from "@/lib
 import {
   getAdmin,
   getPlatformFee,
+  getPlatformReport,
+  getPlatformStats,
   updateAdmin,
   updatePlatformFee,
   verifyCampaign,
   cancelCampaign,
 } from "@/lib/contractClient";
-import type { TransactionLifecyclePhase } from "@/lib/contractClient";
+import type {
+  ContractPlatformReport,
+  ContractPlatformStats,
+  TransactionLifecyclePhase,
+} from "@/lib/contractClient";
 import { isSameAddress } from "@/lib/stellar";
 import { formatAmount } from "@/lib/formatters";
 import { Category, CATEGORY_LABELS, basisPointsToPercentage } from "@/types";
@@ -78,9 +84,29 @@ export default function AdminDashboard() {
   } = useContractVersion();
   const queryClient = useQueryClient();
 
+  const {
+    data: platformReport,
+    isLoading: isPlatformReportLoading,
+    isFetching: isPlatformReportFetching,
+    error: platformReportError,
+    refetch: refetchPlatformReport,
+  } = useQuery<ContractPlatformReport, Error>({
+    queryKey: ["platformReport"],
+    queryFn: getPlatformReport,
+    staleTime: 60_000,
+  });
+  const { data: platformStats } = useQuery<ContractPlatformStats, Error>({
+    queryKey: ["platformStats"],
+    queryFn: getPlatformStats,
+    staleTime: 60_000,
+  });
+
   const { showSuccess, showError, showWarning } = useToast();
   const t = useTranslations("Admin");
+  const tContractErrors = useTranslations("ContractErrors");
   const locale = useLocale();
+  const localizeContractError = (message: string): string =>
+    message.startsWith("ContractErrors.") ? tContractErrors(message) : message;
 
   const [adminAddress, setAdminAddress] = useState<string | null>(null);
   const [platformFee, setPlatformFee] = useState<number | null>(null);
@@ -476,6 +502,89 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="mb-12 rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
+            {t("platformReportTitle")}
+          </h2>
+          <button
+            type="button"
+            onClick={() => void refetchPlatformReport()}
+            disabled={isPlatformReportFetching}
+            className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            <RefreshCw
+              size={16}
+              className={isPlatformReportFetching ? "motion-safe:animate-spin" : ""}
+            />
+            {t("refreshReport")}
+          </button>
+        </div>
+
+        {platformStats?.statsArePartial && (
+          <p
+            role="alert"
+            className="mb-6 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200"
+          >
+            <AlertTriangle size={16} aria-hidden="true" />
+            {t("countersInconsistent")}
+          </p>
+        )}
+
+        {isPlatformReportLoading ? (
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("platformReportLoading")}</p>
+        ) : platformReportError || !platformReport ? (
+          <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+            {t("platformReportError")}{" "}
+            {platformReportError
+              ? localizeContractError(parseContractError(platformReportError))
+              : ""}
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <StatsCard
+              icon={<Activity className="text-blue-500" />}
+              label={t("totalCampaigns")}
+              value={platformReport.totalCampaigns}
+            />
+            <StatsCard
+              icon={<PieChart className="text-purple-500" />}
+              label={t("activeCampaigns")}
+              value={platformReport.activeCampaigns}
+            />
+            <StatsCard
+              icon={<DollarSign className="text-green-500" />}
+              label={t("totalRaised")}
+              value={`${formatAmount(platformReport.totalRaised, locale)} XLM`}
+            />
+            <StatsCard
+              icon={<ShieldAlert className="text-amber-500" />}
+              label={t("totalContributors")}
+              value={platformReport.totalContributors}
+            />
+            <StatsCard
+              icon={<PieChart className="text-purple-500" />}
+              label={t("platformFee")}
+              value={basisPointsToPercentage(platformReport.platformFeeBps)}
+            />
+            <StatsCard
+              icon={<Activity className="text-blue-500" />}
+              label={t("isPaused")}
+              value={platformReport.isPaused ? t("paused") : t("active")}
+            />
+            <StatsCard
+              icon={<ShieldAlert className="text-amber-500" />}
+              label={t("acceptedToken")}
+              value={
+                <span className="font-mono text-xs" title={platformReport.token}>
+                  {platformReport.token.slice(0, 8)}...{platformReport.token.slice(-6)}
+                </span>
+              }
+            />
+          </div>
+        )}
       </section>
 
       {/* Stats Cards */}
@@ -913,7 +1022,7 @@ function StatsCard({
 }: {
   icon: React.ReactNode;
   label: string;
-  value: string | number;
+  value: React.ReactNode;
 }) {
   return (
     <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2rem] border border-zinc-100 dark:border-zinc-700 shadow-sm hover:shadow-md transition-shadow group">

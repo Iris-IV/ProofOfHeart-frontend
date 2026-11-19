@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState, useCallback } from "react";
 import { Download } from "lucide-react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { claimRefund, claimRevenue } from "../lib/contractClient";
 import { getStellarExplorerTxUrl } from "../lib/stellarExplorer";
 import { useContributions } from "../hooks/useContributions";
@@ -22,23 +22,6 @@ function formatXlmAmount(value: bigint, locale: string): string {
   return formatAmount(value, locale, { maximumFractionDigits: 7 });
 }
 
-function getStatusLabelKey(status: string): string {
-  switch (status) {
-    case "active":
-      return "Active";
-    case "funded":
-      return "Funded";
-    case "failed":
-      return "Failed";
-    case "cancelled":
-      return "Cancelled";
-    case "verified":
-      return "Verified";
-    default:
-      return "Unknown";
-  }
-}
-
 function getStatusClasses(status: string): string {
   switch (status) {
     case "active":
@@ -54,19 +37,6 @@ function getStatusClasses(status: string): string {
   }
 }
 
-function getActionLabel(action: string): string {
-  switch (action) {
-    case "contribute":
-      return "Contribution";
-    case "claim_refund":
-      return "Refund claim";
-    case "claim_revenue":
-      return "Revenue claim";
-    default:
-      return "Transaction";
-  }
-}
-
 type ClaimKey = `${number}-${"refund" | "revenue"}`;
 
 function claimKey(campaignId: number, type: "refund" | "revenue"): ClaimKey {
@@ -75,7 +45,11 @@ function claimKey(campaignId: number, type: "refund" | "revenue"): ClaimKey {
 
 export default function MyContributionsSection({ walletAddress }: MyContributionsSectionProps) {
   const locale = useLocale();
+  const t = useTranslations("MyContributions");
+  const tContractErrors = useTranslations("ContractErrors");
   const { showError, showSuccess, showWarning } = useToast();
+  const localizeContractError = (message: string): string =>
+    message.startsWith("ContractErrors.") ? tContractErrors(message) : message;
   const [pendingCampaignId, setPendingCampaignId] = useState<number | null>(null);
   const [claimStatuses, setClaimStatuses] = useState<Map<ClaimKey, ClaimStatus>>(new Map());
   const [isBatchClaiming, setIsBatchClaiming] = useState(false);
@@ -104,10 +78,10 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
     setPendingCampaignId(campaignId);
     try {
       await claimRefund(campaignId, walletAddress);
-      showSuccess("Refund claimed successfully.");
+      showSuccess(t("refundSuccess"));
       refetch();
     } catch (err) {
-      showError(parseContractError(err));
+      showError(localizeContractError(parseContractError(err)));
     } finally {
       setPendingCampaignId(null);
     }
@@ -117,10 +91,10 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
     setPendingCampaignId(campaignId);
     try {
       await claimRevenue(campaignId, walletAddress);
-      showSuccess("Revenue claimed successfully.");
+      showSuccess(t("revenueSuccess"));
       refetch();
     } catch (err) {
-      showError(parseContractError(err));
+      showError(localizeContractError(parseContractError(err)));
     } finally {
       setPendingCampaignId(null);
     }
@@ -152,7 +126,9 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
         } catch (err) {
           markClaimStatus(key, "failed");
           failed++;
-          errors.push(`Refund for "${item.campaign.title}": ${parseContractError(err)}`);
+          errors.push(
+            `${item.campaign.title} — ${t("claimFailed")}: ${localizeContractError(parseContractError(err))}`,
+          );
         }
       }
       if (item.canClaimRevenue) {
@@ -165,7 +141,9 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
         } catch (err) {
           markClaimStatus(key, "failed");
           failed++;
-          errors.push(`Revenue for "${item.campaign.title}": ${parseContractError(err)}`);
+          errors.push(
+            `${item.campaign.title} — ${t("claimFailed")}: ${localizeContractError(parseContractError(err))}`,
+          );
         }
       }
     }
@@ -174,13 +152,12 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
     setIsBatchClaiming(false);
 
     if (failed === 0) {
-      showSuccess(`All ${succeeded} claims completed successfully.`);
+      showSuccess(t("allClaimsSuccess", { count: succeeded }));
     } else if (succeeded === 0) {
-      showError(`${failed} claim${failed === 1 ? "" : "s"} failed.`);
+      showError(t("allClaimsFailed", { count: failed }));
     } else {
-      showWarning(
-        `${succeeded} succeeded, ${failed} failed. ${errors.slice(0, 3).join("; ")}${errors.length > 3 ? ` (+${errors.length - 3} more)` : ""}`,
-      );
+      const details = errors.slice(0, 3).join("; ");
+      showWarning(t("someClaimsFailed", { succeeded, failed, details }));
     }
 
     refetch();
@@ -190,49 +167,105 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
     return claimStatuses.get(claimKey(itemId, type)) ?? "idle";
   };
 
+  const getStatusLabel = (status: string): string => {
+    switch (status) {
+      case "active":
+        return t("statusActive");
+      case "funded":
+        return t("statusFunded");
+      case "failed":
+        return t("statusFailed");
+      case "cancelled":
+        return t("statusCancelled");
+      case "verified":
+        return t("statusVerified");
+      case "refundable":
+        return t("statusRefundable");
+      case "revenue-claimable":
+        return t("statusRevenueClaimable");
+      case "withdrawn":
+        return t("statusWithdrawn");
+      case "inactive":
+        return t("statusInactive");
+      default:
+        return t("statusUnknown");
+    }
+  };
+
+  const getActionLabel = (action: string): string => {
+    switch (action) {
+      case "contribute":
+        return t("actionContribute");
+      case "claim_refund":
+        return t("actionClaimRefund");
+      case "claim_revenue":
+        return t("actionClaimRevenue");
+      case "deposit_revenue":
+        return t("actionDepositRevenue");
+      case "vote":
+        return t("actionVote");
+      case "remove_personal_cap":
+        return t("actionRemovePersonalCap");
+      default:
+        return t("actionTransaction");
+    }
+  };
+
   return (
     <section className="mb-8">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl font-semibold">My Contributions</h2>
+        <h2 className="text-xl font-semibold">{t("title")}</h2>
         <div className="flex items-center gap-3">
           {contributions.length > 0 && (
             <button
               onClick={() => exportContributionHistoryCsv(contributions, walletAddress)}
               className="inline-flex items-center gap-1.5 rounded-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300 transition hover:bg-zinc-100 dark:hover:bg-zinc-700"
-              aria-label="Export contribution history as CSV"
+              aria-label={t("exportCsv")}
             >
               <Download className="h-3.5 w-3.5" />
-              <span>Export CSV</span>
+              <span>{t("exportCsvShort")}</span>
             </button>
           )}
           {claimableCount > 1 && (
             <button
               onClick={handleClaimAll}
               disabled={isBatchClaiming}
-              aria-label={`Claim all refunds — ${claimableCount} pending, each will prompt a Freighter signature`}
+              aria-label={t("claimAll", { count: claimableCount })}
               aria-busy={isBatchClaiming}
               className="rounded-full bg-indigo-600 px-4 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             >
-              {isBatchClaiming ? "Claiming all..." : `Claim All (${claimableCount})`}
+              {isBatchClaiming ? t("claimingAll") : t("claimAll", { count: claimableCount })}
             </button>
           )}
           <div className="text-sm text-zinc-500 dark:text-zinc-400">
-            {contributions.length} campaign
-            {contributions.length === 1 ? "" : "s"} contributed ·{" "}
-            {formatXlmAmount(totalContributed, locale)} Stellar Lumens total
+            {t("summary", {
+              count: contributions.length,
+              total: formatXlmAmount(totalContributed, locale),
+            })}
           </div>
         </div>
       </div>
 
       {isLoading ? (
-        <p className="text-zinc-500 dark:text-zinc-400">Loading contribution history...</p>
+        <p className="text-zinc-500 dark:text-zinc-400">{t("loading")}</p>
       ) : error ? (
-        <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-          {error}
+        <div
+          role="alert"
+          className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+        >
+          <p className="font-semibold">{t("error")}</p>
+          <p>{localizeContractError(error)}</p>
+          <button
+            type="button"
+            onClick={refetch}
+            className="mt-3 rounded-full border border-red-300 px-3 py-1 text-xs font-semibold hover:bg-red-100 dark:border-red-800 dark:hover:bg-red-950"
+          >
+            {t("retry")}
+          </button>
         </div>
       ) : contributions.length === 0 ? (
         <div className="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-5 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-          No contributions yet.
+          {t("empty")}
         </div>
       ) : (
         <ul className="space-y-3">
@@ -263,13 +296,13 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                       {item.campaign.title}
                     </p>
                     <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                      Contributed {formatXlmAmount(item.contribution, locale)} XLM to {item.campaign.title}
+                      {t("contributed", { amount: formatXlmAmount(item.contribution, locale) })}
                     </p>
                   </div>
                   <span
                     className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(displayStatus)}`}
                   >
-                    {getStatusLabelKey(displayStatus)}
+                    {getStatusLabel(displayStatus)}
                   </span>
                 </div>
 
@@ -278,7 +311,7 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                     href={`/causes/${item.campaign.id}`}
                     className="inline-flex items-center rounded-full border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
                   >
-                    Open Campaign
+                    {t("openCampaign")}
                   </Link>
                   {item.canClaimRefund && (
                     <button
@@ -295,12 +328,12 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                       }`}
                     >
                       {refundStatus === "success"
-                        ? "Refunded ✓"
+                        ? t("refunded")
                         : refundStatus === "failed"
-                          ? "Failed ✗"
+                          ? t("claimFailed")
                           : refundStatus === "pending"
-                            ? "Claiming..."
-                            : "Claim Refund"}
+                            ? t("claiming")
+                            : t("claimRefund")}
                     </button>
                   )}
                   {item.canClaimRevenue && (
@@ -318,12 +351,14 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                       }`}
                     >
                       {revenueStatus === "success"
-                        ? "Claimed ✓"
+                        ? t("claimed")
                         : revenueStatus === "failed"
-                          ? "Failed ✗"
+                          ? t("claimFailed")
                           : revenueStatus === "pending"
-                            ? "Claiming..."
-                            : `Claim Revenue (${formatXlmAmount(item.claimableRevenue, locale)} XLM)`}
+                            ? t("claiming")
+                            : t("claimRevenue", {
+                                amount: formatXlmAmount(item.claimableRevenue, locale),
+                              })}
                     </button>
                   )}
                 </div>
@@ -332,7 +367,7 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                   {contributionTransactions.length > 0 ? (
                     contributionTransactions.map((entry) => (
                       <div key={entry.txHash} className="flex items-center gap-2">
-                        <span>Contribution tx:</span>
+                        <span>{t("contributionTx")}</span>
                         <a
                           href={getStellarExplorerTxUrl(entry.txHash)}
                           target="_blank"
@@ -345,13 +380,13 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                       </div>
                     ))
                   ) : (
-                    <span>No contribution transaction recorded on this device yet.</span>
+                    <span>{t("noContributionTx")}</span>
                   )}
 
                   {item.transactions.length > 0 && (
                     <div className="pt-1">
                       <p className="mb-1 font-medium text-zinc-600 dark:text-zinc-300">
-                        Transaction log
+                        {t("transactionLog")}
                       </p>
                       <ul className="space-y-1">
                         {item.transactions.map((entry) => (
@@ -382,9 +417,7 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
       )}
 
       {isRefreshing && !isLoading && (
-        <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-          Refreshing contribution history...
-        </p>
+        <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">{t("refreshing")}</p>
       )}
     </section>
   );

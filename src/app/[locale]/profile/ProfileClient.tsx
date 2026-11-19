@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/Skeleton";
 import CampaignEmptyState from "@/components/CampaignEmptyState";
 import { Button } from "@/components/ui";
 import CreatorProfileHeader from "@/components/CreatorProfileHeader";
+import CreatorStats from "@/components/CreatorStats";
 import VirtualizedCampaignList from "@/components/VirtualizedCampaignList";
 
 /** Matches `grid-cols-1 sm:grid-cols-2` so virtual rows wrap like the grid. */
@@ -91,6 +92,8 @@ export default function ProfileClient() {
         address={publicKey}
         verifiedCampaignCount={createdCampaigns.filter((campaign) => campaign.is_verified).length}
       >
+        <CreatorStats address={publicKey} />
+
         {/* Impact stats */}
         <div className="grid grid-cols-3 gap-4 mt-8 pt-8 border-t border-zinc-200 dark:border-zinc-700">
           <div className="text-center">
