@@ -13,6 +13,13 @@ jest.mock("@/components/ToastProvider", () => ({
   }),
 }));
 
+let mockPlatformPaused = false;
+jest.mock("@/hooks/usePlatformStatus", () => ({
+  usePlatformStatus: () => ({
+    isPaused: mockPlatformPaused,
+    isWriteDisabled: mockPlatformPaused,
+  }),
+}));
 jest.mock("@/hooks/useWriteGuard", () => ({
   useWriteGuard: () => ({
     invoke: jest.fn(),
@@ -118,4 +125,13 @@ describe("WithdrawFunds", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("-0.3 XLM")).toBeInTheDocument();
   });
+  it("disables withdrawal while the platform is paused (#1761)", () => {
+    mockPlatformPaused = true;
+    render(<WithdrawFunds campaign={makeCampaign()} userWalletAddress={CREATOR} />);
+    expect(screen.getByText(/platform is paused; withdrawals are unavailable/i)).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: "withdrawFunds" });
+    expect(button).toBeDisabled();
+    mockPlatformPaused = false;
+  });
+
 });

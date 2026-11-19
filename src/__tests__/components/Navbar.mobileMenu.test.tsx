@@ -18,6 +18,14 @@ jest.mock("@/hooks/useTheme", () => ({
 jest.mock("@/hooks/useAdmin", () => ({ useAdmin: () => ({ admin: null, isLoading: false }) }));
 jest.mock("@/hooks/useCampaigns", () => ({ useCampaigns: () => ({ campaigns: [] }) }));
 jest.mock("@/hooks/useSavedCampaigns", () => ({ useSavedCampaignsCount: () => 0 }));
+let mockPlatformPaused = false;
+jest.mock("@/hooks/usePlatformStatus", () => ({
+  usePlatformStatus: () => ({
+    isPaused: mockPlatformPaused,
+    isCreationBlocked: mockPlatformPaused,
+    isError: false,
+  }),
+}));
 jest.mock("@/hooks/useContractVersion", () => ({
   useContractVersion: () => ({ isMismatch: false, version: null, expectedVersion: null }),
 }));
@@ -77,4 +85,11 @@ describe("Navbar mobile menu", () => {
 
     expect(document.getElementById("mobile-menu")).not.toBeNull();
   });
+  it("shows the site-wide paused banner (#1761)", () => {
+    mockPlatformPaused = true;
+    render(<Navbar />);
+    expect(screen.getByTestId("platform-paused-banner")).toHaveTextContent("temporarily paused");
+    mockPlatformPaused = false;
+  });
+
 });

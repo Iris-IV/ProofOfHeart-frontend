@@ -4,6 +4,13 @@ import VotingComponent from "@/components/VotingComponent";
 import { Campaign, Category } from "@/types";
 
 const mockShowError = jest.fn();
+let mockPlatformPaused = false;
+jest.mock("@/hooks/usePlatformStatus", () => ({
+  usePlatformStatus: () => ({
+    isPaused: mockPlatformPaused,
+    isWriteDisabled: mockPlatformPaused,
+  }),
+}));
 
 jest.mock("@/components/ToastProvider", () => ({
   useToast: () => ({
@@ -40,6 +47,7 @@ describe("VotingComponent Accessibility & Interaction", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockPlatformPaused = false;
   });
 
   it("renders buttons with accessible labels", () => {
@@ -221,4 +229,19 @@ describe("VotingComponent Accessibility & Interaction", () => {
     expect(onVote).toHaveBeenNthCalledWith(2, campaign.id, "downvote");
     consoleSpy.mockRestore();
   });
+  it("disables voting while the platform is paused (#1761)", () => {
+    mockPlatformPaused = true;
+    render(
+      <VotingComponent
+        campaign={campaign}
+        userWalletAddress="GUSER11111111111111111111111111111111111111111111111111"
+        onVote={mockOnVote}
+        isVoting={false}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "approveCampaignAria" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "rejectCampaignAria" })).toBeDisabled();
+    expect(mockOnVote).not.toHaveBeenCalled();
+  });
+
 });

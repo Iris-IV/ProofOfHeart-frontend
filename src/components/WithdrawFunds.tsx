@@ -16,6 +16,7 @@ import {
   type TransactionLifecycleOptions,
 } from "../lib/contractClient";
 import { useWriteGuard } from "../hooks/useWriteGuard";
+import { usePlatformStatus } from "../hooks/usePlatformStatus";
 import VerifiedIcon from "./icons/VerifiedIcon";
 
 interface WithdrawFundsProps {
@@ -39,6 +40,7 @@ export default function WithdrawFunds({
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
   const { showError, showSuccess } = useToast();
   const { invoke, isPending } = useWriteGuard();
+  const { isWriteDisabled, isPaused } = usePlatformStatus();
   const isWithdrawing = isPending("withdrawFunds", campaign.id);
 
   // Settlement status from the contract (issue #1763)
@@ -120,12 +122,15 @@ export default function WithdrawFunds({
   const goalReached = settlementStatus?.goal_met ?? campaign.amount_raised >= campaign.funding_goal;
 
   const isDisabled =
+    isWriteDisabled ||
     settlementLoading ||
     campaign.is_cancelled ||
     campaign.funds_withdrawn ||
     !readyForWithdrawal;
 
-  const disabledReason = campaign.is_cancelled
+  const disabledReason = isWriteDisabled
+    ? isPaused ? "The platform is paused; withdrawals are unavailable." : "Platform availability cannot be verified."
+    : campaign.is_cancelled
     ? t("disabledCancelled")
     : campaign.funds_withdrawn
       ? t("disabledAlreadyWithdrawn")
@@ -146,6 +151,7 @@ export default function WithdrawFunds({
     formatNumber(value, locale, { maximumFractionDigits: 2, minimumFractionDigits: 0 });
 
   const handleWithdraw = async () => {
+    if (isWriteDisabled) return;
     setTxPhase(null);
     await invoke("withdrawFunds", campaign.id, async () => {
       try {
@@ -239,7 +245,7 @@ export default function WithdrawFunds({
           <div className="flex flex-col sm:flex-row gap-2">
             <button
               onClick={handleWithdraw}
-              disabled={isWithdrawing}
+              disabled={isWithdrawing || isWriteDisabled}
               className="flex-1 px-4 py-3 min-h-[44px] bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isWithdrawing

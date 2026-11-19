@@ -5,6 +5,8 @@ import { parseContractError } from "@/utils/contractErrors";
 type LoadClientOptions = {
   useMocks: boolean;
   simulateThrow?: Error;
+  paused?: boolean;
+  creationDisabled?: boolean;
 };
 
 const TEST_ADMIN = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB";
@@ -145,6 +147,13 @@ async function loadClient(options: LoadClientOptions) {
           return { result: { retval: scVal.bigint(25_000_000) } };
         if (method === "get_admin") return { result: { retval: scVal.address(TEST_ADMIN) } };
         if (method === "get_platform_fee") return { result: { retval: scVal.u32(250) } };
+        if (method === "is_paused") return { result: { retval: scVal.bool(options.paused ?? false) } };
+        if (method === "is_creation_disabled") return { result: { retval: scVal.bool(options.creationDisabled ?? false) } };
+        if (method === "get_min_campaign_funding_goal") return { result: { retval: scVal.bigint(100_000n) } };
+        if (method === "get_max_campaign_funding_goal") return { result: { retval: scVal.bigint(1_000_000_000_000_000n) } };
+        if (method === "get_max_contribution_per_tx") return { result: { retval: scVal.bigint(0n) } };
+        if (method === "get_lifetime_contribution") return { result: { retval: scVal.bigint(100_000_000n) } };
+        if (method === "get_personal_cap") return { result: { retval: scVal.bigint(0n) } };
         if (method === "get_approve_votes") return { result: { retval: scVal.u32(12) } };
         if (method === "get_reject_votes") return { result: { retval: scVal.u32(3) } };
         if (method === "has_voted") return { result: { retval: scVal.bool(true) } };
@@ -355,6 +364,13 @@ describe("contractClient", () => {
     expect(await module.getRevenueClaimed(1, TEST_USER)).toBe(BigInt(0));
     expect(await module.getAdmin()).toContain("GADMIN");
     expect(await module.getPlatformFee()).toBe(250);
+    expect(await module.getFundingGoalBounds()).toEqual({ min: 100_000n, max: 1_000_000_000_000_000n });
+    expect(await module.getPlatformStatus()).toEqual({ isPaused: false, isCreationDisabled: false });
+    expect(await module.getDonationLimits(1, TEST_USER)).toEqual({
+      maxPerTx: 0n,
+      lifetime: 100_000_000n,
+      personalCap: 0n,
+    });
 
     expect(await module.init(TEST_ADMIN, TEST_USER, 250)).toBe("mock_tx_init");
     expect(await module.contribute(1, TEST_USER, BigInt(10))).toBe("mock_tx_contribute");
@@ -1001,4 +1017,28 @@ describe("contractClient", () => {
       );
     });
   });
+  describe("pre-sign administrative policy (#1759, #1761, #1762)", () => {
+    it("rejects paused contract writes before wallet signing", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false, paused: true });
+      await expect(module.contribute(1, TEST_USER, 10_000_000n))
+        .rejects.toThrow(/platform is temporarily paused/i);
+      const methods = mockServer.simulateTransaction.mock.calls.map(
+        ([tx]: [{ ops?: Array<{ method?: string }> }]) => tx.ops?.[0]?.method,
+      );
+      expect(methods).toContain("is_paused");
+      expect(mockServer.sendTransaction).not.toHaveBeenCalled();
+    });
+    it("allows normal status reads while blocking creation when admin disables it", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false, creationDisabled: true });
+      await expect(module.getPlatformStatus()).resolves.toEqual({
+        isPaused: false, isCreationDisabled: true,
+      });
+      await expect(module.createCampaign(
+        TEST_USER, "Test", "A description", 1_000_000_000n,
+        30, Category.Learner, false, 0, [],
+      )).rejects.toThrow(/Campaign creation is temporarily disabled/i);
+      expect(mockServer.sendTransaction).not.toHaveBeenCalled();
+    });
+  });
+
 });
