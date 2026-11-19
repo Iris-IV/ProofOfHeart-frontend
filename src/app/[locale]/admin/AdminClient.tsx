@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
 import dynamic from "next/dynamic";
@@ -39,13 +39,22 @@ import { Link } from "@/i18n/routing";
 import { appendAdminAuditLog, AdminAuditLogEntry, getAdminAuditLog } from "@/lib/adminLog";
 import {
   getAdmin,
+  getPendingAdmin,
   getPlatformFee,
-  updateAdmin,
+  getPlatformReport,
+  getPlatformStats,
+  initiateAdminTransfer,
+  acceptAdminTransfer,
+  cancelAdminTransfer,
   updatePlatformFee,
   verifyCampaign,
   cancelCampaign,
 } from "@/lib/contractClient";
-import type { TransactionLifecyclePhase } from "@/lib/contractClient";
+import type {
+  ContractPlatformReport,
+  ContractPlatformStats,
+  TransactionLifecyclePhase,
+} from "@/lib/contractClient";
 import { isSameAddress } from "@/lib/stellar";
 import { formatAmount } from "@/lib/formatters";
 import { Category, CATEGORY_LABELS, basisPointsToPercentage } from "@/types";
@@ -78,11 +87,32 @@ export default function AdminDashboard() {
   } = useContractVersion();
   const queryClient = useQueryClient();
 
+  const {
+    data: platformReport,
+    isLoading: isPlatformReportLoading,
+    isFetching: isPlatformReportFetching,
+    error: platformReportError,
+    refetch: refetchPlatformReport,
+  } = useQuery<ContractPlatformReport, Error>({
+    queryKey: ["platformReport"],
+    queryFn: getPlatformReport,
+    staleTime: 60_000,
+  });
+  const { data: platformStats } = useQuery<ContractPlatformStats, Error>({
+    queryKey: ["platformStats"],
+    queryFn: getPlatformStats,
+    staleTime: 60_000,
+  });
+
   const { showSuccess, showError, showWarning } = useToast();
   const t = useTranslations("Admin");
+  const tContractErrors = useTranslations("ContractErrors");
   const locale = useLocale();
+  const localizeContractError = (message: string): string =>
+    message.startsWith("ContractErrors.") ? tContractErrors(message) : message;
 
   const [adminAddress, setAdminAddress] = useState<string | null>(null);
+  const [pendingAdmin, setPendingAdmin] = useState<string | null>(null);
   const [platformFee, setPlatformFee] = useState<number | null>(null);
   const [feeInput, setFeeInput] = useState("");
   const [newAdminInput, setNewAdminInput] = useState("");
@@ -95,6 +125,7 @@ export default function AdminDashboard() {
   const [isAdminLoading, setIsAdminLoading] = useState(true);
   const [isUpdatingFee, setIsUpdatingFee] = useState(false);
   const [isUpdatingAdmin, setIsUpdatingAdmin] = useState(false);
+  const [isAcceptingAdmin, setIsAcceptingAdmin] = useState(false);
   const [auditLog, setAuditLog] = useState<AdminAuditLogEntry[]>([]);
   const [reports, setReports] = useState<CampaignReport[]>([]);
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
@@ -131,9 +162,14 @@ export default function AdminDashboard() {
 
     const loadData = async () => {
       try {
-        const [addr, fee] = await Promise.all([getAdmin(), getPlatformFee()]);
+        const [addr, fee, pending] = await Promise.all([
+          getAdmin(),
+          getPlatformFee(),
+          getPendingAdmin(),
+        ]);
         if (cancelled) return;
         setAdminAddress(addr);
+        setPendingAdmin(pending);
         setPlatformFee(fee);
         setFeeInput(String(fee));
       } catch (err) {
@@ -345,7 +381,7 @@ export default function AdminDashboard() {
     setIsUpdatingAdmin(true);
     setTxPhase(null);
     try {
-      const txHash = await updateAdmin(nextAdmin, {
+      const txHash = await initiateAdminTransfer(nextAdmin, {
         onStatus: ({ phase }) => setTxPhase(phase),
       });
       if (publicKey) {
@@ -357,14 +393,46 @@ export default function AdminDashboard() {
         });
         await refreshAuditLog(publicKey);
       }
-      setAdminAddress(nextAdmin);
+      setPendingAdmin(nextAdmin);
       setNewAdminInput("");
-      showSuccess(t("adminTransferSuccess"));
+      showSuccess(t("adminTransferInitiated"));
       setIsTransferModalOpen(false);
     } catch (err) {
       showError(parseContractError(err));
     } finally {
       setIsUpdatingAdmin(false);
+      setTxPhase(null);
+    }
+  };
+
+  const handleCancelAdminTransfer = async () => {
+    setIsUpdatingAdmin(true);
+    try {
+      const txHash = await cancelAdminTransfer({ onStatus: ({ phase }) => setTxPhase(phase) });
+      setPendingAdmin(null);
+      if (publicKey) await refreshAuditLog(publicKey);
+      showSuccess(t("adminTransferCancelled"));
+      void txHash;
+    } catch (err) {
+      showError(localizeContractError(parseContractError(err)));
+    } finally {
+      setIsUpdatingAdmin(false);
+      setTxPhase(null);
+    }
+  };
+
+  const handleAcceptAdminTransfer = async () => {
+    if (!publicKey) return;
+    setIsAcceptingAdmin(true);
+    try {
+      await acceptAdminTransfer(publicKey, { onStatus: ({ phase }) => setTxPhase(phase) });
+      setAdminAddress(publicKey);
+      setPendingAdmin(null);
+      showSuccess(t("adminTransferAccepted"));
+    } catch (err) {
+      showError(localizeContractError(parseContractError(err)));
+    } finally {
+      setIsAcceptingAdmin(false);
       setTxPhase(null);
     }
   };
@@ -396,6 +464,25 @@ export default function AdminDashboard() {
 
   if (isAdminLoading || isLoading) {
     return <AdminSkeleton />;
+  }
+
+  const isPendingAdmin = !!publicKey && isSameAddress(publicKey, pendingAdmin);
+
+  if (!isAdmin && isPendingAdmin) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center gap-5 p-6 text-center">
+        <h1 className="text-2xl font-bold">{t("pendingAdminTitle")}</h1>
+        <p className="text-zinc-500 dark:text-zinc-400">{t("pendingAdminDesc")}</p>
+        <button
+          type="button"
+          onClick={() => void handleAcceptAdminTransfer()}
+          disabled={isAcceptingAdmin}
+          className="rounded-2xl bg-green-600 px-6 py-3 font-bold text-white disabled:opacity-50"
+        >
+          {isAcceptingAdmin ? (txPhaseLabel ?? t("acceptingAdmin")) : t("acceptAdmin")}
+        </button>
+      </div>
+    );
   }
 
   if (!isAdmin) {
@@ -476,6 +563,89 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="mb-12 rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
+            {t("platformReportTitle")}
+          </h2>
+          <button
+            type="button"
+            onClick={() => void refetchPlatformReport()}
+            disabled={isPlatformReportFetching}
+            className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            <RefreshCw
+              size={16}
+              className={isPlatformReportFetching ? "motion-safe:animate-spin" : ""}
+            />
+            {t("refreshReport")}
+          </button>
+        </div>
+
+        {platformStats?.statsArePartial && (
+          <p
+            role="alert"
+            className="mb-6 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200"
+          >
+            <AlertTriangle size={16} aria-hidden="true" />
+            {t("countersInconsistent")}
+          </p>
+        )}
+
+        {isPlatformReportLoading ? (
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("platformReportLoading")}</p>
+        ) : platformReportError || !platformReport ? (
+          <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+            {t("platformReportError")}{" "}
+            {platformReportError
+              ? localizeContractError(parseContractError(platformReportError))
+              : ""}
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <StatsCard
+              icon={<Activity className="text-blue-500" />}
+              label={t("totalCampaigns")}
+              value={platformReport.totalCampaigns}
+            />
+            <StatsCard
+              icon={<PieChart className="text-purple-500" />}
+              label={t("activeCampaigns")}
+              value={platformReport.activeCampaigns}
+            />
+            <StatsCard
+              icon={<DollarSign className="text-green-500" />}
+              label={t("totalRaised")}
+              value={`${formatAmount(platformReport.totalRaised, locale)} XLM`}
+            />
+            <StatsCard
+              icon={<ShieldAlert className="text-amber-500" />}
+              label={t("totalContributors")}
+              value={platformReport.totalContributors}
+            />
+            <StatsCard
+              icon={<PieChart className="text-purple-500" />}
+              label={t("platformFee")}
+              value={basisPointsToPercentage(platformReport.platformFeeBps)}
+            />
+            <StatsCard
+              icon={<Activity className="text-blue-500" />}
+              label={t("isPaused")}
+              value={platformReport.isPaused ? t("paused") : t("active")}
+            />
+            <StatsCard
+              icon={<ShieldAlert className="text-amber-500" />}
+              label={t("acceptedToken")}
+              value={
+                <span className="font-mono text-xs" title={platformReport.token}>
+                  {platformReport.token.slice(0, 8)}...{platformReport.token.slice(-6)}
+                </span>
+              }
+            />
+          </div>
+        )}
       </section>
 
       {/* Stats Cards */}
@@ -715,6 +885,22 @@ export default function AdminDashboard() {
               >
                 {isUpdatingAdmin ? (txPhaseLabel ?? t("awaitingSignature")) : t("transferAdmin")}
               </button>
+              {pendingAdmin && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+                  <p className="font-semibold">{t("pendingAdminLabel")}</p>
+                  <p className="mt-1 break-all font-mono text-xs">{pendingAdmin}</p>
+                  <button
+                    type="button"
+                    onClick={() => void handleCancelAdminTransfer()}
+                    disabled={isUpdatingAdmin}
+                    className="mt-3 text-sm font-bold underline disabled:opacity-50"
+                  >
+                    {isUpdatingAdmin
+                      ? (txPhaseLabel ?? t("cancellingAdmin"))
+                      : t("cancelAdminTransfer")}
+                  </button>
+                </div>
+              )}
             </form>
           </section>
 
@@ -913,7 +1099,7 @@ function StatsCard({
 }: {
   icon: React.ReactNode;
   label: string;
-  value: string | number;
+  value: React.ReactNode;
 }) {
   return (
     <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2rem] border border-zinc-100 dark:border-zinc-700 shadow-sm hover:shadow-md transition-shadow group">

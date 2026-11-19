@@ -56,12 +56,22 @@ export enum ContractError {
   CampaignAlreadyBookmarked = 44,
   /** Campaign is not in the wallet's saved list (bookmarks, #1674). */
   CampaignNotBookmarked = 45,
+  /** No personal cap exists to remove (personal caps, #1772). */
+  PersonalCapNotFound = 46,
   /** Wallet reached the on-chain saved-list size limit (bookmarks, #1674). */
   BookmarkLimitReached = 47,
   /** Milestone has not been verified yet (milestone payouts, #1671/#1672). */
   MilestoneNotVerified = 49,
   /** Milestone has already been claimed (milestone payouts, #1671/#1672). */
   MilestoneAlreadyClaimed = 50,
+  InvariantBroken = 51,
+  InvalidPlatformFee = 52,
+  FundingGoalReached = 53,
+  // These are kept on separate client discriminants because older frontend
+  // releases used 22/23/35 for different errors.
+  NoTransferPending = 1001,
+  InvalidNewOwner = 1002,
+  TransferAlreadyPending = 1003,
 }
 
 // ---------------------------------------------------------------------------
@@ -114,9 +124,16 @@ export const errorTranslationKeys: Record<ContractError, string> = {
   [ContractError.InvalidVestingDelay]: "ContractErrors.InvalidVestingDelay",
   [ContractError.CampaignAlreadyBookmarked]: "ContractErrors.CampaignAlreadyBookmarked",
   [ContractError.CampaignNotBookmarked]: "ContractErrors.CampaignNotBookmarked",
+  [ContractError.PersonalCapNotFound]: "ContractErrors.PersonalCapNotFound",
   [ContractError.BookmarkLimitReached]: "ContractErrors.BookmarkLimitReached",
   [ContractError.MilestoneNotVerified]: "ContractErrors.MilestoneNotVerified",
   [ContractError.MilestoneAlreadyClaimed]: "ContractErrors.MilestoneAlreadyClaimed",
+  [ContractError.InvariantBroken]: "ContractErrors.InvariantBroken",
+  [ContractError.InvalidPlatformFee]: "ContractErrors.InvalidPlatformFee",
+  [ContractError.FundingGoalReached]: "ContractErrors.FundingGoalReached",
+  [ContractError.NoTransferPending]: "ContractErrors.NoTransferPending",
+  [ContractError.InvalidNewOwner]: "ContractErrors.InvalidNewOwner",
+  [ContractError.TransferAlreadyPending]: "ContractErrors.TransferAlreadyPending",
 };
 
 const CONTRACT_ERROR_KEYS = new Set(Object.values(errorTranslationKeys));
@@ -179,6 +196,14 @@ export function getContractErrorCode(error: unknown): ContractError | null {
     const sorobanMatch = message.match(/Error\s*\(\s*Contract\s*,\s*#(\d+)\s*\)/i);
     if (sorobanMatch) {
       const code = parseInt(sorobanMatch[1], 10);
+      const specialCode = (
+        {
+          22: ContractError.NoTransferPending,
+          23: ContractError.InvalidNewOwner,
+          35: ContractError.TransferAlreadyPending,
+        } as Record<number, ContractError>
+      )[code];
+      if (specialCode) return specialCode;
       if (code in ContractError) {
         return code as ContractError;
       }
@@ -188,6 +213,14 @@ export function getContractErrorCode(error: unknown): ContractError | null {
     const codeMatch = message.match(/contract\s*[Ee]rror[:\s]+(\d+)/i);
     if (codeMatch) {
       const code = parseInt(codeMatch[1], 10);
+      const specialCode = (
+        {
+          22: ContractError.NoTransferPending,
+          23: ContractError.InvalidNewOwner,
+          35: ContractError.TransferAlreadyPending,
+        } as Record<number, ContractError>
+      )[code];
+      if (specialCode) return specialCode;
       if (code in ContractError) {
         return code as ContractError;
       }

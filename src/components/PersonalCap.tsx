@@ -3,13 +3,13 @@
 import { useState, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { formatNumber } from "@/lib/formatters";
-import { setPersonalCap } from "../lib/contractClient";
+import { removePersonalCap, setPersonalCap } from "../lib/contractClient";
 import { usePersonalCap } from "../hooks/usePersonalCap";
 import { useContribution } from "../hooks/useContribution";
 import { useWallet } from "./WalletContext";
 import { useToast } from "./ToastProvider";
 import { stroopsToXlmNumber, xlmToStroops } from "../lib/stellarAmount";
-import { parseContractError } from "../utils/contractErrors";
+import { ContractError, getContractErrorCode, parseContractError } from "../utils/contractErrors";
 import AsyncButtonContent from "./AsyncButtonContent";
 
 interface PersonalCapProps {
@@ -18,6 +18,7 @@ interface PersonalCapProps {
 
 export default function PersonalCap({ campaignId }: PersonalCapProps) {
   const t = useTranslations("PersonalCap");
+  const tContractErrors = useTranslations("ContractErrors");
   const locale = useLocale();
   const { publicKey: userWalletAddress } = useWallet();
   const { showError, showSuccess, showWarning } = useToast();
@@ -38,6 +39,11 @@ export default function PersonalCap({ campaignId }: PersonalCapProps) {
   const currentCapXlm = stroopsToXlmNumber(personalCap);
   const currentContributionXlm = stroopsToXlmNumber(contribution);
   const hasCap = personalCap > BigInt(0);
+  const localizeContractError = useCallback(
+    (message: string): string =>
+      message.startsWith("ContractErrors.") ? tContractErrors(message) : message,
+    [tContractErrors],
+  );
 
   const parsedInput = (() => {
     const trimmed = capInput.trim();
@@ -70,7 +76,7 @@ export default function PersonalCap({ campaignId }: PersonalCapProps) {
       setCapInput("");
       refetchCap();
     } catch (err) {
-      showError(parseContractError(err));
+      showError(localizeContractError(parseContractError(err)));
     } finally {
       setIsSetting(false);
     }
@@ -84,6 +90,7 @@ export default function PersonalCap({ campaignId }: PersonalCapProps) {
     refetchCap,
     t,
     formatXlm,
+    localizeContractError,
   ]);
 
   const handleRemoveCap = useCallback(async () => {
@@ -91,15 +98,32 @@ export default function PersonalCap({ campaignId }: PersonalCapProps) {
 
     setIsRemoving(true);
     try {
-      await setPersonalCap(campaignId, userWalletAddress, BigInt(0));
+      await removePersonalCap(campaignId, userWalletAddress);
       showSuccess(t("capRemovedSuccess"));
-      refetchCap();
     } catch (err) {
-      showError(parseContractError(err));
+      const message = parseContractError(err);
+      if (
+        getContractErrorCode(err) === ContractError.PersonalCapNotFound ||
+        message === "ContractErrors.PersonalCapNotFound"
+      ) {
+        showWarning(t("capNotFound"));
+      } else {
+        showError(localizeContractError(message));
+      }
     } finally {
       setIsRemoving(false);
+      void refetchCap();
     }
-  }, [userWalletAddress, campaignId, showSuccess, showError, refetchCap, t]);
+  }, [
+    userWalletAddress,
+    campaignId,
+    showSuccess,
+    showError,
+    showWarning,
+    refetchCap,
+    t,
+    localizeContractError,
+  ]);
 
   if (!userWalletAddress) return null;
   if (isLoading || isLoadingContribution) {

@@ -84,7 +84,12 @@ const NETWORK_PASSPHRASE =
   process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
 
 export type TransactionLifecyclePhase =
-  "building" | "signing" | "submitting" | "confirming" | "confirmed" | "failed";
+  | "building"
+  | "signing"
+  | "submitting"
+  | "confirming"
+  | "confirmed"
+  | "failed";
 
 export interface TransactionLifecycleUpdate {
   phase: TransactionLifecyclePhase;
@@ -681,6 +686,37 @@ function campaignFromSpec(spec: SpecCampaign): Campaign {
   };
 }
 
+/**
+ * Soroban encodes `Option<T>` as void for `None` and as the bare value for
+ * `Some`. Both helpers take the field's ScVal so an absent field still reads
+ * as `None`.
+ */
+function isScValVoid(val: xdr.ScVal | undefined): boolean {
+  return !val || val.switch().name === "scvVoid";
+}
+
+function decodeOptionalAddress(val: xdr.ScVal | undefined): string | null {
+  return isScValVoid(val) ? null : Address.fromScVal(val as xdr.ScVal).toString();
+}
+
+function decodeOptionalU32(val: xdr.ScVal | undefined): number | null {
+  return isScValVoid(val) ? null : (val as xdr.ScVal).u32();
+}
+
+function decodeScValMap(result: xdr.ScVal | null, label: string): Record<string, xdr.ScVal> {
+  const map = result?.map();
+  if (!map) throw new Error(`Expected ScVal map for ${label}.`);
+  const fields: Record<string, xdr.ScVal> = {};
+  for (const entry of map) fields[entry.key().sym().toString()] = entry.val();
+  return fields;
+}
+
+function requiredField(fields: Record<string, xdr.ScVal>, name: string, label: string): xdr.ScVal {
+  const value = fields[name];
+  if (!value) throw new Error(`${label} is missing ${name}.`);
+  return value;
+}
+
 // Exposed for targeted unit tests of XDR decoding behavior.
 export const __testUtils = {
   decodeCampaign,
@@ -856,6 +892,13 @@ for (let i = 0; i < GENERATED_MOCK_COUNT; i++) {
   );
 }
 
+const mockPersonalCaps = new Map<string, bigint>();
+const mockContributions = new Map<string, bigint>();
+
+function contributionKey(campaignId: number, contributor: string): string {
+  return `${campaignId}:${contributor.toLowerCase()}`;
+}
+
 // ---------------------------------------------------------------------------
 // Public API — Read (view) functions
 // ---------------------------------------------------------------------------
@@ -994,6 +1037,157 @@ export async function getPlatformStats(): Promise<ContractPlatformStats> {
   }
 }
 
+export interface ContractPlatformReport {
+  totalCampaigns: number;
+  activeCampaigns: number;
+  totalRaised: bigint;
+  totalContributors: number;
+  platformFeeBps: number;
+  isPaused: boolean;
+  token: string;
+}
+
+export interface ContributorPortfolioPosition {
+  campaignId: number;
+  amount: bigint;
+  status: string;
+  refundable: boolean;
+}
+
+export interface ContributorPortfolio {
+  positions: ContributorPortfolioPosition[];
+  nextCursor: number;
+}
+
+export async function getPlatformReport(): Promise<ContractPlatformReport> {
+  if (USE_MOCKS) {
+    return {
+      totalCampaigns: MOCK_CAMPAIGNS.length,
+      activeCampaigns: MOCK_CAMPAIGNS.filter((c) => c.is_active && !c.is_cancelled).length,
+      totalRaised: MOCK_CAMPAIGNS.reduce((sum, c) => sum + c.amount_raised, BigInt(0)),
+      totalContributors: MOCK_CAMPAIGNS.length * 7,
+      platformFeeBps: 250,
+      isPaused: false,
+      token: "GTOKEN123456789012345678901234567890123456789012345678901234567890",
+    };
+  }
+  try {
+    const result = await invokeViewMethod("get_platform_report");
+    const fields = decodeScValMap(result, "PlatformReport");
+    const field = (name: string): xdr.ScVal => requiredField(fields, name, "PlatformReport");
+    return {
+      totalCampaigns: field("total_campaigns").u32(),
+      activeCampaigns: field("active_campaigns").u32(),
+      totalRaised: scValToBigInt(field("total_raised")),
+      totalContributors: field("total_contributors").u32(),
+      platformFeeBps: field("platform_fee_bps").u32(),
+      isPaused: field("is_paused").b(),
+      token: Address.fromScVal(field("token")).toString(),
+    };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export interface ContractCreatorStats {
+  isKnownCreator: boolean;
+  totalCampaigns: number;
+  activeCampaigns: number;
+  totalRaised: bigint;
+  totalContributors: number;
+}
+
+export async function getCreatorStats(creator: string): Promise<ContractCreatorStats> {
+  if (USE_MOCKS) {
+    const owned = MOCK_CAMPAIGNS.filter((c) => c.creator === creator);
+    return {
+      isKnownCreator: owned.length > 0,
+      totalCampaigns: owned.length,
+      activeCampaigns: owned.filter((c) => c.is_active && !c.is_cancelled).length,
+      totalRaised: owned.reduce((sum, c) => sum + c.amount_raised, BigInt(0)),
+      totalContributors: owned.length * 7,
+    };
+  }
+  try {
+    const result = await invokeViewMethod("get_creator_stats", [new Address(creator).toScVal()]);
+    const fields = decodeScValMap(result, "CreatorStats");
+    const field = (name: string): xdr.ScVal => requiredField(fields, name, "CreatorStats");
+    return {
+      isKnownCreator: field("is_known_creator").b(),
+      totalCampaigns: field("total_campaigns").u32(),
+      activeCampaigns: field("active_campaigns").u32(),
+      totalRaised: scValToBigInt(field("total_raised")),
+      totalContributors: field("total_contributors").u32(),
+    };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function getContributorPortfolio(
+  contributor: string,
+  start = 0,
+  limit = LIST_MAX_LIMIT,
+): Promise<ContributorPortfolio> {
+  const pageLimit = Math.max(1, Math.min(limit, LIST_MAX_LIMIT));
+
+  if (USE_MOCKS) {
+    const rows: ContributorPortfolioPosition[] = [];
+    let cursor = start;
+    for (let id = start + 1; id <= MOCK_CAMPAIGNS.length; id += 1) {
+      const amount = mockContributions.get(contributionKey(id, contributor)) ?? BigInt(0);
+      if (amount <= BigInt(0)) continue;
+      const c = MOCK_CAMPAIGNS[id - 1]!;
+      rows.push({
+        campaignId: id,
+        amount,
+        status: c.is_cancelled
+          ? "cancelled"
+          : c.funds_withdrawn
+            ? "withdrawn"
+            : !c.is_active
+              ? "inactive"
+              : c.is_verified
+                ? "verified"
+                : "active",
+        refundable: c.is_cancelled || c.deadline < Math.floor(Date.now() / 1000),
+      });
+      cursor = id;
+      if (rows.length >= pageLimit) break;
+    }
+    const exhausted = cursor >= MOCK_CAMPAIGNS.length;
+    return { positions: rows, nextCursor: exhausted ? 0 : cursor + 1 };
+  }
+
+  try {
+    const result = await invokeViewMethod("get_contributor_portfolio", [
+      new Address(contributor).toScVal(),
+      nativeToScVal(start, { type: "u32" }),
+      nativeToScVal(pageLimit, { type: "u32" }),
+    ]);
+    const [rows, next] = result?.vec() ?? [];
+    const positions = (rows?.vec() ?? []).map((row): ContributorPortfolioPosition => {
+      const values = row.vec() ?? [];
+      const campaignId = values[0];
+      const amount = values[1];
+      const status = values[2];
+      const refundable = values[3];
+      if (!campaignId || !amount || !status || !refundable) {
+        throw new Error("Contributor portfolio row is missing fields.");
+      }
+      return {
+        campaignId: campaignId.u32(),
+        amount: scValToBigInt(amount),
+        status: status.str().toString(),
+        refundable: refundable.b(),
+      };
+    });
+    return { positions, nextCursor: next?.u32() ?? 0 };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
 export async function getCampaignCount(): Promise<number> {
   if (USE_MOCKS) return MOCK_CAMPAIGNS.length;
   try {
@@ -1034,7 +1228,8 @@ export async function getAllCampaigns(): Promise<Campaign[]> {
 }
 
 export async function getContribution(campaignId: number, contributor: string): Promise<bigint> {
-  if (USE_MOCKS) return BigInt(0);
+  if (USE_MOCKS)
+    return mockContributions.get(contributionKey(campaignId, contributor)) ?? BigInt(0);
   try {
     return await generated.getContribution(campaignId, contributor);
   } catch (err) {
@@ -1047,7 +1242,7 @@ export async function getContribution(campaignId: number, contributor: string): 
  * Returns the cap in stroops, or 0 if no cap is set (unlimited).
  */
 export async function getPersonalCap(campaignId: number, contributor: string): Promise<bigint> {
-  if (USE_MOCKS) return BigInt(0);
+  if (USE_MOCKS) return mockPersonalCaps.get(contributionKey(campaignId, contributor)) ?? BigInt(0);
   try {
     return await generated.getPersonalCap(campaignId, contributor);
   } catch (err) {
@@ -1196,35 +1391,39 @@ export async function claimMilestone(
 export async function extendCampaignDeadline(
   campaignId: number,
   additionalDays: number,
+  callerAddress: string,
+  options?: TransactionLifecycleOptions,
 ): Promise<string> {
   if (additionalDays < 1 || additionalDays > 30) throw new Error("additionalDays must be 1..30");
-  const contract = new Contract(CONTRACT_ADDRESS);
-  const op = contract.call(
-    "extend_campaign_deadline",
+
+  if (USE_MOCKS) {
+    console.log(`[MOCK] Extending campaign ${campaignId} deadline by ${additionalDays} days`);
+    return emitMockLifecycle(`mock_extend_${campaignId}_${Date.now()}`, options);
+  }
+
+  const args = [
     nativeToScVal(campaignId, { type: "u32" }),
     nativeToScVal(additionalDays, { type: "u64" }),
-  );
-  // Caller must be campaign creator; retrieve from wallet context if needed
-  // For now use a placeholder — the UI layer should pass the connected wallet address via options
-  const caller =
-    typeof window !== "undefined"
-      ? (window as any).__walletPublicKey ||
-        "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF"
-      : "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF";
-  try {
-    const result = await buildAndSubmitTransaction(caller, op, {
-      operation: "extend_campaign_deadline",
-    } as any);
-    return result.txHash;
-  } catch (err) {
-    throw new Error(parseContractError(err));
-  }
+  ];
+
+  return buildAndSubmitTransaction("extend_campaign_deadline", args, callerAddress, options);
 }
 
 export async function getAdmin(): Promise<string> {
   if (USE_MOCKS) return "GADMIN123456789012345678901234567890123456789012345678901234567890";
   try {
     return await generated.getAdmin();
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/** The address awaiting acceptance of the two-step admin transfer, if any. */
+export async function getPendingAdmin(): Promise<string | null> {
+  if (USE_MOCKS) return null;
+  try {
+    const result = await invokeViewMethod("get_pending_admin");
+    return result && !isScValVoid(result) ? Address.fromScVal(result).toString() : null;
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -1304,6 +1503,61 @@ interface CreateCampaignFields {
   maxContributionPerUser: bigint;
 }
 
+export interface BatchContribution {
+  campaignId: number;
+  contributor: string;
+  amount: bigint;
+}
+
+function encodeBatchContributions(items: BatchContribution[]): xdr.ScVal {
+  if (items.length === 0 || items.length > 20)
+    throw new Error("Batch contribution must contain 1..20 items");
+  const encoded = items.map((item) => {
+    validateStellarAddress(item.contributor);
+    validateAmount(item.amount);
+    const fields: [string, xdr.ScVal][] = [
+      ["amount", nativeToScVal(item.amount, { type: "i128" })],
+      ["campaign_id", nativeToScVal(item.campaignId, { type: "u32" })],
+      ["contributor", new Address(item.contributor).toScVal()],
+    ];
+    return xdr.ScVal.scvMap(
+      fields.map(([key, val]) => new xdr.ScMapEntry({ key: xdr.ScVal.scvSymbol(key), val })),
+    );
+  });
+  return xdr.ScVal.scvVec(encoded);
+}
+
+export async function batchContribute(
+  contributions: BatchContribution[],
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (contributions.length === 0 || contributions.length > 20) {
+    throw new Error("Batch contribution must contain 1..20 items");
+  }
+  const firstContribution = contributions[0];
+  if (!firstContribution) throw new Error("Batch contribution must contain 1..20 items");
+  const contributor = firstContribution.contributor;
+  if (!contributions.every((item) => item.contributor === contributor)) {
+    throw new Error("All batch contributions must use the same contributor");
+  }
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_batch_contribute", options);
+  const op = new Contract(CONTRACT_ADDRESS).call(
+    "batch_contribute",
+    encodeBatchContributions(contributions),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(contributor, op, {
+      ...options,
+      operation: "batch_contribute",
+    });
+    clearContractCacheByMethod("get_campaign");
+    clearContractCacheByMethod("get_contribution");
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
 /**
  * Encode the arguments of `create_campaign`. The contract takes one
  * `CreateCampaignParams` struct, which is an ScVal map keyed by symbols. Soroban
@@ -1319,10 +1573,7 @@ function encodeCreateCampaignParams(params: CreateCampaignFields): xdr.ScVal {
     ["category", nativeToScVal(params.category, { type: "u32" })],
     ["has_revenue_sharing", nativeToScVal(params.hasRevenueSharing, { type: "bool" })],
     ["revenue_share_percentage", nativeToScVal(params.revenueSharePercentage, { type: "u32" })],
-    [
-      "max_contribution_per_user",
-      nativeToScVal(params.maxContributionPerUser, { type: "i128" }),
-    ],
+    ["max_contribution_per_user", nativeToScVal(params.maxContributionPerUser, { type: "i128" })],
   ];
   fields.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
 
@@ -1443,6 +1694,80 @@ export async function createCampaign(
   }
 }
 
+export async function isTokenAllowed(token: string): Promise<boolean> {
+  validateStellarAddress(token);
+  if (USE_MOCKS) return true;
+  try {
+    const result = await invokeViewMethod("is_token_allowed", [new Address(token).toScVal()]);
+    return result?.b() ?? false;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function createCampaignWithToken(
+  creator: string,
+  token: string,
+  title: string,
+  description: string,
+  fundingGoal: bigint,
+  durationDays: number,
+  category: Category,
+  hasRevenueSharing: boolean,
+  revenueSharePercentage: number,
+  maxContributionPerUser: bigint = 0n,
+  options?: TransactionLifecycleOptions,
+): Promise<CreateCampaignResult> {
+  validateStellarAddress(creator);
+  validateStellarAddress(token);
+  validateFundingGoal(fundingGoal);
+  validateDuration(durationDays);
+  if (USE_MOCKS)
+    return {
+      txHash: emitMockLifecycle("mock_tx_create_campaign_with_token", options),
+      campaignId: null,
+    };
+  const params = encodeCreateCampaignParams({
+    creator,
+    title,
+    description,
+    fundingGoal,
+    durationDays,
+    category,
+    hasRevenueSharing,
+    revenueSharePercentage,
+    maxContributionPerUser,
+  });
+  const op = new Contract(CONTRACT_ADDRESS).call(
+    "create_campaign_with_token",
+    params,
+    new Address(token).toScVal(),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(creator, op, {
+      ...options,
+      operation: "create_campaign_with_token",
+    });
+    clearContractCacheByMethod("get_campaign_count");
+    return { txHash: txResult.txHash, campaignId: txResult.returnValue?.u32() ?? null };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function getCampaignToken(campaignId: number): Promise<string> {
+  if (USE_MOCKS) return "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF";
+  try {
+    const result = await invokeViewMethod("get_campaign_token", [
+      nativeToScVal(campaignId, { type: "u32" }),
+    ]);
+    if (!result) return "";
+    return Address.fromScVal(result).toString();
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
 /**
  * Simulate the exact contribution operation and return the assembled
  * transaction fee. Soroban RPC derives this from CPU, memory, ledger reads and
@@ -1496,7 +1821,11 @@ export async function contribute(
   validateStellarAddress(contributor);
   validateAmount(amount);
 
-  if (USE_MOCKS) return emitMockLifecycle("mock_tx_contribute", options);
+  if (USE_MOCKS) {
+    const key = contributionKey(campaignId, contributor);
+    mockContributions.set(key, (mockContributions.get(key) ?? BigInt(0)) + amount);
+    return emitMockLifecycle("mock_tx_contribute", options);
+  }
   const contract = new Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     "contribute",
@@ -1946,6 +2275,65 @@ export async function updateAdmin(
   }
 }
 
+export async function initiateAdminTransfer(
+  newAdmin: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(newAdmin);
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_initiate_admin_transfer", options);
+  const callerAddress = await getSignerAddress();
+  const op = new Contract(CONTRACT_ADDRESS).call(
+    "initiate_admin_transfer",
+    new Address(newAdmin).toScVal(),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "initiate_admin_transfer",
+    });
+    clearContractCacheByMethod("get_pending_admin");
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function acceptAdminTransfer(
+  pendingAdmin: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(pendingAdmin);
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_accept_admin_transfer", options);
+  const op = new Contract(CONTRACT_ADDRESS).call("accept_admin_transfer");
+  try {
+    const txResult = await buildAndSubmitTransaction(pendingAdmin, op, {
+      ...options,
+      operation: "accept_admin_transfer",
+    });
+    clearContractCacheByMethod("get_admin");
+    clearContractCacheByMethod("get_pending_admin");
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function cancelAdminTransfer(options?: TransactionLifecycleOptions): Promise<string> {
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_cancel_admin_transfer", options);
+  const callerAddress = await getSignerAddress();
+  const op = new Contract(CONTRACT_ADDRESS).call("cancel_admin_transfer");
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "cancel_admin_transfer",
+    });
+    clearContractCacheByMethod("get_pending_admin");
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Voting functions — wired to real contract
 // ---------------------------------------------------------------------------
@@ -1972,6 +2360,92 @@ export async function hasVoted(campaignId: number, voter: string): Promise<boole
   if (USE_MOCKS) return false;
   try {
     return await generated.hasVoted(campaignId, voter);
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function getDelegate(delegator: string): Promise<string | null> {
+  validateStellarAddress(delegator);
+  if (USE_MOCKS) return null;
+  try {
+    const result = await invokeViewMethod("get_delegate", [new Address(delegator).toScVal()]);
+    return result && !isScValVoid(result) ? Address.fromScVal(result).toString() : null;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function delegateVotes(
+  delegator: string,
+  delegate: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(delegator);
+  validateStellarAddress(delegate);
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_delegate_votes", options);
+  const op = new Contract(CONTRACT_ADDRESS).call(
+    "delegate_votes",
+    new Address(delegator).toScVal(),
+    new Address(delegate).toScVal(),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(delegator, op, {
+      ...options,
+      operation: "delegate_votes",
+    });
+    clearContractCacheByMethod("get_delegate");
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function undelegateVotes(
+  delegator: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(delegator);
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_undelegate_votes", options);
+  const op = new Contract(CONTRACT_ADDRESS).call(
+    "undelegate_votes",
+    new Address(delegator).toScVal(),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(delegator, op, {
+      ...options,
+      operation: "undelegate_votes",
+    });
+    clearContractCacheByMethod("get_delegate");
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function castDelegatedVote(
+  campaignId: number,
+  delegate: string,
+  delegator: string,
+  approve: boolean,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(delegate);
+  validateStellarAddress(delegator);
+  if (USE_MOCKS) return emitMockLifecycle(`mock_tx_cast_delegated_vote_${campaignId}`, options);
+  const op = new Contract(CONTRACT_ADDRESS).call(
+    "cast_delegated_vote",
+    nativeToScVal(campaignId, { type: "u32" }),
+    new Address(delegate).toScVal(),
+    new Address(delegator).toScVal(),
+    nativeToScVal(approve, { type: "bool" }),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(delegate, op, {
+      ...options,
+      operation: "cast_delegated_vote",
+    });
+    return txResult.txHash;
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -2024,7 +2498,10 @@ export async function setPersonalCap(
 ): Promise<string> {
   validateStellarAddress(contributor);
 
-  if (USE_MOCKS) return emitMockLifecycle("mock_tx_set_personal_cap", options);
+  if (USE_MOCKS) {
+    mockPersonalCaps.set(contributionKey(campaignId, contributor), capAmount);
+    return emitMockLifecycle("mock_tx_set_personal_cap", options);
+  }
   const contract = new Contract(CONTRACT_ADDRESS);
   const op = contract.call(
     "set_personal_cap",
@@ -2037,6 +2514,7 @@ export async function setPersonalCap(
       ...options,
       operation: "set_personal_cap",
     });
+    clearContractCacheByMethod("get_personal_cap");
     appendWalletTransaction({
       walletAddress: contributor,
       campaignId,
@@ -2049,6 +2527,56 @@ export async function setPersonalCap(
     const errorCode = getContractErrorCode(err);
     captureTransactionError(
       "set_personal_cap",
+      campaignId,
+      error,
+      errorCode ? String(errorCode) : undefined,
+    );
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function removePersonalCap(
+  campaignId: number,
+  contributor: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(contributor);
+
+  if (USE_MOCKS) {
+    const key = contributionKey(campaignId, contributor);
+    if (!mockPersonalCaps.has(key)) {
+      throw new Error(
+        parseContractError(new ContractErrorException(ContractError.PersonalCapNotFound)),
+      );
+    }
+    mockPersonalCaps.delete(key);
+    return emitMockLifecycle("mock_tx_remove_personal_cap", options);
+  }
+
+  const contract = new Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    "remove_personal_cap",
+    nativeToScVal(campaignId, { type: "u32" }),
+    new Address(contributor).toScVal(),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(contributor, op, {
+      ...options,
+      operation: "remove_personal_cap",
+    });
+    clearContractCacheByMethod("get_personal_cap");
+    appendWalletTransaction({
+      walletAddress: contributor,
+      campaignId,
+      action: "remove_personal_cap",
+      txHash: txResult.txHash,
+    });
+    return txResult.txHash;
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    const errorCode = getContractErrorCode(err);
+    captureTransactionError(
+      "remove_personal_cap",
       campaignId,
       error,
       errorCode ? String(errorCode) : undefined,
@@ -2201,4 +2729,464 @@ export async function claimReserve(
     );
     throw new Error(parseContractError(err));
   }
+}
+
+// ---------------------------------------------------------------------------
+// Campaign tags — issue #1766
+// Wraps add_campaign_tag, get_campaign_tags, get_campaigns_by_tag
+// ---------------------------------------------------------------------------
+
+/** In-memory mock store: campaignId → Set<tag> */
+const mockCampaignTags = new Map<number, Set<string>>();
+
+/**
+ * Add a tag to a campaign on-chain (creator only).
+ * Returns the transaction hash on success.
+ *
+ * ScVal shape: add_campaign_tag(campaign_id: u32, tag: string)
+ */
+export async function addCampaignTag(
+  campaignId: number,
+  tag: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) {
+    const tags = mockCampaignTags.get(campaignId) ?? new Set<string>();
+    tags.add(tag.toLowerCase().trim());
+    mockCampaignTags.set(campaignId, tags);
+    // Also update the in-memory mock campaign so tag renders immediately.
+    const mockCampaign = MOCK_CAMPAIGNS.find((c) => c.id === campaignId);
+    if (mockCampaign) {
+      mockCampaign.tags = Array.from(tags);
+    }
+    return emitMockLifecycle(`mock_tx_add_tag_${campaignId}`, options);
+  }
+  const callerAddress = await getSignerAddress();
+  const contract = new Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    "add_campaign_tag",
+    nativeToScVal(campaignId, { type: "u32" }),
+    nativeToScVal(tag, { type: "string" }),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "add_campaign_tag",
+    });
+    clearContractCacheByMethod("get_campaign_tags");
+    clearContractCacheByMethod("get_campaigns_by_tag");
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Fetch all tags for a campaign.
+ * Returns an empty array when the campaign has no tags.
+ *
+ * ScVal shape: get_campaign_tags(campaign_id: u32) -> Vec<String>
+ */
+export async function getCampaignTags(campaignId: number): Promise<string[]> {
+  if (USE_MOCKS) {
+    const stored = mockCampaignTags.get(campaignId);
+    if (stored) return Array.from(stored);
+    // Fall back to tags on the mock campaign object itself.
+    return MOCK_CAMPAIGNS.find((c) => c.id === campaignId)?.tags ?? [];
+  }
+  try {
+    const result = await invokeViewMethod("get_campaign_tags", [
+      nativeToScVal(campaignId, { type: "u32" }),
+    ]);
+    return (result?.vec() ?? []).map((v) => v.str().toString());
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * List campaigns that carry a given tag (paginated).
+ * Returns a page of campaign ids so callers can fetch full campaign data
+ * via getCampaign() as needed.
+ *
+ * ScVal shape:
+ *   get_campaigns_by_tag(tag: string, offset: u32, limit: u32) -> (Vec<u32>, u32)
+ *   where the second element is the next offset (0 when exhausted).
+ */
+export async function getCampaignsByTag(
+  tag: string,
+  offset = 0,
+  limit = DEFAULT_CAMPAIGNS_PAGE_SIZE,
+): Promise<{ campaignIds: number[]; nextOffset: number | null }> {
+  if (USE_MOCKS) {
+    const normalised = tag.toLowerCase().trim();
+    const matching = MOCK_CAMPAIGNS.filter((c) => c.tags?.includes(normalised)).map((c) => c.id);
+    const slice = matching.slice(offset, offset + limit);
+    const nextOffset = offset + limit < matching.length ? offset + limit : null;
+    return { campaignIds: slice, nextOffset };
+  }
+  try {
+    const result = await invokeViewMethod("get_campaigns_by_tag", [
+      nativeToScVal(tag, { type: "string" }),
+      nativeToScVal(offset, { type: "u32" }),
+      nativeToScVal(Math.min(limit, LIST_MAX_LIMIT), { type: "u32" }),
+    ]);
+    if (!result) return { campaignIds: [], nextOffset: null };
+    const [idsVec, nextVal] = result.vec() ?? [];
+    if (!idsVec) return { campaignIds: [], nextOffset: null };
+    const campaignIds = (idsVec.vec() ?? []).map((v) => v.u32());
+    const next = nextVal ? nextVal.u32() : 0;
+    return { campaignIds, nextOffset: next > 0 ? next : null };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// set_milestones — issue #1765
+// Called after create_campaign to register the on-chain milestone plan.
+// ---------------------------------------------------------------------------
+
+export interface MilestoneInput {
+  description: string;
+  /** Payout share in basis points. All milestones for a campaign must sum to 10 000. */
+  payout_bps: number;
+}
+
+/**
+ * Register the milestone payout plan for `campaignId` on-chain.
+ *
+ * The contract expects `set_milestones(campaign_id: u32, milestones: Vec<{description: String, payout_bps: u32}>)`.
+ * `payout_bps` values must sum to 10 000 (BPS_DENOMINATOR).
+ *
+ * @param campaignId - The id returned by create_campaign.
+ * @param milestones - Array of milestone inputs; payout_bps must sum to 10 000.
+ */
+export async function setMilestones(
+  campaignId: number,
+  milestones: MilestoneInput[],
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) {
+    // Update the in-memory mock so getMilestones returns the plan immediately.
+    const mockCampaign = MOCK_CAMPAIGNS.find((c) => c.id === campaignId);
+    if (mockCampaign) {
+      mockCampaign.milestones = milestones.map((m, i) => ({
+        targetAmount: BigInt(0), // payout_bps is used on-chain; targetAmount is UI-only
+        description: m.description,
+      }));
+    }
+    return emitMockLifecycle(`mock_tx_set_milestones_${campaignId}`, options);
+  }
+  const callerAddress = await getSignerAddress();
+  const contract = new Contract(CONTRACT_ADDRESS);
+
+  // Encode each milestone as an ScVal map { description: String, payout_bps: u32 }
+  const encodedMilestones = xdr.ScVal.scvVec(
+    milestones.map((m) => {
+      const fields: [string, xdr.ScVal][] = [
+        ["description", nativeToScVal(m.description, { type: "string" })],
+        ["payout_bps", nativeToScVal(m.payout_bps, { type: "u32" })],
+      ];
+      fields.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+      return xdr.ScVal.scvMap(
+        fields.map(([key, val]) => new xdr.ScMapEntry({ key: xdr.ScVal.scvSymbol(key), val })),
+      );
+    }),
+  );
+
+  const op = contract.call(
+    "set_milestones",
+    nativeToScVal(campaignId, { type: "u32" }),
+    encodedMilestones,
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "set_milestones",
+    });
+    clearContractCacheByMethod("get_milestones");
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Convert an array of milestone form entries (targetAmount in stroops, description)
+ * into MilestoneInput objects with payout_bps derived proportionally.
+ *
+ * Rules:
+ * - If total target is 0 or milestones are empty, returns [].
+ * - Distributes bps proportionally to targetAmount, rounding down.
+ * - Gives any remaining bps (due to rounding) to the last milestone.
+ *
+ * The result always sums to exactly BPS_DENOMINATOR (10 000) when non-empty.
+ */
+export function milestoneFormEntriesToInputs(
+  entries: { targetAmount: bigint; description: string }[],
+): MilestoneInput[] {
+  const valid = entries.filter((e) => e.targetAmount > BigInt(0) && e.description.trim());
+  if (valid.length === 0) return [];
+
+  const total = valid.reduce((sum, e) => sum + e.targetAmount, BigInt(0));
+  if (total === BigInt(0)) return [];
+
+  const bpsValues: number[] = valid.map((e) =>
+    Number((e.targetAmount * BigInt(BPS_DENOMINATOR)) / total),
+  );
+
+  // Fix rounding: assign remainder to last milestone.
+  const assigned = bpsValues.reduce((s, v) => s + v, 0);
+  const remainder = BPS_DENOMINATOR - assigned;
+  if (bpsValues.length > 0) {
+    bpsValues[bpsValues.length - 1] += remainder;
+  }
+
+  return valid.map((e, i) => ({
+    description: e.description.trim(),
+    payout_bps: bpsValues[i],
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// check_settlement_status — issue #1763
+// ---------------------------------------------------------------------------
+
+export interface SettlementStatus {
+  /** True when the campaign deadline has passed. */
+  deadline_passed: boolean;
+  /** True when amount_raised >= funding_goal. */
+  goal_met: boolean;
+  /** True when funds can be withdrawn right now. */
+  ready_for_withdrawal: boolean;
+}
+
+/**
+ * Ask the contract whether a campaign is ready for withdrawal.
+ *
+ * ScVal shape: check_settlement_status(campaign_id: u32) -> (bool, bool, bool)
+ * Returns (deadline_passed, goal_met, ready_for_withdrawal).
+ *
+ * Falls back to client-side derivation when mocks are active so tests do not
+ * require a live RPC node.
+ */
+export async function checkSettlementStatus(campaignId: number): Promise<SettlementStatus> {
+  if (USE_MOCKS) {
+    const campaign = MOCK_CAMPAIGNS.find((c) => c.id === campaignId);
+    if (!campaign) {
+      return { deadline_passed: false, goal_met: false, ready_for_withdrawal: false };
+    }
+    const now = Math.floor(Date.now() / 1000);
+    const deadline_passed = campaign.deadline < now;
+    const goal_met = campaign.amount_raised >= campaign.funding_goal;
+    const ready_for_withdrawal =
+      deadline_passed && goal_met && !campaign.funds_withdrawn && !campaign.is_cancelled;
+    return { deadline_passed, goal_met, ready_for_withdrawal };
+  }
+  try {
+    const result = await invokeViewMethod("check_settlement_status", [
+      nativeToScVal(campaignId, { type: "u32" }),
+    ]);
+    if (!result) {
+      return { deadline_passed: false, goal_met: false, ready_for_withdrawal: false };
+    }
+    // The contract returns a tuple encoded as a Vec of three bools.
+    const vec = result.vec();
+    if (vec && vec.length >= 3) {
+      return {
+        deadline_passed: vec[0].b(),
+        goal_met: vec[1].b(),
+        ready_for_withdrawal: vec[2].b(),
+      };
+    }
+    // Fallback: try struct map encoding.
+    const map = result.map();
+    if (map) {
+      const fields: Record<string, boolean> = {};
+      for (const entry of map) fields[entry.key().sym().toString()] = entry.val().b();
+      return {
+        deadline_passed: fields["deadline_passed"] ?? false,
+        goal_met: fields["goal_met"] ?? false,
+        ready_for_withdrawal: fields["ready_for_withdrawal"] ?? false,
+      };
+    }
+    return { deadline_passed: false, goal_met: false, ready_for_withdrawal: false };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// get_cancellation_penalty_bps — issue #1764
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the cancellation penalty in basis points.
+ *
+ * ScVal shape: get_cancellation_penalty_bps() -> u32
+ *
+ * This is a global contract setting; the actual charge applied to the creator
+ * on cancel_campaign() is:
+ *   penalty_amount = amount_raised * penalty_bps / 10_000
+ */
+export async function getCancellationPenaltyBps(): Promise<number> {
+  if (USE_MOCKS) return 500; // 5% mock penalty
+  try {
+    const result = await invokeViewMethod("get_cancellation_penalty_bps");
+    return result ? result.u32() : 0;
+  } catch (err) {
+    // Non-fatal: if contract doesn't expose this yet, default to 0.
+    console.warn("[contractClient] get_cancellation_penalty_bps not available:", err);
+    return 0;
+  }
+}
+
+// Campaign Ownership Transfer (#1767)
+// ---------------------------------------------------------------------------
+
+/**
+ * Initiate a campaign ownership transfer to a new address.
+ * The new owner must accept the transfer before the expiry.
+ *
+ * ScVal shape: initiate_campaign_transfer(campaign_id: u64, new_owner: Address, expiry: u64)
+ *
+ * @param campaignId - The campaign ID
+ * @param newOwnerAddress - The address of the new owner
+ * @param expiryLedger - The ledger number when the transfer offer expires
+ * @param callerAddress - The current owner's address
+ * @param options - Transaction lifecycle options
+ */
+export async function initiateCampaignTransfer(
+  campaignId: number,
+  newOwnerAddress: string,
+  expiryLedger: number,
+  callerAddress: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) {
+    console.log(
+      `[MOCK] Initiating campaign transfer for campaign ${campaignId} to ${newOwnerAddress}`,
+    );
+    return emitMockLifecycle(`mock_transfer_${campaignId}_${Date.now()}`, options);
+  }
+
+  const args = [
+    nativeToScVal(campaignId, { type: "u64" }),
+    new Address(newOwnerAddress).toScVal(),
+    nativeToScVal(expiryLedger, { type: "u64" }),
+  ];
+
+  return buildAndSubmitTransaction("initiate_campaign_transfer", args, callerAddress, options);
+}
+
+/**
+ * Accept a pending campaign ownership transfer.
+ *
+ * ScVal shape: accept_campaign_transfer(campaign_id: u64)
+ *
+ * @param campaignId - The campaign ID
+ * @param callerAddress - The new owner's address (must match pending transfer)
+ * @param options - Transaction lifecycle options
+ */
+export async function acceptCampaignTransfer(
+  campaignId: number,
+  callerAddress: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) {
+    console.log(`[MOCK] Accepting campaign transfer for campaign ${campaignId}`);
+    return emitMockLifecycle(`mock_accept_${campaignId}_${Date.now()}`, options);
+  }
+
+  const args = [nativeToScVal(campaignId, { type: "u64" })];
+
+  return buildAndSubmitTransaction("accept_campaign_transfer", args, callerAddress, options);
+}
+
+/**
+ * Cancel a pending campaign ownership transfer.
+ *
+ * ScVal shape: cancel_campaign_transfer(campaign_id: u64)
+ *
+ * @param campaignId - The campaign ID
+ * @param callerAddress - The current owner's address
+ * @param options - Transaction lifecycle options
+ */
+export async function cancelCampaignTransfer(
+  campaignId: number,
+  callerAddress: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) {
+    console.log(`[MOCK] Cancelling campaign transfer for campaign ${campaignId}`);
+    return emitMockLifecycle(`mock_cancel_transfer_${campaignId}_${Date.now()}`, options);
+  }
+
+  const args = [nativeToScVal(campaignId, { type: "u64" })];
+
+  return buildAndSubmitTransaction("cancel_campaign_transfer", args, callerAddress, options);
+}
+
+/**
+ * Check if a campaign has a pending ownership transfer.
+ *
+ * ScVal shape: has_pending_campaign_transfer(campaign_id: u64) -> bool
+ *
+ * @param campaignId - The campaign ID
+ * @returns True if there is a pending transfer
+ */
+export async function hasPendingCampaignTransfer(campaignId: number): Promise<boolean> {
+  if (USE_MOCKS) {
+    // Mock: return false for most campaigns, true for demo purposes if campaignId is odd
+    return campaignId % 2 === 1;
+  }
+
+  try {
+    const args = [nativeToScVal(campaignId, { type: "u64" })];
+    const result = await invokeViewMethod("has_pending_campaign_transfer", args);
+    return result ? result.b() : false;
+  } catch (err) {
+    console.warn(
+      `[contractClient] has_pending_campaign_transfer failed for campaign ${campaignId}:`,
+      err,
+    );
+    return false;
+  }
+}
+
+// Campaign Metadata Update (#1756)
+// ---------------------------------------------------------------------------
+
+/**
+ * Update campaign title and description on-chain.
+ * Only allowed before any contributions (amount_raised = 0).
+ *
+ * ScVal shape: update_campaign(campaign_id: u64, title: String, description: String)
+ *
+ * @param campaignId - The campaign ID
+ * @param title - New campaign title
+ * @param description - New campaign description
+ * @param callerAddress - The campaign creator's address
+ * @param options - Transaction lifecycle options
+ */
+export async function updateCampaign(
+  campaignId: number,
+  title: string,
+  description: string,
+  callerAddress: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) {
+    console.log(`[MOCK] Updating campaign ${campaignId}: "${title}"`);
+    return emitMockLifecycle(`mock_update_${campaignId}_${Date.now()}`, options);
+  }
+
+  const args = [
+    nativeToScVal(campaignId, { type: "u64" }),
+    nativeToScVal(title, { type: "string" }),
+    nativeToScVal(description, { type: "string" }),
+  ];
+
+  return buildAndSubmitTransaction("update_campaign", args, callerAddress, options);
 }

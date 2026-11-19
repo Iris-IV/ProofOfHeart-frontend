@@ -35,7 +35,7 @@ const OVERLAY_VARIANTS = {
 
 const PANEL_VARIANTS = {
   dialog:
-    "w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden",
+    "ui-dialog-enter w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden",
   drawer:
     "ui-slide-up border border-white/60 bg-white/90 shadow-2xl backdrop-blur-xl backdrop-saturate-150 dark:border-white/10 dark:bg-zinc-900/90 w-full max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-t-3xl pb-[max(1rem,env(safe-area-inset-bottom))] sm:h-full sm:max-h-none sm:max-w-md sm:rounded-none sm:rounded-l-3xl",
 } as const;
@@ -48,6 +48,9 @@ const PANEL_VARIANTS = {
  *
  * Initial focus prefers the first form field (input/select/textarea) so
  * keyboard users can fill donation and other forms without tab order gaps.
+ *
+ * Enter motion (backdrop fade and panel scale) is CSS-only and disabled under
+ * `prefers-reduced-motion: reduce` (see globals.css).
  */
 function Modal({
   isOpen = true,
@@ -115,6 +118,8 @@ function Modal({
 
       if (e.key === "Tab" && modalRef.current) {
         const scope = modalRef.current;
+        // Queried on every Tab press so the trap follows fields that are added,
+        // removed or disabled while the dialog is open.
         const focusable = Array.from(scope.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
         if (focusable.length === 0) {
           e.preventDefault();
@@ -152,7 +157,7 @@ function Modal({
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex bg-black/60 backdrop-blur-sm",
+        "ui-overlay-enter fixed inset-0 z-50 flex bg-black/60 backdrop-blur-sm",
         OVERLAY_VARIANTS[variant],
         overlayClassName,
       )}

@@ -118,6 +118,9 @@ export default function FundingProgressBar({
             const isOpen = openMilestone === idx;
             const tooltipId = `${milestoneIdPrefix}-milestone-${idx}`;
             const targetLabel = formatAmount(m.targetAmount, locale, { maximumFractionDigits: 0 });
+            const remainingLabel = formatAmount(m.targetAmount - amountRaised, locale, {
+              maximumFractionDigits: 2,
+            });
 
             return (
               <button
@@ -147,17 +150,18 @@ export default function FundingProgressBar({
                 }}
                 aria-expanded={isOpen}
                 aria-describedby={isOpen ? tooltipId : undefined}
-                aria-label={`Milestone: ${targetLabel} XLM — ${m.description}`}
+                aria-label={`Milestone: ${targetLabel} XLM — ${m.description}${isReached ? " (reached)" : ""}`}
                 // `before:` widens the 12px dot's hit area to a 32px touch
                 // target (WCAG 2.5.8) without moving it or growing the row.
                 className="absolute top-0 flex flex-col items-center -translate-x-1/2 z-10 touch-manipulation before:absolute before:left-1/2 before:top-1/2 before:size-8 before:-translate-x-1/2 before:-translate-y-1/2 before:content-[''] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 rounded-full dark:focus-visible:ring-offset-zinc-900"
                 style={{ left: `${visualPct}%` }}
               >
-                {/* Marker dot */}
+                {/* Marker dot. Reached pins get a one-shot pulse (see globals.css). */}
                 <div
-                  className={`w-3.5 h-3.5 rounded-full border-2 border-white dark:border-zinc-800 shadow-sm transition-colors flex items-center justify-center ${
+                  data-reached={isReached ? "true" : "false"}
+                  className={`relative w-3.5 h-3.5 rounded-full border-2 border-white dark:border-zinc-800 shadow-sm transition-colors flex items-center justify-center ${
                     isReached
-                      ? "bg-emerald-500 text-white"
+                      ? "bg-emerald-500 text-white milestone-pin-reached"
                       : "bg-zinc-300 dark:bg-zinc-600 text-transparent"
                   }`}
                 >
@@ -178,10 +182,17 @@ export default function FundingProgressBar({
                   <span
                     id={tooltipId}
                     role="tooltip"
-                    className="absolute top-5 block w-max max-w-[150px] bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] p-1.5 rounded-md pointer-events-none z-20 text-center shadow-lg"
+                    className="milestone-tooltip-enter absolute top-5 block w-max max-w-[150px] bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] p-1.5 rounded-md pointer-events-none z-20 text-center shadow-lg"
                   >
                     <span className="block font-semibold">{targetLabel} XLM</span>
                     <span className="block line-clamp-2">{m.description}</span>
+                    <span
+                      className={`block mt-0.5 font-medium ${
+                        isReached ? "text-emerald-400 dark:text-emerald-600" : "opacity-80"
+                      }`}
+                    >
+                      {isReached ? "Reached" : `${remainingLabel} XLM to go`}
+                    </span>
                     {/* Arrow */}
                     <span className="absolute -top-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-b-zinc-900 dark:border-b-zinc-100" />
                   </span>

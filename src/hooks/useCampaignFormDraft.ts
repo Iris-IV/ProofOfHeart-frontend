@@ -49,6 +49,103 @@ interface UseCampaignFormDraftReturn {
   clearDraft: () => void;
 }
 
+/** Keys that can alter object prototypes if copied or merged from untrusted input. */
+const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
+const MAX_TAGS = 20;
+const MAX_MILESTONES = 50;
+
+type UnknownRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function asBoolean(value: unknown): boolean | undefined {
+  return typeof value === "boolean" ? value : undefined;
+}
+
+function asFiniteNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function asCategory(value: unknown): Category | undefined {
+  return (Object.values(Category) as unknown[]).includes(value) ? (value as Category) : undefined;
+}
+
+function sanitizeTags(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter((tag): tag is string => typeof tag === "string").slice(0, MAX_TAGS);
+}
+
+function sanitizeMilestones(value: unknown): CampaignFormDraftData["milestones"] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value
+    .filter(isRecord)
+    .slice(0, MAX_MILESTONES)
+    .map((milestone) => ({
+      targetAmount: asString(milestone.targetAmount) ?? "",
+      description: asString(milestone.description) ?? "",
+    }));
+}
+
+/**
+ * Rebuilds a draft from untrusted storage contents. Only whitelisted keys are
+ * read and each value is type-checked, so unknown or prototype-polluting keys
+ * are never copied onto the returned object.
+ */
+export function sanitizeCampaignDraft(raw: unknown): Partial<CampaignFormDraftData> {
+  if (!isRecord(raw)) return {};
+
+  const draft: Partial<CampaignFormDraftData> = {};
+  const title = asString(raw.title);
+  const description = asString(raw.description);
+  const descriptionEs = asString(raw.descriptionEs);
+  const creatorEmail = asString(raw.creatorEmail);
+  const fundingGoal = asString(raw.fundingGoal);
+  const durationDays = asString(raw.durationDays);
+  const category = asCategory(raw.category);
+  const hasRevenueSharing = asBoolean(raw.hasRevenueSharing);
+  const revenueSharePercentage = asFiniteNumber(raw.revenueSharePercentage);
+  const tags = sanitizeTags(raw.tags);
+  const coverImageUrl = asString(raw.coverImageUrl);
+  const milestones = sanitizeMilestones(raw.milestones);
+  const maxContributionPerWallet = asString(raw.maxContributionPerWallet);
+
+  if (title !== undefined) draft.title = title;
+  if (description !== undefined) draft.description = description;
+  if (descriptionEs !== undefined) draft.descriptionEs = descriptionEs;
+  if (creatorEmail !== undefined) draft.creatorEmail = creatorEmail;
+  if (fundingGoal !== undefined) draft.fundingGoal = fundingGoal;
+  if (durationDays !== undefined) draft.durationDays = durationDays;
+  if (category !== undefined) draft.category = category;
+  if (hasRevenueSharing !== undefined) draft.hasRevenueSharing = hasRevenueSharing;
+  if (revenueSharePercentage !== undefined) draft.revenueSharePercentage = revenueSharePercentage;
+  if (tags !== undefined) draft.tags = tags;
+  if (coverImageUrl !== undefined) draft.coverImageUrl = coverImageUrl;
+  if (milestones !== undefined) draft.milestones = milestones;
+  if (maxContributionPerWallet !== undefined) {
+    draft.maxContributionPerWallet = maxContributionPerWallet;
+  }
+
+  return draft;
+}
+
+/**
+ * Parses stored draft JSON. The reviver drops forbidden keys at every depth
+ * before any value reaches application code.
+ */
+export function parseCampaignDraft(serialized: string): Partial<CampaignFormDraftData> {
+  const parsed: unknown = JSON.parse(serialized, (key, value: unknown) =>
+    FORBIDDEN_KEYS.has(key) ? undefined : value,
+  );
+  return sanitizeCampaignDraft(parsed);
+}
+
 export function useCampaignFormDraft({
   publicKey,
 }: UseCampaignFormDraftOptions): UseCampaignFormDraftReturn {
@@ -65,7 +162,7 @@ export function useCampaignFormDraft({
       try {
         const saved = localStorage.getItem(draftKey);
         if (saved) {
-          const parsed = JSON.parse(saved) as Partial<CampaignFormDraftData>;
+          const parsed = parseCampaignDraft(saved);
           if (parsed.title) setters.setTitle(parsed.title);
           if (parsed.description) setters.setDescription(parsed.description);
           if (parsed.descriptionEs) setters.setDescriptionEs(parsed.descriptionEs);

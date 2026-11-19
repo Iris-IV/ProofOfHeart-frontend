@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Wallet } from "lucide-react";
 import { Link } from "@/i18n/routing";
@@ -17,7 +17,12 @@ import { Skeleton } from "@/components/Skeleton";
 import CampaignEmptyState from "@/components/CampaignEmptyState";
 import { Button } from "@/components/ui";
 import CreatorProfileHeader from "@/components/CreatorProfileHeader";
+import CreatorStats from "@/components/CreatorStats";
 import VirtualizedCampaignList from "@/components/VirtualizedCampaignList";
+import { delegateVotes, getDelegate, undelegateVotes } from "@/lib/contractClient";
+import { parseContractError } from "@/utils/contractErrors";
+import { isValidStellarPublicKey } from "@/utils/validators";
+import { useToast } from "@/components/ToastProvider";
 
 /** Matches `grid-cols-1 sm:grid-cols-2` so virtual rows wrap like the grid. */
 const SAVED_GRID_COLUMNS = [
@@ -56,6 +61,49 @@ export default function ProfileClient() {
     () => contributions.reduce((sum, item) => sum + item.contribution, 0n),
     [contributions],
   );
+  const { showSuccess, showError } = useToast();
+  const [delegateInput, setDelegateInput] = useState("");
+  const [currentDelegate, setCurrentDelegate] = useState<string | null>(null);
+  const [isDelegating, setIsDelegating] = useState(false);
+
+  useEffect(() => {
+    if (!publicKey) return;
+    void getDelegate(publicKey)
+      .then(setCurrentDelegate)
+      .catch(() => setCurrentDelegate(null));
+  }, [publicKey]);
+
+  const handleDelegate = async () => {
+    if (!publicKey || !isValidStellarPublicKey(delegateInput.trim())) {
+      showError(t("invalidDelegate"));
+      return;
+    }
+    setIsDelegating(true);
+    try {
+      await delegateVotes(publicKey, delegateInput.trim());
+      setCurrentDelegate(delegateInput.trim());
+      setDelegateInput("");
+      showSuccess(t("delegationSuccess"));
+    } catch (error) {
+      showError(parseContractError(error));
+    } finally {
+      setIsDelegating(false);
+    }
+  };
+
+  const handleUndelegate = async () => {
+    if (!publicKey) return;
+    setIsDelegating(true);
+    try {
+      await undelegateVotes(publicKey);
+      setCurrentDelegate(null);
+      showSuccess(t("delegationRevoked"));
+    } catch (error) {
+      showError(parseContractError(error));
+    } finally {
+      setIsDelegating(false);
+    }
+  };
 
   if (!isWalletConnected || !publicKey) {
     return (
@@ -91,6 +139,8 @@ export default function ProfileClient() {
         address={publicKey}
         verifiedCampaignCount={createdCampaigns.filter((campaign) => campaign.is_verified).length}
       >
+        <CreatorStats address={publicKey} />
+
         {/* Impact stats */}
         <div className="grid grid-cols-3 gap-4 mt-8 pt-8 border-t border-zinc-200 dark:border-zinc-700">
           <div className="text-center">
@@ -132,6 +182,48 @@ export default function ProfileClient() {
           </div>
         </div>
       </CreatorProfileHeader>
+
+      <section className="mb-8 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
+          {t("delegationTitle")}
+        </h2>
+        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          {t("delegationDescription")}
+        </p>
+        {currentDelegate ? (
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="break-all font-mono text-xs text-zinc-700 dark:text-zinc-300">
+              {currentDelegate}
+            </p>
+            <button
+              type="button"
+              onClick={() => void handleUndelegate()}
+              disabled={isDelegating}
+              className="rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 disabled:opacity-50 dark:border-red-900/50"
+            >
+              {isDelegating ? t("revoking") : t("revokeDelegation")}
+            </button>
+          </div>
+        ) : (
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <input
+              value={delegateInput}
+              onChange={(event) => setDelegateInput(event.target.value)}
+              placeholder="G..."
+              aria-label={t("delegateAddress")}
+              className="min-w-0 flex-1 rounded-xl border border-zinc-300 bg-white px-4 py-3 font-mono text-xs dark:border-zinc-700 dark:bg-zinc-950"
+            />
+            <button
+              type="button"
+              onClick={() => void handleDelegate()}
+              disabled={isDelegating}
+              className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white disabled:opacity-50"
+            >
+              {isDelegating ? t("delegating") : t("delegateVotes")}
+            </button>
+          </div>
+        )}
+      </section>
 
       {/* Contributions */}
       {(isDataLoading || contributions.length > 0) && (

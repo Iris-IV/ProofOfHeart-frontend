@@ -11,7 +11,15 @@ import { cropCoverToAspect } from "@/lib/coverCrop";
 import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
 import { useRouter } from "@/i18n/routing";
-import { createCampaign, type TransactionLifecyclePhase } from "@/lib/contractClient";
+import {
+  createCampaign,
+  createCampaignWithToken,
+  isTokenAllowed,
+  setMilestones as setMilestonesOnChain,
+  milestoneFormEntriesToInputs,
+  addCampaignTag,
+  type TransactionLifecyclePhase,
+} from "@/lib/contractClient";
 import { invalidateCampaignsList } from "@/lib/cacheInvalidation";
 import { Category, CATEGORY_LABELS } from "@/types";
 import { xlmToStroops } from "@/lib/stellarAmount";
@@ -42,6 +50,7 @@ export default function CreateCampaignPage() {
   const [descriptionEs, setDescriptionEs] = useState("");
   const [creatorEmail, setCreatorEmail] = useState("");
   const [fundingGoal, setFundingGoal] = useState("");
+  const [campaignToken, setCampaignToken] = useState("");
   const [durationDays, setDurationDays] = useState("");
   // Optional per-wallet cap in XLM. Blank means no cap, which the contract stores as 0.
   const [maxContributionPerWallet, setMaxContributionPerWallet] = useState("");
@@ -53,7 +62,9 @@ export default function CreateCampaignPage() {
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [reviewData, setReviewData] = useState<ReviewData | null>(null);
   const [tags, setTags] = useState<string[]>([]);
-  const [milestones, setMilestones] = useState<{ targetAmount: string; description: string }[]>([]);
+  const [milestones, setMilestoneForm] = useState<{ targetAmount: string; description: string }[]>(
+    [],
+  );
   const [tagInput, setTagInput] = useState("");
   const [descriptionTab, setDescriptionTab] = useState<"write" | "preview">("write");
   const [coverImageUrl, setCoverImageUrl] = useState("");
@@ -87,7 +98,7 @@ export default function CreateCampaignPage() {
       setRevenueSharePercentage,
       setTags,
       setCoverImageUrl,
-      setMilestones,
+      setMilestones: setMilestoneForm,
       setMaxContributionPerWallet,
     });
     // Restore must run once on mount; the setters are stable.
@@ -254,23 +265,74 @@ export default function CreateCampaignPage() {
 
       const maxContributionStroops = xlmToStroops(reviewData.maxContributionPerWallet ?? "");
 
-      const { campaignId: newCampaignId } = await createCampaign(
-        publicKey,
-        reviewData.title,
-        reviewData.description,
-        fundingGoalStroops,
-        reviewData.durationDays,
-        reviewData.category,
-        reviewData.hasRevenueSharing,
-        basisPoints,
-        reviewData.tags,
-        maxContributionStroops,
-        {
-          onStatus: ({ phase }) => setTxPhase(phase),
-          coverImageUrl: reviewData.coverImageUrl,
-          milestones: reviewData.milestones,
-        },
-      );
+      let created;
+      if (campaignToken.trim()) {
+        if (!(await isTokenAllowed(campaignToken.trim()))) {
+          throw new Error(t("tokenNotAllowed"));
+        }
+        created = await createCampaignWithToken(
+          publicKey,
+          campaignToken.trim(),
+          reviewData.title,
+          reviewData.description,
+          fundingGoalStroops,
+          reviewData.durationDays,
+          reviewData.category,
+          reviewData.hasRevenueSharing,
+          basisPoints,
+          maxContributionStroops,
+          { onStatus: ({ phase }) => setTxPhase(phase) },
+        );
+      } else {
+        created = await createCampaign(
+          publicKey,
+          reviewData.title,
+          reviewData.description,
+          fundingGoalStroops,
+          reviewData.durationDays,
+          reviewData.category,
+          reviewData.hasRevenueSharing,
+          basisPoints,
+          reviewData.tags,
+          maxContributionStroops,
+          {
+            onStatus: ({ phase }) => setTxPhase(phase),
+            coverImageUrl: reviewData.coverImageUrl,
+            milestones: reviewData.milestones,
+          },
+        );
+      }
+      const { campaignId: newCampaignId } = created;
+
+      // Issue #1765 — register milestone payout plan on-chain if any milestones were provided
+      if (newCampaignId !== null && reviewData.milestones && reviewData.milestones.length > 0) {
+        const milestoneInputs = milestoneFormEntriesToInputs(reviewData.milestones);
+        if (milestoneInputs.length > 0) {
+          try {
+            await setMilestonesOnChain(newCampaignId, milestoneInputs, {
+              onStatus: ({ phase }) => setTxPhase(phase),
+            });
+          } catch (milestoneErr) {
+            // Non-fatal: campaign is already created; warn but don't block navigation
+            showWarning(t("milestonesSetFailed"));
+            console.warn("[NewCauseClient] set_milestones failed:", milestoneErr);
+          }
+        }
+      }
+
+      // Issue #1766 — register tags on-chain via add_campaign_tag for each tag
+      if (newCampaignId !== null && reviewData.tags && reviewData.tags.length > 0) {
+        for (const tag of reviewData.tags) {
+          try {
+            await addCampaignTag(newCampaignId, tag, {
+              onStatus: ({ phase }) => setTxPhase(phase),
+            });
+          } catch (tagErr) {
+            // Non-fatal: tags are also stored in the description blob as fallback
+            console.warn("[NewCauseClient] add_campaign_tag failed for tag:", tag, tagErr);
+          }
+        }
+      }
 
       await notifyEmailOptIn(newCampaignId, reviewData.creatorEmail, reviewData.title, publicKey);
       invalidateCampaignsList(queryClient);
@@ -646,6 +708,16 @@ export default function CreateCampaignPage() {
                   {err("fundingGoal")}
                 </p>
               )}
+              <label htmlFor="campaignToken" className="mt-4 block text-sm font-semibold">
+                {t("campaignTokenOptional")}
+              </label>
+              <input
+                id="campaignToken"
+                value={campaignToken}
+                onChange={(event) => setCampaignToken(event.target.value)}
+                placeholder="G..."
+                className="mt-2 w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 font-mono text-xs dark:border-zinc-700 dark:bg-zinc-950"
+              />
             </div>
 
             <div>
@@ -994,7 +1066,7 @@ export default function CreateCampaignPage() {
               <button
                 type="button"
                 onClick={() =>
-                  setMilestones([...milestones, { targetAmount: "", description: "" }])
+                  setMilestoneForm([...milestones, { targetAmount: "", description: "" }])
                 }
                 className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline"
               >
@@ -1022,7 +1094,7 @@ export default function CreateCampaignPage() {
                           value={m.targetAmount}
                           onChange={(e) => {
                             const value = e.target.value;
-                            setMilestones(
+                            setMilestoneForm(
                               milestones.map((ms, i) =>
                                 i === idx ? { ...ms, targetAmount: value } : ms,
                               ),
@@ -1046,7 +1118,7 @@ export default function CreateCampaignPage() {
                           value={m.description}
                           onChange={(e) => {
                             const value = e.target.value;
-                            setMilestones(
+                            setMilestoneForm(
                               milestones.map((ms, i) =>
                                 i === idx ? { ...ms, description: value } : ms,
                               ),
@@ -1059,7 +1131,7 @@ export default function CreateCampaignPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setMilestones(milestones.filter((_, i) => i !== idx))}
+                      onClick={() => setMilestoneForm(milestones.filter((_, i) => i !== idx))}
                       className="text-zinc-400 hover:text-red-500 p-1 transition-colors"
                       aria-label="Remove milestone"
                     >
