@@ -272,7 +272,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
       const [latestStatus, latestLimits, latestCampaign] = await Promise.all([
         getPlatformStatus(true),
         getDonationLimits(campaign.id, publicKey, true),
-        getCampaign(campaign.id),
+        getCampaign(campaign.id, true),
       ]);
       if (latestStatus.isPaused) {
         setError("platformPaused");
@@ -323,6 +323,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
       setStep("confirmed");
       trackContributionConfirmed(campaign.id);
       onSuccess();
+      void refetchLimits();
     } catch (err) {
       const msg = parseContractError(err);
       const localized = localizeContractError(msg);
