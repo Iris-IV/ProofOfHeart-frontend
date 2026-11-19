@@ -231,7 +231,20 @@ export interface Comment {
   parentId: string | null;
   signature: string;
   isPinned: boolean;
+  /** @deprecated Use `reportCount` / `isUnderReview`. Kept for backwards compat with stored data. */
   isReported: boolean;
+  /**
+   * Number of distinct reports received (#1877). A comment is not hidden
+   * until this reaches `COMMENT_REPORT_THRESHOLD` or a moderator reviews it.
+   */
+  reportCount: number;
+  /**
+   * True when the report threshold has been reached and the comment is
+   * awaiting moderator review (#1877). The comment is still returned by the
+   * GET endpoint, but with `isUnderReview: true` so the UI can display a
+   * "this comment is under review" label.
+   */
+  isUnderReview: boolean;
   /** sha256 of the canonical comment, used to match on-chain censures (#1682). */
   commentHash?: string;
 }
