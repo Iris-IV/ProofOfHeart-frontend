@@ -492,7 +492,13 @@
     "invalidAmount": "Please enter a valid amount.",
     "amountMustBePositive": "Amount must be greater than zero.",
     "invalidNumberFormat": "Invalid number format.",
-    "maxDecimalPlaces": "Maximum 7 decimal places allowed."
+    "maxDecimalPlaces": "Maximum 7 decimal places allowed.",
+    "amountExceedsRemainingGoal": "Amount exceeds the remaining funding goal.",
+    "campaignAlreadyFunded": "This cause is already fully funded.",
+    "amountExceedsAllowance": "Amount exceeds your remaining contribution allowance.",
+    "limitsLoading": "Checking your contribution limits…",
+    "limitsUnavailable": "Unable to verify contribution limits. Try again.",
+    "platformPaused": "The platform is temporarily paused. Donations are disabled."
   },
   "WithdrawFunds": {
     "withdrawalSuccessToast": "Withdrawal successful! You received {amount} XLM.",
