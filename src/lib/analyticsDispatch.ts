@@ -3,7 +3,10 @@ import { trackWebVital, type WebVitalMetric } from "@/lib/analytics";
 export type WebVitalRating = "good" | "needs-improvement" | "poor";
 
 /** Core Web Vitals SLA target thresholds (milliseconds / score) */
-export const WEB_VITALS_THRESHOLDS: Record<WebVitalMetric["name"], { good: number; needsImprovement: number }> = {
+export const WEB_VITALS_THRESHOLDS: Record<
+  WebVitalMetric["name"],
+  { good: number; needsImprovement: number }
+> = {
   LCP: { good: 2500, needsImprovement: 4000 },
   FID: { good: 100, needsImprovement: 300 },
   CLS: { good: 0.1, needsImprovement: 0.25 },
@@ -26,7 +29,9 @@ export function analyticsDispatch(eventName: string, payload: Record<string, unk
   if (eventName === "web_vital" && payload.name && typeof payload.value === "number") {
     const metricName = payload.name as WebVitalMetric["name"];
     const value = payload.value;
-    const rating = payload.rating ? (payload.rating as WebVitalRating) : rateWebVital(metricName, value);
+    const rating = payload.rating
+      ? (payload.rating as WebVitalRating)
+      : rateWebVital(metricName, value);
 
     trackWebVital({
       name: metricName,
@@ -38,8 +43,5 @@ export function analyticsDispatch(eventName: string, payload: Record<string, unk
     return;
   }
 
-  // Fallback for general analytics dispatch events
-  if (process.env.NODE_ENV === "development") {
-    console.log("[AnalyticsDispatch]", eventName, payload);
-  }
+  // Unknown analytics events are intentionally ignored.
 }

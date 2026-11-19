@@ -82,7 +82,9 @@ export async function getCampaignUpdates(campaignId: number): Promise<CampaignUp
 
   try {
     const raw = await requestOffchainJson<unknown[]>(`/campaigns/${campaignId}/updates`);
-    const updates = raw.map((item) => parseWith(CampaignUpdateSchema, "CampaignUpdateSchema", item) as CampaignUpdate);
+    const updates = raw.map(
+      (item) => parseWith(CampaignUpdateSchema, "CampaignUpdateSchema", item) as CampaignUpdate,
+    );
 
     // Sort by timestamp descending (newest first)
     return updates.sort((a: CampaignUpdate, b: CampaignUpdate) => b.timestamp - a.timestamp);
@@ -123,11 +125,6 @@ export async function createCampaignUpdate(
       timestamp,
       signature,
     };
-
-    // Log notify action (mock behavior) — dev-only, never in production (#1056).
-    if (notify && process.env.NODE_ENV === "development") {
-      console.log(`[Mock] Notification sent to contributors for campaign ${campaignId}`);
-    }
 
     // Add to mock data
     if (!MOCK_UPDATES[campaignId]) {

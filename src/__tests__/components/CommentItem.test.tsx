@@ -62,7 +62,7 @@ describe("CommentItem", () => {
       />,
     );
 
-    expect(screen.getByText("Pinned by Creator")).toBeInTheDocument();
+    expect(screen.getByText("pinnedByCreator")).toBeInTheDocument();
   });
 
   it("shows reported status and hides content", () => {
@@ -118,7 +118,7 @@ describe("CommentItem", () => {
       />,
     );
 
-    fireEvent.click(screen.getByTitle("Report Comment"));
+    fireEvent.click(screen.getByTitle("reportComment"));
     expect(mockOnReport).toHaveBeenCalledWith("c1");
   });
 
@@ -135,7 +135,7 @@ describe("CommentItem", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Reply/i }));
-    expect(screen.getByPlaceholderText("Write a reply...")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("writeReply")).toBeInTheDocument();
   });
 
   it("renders replies correctly", () => {
