@@ -9,6 +9,14 @@
 
 export const STROOPS_PER_XLM = 10_000_000n;
 
+/** Raised by {@link xlmToStroops} when a value is not a valid non-negative XLM amount. */
+export class InvalidXlmAmountError extends Error {
+  constructor(value: string) {
+    super(`Invalid XLM amount: ${JSON.stringify(value)}`);
+    this.name = "InvalidXlmAmountError";
+  }
+}
+
 /**
  * Convert stroops (i128) to a decimal XLM string without floating-point loss.
  */
@@ -35,10 +43,17 @@ export function xlmToStroops(xlm: string): bigint {
   const trimmed = xlm.trim();
   if (!trimmed) return BigInt(0);
 
+  // A valid XLM amount is a non-negative decimal with at most seven fractional
+  // digits (one stroop). Validate explicitly so callers never receive negative
+  // stroops or a raw SyntaxError from BigInt().
+  if (!/^\d+(?:\.\d+)?$/.test(trimmed)) throw new InvalidXlmAmountError(xlm);
+
   const parts = trimmed.split(".");
   const integerPart = parts[0] || "0";
   const fractionalPart = parts[1] || "";
-  const paddedFractional = fractionalPart.padEnd(7, "0").slice(0, 7);
+  if (fractionalPart.length > 7) throw new InvalidXlmAmountError(xlm);
+
+  const paddedFractional = fractionalPart.padEnd(7, "0");
 
   return BigInt(integerPart + paddedFractional);
 }

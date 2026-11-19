@@ -44,9 +44,8 @@ describe("xlmToStroops", () => {
     expect(xlmToStroops("0.0000001")).toBe(1n);
   });
 
-  it("pads and truncates fractional digits to 7 stroop decimals", () => {
+  it("pads fractional digits to 7 stroop decimals", () => {
     expect(xlmToStroops("1.2")).toBe(12_000_000n);
-    expect(xlmToStroops("1.123456789")).toBe(11_234_567n);
   });
 });
 
