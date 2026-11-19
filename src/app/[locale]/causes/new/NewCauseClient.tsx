@@ -11,7 +11,13 @@ import { cropCoverToAspect } from "@/lib/coverCrop";
 import { useToast } from "@/components/ToastProvider";
 import { useWallet } from "@/components/WalletContext";
 import { useRouter } from "@/i18n/routing";
-import { createCampaign, type TransactionLifecyclePhase } from "@/lib/contractClient";
+import {
+  createCampaign,
+  setMilestones,
+  milestoneFormEntriesToInputs,
+  addCampaignTag,
+  type TransactionLifecyclePhase,
+} from "@/lib/contractClient";
 import { invalidateCampaignsList } from "@/lib/cacheInvalidation";
 import { Category, CATEGORY_LABELS } from "@/types";
 import { xlmToStroops } from "@/lib/stellarAmount";
@@ -271,6 +277,36 @@ export default function CreateCampaignPage() {
           milestones: reviewData.milestones,
         },
       );
+
+      // Issue #1765 — register milestone payout plan on-chain if any milestones were provided
+      if (newCampaignId !== null && reviewData.milestones && reviewData.milestones.length > 0) {
+        const milestoneInputs = milestoneFormEntriesToInputs(reviewData.milestones);
+        if (milestoneInputs.length > 0) {
+          try {
+            await setMilestones(newCampaignId, milestoneInputs, {
+              onStatus: ({ phase }) => setTxPhase(phase),
+            });
+          } catch (milestoneErr) {
+            // Non-fatal: campaign is already created; warn but don't block navigation
+            showWarning(t("milestonesSetFailed"));
+            console.warn("[NewCauseClient] set_milestones failed:", milestoneErr);
+          }
+        }
+      }
+
+      // Issue #1766 — register tags on-chain via add_campaign_tag for each tag
+      if (newCampaignId !== null && reviewData.tags && reviewData.tags.length > 0) {
+        for (const tag of reviewData.tags) {
+          try {
+            await addCampaignTag(newCampaignId, tag, {
+              onStatus: ({ phase }) => setTxPhase(phase),
+            });
+          } catch (tagErr) {
+            // Non-fatal: tags are also stored in the description blob as fallback
+            console.warn("[NewCauseClient] add_campaign_tag failed for tag:", tag, tagErr);
+          }
+        }
+      }
 
       await notifyEmailOptIn(newCampaignId, reviewData.creatorEmail, reviewData.title, publicKey);
       invalidateCampaignsList(queryClient);

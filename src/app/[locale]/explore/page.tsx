@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { Suspense } from "react";
 import { buildAlternates } from "@/lib/seo";
 import ExploreClient from "./ExploreClient";
 
@@ -26,5 +27,9 @@ export async function generateMetadata({ params }: Props) {
 }
 
 export default function Page() {
-  return <ExploreClient />;
+  return (
+    <Suspense>
+      <ExploreClient />
+    </Suspense>
+  );
 }

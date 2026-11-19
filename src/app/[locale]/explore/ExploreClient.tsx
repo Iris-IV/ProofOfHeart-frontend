@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import Image from "next/image";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { useMemo, useRef, useState, useEffect } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import CampaignStatusBadge from "@/components/CampaignStatusBadge";
 import FundingProgressBar from "@/components/FundingProgressBar";
 import { CampaignRowSkeleton } from "@/components/Skeleton";
@@ -54,11 +55,27 @@ const PREFETCH_ROW_THRESHOLD = 4;
 export default function ExplorePage() {
   const t = useTranslations("Explore");
   const locale = useLocale();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const { campaigns, isLoading, error, refetch, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useInfiniteCampaigns();
   const [activeCategory, setActiveCategory] = useState<"all" | Category>("all");
   // Starts compact so the server and first client render match; the saved choice applies after mount.
   const [density, setDensity] = useState<ExploreDensity>("compact");
+
+  // Issue #1766 — tag filter from ?tag= query param
+  const activeTag = searchParams?.get("tag") ?? null;
+
+  const setActiveTag = (tag: string | null) => {
+    const params = new URLSearchParams(searchParams?.toString() ?? "");
+    if (tag) {
+      params.set("tag", tag);
+    } else {
+      params.delete("tag");
+    }
+    router.replace(`${pathname}?${params.toString()}`);
+  };
 
   useEffect(() => {
     setDensity(loadExploreDensity());
@@ -74,11 +91,23 @@ export default function ExplorePage() {
     return ["all" as const, ...Array.from(seen).sort((a, b) => a - b)];
   }, [campaigns]);
 
-  const filtered = useMemo(
-    () =>
-      activeCategory === "all" ? campaigns : campaigns.filter((c) => c.category === activeCategory),
-    [campaigns, activeCategory],
-  );
+  // Collect all tags across loaded campaigns for the tag pill list (issue #1766)
+  const allTags = useMemo(() => {
+    const seen = new Set<string>();
+    for (const c of campaigns) {
+      for (const tag of c.tags ?? []) seen.add(tag);
+    }
+    return Array.from(seen).sort();
+  }, [campaigns]);
+
+  const filtered = useMemo(() => {
+    let result = activeCategory === "all" ? campaigns : campaigns.filter((c) => c.category === activeCategory);
+    // Apply tag filter if one is active (issue #1766)
+    if (activeTag) {
+      result = result.filter((c) => c.tags?.includes(activeTag));
+    }
+    return result;
+  }, [campaigns, activeCategory, activeTag]);
 
   // Sort by funding progress descending for the explore view
   const sorted = useMemo(
@@ -161,6 +190,41 @@ export default function ExplorePage() {
         </div>
       )}
 
+      {/* Tag pills — issue #1766 */}
+      {!isLoading && !error && allTags.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-3">
+          {allTags.map((tag) => (
+            <button
+              key={tag}
+              onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+                activeTag === tag
+                  ? "bg-orange-500 text-white border-orange-500"
+                  : "bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-600 hover:border-orange-300 dark:hover:border-orange-700"
+              }`}
+              aria-pressed={activeTag === tag}
+            >
+              #{tag}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Active tag banner */}
+      {activeTag && (
+        <div className="mt-3 flex items-center gap-2 text-sm text-orange-700 dark:text-orange-400">
+          <span>
+            {t("filteringByTag", { tag: activeTag })}
+          </span>
+          <button
+            onClick={() => setActiveTag(null)}
+            className="underline hover:no-underline text-xs"
+          >
+            {t("clearTagFilter")}
+          </button>
+        </div>
+      )}
+
       {/* Layout toggle */}
       {!isLoading && !error && sorted.length > 0 && (
         <div
@@ -218,11 +282,23 @@ export default function ExplorePage() {
         <div className="mt-16 text-center">
           <div className="text-5xl mb-4">🌐</div>
           <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-2">
-            {campaigns.length === 0 ? t("noCausesYet") : t("noCausesInCategory")}
+            {campaigns.length === 0 ? t("noCausesYet") : activeTag ? t("noTagResults") : t("noCausesInCategory")}
           </h2>
           <p className="text-zinc-600 dark:text-zinc-400">
-            {campaigns.length === 0 ? t("checkBackSoon") : t("tryDifferentCategory")}
+            {campaigns.length === 0
+              ? t("checkBackSoon")
+              : activeTag
+                ? t("tryDifferentTag")
+                : t("tryDifferentCategory")}
           </p>
+          {activeTag && (
+            <button
+              onClick={() => setActiveTag(null)}
+              className="mt-4 px-4 py-2 rounded-full text-sm font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+            >
+              {t("clearTagFilter")}
+            </button>
+          )}
         </div>
       )}
 
@@ -306,6 +382,28 @@ export default function ExplorePage() {
                         {formatAmount(campaign.funding_goal, locale, { maximumFractionDigits: 1 })}{" "}
                         XLM
                       </p>
+                      {campaign.tags && campaign.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {campaign.tags.map((tag) => (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setActiveTag(tag);
+                              }}
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-medium border transition-colors ${
+                                activeTag === tag
+                                  ? "bg-orange-500 text-white border-orange-500"
+                                  : "bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-600 hover:border-orange-300"
+                              }`}
+                            >
+                              #{tag}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       <div className="mt-1.5">
                         <FundingProgressBar
                           amountRaised={campaign.amount_raised}
