@@ -9,7 +9,6 @@ import {
   TransactionBuilder,
   nativeToScVal,
   rpc,
-  scValToBigInt,
   xdr,
 } from "@stellar/stellar-sdk";
 // #649 — Signing goes through the active wallet signer (Freighter or an
@@ -25,6 +24,13 @@ import {
 } from "./observability";
 import { appendWalletTransaction } from "./transactionLog";
 import { decodeCampaignStatusFlags } from "./campaignStatusFlags";
+import {
+  createGeneratedClient,
+  decodeSpecCampaign,
+  type SpecCampaign,
+  type SpecCampaignReserve,
+  type SpecPlatformStats,
+} from "./generated/client";
 import {
   Campaign,
   Category,
@@ -113,7 +119,11 @@ export function getActiveRpcUrl(): string {
 function getServer(): rpc.Server {
   const url = getActiveRpcUrl();
   if (!_server || _serverUrl !== url) {
-    _server = new rpc.Server(url);
+    // A locally-configured http endpoint (stellar container start local,
+    // devnets) must be allowed explicitly — the SDK rejects plain http
+    // otherwise. Only a URL the operator configured as http gets this;
+    // https endpoints keep the SDK's default posture (#1789).
+    _server = new rpc.Server(url, { allowHttp: url.startsWith("http://") });
     _serverUrl = url;
   }
   return _server;
@@ -578,36 +588,38 @@ async function invokeViewMethod(method: string, args: xdr.ScVal[] = []): Promise
   return result;
 }
 
+// #1790 — every view call goes through the generated client, which owns the
+// method name, ScVal argument encoding and struct decoding for the contract's
+// read surface (src/lib/generated/, regenerate with `npm run bindings:generate`).
+// The transport stays here, so caching, RPC failover and observability are
+// unchanged.
+const generated = createGeneratedClient(invokeViewMethod);
+
 // ---------------------------------------------------------------------------
 // XDR ↔ TypeScript decoders
 // ---------------------------------------------------------------------------
 
 function decodeCampaign(val: xdr.ScVal): Campaign {
-  const map = val.map();
-  if (!map) throw new Error("Expected ScVal map for Campaign.");
+  return campaignFromSpec(decodeSpecCampaign(val));
+}
 
-  const fields: Record<string, xdr.ScVal> = {};
-  for (const entry of map) {
-    const key = entry.key().sym().toString();
-    fields[key] = entry.val();
-  }
-
-  const funding_goal = scValToBigInt(fields["funding_goal"]);
-  const deadline = Number(fields["deadline"].u64());
-  const amount_raised = scValToBigInt(fields["amount_raised"]);
-  // The contract stores lifecycle state as one `status` bitfield, not booleans.
+/**
+ * Maps a decoded on-chain campaign (generated client, issue #1790) to the
+ * app-facing `Campaign`: strips the `===POH_EXT===` suffix (cover image, UI
+ * milestones, tags) from the description and derives the lifecycle status
+ * from the contract's `status` bitfield.
+ */
+function campaignFromSpec(spec: SpecCampaign): Campaign {
   const { is_active, funds_withdrawn, is_cancelled, is_verified } = decodeCampaignStatusFlags(
-    fields["status"].u32(),
+    spec.status,
   );
 
-  let rawDescription = fields["description"].str().toString();
+  let rawDescription = spec.description;
   let cover_image_url: string | undefined = undefined;
   let milestones: Milestone[] | undefined = undefined;
   // Contract fields carry no `tags`; fall back to that key only for older/mock
   // records that may have stored it directly, otherwise default to [].
-  let tags: string[] = fields["tags"]
-    ? fields["tags"].vec().map((v: xdr.ScVal) => v.str().toString())
-    : [];
+  let tags: string[] = spec.tags ?? [];
 
   const EXT_MARKER = "\n\n===POH_EXT===\n";
   const extIndex = rawDescription.indexOf(EXT_MARKER);
@@ -633,57 +645,40 @@ function decodeCampaign(val: xdr.ScVal): Campaign {
   }
 
   return {
-    id: fields["id"].u32(),
-    creator: Address.fromScVal(fields["creator"]).toString(),
-    title: fields["title"].str().toString(),
+    id: spec.id,
+    creator: spec.creator,
+    title: spec.title,
     description: rawDescription,
-    funding_goal,
-    deadline,
-    amount_raised,
+    funding_goal: spec.funding_goal,
+    deadline: spec.deadline,
+    amount_raised: spec.amount_raised,
     is_active,
     status: deriveStatus({
       is_cancelled,
       is_verified,
       is_active,
       funds_withdrawn,
-      deadline,
-      amount_raised,
-      funding_goal,
+      deadline: spec.deadline,
+      amount_raised: spec.amount_raised,
+      funding_goal: spec.funding_goal,
     }),
     funds_withdrawn,
     is_cancelled,
     is_verified,
-    category: fields["category"].u32() as Category,
-    has_revenue_sharing: fields["has_revenue_sharing"].b(),
-    revenue_share_percentage: fields["revenue_share_percentage"].u32(),
-    first_creator: Address.fromScVal(fields["first_creator"]).toString(),
-    pending_creator: decodeOptionalAddress(fields["pending_creator"]),
-    pending_creator_expiry: Number(fields["pending_creator_expiry"].u64()),
-    max_contribution_per_user: scValToBigInt(fields["max_contribution_per_user"]),
-    fee_override: decodeOptionalU32(fields["fee_override"]),
-    deadline_extended: fields["deadline_extended"].b(),
-    effective_amount_raised: scValToBigInt(fields["effective_amount_raised"]),
+    category: spec.category as Category,
+    has_revenue_sharing: spec.has_revenue_sharing,
+    revenue_share_percentage: spec.revenue_share_percentage,
+    first_creator: spec.first_creator,
+    pending_creator: spec.pending_creator,
+    pending_creator_expiry: spec.pending_creator_expiry,
+    max_contribution_per_user: spec.max_contribution_per_user,
+    fee_override: spec.fee_override,
+    deadline_extended: spec.deadline_extended,
+    effective_amount_raised: spec.effective_amount_raised,
     tags,
     cover_image_url,
     milestones,
   };
-}
-
-/**
- * Soroban encodes `Option<T>` as void for `None` and as the bare value for
- * `Some`. Both helpers take the field's ScVal so an absent field still reads
- * as `None`.
- */
-function isScValVoid(val: xdr.ScVal | undefined): boolean {
-  return !val || val.switch().name === "scvVoid";
-}
-
-function decodeOptionalAddress(val: xdr.ScVal | undefined): string | null {
-  return isScValVoid(val) ? null : Address.fromScVal(val as xdr.ScVal).toString();
-}
-
-function decodeOptionalU32(val: xdr.ScVal | undefined): number | null {
-  return isScValVoid(val) ? null : (val as xdr.ScVal).u32();
 }
 
 // Exposed for targeted unit tests of XDR decoding behavior.
@@ -906,14 +901,6 @@ export function initialCampaignsCursor(filters: { category?: Category; creator?:
   return filters.category !== undefined || filters.creator ? 0 : 1;
 }
 
-/** Decodes a `(Vec<Campaign>, u32)` page tuple returned by the paginated views. */
-function decodeCampaignPage(result: xdr.ScVal | null): { campaigns: Campaign[]; next: number } {
-  const [page, next] = result?.vec() ?? [];
-  if (!page || !next) return { campaigns: [], next: 0 };
-  const campaigns = (page.vec() ?? []).map((c) => decodeCampaign(c));
-  return { campaigns, next: next.u32() };
-}
-
 /**
  * Cursor-paginated campaign listing. Each call issues exactly ONE contract
  * view (never one per campaign):
@@ -950,32 +937,21 @@ export async function listCampaigns({
   try {
     if (!filtered) {
       // list_campaigns' `start` is an exclusive id cursor; our cursor is "next id".
-      const result = await invokeViewMethod("list_campaigns", [
-        nativeToScVal(Math.max(0, position - 1), { type: "u32" }),
-        nativeToScVal(pageLimit, { type: "u32" }),
-      ]);
-      const { campaigns, next } = decodeCampaignPage(result);
-      const exhausted = campaigns.length < pageLimit || next + 1 <= position;
-      return { campaigns, nextCursor: exhausted ? null : next + 1 };
+      const page = await generated.listCampaigns(Math.max(0, position - 1), pageLimit);
+      const campaigns = page.campaigns.map(campaignFromSpec);
+      const exhausted = campaigns.length < pageLimit || page.next + 1 <= position;
+      return { campaigns, nextCursor: exhausted ? null : page.next + 1 };
     }
 
-    const result = creator
-      ? await invokeViewMethod("get_creator_campaigns", [
-          new Address(creator).toScVal(),
-          nativeToScVal(position, { type: "u32" }),
-          nativeToScVal(pageLimit, { type: "u32" }),
-        ])
-      : await invokeViewMethod("get_campaigns_by_category", [
-          nativeToScVal(category, { type: "u32" }),
-          nativeToScVal(position, { type: "u32" }),
-          nativeToScVal(pageLimit, { type: "u32" }),
-        ]);
-    const { campaigns: indexed, next } = decodeCampaignPage(result);
+    const page = creator
+      ? await generated.getCreatorCampaigns(creator, position, pageLimit)
+      : await generated.getCampaignsByCategory(category as number, position, pageLimit);
+    const indexed = page.campaigns.map(campaignFromSpec);
     // The creator index has no category filter; narrow it client-side when both are set.
     const campaigns =
       creator && category !== undefined ? indexed.filter((c) => c.category === category) : indexed;
-    const exhausted = indexed.length < pageLimit || next <= position;
-    return { campaigns, nextCursor: exhausted ? null : next };
+    const exhausted = indexed.length < pageLimit || page.next <= position;
+    return { campaigns, nextCursor: exhausted ? null : page.next };
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -1004,23 +980,14 @@ export async function getPlatformStats(): Promise<ContractPlatformStats> {
     };
   }
   try {
-    const result = await invokeViewMethod("get_platform_stats");
-    const map = result?.map();
-    if (!map) throw new Error("Expected ScVal map for PlatformStats.");
-    const fields: Record<string, xdr.ScVal> = {};
-    for (const entry of map) fields[entry.key().sym().toString()] = entry.val();
-    const field = (name: string): xdr.ScVal => {
-      const value = fields[name];
-      if (!value) throw new Error(`PlatformStats is missing ${name}.`);
-      return value;
-    };
+    const stats: SpecPlatformStats = await generated.getPlatformStats();
     return {
-      totalCampaigns: field("total_campaigns").u32(),
-      activeCampaigns: field("active_campaigns").u32(),
-      verifiedCampaigns: field("verified_campaigns").u32(),
-      cancelledCampaigns: field("cancelled_campaigns").u32(),
-      totalAmountRaised: scValToBigInt(field("total_amount_raised")),
-      statsArePartial: fields["stats_are_partial"]?.b() ?? false,
+      totalCampaigns: stats.total_campaigns,
+      activeCampaigns: stats.active_campaigns,
+      verifiedCampaigns: stats.verified_campaigns,
+      cancelledCampaigns: stats.cancelled_campaigns,
+      totalAmountRaised: stats.total_amount_raised,
+      statsArePartial: stats.stats_are_partial,
     };
   } catch (err) {
     throw new Error(parseContractError(err));
@@ -1030,9 +997,7 @@ export async function getPlatformStats(): Promise<ContractPlatformStats> {
 export async function getCampaignCount(): Promise<number> {
   if (USE_MOCKS) return MOCK_CAMPAIGNS.length;
   try {
-    const result = await invokeViewMethod("get_campaign_count");
-    if (!result) return 0;
-    return result.u32();
+    return await generated.getCampaignCount();
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -1041,9 +1006,9 @@ export async function getCampaignCount(): Promise<number> {
 export async function getCampaign(id: number): Promise<Campaign | null> {
   if (USE_MOCKS) return MOCK_CAMPAIGNS.find((c) => c.id === id) ?? null;
   try {
-    const result = await invokeViewMethod("get_campaign", [nativeToScVal(id, { type: "u32" })]);
-    if (!result) return null;
-    return decodeCampaign(result);
+    const spec = await generated.getCampaign(id);
+    if (!spec) return null;
+    return campaignFromSpec(spec);
   } catch (err) {
     const code = getContractErrorCode(err);
     if (code === ContractError.CampaignNotFound) return null;
@@ -1071,12 +1036,7 @@ export async function getAllCampaigns(): Promise<Campaign[]> {
 export async function getContribution(campaignId: number, contributor: string): Promise<bigint> {
   if (USE_MOCKS) return BigInt(0);
   try {
-    const result = await invokeViewMethod("get_contribution", [
-      nativeToScVal(campaignId, { type: "u32" }),
-      new Address(contributor).toScVal(),
-    ]);
-    if (!result) return BigInt(0);
-    return scValToBigInt(result);
+    return await generated.getContribution(campaignId, contributor);
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -1089,12 +1049,7 @@ export async function getContribution(campaignId: number, contributor: string): 
 export async function getPersonalCap(campaignId: number, contributor: string): Promise<bigint> {
   if (USE_MOCKS) return BigInt(0);
   try {
-    const result = await invokeViewMethod("get_personal_cap", [
-      nativeToScVal(campaignId, { type: "u32" }),
-      new Address(contributor).toScVal(),
-    ]);
-    if (!result) return BigInt(0);
-    return scValToBigInt(result);
+    return await generated.getPersonalCap(campaignId, contributor);
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -1103,11 +1058,7 @@ export async function getPersonalCap(campaignId: number, contributor: string): P
 export async function getRevenuePool(campaignId: number): Promise<bigint> {
   if (USE_MOCKS) return BigInt(0);
   try {
-    const result = await invokeViewMethod("get_revenue_pool", [
-      nativeToScVal(campaignId, { type: "u32" }),
-    ]);
-    if (!result) return BigInt(0);
-    return scValToBigInt(result);
+    return await generated.getRevenuePool(campaignId);
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -1116,12 +1067,7 @@ export async function getRevenuePool(campaignId: number): Promise<bigint> {
 export async function getRevenueClaimed(campaignId: number, contributor: string): Promise<bigint> {
   if (USE_MOCKS) return BigInt(0);
   try {
-    const result = await invokeViewMethod("get_revenue_claimed", [
-      nativeToScVal(campaignId, { type: "u32" }),
-      new Address(contributor).toScVal(),
-    ]);
-    if (!result) return BigInt(0);
-    return scValToBigInt(result);
+    return await generated.getRevenueClaimed(campaignId, contributor);
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -1135,22 +1081,6 @@ export async function getRevenueClaimed(campaignId: number, contributor: string)
 export const BPS_DENOMINATOR = 10_000;
 const BPS_CEIL_OFFSET = 9_999;
 
-function decodeMilestone(val: xdr.ScVal): ContractMilestone {
-  const map = val.map();
-  if (!map) throw new Error("Expected ScVal map for Milestone.");
-  const fields: Record<string, xdr.ScVal> = {};
-  for (const entry of map) {
-    const key = entry.key().sym().toString();
-    fields[key] = entry.val();
-  }
-  return {
-    id: fields["id"].u32(),
-    description: fields["description"].str().toString(),
-    payout_bps: fields["payout_bps"].u32(),
-    verified: fields["verified"].b(),
-  };
-}
-
 /**
  * Fetch the on-chain milestone payout plan for `campaignId`.
  * Returns an empty array when the creator has not set a plan.
@@ -1158,10 +1088,13 @@ function decodeMilestone(val: xdr.ScVal): ContractMilestone {
 export async function getMilestones(campaignId: number): Promise<ContractMilestone[]> {
   if (USE_MOCKS) return [];
   try {
-    const result = await invokeViewMethod("get_milestones", [
-      nativeToScVal(campaignId, { type: "u32" }),
-    ]);
-    return result?.vec()?.map(decodeMilestone) ?? [];
+    const milestones = await generated.getMilestones(campaignId);
+    return milestones.map((m) => ({
+      id: m.id,
+      description: m.description,
+      payout_bps: m.payout_bps,
+      verified: m.verified,
+    }));
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -1176,11 +1109,7 @@ export async function isMilestoneClaimed(
 ): Promise<boolean> {
   if (USE_MOCKS) return false;
   try {
-    const result = await invokeViewMethod("is_milestone_claimed", [
-      nativeToScVal(campaignId, { type: "u32" }),
-      nativeToScVal(milestoneId, { type: "u32" }),
-    ]);
-    return result?.b() ?? false;
+    return await generated.isMilestoneClaimed(campaignId, milestoneId);
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -1295,9 +1224,7 @@ export async function extendCampaignDeadline(
 export async function getAdmin(): Promise<string> {
   if (USE_MOCKS) return "GADMIN123456789012345678901234567890123456789012345678901234567890";
   try {
-    const result = await invokeViewMethod("get_admin");
-    if (!result) return "";
-    return Address.fromScVal(result).toString();
+    return await generated.getAdmin();
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -1312,9 +1239,7 @@ export async function getVersion(): Promise<number> {
   if (USE_MOCKS) return 1;
 
   try {
-    const result = await invokeViewMethod("get_version");
-    if (!result) return 0;
-    return result.u32();
+    return await generated.getVersion();
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -1327,9 +1252,7 @@ export async function getPlatformFee(): Promise<number> {
   if (USE_MOCKS) return 250;
 
   try {
-    const result = await invokeViewMethod("get_platform_fee");
-    if (!result) return 0;
-    return result.u32();
+    return await generated.getPlatformFee();
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -1845,8 +1768,7 @@ async function submitBookmarkTx(
 export async function getSavedCampaigns(user: string): Promise<number[]> {
   if (USE_MOCKS) return [...(mockBookmarks.get(user) ?? [])];
   try {
-    const result = await invokeViewMethod("get_saved_campaigns", [new Address(user).toScVal()]);
-    return (result?.vec() ?? []).map((v) => v.u32());
+    return await generated.getSavedCampaigns(user);
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -1855,10 +1777,7 @@ export async function getSavedCampaigns(user: string): Promise<number[]> {
 export async function getSavedCampaignsCount(user: string): Promise<number> {
   if (USE_MOCKS) return (mockBookmarks.get(user) ?? []).length;
   try {
-    const result = await invokeViewMethod("get_saved_campaigns_count", [
-      new Address(user).toScVal(),
-    ]);
-    return result ? result.u32() : 0;
+    return await generated.getSavedCampaignsCount(user);
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -2034,11 +1953,7 @@ export async function updateAdmin(
 export async function getApproveVotes(campaignId: number): Promise<number> {
   if (USE_MOCKS) return 0;
   try {
-    const result = await invokeViewMethod("get_approve_votes", [
-      nativeToScVal(campaignId, { type: "u32" }),
-    ]);
-    if (!result) return 0;
-    return result.u32();
+    return await generated.getApproveVotes(campaignId);
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -2047,11 +1962,7 @@ export async function getApproveVotes(campaignId: number): Promise<number> {
 export async function getRejectVotes(campaignId: number): Promise<number> {
   if (USE_MOCKS) return 0;
   try {
-    const result = await invokeViewMethod("get_reject_votes", [
-      nativeToScVal(campaignId, { type: "u32" }),
-    ]);
-    if (!result) return 0;
-    return result.u32();
+    return await generated.getRejectVotes(campaignId);
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -2060,12 +1971,7 @@ export async function getRejectVotes(campaignId: number): Promise<number> {
 export async function hasVoted(campaignId: number, voter: string): Promise<boolean> {
   if (USE_MOCKS) return false;
   try {
-    const result = await invokeViewMethod("has_voted", [
-      nativeToScVal(campaignId, { type: "u32" }),
-      new Address(voter).toScVal(),
-    ]);
-    if (!result) return false;
-    return result.b();
+    return await generated.hasVoted(campaignId, voter);
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -2074,9 +1980,7 @@ export async function hasVoted(campaignId: number, voter: string): Promise<boole
 export async function getMinVotesQuorum(): Promise<number> {
   if (USE_MOCKS) return 10;
   try {
-    const result = await invokeViewMethod("get_min_votes_quorum");
-    if (!result) return 0;
-    return result.u32();
+    return await generated.getMinVotesQuorum();
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -2085,9 +1989,7 @@ export async function getMinVotesQuorum(): Promise<number> {
 export async function getApprovalThresholdBps(): Promise<number> {
   if (USE_MOCKS) return 5000;
   try {
-    const result = await invokeViewMethod("get_approval_threshold_bps");
-    if (!result) return 0;
-    return result.u32();
+    return await generated.getApprovalThresholdBps();
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -2103,12 +2005,7 @@ export async function getApprovalThresholdBps(): Promise<number> {
 export async function isCommentCensured(campaignId: number, commentHash: string): Promise<boolean> {
   if (USE_MOCKS) return false;
   try {
-    const result = await invokeViewMethod("is_comment_censured", [
-      nativeToScVal(campaignId, { type: "u32" }),
-      xdr.ScVal.scvBytes(Buffer.from(commentHash, "hex")),
-    ]);
-    if (!result) return false;
-    return result.b();
+    return await generated.isCommentCensured(campaignId, commentHash);
   } catch (err) {
     throw new Error(parseContractError(err));
   }
@@ -2257,38 +2154,13 @@ export interface CampaignReserve {
 export async function getCampaignReserve(campaignId: number): Promise<CampaignReserve | null> {
   if (USE_MOCKS) return null;
   try {
-    const result = await invokeViewMethod("get_campaign_reserve", [
-      nativeToScVal(campaignId, { type: "u32" }),
-    ]);
-    if (!result) return null;
-
-    // The contract returns an Option — a void/unit ScVal means None.
-    if (result.switch().name === "scvVoid") return null;
-
-    // Decode the struct fields from the map ScVal.
-    const map = result.map();
-    if (!map) return null;
-
-    let amount = BigInt(0);
-    let release_timestamp = 0;
-    let released = false;
-
-    for (const entry of map) {
-      const key = entry.key().sym();
-      switch (key) {
-        case "amount":
-          amount = scValToBigInt(entry.val());
-          break;
-        case "release_timestamp":
-          release_timestamp = Number(scValToBigInt(entry.val()));
-          break;
-        case "released":
-          released = entry.val().b() ?? false;
-          break;
-      }
-    }
-
-    return { amount, release_timestamp, released };
+    const reserve: SpecCampaignReserve | null = await generated.getCampaignReserve(campaignId);
+    if (!reserve) return null;
+    return {
+      amount: reserve.amount,
+      release_timestamp: Number(reserve.release_timestamp),
+      released: reserve.released,
+    };
   } catch {
     return null;
   }

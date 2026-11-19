@@ -95,10 +95,10 @@ To validate a reported issue, run the following in the `ProofOfHeart-frontend` r
 
 ```bash
 # Install dependencies
-pnpm install
+npm ci
 
 # Run affected component in isolation
-pnpm dev -- --port 3001
+npm run dev -- --port 3001
 
 # Test with a PoC (replace with your exploit)
 echo '{"test":"exploit"}' | curl -X POST http://localhost:3001/api/endpoint
