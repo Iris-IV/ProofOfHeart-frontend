@@ -78,7 +78,12 @@ const NETWORK_PASSPHRASE =
   process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
 
 export type TransactionLifecyclePhase =
-  "building" | "signing" | "submitting" | "confirming" | "confirmed" | "failed";
+  | "building"
+  | "signing"
+  | "submitting"
+  | "confirming"
+  | "confirmed"
+  | "failed";
 
 export interface TransactionLifecycleUpdate {
   phase: TransactionLifecyclePhase;
@@ -1440,29 +1445,22 @@ export async function claimMilestone(
 export async function extendCampaignDeadline(
   campaignId: number,
   additionalDays: number,
+  callerAddress: string,
+  options?: TransactionLifecycleOptions,
 ): Promise<string> {
   if (additionalDays < 1 || additionalDays > 30) throw new Error("additionalDays must be 1..30");
-  const contract = new Contract(CONTRACT_ADDRESS);
-  const op = contract.call(
-    "extend_campaign_deadline",
+
+  if (USE_MOCKS) {
+    console.log(`[MOCK] Extending campaign ${campaignId} deadline by ${additionalDays} days`);
+    return emitMockLifecycle(`mock_extend_${campaignId}_${Date.now()}`, options);
+  }
+
+  const args = [
     nativeToScVal(campaignId, { type: "u32" }),
     nativeToScVal(additionalDays, { type: "u64" }),
-  );
-  // Caller must be campaign creator; retrieve from wallet context if needed
-  // For now use a placeholder — the UI layer should pass the connected wallet address via options
-  const caller =
-    typeof window !== "undefined"
-      ? (window as any).__walletPublicKey ||
-        "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF"
-      : "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF";
-  try {
-    const result = await buildAndSubmitTransaction(caller, op, {
-      operation: "extend_campaign_deadline",
-    } as any);
-    return result.txHash;
-  } catch (err) {
-    throw new Error(parseContractError(err));
-  }
+  ];
+
+  return buildAndSubmitTransaction("extend_campaign_deadline", args, callerAddress, options);
 }
 
 export async function getAdmin(): Promise<string> {
@@ -2718,9 +2716,7 @@ export async function setMilestones(
       ];
       fields.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
       return xdr.ScVal.scvMap(
-        fields.map(
-          ([key, val]) => new xdr.ScMapEntry({ key: xdr.ScVal.scvSymbol(key), val }),
-        ),
+        fields.map(([key, val]) => new xdr.ScMapEntry({ key: xdr.ScVal.scvSymbol(key), val })),
       );
     }),
   );
@@ -2870,4 +2866,153 @@ export async function getCancellationPenaltyBps(): Promise<number> {
     console.warn("[contractClient] get_cancellation_penalty_bps not available:", err);
     return 0;
   }
+}
+
+// Campaign Ownership Transfer (#1767)
+// ---------------------------------------------------------------------------
+
+/**
+ * Initiate a campaign ownership transfer to a new address.
+ * The new owner must accept the transfer before the expiry.
+ *
+ * ScVal shape: initiate_campaign_transfer(campaign_id: u64, new_owner: Address, expiry: u64)
+ *
+ * @param campaignId - The campaign ID
+ * @param newOwnerAddress - The address of the new owner
+ * @param expiryLedger - The ledger number when the transfer offer expires
+ * @param callerAddress - The current owner's address
+ * @param options - Transaction lifecycle options
+ */
+export async function initiateCampaignTransfer(
+  campaignId: number,
+  newOwnerAddress: string,
+  expiryLedger: number,
+  callerAddress: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) {
+    console.log(
+      `[MOCK] Initiating campaign transfer for campaign ${campaignId} to ${newOwnerAddress}`,
+    );
+    return emitMockLifecycle(`mock_transfer_${campaignId}_${Date.now()}`, options);
+  }
+
+  const args = [
+    nativeToScVal(campaignId, { type: "u64" }),
+    new Address(newOwnerAddress).toScVal(),
+    nativeToScVal(expiryLedger, { type: "u64" }),
+  ];
+
+  return buildAndSubmitTransaction("initiate_campaign_transfer", args, callerAddress, options);
+}
+
+/**
+ * Accept a pending campaign ownership transfer.
+ *
+ * ScVal shape: accept_campaign_transfer(campaign_id: u64)
+ *
+ * @param campaignId - The campaign ID
+ * @param callerAddress - The new owner's address (must match pending transfer)
+ * @param options - Transaction lifecycle options
+ */
+export async function acceptCampaignTransfer(
+  campaignId: number,
+  callerAddress: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) {
+    console.log(`[MOCK] Accepting campaign transfer for campaign ${campaignId}`);
+    return emitMockLifecycle(`mock_accept_${campaignId}_${Date.now()}`, options);
+  }
+
+  const args = [nativeToScVal(campaignId, { type: "u64" })];
+
+  return buildAndSubmitTransaction("accept_campaign_transfer", args, callerAddress, options);
+}
+
+/**
+ * Cancel a pending campaign ownership transfer.
+ *
+ * ScVal shape: cancel_campaign_transfer(campaign_id: u64)
+ *
+ * @param campaignId - The campaign ID
+ * @param callerAddress - The current owner's address
+ * @param options - Transaction lifecycle options
+ */
+export async function cancelCampaignTransfer(
+  campaignId: number,
+  callerAddress: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) {
+    console.log(`[MOCK] Cancelling campaign transfer for campaign ${campaignId}`);
+    return emitMockLifecycle(`mock_cancel_transfer_${campaignId}_${Date.now()}`, options);
+  }
+
+  const args = [nativeToScVal(campaignId, { type: "u64" })];
+
+  return buildAndSubmitTransaction("cancel_campaign_transfer", args, callerAddress, options);
+}
+
+/**
+ * Check if a campaign has a pending ownership transfer.
+ *
+ * ScVal shape: has_pending_campaign_transfer(campaign_id: u64) -> bool
+ *
+ * @param campaignId - The campaign ID
+ * @returns True if there is a pending transfer
+ */
+export async function hasPendingCampaignTransfer(campaignId: number): Promise<boolean> {
+  if (USE_MOCKS) {
+    // Mock: return false for most campaigns, true for demo purposes if campaignId is odd
+    return campaignId % 2 === 1;
+  }
+
+  try {
+    const args = [nativeToScVal(campaignId, { type: "u64" })];
+    const result = await invokeViewMethod("has_pending_campaign_transfer", args);
+    return result ? result.b() : false;
+  } catch (err) {
+    console.warn(
+      `[contractClient] has_pending_campaign_transfer failed for campaign ${campaignId}:`,
+      err,
+    );
+    return false;
+  }
+}
+
+// Campaign Metadata Update (#1756)
+// ---------------------------------------------------------------------------
+
+/**
+ * Update campaign title and description on-chain.
+ * Only allowed before any contributions (amount_raised = 0).
+ *
+ * ScVal shape: update_campaign(campaign_id: u64, title: String, description: String)
+ *
+ * @param campaignId - The campaign ID
+ * @param title - New campaign title
+ * @param description - New campaign description
+ * @param callerAddress - The campaign creator's address
+ * @param options - Transaction lifecycle options
+ */
+export async function updateCampaign(
+  campaignId: number,
+  title: string,
+  description: string,
+  callerAddress: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) {
+    console.log(`[MOCK] Updating campaign ${campaignId}: "${title}"`);
+    return emitMockLifecycle(`mock_update_${campaignId}_${Date.now()}`, options);
+  }
+
+  const args = [
+    nativeToScVal(campaignId, { type: "u64" }),
+    nativeToScVal(title, { type: "string" }),
+    nativeToScVal(description, { type: "string" }),
+  ];
+
+  return buildAndSubmitTransaction("update_campaign", args, callerAddress, options);
 }
