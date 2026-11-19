@@ -3,11 +3,15 @@ import { getReportRepository } from "@/lib/reportRepository";
 import { CampaignReport } from "@/lib/campaignReports";
 import { createRateLimiter, rateLimitKeyFromRequest } from "@/lib/rateLimit";
 import { CreateReportBodySchema } from "@/lib/schemas";
+import { requireAdmin } from "@/lib/adminAuth";
 
 const reportRateLimiter = createRateLimiter("campaign_reports", 60_000, 3);
 
 // GET /api/reports  — admin moderation queue
 export async function GET(req: NextRequest) {
+  const auth = await requireAdmin(req);
+  if (!auth.ok) return auth.response;
+
   const url = new URL(req.url);
   const statusParam = url.searchParams.get("status");
   const status = statusParam === "pending" || statusParam === "reviewed" ? statusParam : undefined;
