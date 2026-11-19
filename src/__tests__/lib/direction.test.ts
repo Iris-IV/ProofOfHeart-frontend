@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import {
   SEMANTIC_LANDMARK_MAP,
   auditSemanticLandmarks,

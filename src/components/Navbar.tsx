@@ -187,7 +187,7 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden items-center gap-2 md:flex" aria-label="Primary">
+        <nav className="hidden items-center gap-2 md:flex" aria-label={t("primaryNavigation")}>
           {navLinks.map((link) => {
             const isActive = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
             return (
@@ -257,7 +257,7 @@ export default function Navbar() {
           <button
             onClick={toggleTheme}
             className="flex size-9 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-950 hover:bg-black/5 dark:border-white/15 dark:bg-zinc-800 dark:text-white dark:hover:bg-white/10 transition-colors shadow-sm"
-            aria-label="Toggle theme"
+            aria-label={t("toggleTheme")}
             aria-pressed={mounted && theme === "dark"}
           >
             {!mounted ? (
@@ -320,10 +320,10 @@ export default function Navbar() {
             aria-controls="mobile-menu"
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((o) => !o)}
-            aria-label="Toggle menu"
+            aria-label={t("toggleMenu")}
             className="inline-flex size-11 items-center justify-center rounded-lg border border-black/10 bg-white text-zinc-950 hover:bg-black/5 dark:border-white/15 dark:bg-zinc-900 dark:text-white dark:hover:bg-white/10 md:hidden transition-colors shadow-sm"
           >
-            <span className="sr-only">Toggle menu</span>
+            <span className="sr-only">{t("toggleMenu")}</span>
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
@@ -339,7 +339,7 @@ export default function Navbar() {
           className="border-t border-black/5 dark:border-white/10 md:hidden bg-white dark:bg-zinc-900 motion-safe:animate-in motion-safe:slide-in-from-top duration-300"
         >
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
-            <nav aria-label="Mobile">
+            <nav aria-label={t("mobileNavigation")}>
               <ul className="flex flex-col gap-2">
                 {navLinks.map((link) => {
                   const isActive =

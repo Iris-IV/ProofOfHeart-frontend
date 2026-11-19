@@ -244,7 +244,27 @@ Commits are validated:
 
 If a commit message is invalid, you'll see a helpful error message explaining what needs to be fixed.
 
-## 7) Pull Request Conventions
+## 7) Branch Protection and Required CI Checks
+
+The `main` branch requires all four CI jobs to pass before a PR can be merged:
+
+| Required check | What it runs |
+|---|---|
+| `Lint` | `npm run lint` |
+| `Type Check` | `npm run typecheck` |
+| `Test` | `npm run test:coverage` |
+| `Build` | `npm run build` |
+
+**Admin bypass is disabled** — maintainers and bots are subject to the same rules.
+A PR with a type error, lint failure, or failing test cannot be merged regardless of who opens it.
+
+To verify locally before pushing:
+
+```bash
+npm run lint && npm run typecheck && npm run test && npm run build
+```
+
+## 8) Pull Request Conventions
 
 PR titles must follow the same Conventional Commits format as commit messages. This ensures consistency and enables automated changelog generation.
 
@@ -304,9 +324,9 @@ npm run audit:ci                    # the gate CI runs
 node scripts/check-audit-policy.mjs # allowlist expiry + overrides parity
 ```
 
-Security pins live in the `overrides` block of **both** `package.json` and
-`pnpm-workspace.yaml`; the two must stay identical, and
-`node scripts/check-audit-policy.mjs` fails if they drift. See
+Security pins live in the `overrides` block of `package.json`
+(`package-lock.json` is the only lockfile — see #1787), and
+`node scripts/check-audit-policy.mjs` enforces the policy. See
 [docs/DEPENDENCY_SECURITY.md](docs/DEPENDENCY_SECURITY.md).
 
 ### Validation

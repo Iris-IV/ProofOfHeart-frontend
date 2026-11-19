@@ -9,6 +9,12 @@ jest.mock("../ToastProvider", () => ({
   useToast: jest.fn(),
 }));
 
+// Disable mock mode so Freighter API mocks drive the context under test
+jest.mock("@/lib/runtimeEnv", () => ({
+  ...jest.requireActual("@/lib/runtimeEnv"),
+  IS_MOCK_MODE: false,
+}));
+
 const mockIsConnected = isConnected as jest.Mock;
 const mockIsAllowed = isAllowed as jest.Mock;
 const mockGetAddress = getAddress as jest.Mock;

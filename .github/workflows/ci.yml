@@ -13,9 +13,121 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build and Test
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Run linter
+        run: npm run lint
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Type check
+        run: npm run typecheck
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Run tests with coverage
+        run: npm run test:coverage
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+          verbose: true
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+  lockfile-guard:
+    name: Lockfile Guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # #1787 — npm is the single package manager for this repo
+      # (package.json#packageManager). pnpm/yarn/bun lockfiles must never be
+      # committed again, and package-lock.json must stay tracked so
+      # `npm ci` keeps working.
+      - name: Reject foreign lockfiles, require package-lock.json
+        run: |
+          bad=$(git ls-files | grep -E '^(pnpm-lock\.yaml|pnpm-workspace\.yaml|yarn\.lock|bun\.lock|bun\.lockb)$' || true)
+          if [ -n "$bad" ]; then
+            echo "::error::Non-npm lockfiles are tracked: $bad. This repo uses npm (see package.json#packageManager)."
+            exit 1
+          fi
+          if ! git ls-files --error-unmatch package-lock.json > /dev/null 2>&1; then
+            echo "::error::package-lock.json must be tracked — npm is the package manager and CI installs with npm ci."
+            exit 1
+          fi
+          echo "Lockfiles OK (npm only)."
+
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      contract: ${{ steps.filter.outputs.contract }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            contract:
+              - 'src/lib/contractClient.ts'
+              - 'src/lib/generated/**'
+              - 'tests/e2e/live-soroban.spec.ts'
+              - 'playwright.config.ts'
+              - '.github/workflows/ci.yml'
+
+  e2e-soroban:
+    name: Live Soroban E2E
+    needs: changes
+    if: needs.changes.outputs.contract == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -28,24 +140,119 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Run linter
-        run: npm run lint
+      - name: Install Stellar CLI
+        uses: stellar/stellar-cli@v25.2.0
 
-      - name: Type check
-        run: npm run typecheck
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
 
-      - name: Run tests with coverage
-        run: npm run test:coverage
+      # --- local network ----------------------------------------------------
+      - name: Start local Soroban network
+        run: stellar container start local
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
-          verbose: true
+      - name: Wait for Soroban RPC
+        id: rpc
+        run: |
+          url=""
+          for i in $(seq 1 90); do
+            for candidate in http://localhost:8000/soroban/rpc http://localhost:8000/rpc; do
+              if curl -sf -X POST "$candidate" -H 'content-type: application/json' \
+                  -d '{"jsonrpc":"2.0","id":1,"method":"getHealth","params":{}}' \
+                  | grep -q '"healthy"'; then
+                url="$candidate"
+                break 2
+              fi
+            done
+            sleep 4
+          done
+          if [ -z "$url" ]; then
+            echo "::error::Soroban RPC never became healthy"
+            docker ps -a || true
+            docker logs --tail 100 local || true
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          # The live test execs into the quickstart container to restart
+          # stellar-core for the time jump; discover its actual name.
+          container=$(docker ps --filter 'publish=8000' --format '{{.Names}}' | head -n1)
+          echo "E2E_DOCKER_CONTAINER=$container" >> "$GITHUB_ENV"
+          echo "RPC ready at $url (container: $container)"
+
+      # --- contract artifact from the contract repo's CI ---------------------
+      - name: Download contract wasm artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run_id=$(gh api "repos/Iris-IV/ProofOfHeart-stellar/actions/workflows/ci.yml/runs?branch=main&status=success&per_page=1" --jq '.workflow_runs[0].id // empty')
+          if [ -z "$run_id" ]; then
+            echo "::error::No successful contract CI run found on main"
+            exit 1
+          fi
+          mkdir -p contract-artifact
+          gh run download "$run_id" -R Iris-IV/ProofOfHeart-stellar -n proof_of_heart.wasm -D contract-artifact
+          test -f contract-artifact/proof_of_heart.wasm
+
+      # --- provision accounts, token, contract ------------------------------
+      - name: Provision network state
+        id: provision
+        run: |
+          set -euo pipefail
+          stellar keys generate poh_admin --network local --fund
+          stellar keys generate poh_creator --network local --fund
+          stellar keys generate poh_donor --network local --fund
+          stellar keys generate poh_issuer --network local --fund
+
+          admin=$(stellar keys address poh_admin)
+          creator=$(stellar keys address poh_creator)
+          donor=$(stellar keys address poh_donor)
+          issuer=$(stellar keys address poh_issuer)
+
+          # Platform token: a classic asset wrapped as a SEP-41 token contract.
+          token=$(stellar contract deploy --asset "POH:$issuer" --source poh_issuer --network local)
+          token_check=$(stellar contract id asset --asset "POH:$issuer" --network local)
+          if [ "$token" != "$token_check" ]; then
+            echo "::error::Asset contract id mismatch: $token vs $token_check"
+            exit 1
+          fi
+
+          # Both holder accounts need trustlines: the donor gives, the creator
+          # receives the withdrawal payout.
+          stellar tx new change-trust --source poh_creator --line "POH:$issuer" --limit 10000000000 --network local
+          stellar tx new change-trust --source poh_donor --line "POH:$issuer" --limit 10000000000 --network local
+
+          # 100 POH (7 decimals) to the donor — enough to cover the goal.
+          stellar tx new payment --source poh_issuer --destination "$donor" \
+            --asset "POH:$issuer" --amount 1000000000 --network local
+
+          contract=$(stellar contract deploy --wasm contract-artifact/proof_of_heart.wasm \
+            --source poh_admin --network local)
+          stellar contract invoke --id "$contract" --source poh_admin --network local -- \
+            init --admin "$admin" --token "$token" --platform_fee 300
+
+          {
+            echo "E2E_CONTRACT_ADDRESS=$contract"
+            echo "NEXT_PUBLIC_CONTRACT_ADDRESS=$contract"
+            echo "E2E_ADMIN_SECRET=$(stellar keys secret poh_admin)"
+            echo "E2E_CREATOR_SECRET=$(stellar keys secret poh_creator)"
+            echo "E2E_DONOR_SECRET=$(stellar keys secret poh_donor)"
+          } >> "$GITHUB_ENV"
+          echo "contract=$token" >> "$GITHUB_OUTPUT"
+          echo "Provisioned contract $contract with token $token"
+
+      # --- the happy path (#1789) ------------------------------------------
+      - name: Run live happy path (create → verify → donate → advance time → withdraw)
+        run: npm run test:e2e -- --project=chromium tests/e2e/live-soroban.spec.ts
+        env:
+          E2E_LIVE: "true"
+          NEXT_PUBLIC_USE_MOCKS: "false"
+          NEXT_PUBLIC_SOROBAN_RPC_URL: ${{ steps.rpc.outputs.url }}
+
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          docker ps -a || true
+          docker logs --tail 100 "${E2E_DOCKER_CONTAINER:-local}" || true
+          curl -s http://localhost:11626/info | head -c 4000 || true
 
       - name: Build application
         run: npm run build

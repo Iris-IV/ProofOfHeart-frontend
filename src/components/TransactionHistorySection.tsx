@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { type WalletTransactionLogEntry } from "../lib/transactionLog";
 import { explorerTxUrl } from "../utils/explorer";
@@ -68,6 +69,7 @@ export default function TransactionHistorySection({
   walletAddress,
   campaignTitleMap,
 }: TransactionHistorySectionProps) {
+  const t = useTranslations("Accessibility");
   const [isMounted, setIsMounted] = useState(false);
   const { transactions: entries, isLoading } = useWalletTransactions(walletAddress);
 
@@ -114,7 +116,7 @@ export default function TransactionHistorySection({
 
   return (
     <section className="mb-8" aria-labelledby="tx-history-heading">
-      <h2 id="tx-history-heading" className="text-xl font-semibold mb-4">Transaction History</h2>
+      <h2 id="tx-history-heading" className="text-xl font-semibold mb-4">{t("transactionHistoryTitle")}</h2>
 
       {entries.length === 0 ? (
         <p className="text-zinc-500 dark:text-zinc-400">
@@ -123,7 +125,7 @@ export default function TransactionHistorySection({
       ) : (
         <>
           {/* Filter bar */}
-          <div className="flex flex-wrap gap-2 mb-4" role="group" aria-label="Filter transactions">
+          <div className="flex flex-wrap gap-2 mb-4" role="group" aria-label={t("filterTransactions")}>
             {actionOptions.map((opt) => (
               <button
                 key={opt}
@@ -146,7 +148,7 @@ export default function TransactionHistorySection({
             </p>
           ) : (
             <>
-              <ul className="space-y-2" aria-label="Transaction history">
+              <ul className="space-y-2" aria-label={t("transactionHistory")}>
                 {paginated.map((entry) => {
                   const campaignTitle =
                     campaignTitleMap[entry.campaignId] ?? `Campaign #${entry.campaignId}`;
@@ -162,7 +164,7 @@ export default function TransactionHistorySection({
                           >
                             {getActionLabel(entry.action)}
                           </span>
-                          <span className="text-xs text-zinc-500 dark:text-zinc-400">Cause:</span>
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400">{t("causeLabel")}</span>
                           <Link
                             href={`/causes/${entry.campaignId}`}
                             className="text-sm font-medium text-zinc-900 dark:text-zinc-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate max-w-[200px] sm:max-w-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-800 rounded"

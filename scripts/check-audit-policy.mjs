@@ -10,12 +10,13 @@
  *    permanent one nobody remembers approving. Requiring an `expiry` and failing
  *    once it passes turns that decision into a scheduled review.
  *
- * 2. **The `overrides` block must be identical in `package.json` and
- *    `pnpm-workspace.yaml`.** CI installs with npm, contributors may install with
- *    pnpm, and a security pin that exists in only one of them means the two
- *    resolve different versions — so the pin protects CI while leaving a local
- *    checkout, or a pnpm-based deploy, vulnerable. `docs/DEPENDENCY_SECURITY.md`
- *    documents this rule; this script enforces it.
+ * 2. **If a `pnpm-workspace.yaml` is present, its `overrides` block must be
+ *    identical to `package.json`'s.** The project is npm-only since #1787 —
+ *    `package-lock.json` is the single lockfile and CI enforces that — but a
+ *    contributor who reintroduces pnpm support must mirror every security pin,
+ *    otherwise the two resolvers disagree and the pin protects only one of
+ *    them. `docs/DEPENDENCY_SECURITY.md` documents this rule; this script
+ *    enforces it whenever the file exists.
  *
  * Dependency-free on purpose: it runs in CI without `npm ci`, so a policy check
  * costs a second of Node startup instead of an install.
@@ -27,7 +28,7 @@
  * Exits 0 when the policy holds, 1 otherwise.
  */
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -390,25 +391,29 @@ export function checkAuditPolicy(options = {}) {
 
   const pkg = readJson(join(root, "package.json"), "package.json", issues);
   if (pkg !== undefined && pkg !== null && typeof pkg === "object") {
-    let pnpmOverrides = null;
-    try {
-      const yaml = readFileSync(join(root, "pnpm-workspace.yaml"), "utf-8");
-      pnpmOverrides = parsePnpmOverrides(yaml);
-    } catch (error) {
-      issues.push({
-        severity: SEVERITY_ERROR,
-        source: "pnpm-workspace.yaml",
-        message: `could not be read: ${error instanceof Error ? error.message : String(error)}`,
-      });
-    }
-    if (pnpmOverrides === null) {
-      issues.push({
-        severity: SEVERITY_ERROR,
-        source: "pnpm-workspace.yaml",
-        message: 'has no "overrides" block',
-      });
-    } else {
-      issues.push(...validateOverrideParity({ overrides: pkg.overrides, pnpmOverrides }));
+    // #1787 — the repo is npm-only; pnpm-workspace.yaml is no longer committed.
+    // Parity is enforced only if someone reintroduces the file.
+    if (existsSync(join(root, "pnpm-workspace.yaml"))) {
+      let pnpmOverrides = null;
+      try {
+        const yaml = readFileSync(join(root, "pnpm-workspace.yaml"), "utf-8");
+        pnpmOverrides = parsePnpmOverrides(yaml);
+      } catch (error) {
+        issues.push({
+          severity: SEVERITY_ERROR,
+          source: "pnpm-workspace.yaml",
+          message: `could not be read: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
+      if (pnpmOverrides === null) {
+        issues.push({
+          severity: SEVERITY_ERROR,
+          source: "pnpm-workspace.yaml",
+          message: 'has no "overrides" block',
+        });
+      } else {
+        issues.push(...validateOverrideParity({ overrides: pkg.overrides, pnpmOverrides }));
+      }
     }
   }
 

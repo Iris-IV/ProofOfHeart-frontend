@@ -5,6 +5,7 @@
   "engines": {
     "node": ">=22"
   },
+  "packageManager": "npm@10.9.2",
   "scripts": {
     "dev": "next dev",
     "build": "node ./scripts/validate-production-build.mjs && next build",
@@ -33,6 +34,7 @@
     "audit:ci": "audit-ci --config audit-ci.json",
     "audit:ci:json": "audit-ci --config audit-ci.json --output-format json",
     "changeset:check": "node scripts/validate-changesets.mjs",
+    "bindings:generate": "node scripts/generate-contract-bindings.mjs",
     "bundle-size": "node scripts/bundle-size-check.mjs",
     "bundle-size:update": "node scripts/bundle-size-check.mjs --update-baseline",
     "changeset": "changeset",

@@ -26,6 +26,7 @@ import { xlmToStroops } from "@/lib/stellarAmount";
 import { fundingGoalBoundsError, formatGoalStroops } from "@/utils/validators";
 import { usePlatformStatus } from "@/hooks/usePlatformStatus";
 import { parseContractError } from "@/utils/contractErrors";
+import { signOffchainPayload } from "@/lib/offchainApiClient";
 import { useCampaignFormDraft } from "@/hooks/useCampaignFormDraft";
 import { CheckCircle2 } from "lucide-react";
 import {
@@ -41,6 +42,7 @@ import {
 
 export default function CreateCampaignPage() {
   const t = useTranslations("CreateCampaign");
+  const tAccessibility = useTranslations("Accessibility");
   const router = useRouter();
   const queryClient = useQueryClient();
   const { publicKey, isWalletConnected, connectWallet, isLoading: walletLoading } = useWallet();
@@ -237,15 +239,26 @@ export default function CreateCampaignPage() {
     ) => {
       if (!email) return;
       try {
+        const payload = { email, campaignId, campaignTitle, creatorAddress };
+        const signed = await signOffchainPayload(
+          {
+            path: "/api/notify-creator",
+            method: "POST",
+            timestamp: Math.floor(Date.now() / 1000),
+            payload,
+          },
+          "notify-creator",
+        );
         const res = await fetch("/api/notify-creator", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email,
-            campaignId,
-            campaignTitle,
-            creatorAddress,
-          }),
+          headers: {
+            "Content-Type": "application/json",
+            "X-Wallet-Address": signed.walletAddress,
+            "X-Request-Signature": signed.signature,
+            "X-Request-Timestamp": String(signed.timestamp),
+            "X-Request-Purpose": "notify-creator",
+          },
+          body: JSON.stringify(payload),
         });
         if (!res.ok) {
           const data = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -652,7 +665,7 @@ export default function CreateCampaignPage() {
                       {description}
                     </SafeMarkdown>
                   ) : (
-                    <span className="italic text-zinc-400">Nothing to preview</span>
+                    <span className="italic text-zinc-400">{tAccessibility("nothingToPreview")}</span>
                   )}
                 </div>
               )}
