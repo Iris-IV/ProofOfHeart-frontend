@@ -3150,151 +3150,244 @@ export async function getCancellationPenaltyBps(): Promise<number> {
   }
 }
 
-// Campaign Ownership Transfer (#1767)
+// ---------------------------------------------------------------------------
+// Batch verification — issue #1782
 // ---------------------------------------------------------------------------
 
 /**
- * Initiate a campaign ownership transfer to a new address.
- * The new owner must accept the transfer before the expiry.
- *
- * ScVal shape: initiate_campaign_transfer(campaign_id: u64, new_owner: Address, expiry: u64)
- *
- * @param campaignId - The campaign ID
- * @param newOwnerAddress - The address of the new owner
- * @param expiryLedger - The ledger number when the transfer offer expires
- * @param callerAddress - The current owner's address
- * @param options - Transaction lifecycle options
+ * Verify multiple campaigns in a single batch transaction (up to 50).
+ * Returns the transaction hash and result with verified/failed IDs.
  */
-export async function initiateCampaignTransfer(
-  campaignId: number,
-  newOwnerAddress: string,
-  expiryLedger: number,
-  callerAddress: string,
+export async function verifyCampaigns(
+  campaignIds: number[],
   options?: TransactionLifecycleOptions,
-): Promise<string> {
-  if (USE_MOCKS) {
-    console.log(
-      `[MOCK] Initiating campaign transfer for campaign ${campaignId} to ${newOwnerAddress}`,
-    );
-    return emitMockLifecycle(`mock_transfer_${campaignId}_${Date.now()}`, options);
+): Promise<{ txHash: string; verified: number[]; failed: number[] }> {
+  if (campaignIds.length === 0) {
+    throw new Error("At least one campaign must be selected");
+  }
+  if (campaignIds.length > 50) {
+    throw new Error("Maximum 50 campaigns per batch");
   }
 
-  const args = [
-    nativeToScVal(campaignId, { type: "u64" }),
-    new Address(newOwnerAddress).toScVal(),
-    nativeToScVal(expiryLedger, { type: "u64" }),
-  ];
-
-  return buildAndSubmitTransaction("initiate_campaign_transfer", args, callerAddress, options);
-}
-
-/**
- * Accept a pending campaign ownership transfer.
- *
- * ScVal shape: accept_campaign_transfer(campaign_id: u64)
- *
- * @param campaignId - The campaign ID
- * @param callerAddress - The new owner's address (must match pending transfer)
- * @param options - Transaction lifecycle options
- */
-export async function acceptCampaignTransfer(
-  campaignId: number,
-  callerAddress: string,
-  options?: TransactionLifecycleOptions,
-): Promise<string> {
   if (USE_MOCKS) {
-    console.log(`[MOCK] Accepting campaign transfer for campaign ${campaignId}`);
-    return emitMockLifecycle(`mock_accept_${campaignId}_${Date.now()}`, options);
+    await emitMockLifecycle("mock_tx_verify_campaigns", options);
+    return { txHash: "mock_tx_hash", verified: campaignIds, failed: [] };
   }
 
-  const args = [nativeToScVal(campaignId, { type: "u64" })];
+  const callerAddress = await getSignerAddress();
+  const contract = new Contract(CONTRACT_ADDRESS);
 
-  return buildAndSubmitTransaction("accept_campaign_transfer", args, callerAddress, options);
-}
+  const idsAsScVal = campaignIds.map((id) => nativeToScVal(id, { type: "u32" }));
+  const vectorArg = xdr.ScVal.scvVec(idsAsScVal);
 
-/**
- * Cancel a pending campaign ownership transfer.
- *
- * ScVal shape: cancel_campaign_transfer(campaign_id: u64)
- *
- * @param campaignId - The campaign ID
- * @param callerAddress - The current owner's address
- * @param options - Transaction lifecycle options
- */
-export async function cancelCampaignTransfer(
-  campaignId: number,
-  callerAddress: string,
-  options?: TransactionLifecycleOptions,
-): Promise<string> {
-  if (USE_MOCKS) {
-    console.log(`[MOCK] Cancelling campaign transfer for campaign ${campaignId}`);
-    return emitMockLifecycle(`mock_cancel_transfer_${campaignId}_${Date.now()}`, options);
-  }
-
-  const args = [nativeToScVal(campaignId, { type: "u64" })];
-
-  return buildAndSubmitTransaction("cancel_campaign_transfer", args, callerAddress, options);
-}
-
-/**
- * Check if a campaign has a pending ownership transfer.
- *
- * ScVal shape: has_pending_campaign_transfer(campaign_id: u64) -> bool
- *
- * @param campaignId - The campaign ID
- * @returns True if there is a pending transfer
- */
-export async function hasPendingCampaignTransfer(campaignId: number): Promise<boolean> {
-  if (USE_MOCKS) {
-    // Mock: return false for most campaigns, true for demo purposes if campaignId is odd
-    return campaignId % 2 === 1;
-  }
+  const op = contract.call("verify_campaigns", vectorArg);
 
   try {
-    const args = [nativeToScVal(campaignId, { type: "u64" })];
-    const result = await invokeViewMethod("has_pending_campaign_transfer", args);
-    return result ? result.b() : false;
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "verify_campaigns",
+    });
+
+    // Parse return value: (Vec<u32>, Vec<u32>) = (verified_ids, failed_ids)
+    const returnVal = txResult.returnValue;
+    const verified = parseIdVector(returnVal?.[0]);
+    const failed = parseIdVector(returnVal?.[1]);
+
+    return { txHash: txResult.txHash, verified, failed };
   } catch (err) {
-    console.warn(
-      `[contractClient] has_pending_campaign_transfer failed for campaign ${campaignId}:`,
-      err,
-    );
-    return false;
+    throw new Error(parseContractError(err));
   }
 }
 
-// Campaign Metadata Update (#1756)
+/**
+ * Batch verify all milestones for a campaign.
+ */
+export async function batchVerifyMilestones(
+  campaignId: number,
+  options?: TransactionLifecycleOptions,
+): Promise<{ txHash: string; verifiedIds: number[] }> {
+  if (USE_MOCKS) {
+    await emitMockLifecycle("mock_tx_batch_verify_milestones", options);
+    return { txHash: "mock_tx_hash", verifiedIds: [] };
+  }
+
+  const callerAddress = await getSignerAddress();
+  const contract = new Contract(CONTRACT_ADDRESS);
+
+  const op = contract.call(
+    "batch_verify_milestones",
+    nativeToScVal(campaignId, { type: "u32" }),
+  );
+
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "batch_verify_milestones",
+    });
+
+    const verifiedIds = parseIdVector(txResult.returnValue);
+    return { txHash: txResult.txHash, verifiedIds };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+// Helper to parse vector of u32s from ScVal
+function parseIdVector(scval: xdr.ScVal | undefined): number[] {
+  if (!scval) return [];
+  if (scval.kind() !== xdr.ScValType.scvVec()) return [];
+  return scval.vec()?.map((item) => item.u32() ?? 0) ?? [];
+}
+
+// ---------------------------------------------------------------------------
+// Admin moderation — issue #1781
 // ---------------------------------------------------------------------------
 
 /**
- * Update campaign title and description on-chain.
- * Only allowed before any contributions (amount_raised = 0).
- *
- * ScVal shape: update_campaign(campaign_id: u64, title: String, description: String)
- *
- * @param campaignId - The campaign ID
- * @param title - New campaign title
- * @param description - New campaign description
- * @param callerAddress - The campaign creator's address
- * @param options - Transaction lifecycle options
+ * Cancel a campaign as admin.
  */
-export async function updateCampaign(
+export async function adminCancelCampaign(
   campaignId: number,
-  title: string,
-  description: string,
-  callerAddress: string,
   options?: TransactionLifecycleOptions,
 ): Promise<string> {
-  if (USE_MOCKS) {
-    console.log(`[MOCK] Updating campaign ${campaignId}: "${title}"`);
-    return emitMockLifecycle(`mock_update_${campaignId}_${Date.now()}`, options);
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_admin_cancel_campaign", options);
+
+  const callerAddress = await getSignerAddress();
+  const contract = new Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    "admin_cancel_campaign",
+    nativeToScVal(campaignId, { type: "u32" }),
+  );
+
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "admin_cancel_campaign",
+    });
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Censure a comment by its hash (hides it from view).
+ */
+export async function censureComment(
+  commentHash: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (!commentHash || commentHash.length !== 64) {
+    throw new Error("Invalid comment hash format");
   }
 
-  const args = [
-    nativeToScVal(campaignId, { type: "u64" }),
-    nativeToScVal(title, { type: "string" }),
-    nativeToScVal(description, { type: "string" }),
-  ];
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_censure_comment", options);
 
-  return buildAndSubmitTransaction("update_campaign", args, callerAddress, options);
+  const callerAddress = await getSignerAddress();
+  const contract = new Contract(CONTRACT_ADDRESS);
+
+  const hashBuffer = Buffer.from(commentHash, "hex");
+  const hashScVal = xdr.ScVal.scvBytes(hashBuffer);
+
+  const op = contract.call("censure_comment", hashScVal);
+
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "censure_comment",
+    });
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
 }
+
+/**
+ * Uncensure a comment (make it visible again).
+ */
+export async function uncensureComment(
+  commentHash: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (!commentHash || commentHash.length !== 64) {
+    throw new Error("Invalid comment hash format");
+  }
+
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_uncensure_comment", options);
+
+  const callerAddress = await getSignerAddress();
+  const contract = new Contract(CONTRACT_ADDRESS);
+
+  const hashBuffer = Buffer.from(commentHash, "hex");
+  const hashScVal = xdr.ScVal.scvBytes(hashBuffer);
+
+  const op = contract.call("uncensure_comment", hashScVal);
+
+  try {
+    const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+      ...options,
+      operation: "uncensure_comment",
+    });
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Check if a comment is censured (view method).
+ */
+export async function isCommentCensured(commentHash: string): Promise<boolean> {
+  if (!commentHash || commentHash.length !== 64) {
+    throw new Error("Invalid comment hash format");
+  }
+
+  if (USE_MOCKS) return false;
+
+  try {
+    const hashBuffer = Buffer.from(commentHash, "hex");
+    const hashScVal = xdr.ScVal.scvBytes(hashBuffer);
+
+    const result = await invokeViewMethod("is_comment_censured", [hashScVal]);
+    return result ? result.bool() : false;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/**
+ * Get the count of censured comments (view method).
+ */
+export async function getCensuredCommentCount(): Promise<number> {
+  if (USE_MOCKS) return 0;
+
+  try {
+    const result = await invokeViewMethod("get_censured_comment_count", []);
+    return result ? result.u32() : 0;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Re-exports from specialized modules
+// ---------------------------------------------------------------------------
+
+export {
+  setVotingParams,
+  setMinVotingBalance,
+  setCategoryVotingThreshold,
+  removeCategoryVotingThreshold,
+  purgeVotingState,
+} from "./contractClient.governance";
+
+export {
+  setCampaignFeeOverride,
+  setCategoryDurationCap,
+  removeCategoryDurationCap,
+  setMinCampaignFundingGoal,
+  setMaxCampaignFundingGoal,
+  setMaxContributionPerTx,
+  setCancellationPenaltyBps,
+  setVestingParams,
+} from "./contractClient.limits-fees";
