@@ -173,7 +173,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
     if (parts[1] && parts[1].length > 7) {
       return { valid: false, errorKey: "maxDecimalPlaces" };
     }
-    if (!/^\\d+(?:\\.\\d{1,7})?$/.test(trimmed)) {
+    if (!/^\d+(?:\.\d{1,7})?$/.test(trimmed)) {
       return { valid: false, errorKey: "invalidNumberFormat" };
     }
 
