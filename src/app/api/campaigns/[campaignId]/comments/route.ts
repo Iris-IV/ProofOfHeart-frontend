@@ -30,7 +30,12 @@ export async function GET(
 
   const stored = await getCommentRepository().list(campaignId);
   const notCensured = await filterCensuredComments(campaignId, stored);
-  const all = notCensured.filter((c) => !c.isReported);
+  // Never hide a comment based solely on `isReported` / a single report (#1877).
+  // Comments that have crossed the report threshold are kept visible but carry
+  // `isUnderReview: true` so the UI can display a "this comment is under
+  // review" label.  Only moderator-approved removals (via the restore endpoint)
+  // or on-chain censures (filterCensuredComments) suppress a comment entirely.
+  const all = notCensured;
   const total = all.length;
   const items = all.slice((page - 1) * pageSize, page * pageSize);
 
