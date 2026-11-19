@@ -74,6 +74,9 @@ const HEX_ALLOWLIST = new Set(
     // Official multi-colour Google "G" logomark — must stay literal, a
     // themed recolour would no longer be the Google brand mark.
     "components/SocialLoginButtons.tsx",
+    // Audited theme token values and contrast utilities operate on literal
+    // hex colours in JavaScript for WCAG ratio calculations.
+    "hooks/useTheme.ts",
   ].map((p) => path.normalize(p)),
 );
 
