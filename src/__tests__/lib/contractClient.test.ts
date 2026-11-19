@@ -145,6 +145,13 @@ async function loadClient(options: LoadClientOptions) {
           return { result: { retval: scVal.bigint(25_000_000) } };
         if (method === "get_admin") return { result: { retval: scVal.address(TEST_ADMIN) } };
         if (method === "get_platform_fee") return { result: { retval: scVal.u32(250) } };
+        if (method === "is_paused") return { result: { retval: scVal.bool(false) } };
+        if (method === "is_creation_disabled") return { result: { retval: scVal.bool(false) } };
+        if (method === "get_min_campaign_funding_goal") return { result: { retval: scVal.bigint(100_000n) } };
+        if (method === "get_max_campaign_funding_goal") return { result: { retval: scVal.bigint(1_000_000_000_000_000n) } };
+        if (method === "get_max_contribution_per_tx") return { result: { retval: scVal.bigint(0n) } };
+        if (method === "get_lifetime_contribution") return { result: { retval: scVal.bigint(100_000_000n) } };
+        if (method === "get_personal_cap") return { result: { retval: scVal.bigint(0n) } };
         if (method === "get_approve_votes") return { result: { retval: scVal.u32(12) } };
         if (method === "get_reject_votes") return { result: { retval: scVal.u32(3) } };
         if (method === "has_voted") return { result: { retval: scVal.bool(true) } };
