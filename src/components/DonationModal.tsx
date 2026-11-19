@@ -66,6 +66,11 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
     useDonationLimits(campaign.id, publicKey);
   const { showError } = useToast();
   const { platformFeeBps } = usePlatformFee();
+
+  // TODO #1758: Replace with dynamic token from get_campaign_token
+  // For now, default to XLM but allows easy transition to per-campaign tokens
+  const tokenSymbol = "XLM";
+
   const [estimatedNetworkFeeXlm, setEstimatedNetworkFeeXlm] = useState(
     getEstimatedContributeNetworkFeeXlm,
   );
@@ -216,7 +221,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
   const displayGoal = formatAmount(liveCampaign.funding_goal, locale, { maximumFractionDigits: 2 });
   const fundingProgressText = `${t("percentFunded", {
     percent: displayedPct,
-  })}, ${displayRaised} / ${displayGoal} XLM`;
+  })}, ${displayRaised} / ${displayGoal} ${tokenSymbol}`;
   const totalWalletCost =
     amountNum > 0 ? amountNum + estimatedNetworkFeeXlm : estimatedNetworkFeeXlm;
 
@@ -384,7 +389,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
           <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
             <span>{t("percentFunded", { percent: displayedPct })}</span>
             <span>
-              {displayRaised} / {displayGoal} XLM
+              {displayRaised} / {displayGoal} {tokenSymbol}
             </span>
           </div>
           <div
@@ -450,7 +455,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
                   className="w-full px-4 py-3 pr-16 rounded-xl border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-zinc-400">
-                  XLM
+                  {tokenSymbol}
                 </span>
               </div>
 
@@ -475,7 +480,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
                       }}
                       className={`tap-target focus-ring min-w-12 flex-1 rounded-control border px-3 py-2 text-sm font-semibold transition-colors duration-[140ms] disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none ${amount === String(preset) ? "border-brand bg-brand-subtle text-brand dark:bg-blue-950 dark:text-blue-200" : "border-zinc-300 text-zinc-700 hover:bg-brand/5 dark:border-zinc-600 dark:text-zinc-200"}`}
                     >
-                      {preset} XLM
+                      {preset} {tokenSymbol}
                     </button>
                   ))}
                 </div>
@@ -527,7 +532,8 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
                 <div className="flex justify-between gap-4">
                   <dt className="text-zinc-600 dark:text-zinc-400">{t("contributionLine")}</dt>
                   <dd className="font-medium text-zinc-900 dark:text-zinc-50 tabular-nums">
-                    {amountNum.toLocaleString(undefined, { maximumFractionDigits: 7 })} XLM
+                    {amountNum.toLocaleString(undefined, { maximumFractionDigits: 7 })}{" "}
+                    {tokenSymbol}
                   </dd>
                 </div>
                 <div className="flex justify-between gap-4">
@@ -536,7 +542,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
                     {estimatedNetworkFeeXlm.toLocaleString(undefined, {
                       maximumFractionDigits: 7,
                     })}{" "}
-                    XLM
+                    {tokenSymbol}
                   </dd>
                 </div>
                 <div className="flex justify-between gap-4 border-t border-zinc-200 dark:border-zinc-600 pt-2">
@@ -544,7 +550,8 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
                     {t("totalLine")}
                   </dt>
                   <dd className="font-semibold text-zinc-900 dark:text-zinc-50 tabular-nums">
-                    {totalWalletCost.toLocaleString(undefined, { maximumFractionDigits: 7 })} XLM
+                    {totalWalletCost.toLocaleString(undefined, { maximumFractionDigits: 7 })}{" "}
+                    {tokenSymbol}
                   </dd>
                 </div>
               </dl>

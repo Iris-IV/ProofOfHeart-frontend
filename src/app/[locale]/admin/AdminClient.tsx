@@ -39,10 +39,13 @@ import { Link } from "@/i18n/routing";
 import { appendAdminAuditLog, AdminAuditLogEntry, getAdminAuditLog } from "@/lib/adminLog";
 import {
   getAdmin,
+  getPendingAdmin,
   getPlatformFee,
   getPlatformReport,
   getPlatformStats,
-  updateAdmin,
+  initiateAdminTransfer,
+  acceptAdminTransfer,
+  cancelAdminTransfer,
   updatePlatformFee,
   verifyCampaign,
   cancelCampaign,
@@ -109,6 +112,7 @@ export default function AdminDashboard() {
     message.startsWith("ContractErrors.") ? tContractErrors(message) : message;
 
   const [adminAddress, setAdminAddress] = useState<string | null>(null);
+  const [pendingAdmin, setPendingAdmin] = useState<string | null>(null);
   const [platformFee, setPlatformFee] = useState<number | null>(null);
   const [feeInput, setFeeInput] = useState("");
   const [newAdminInput, setNewAdminInput] = useState("");
@@ -121,6 +125,7 @@ export default function AdminDashboard() {
   const [isAdminLoading, setIsAdminLoading] = useState(true);
   const [isUpdatingFee, setIsUpdatingFee] = useState(false);
   const [isUpdatingAdmin, setIsUpdatingAdmin] = useState(false);
+  const [isAcceptingAdmin, setIsAcceptingAdmin] = useState(false);
   const [auditLog, setAuditLog] = useState<AdminAuditLogEntry[]>([]);
   const [reports, setReports] = useState<CampaignReport[]>([]);
   const [txPhase, setTxPhase] = useState<TransactionLifecyclePhase | null>(null);
@@ -157,9 +162,14 @@ export default function AdminDashboard() {
 
     const loadData = async () => {
       try {
-        const [addr, fee] = await Promise.all([getAdmin(), getPlatformFee()]);
+        const [addr, fee, pending] = await Promise.all([
+          getAdmin(),
+          getPlatformFee(),
+          getPendingAdmin(),
+        ]);
         if (cancelled) return;
         setAdminAddress(addr);
+        setPendingAdmin(pending);
         setPlatformFee(fee);
         setFeeInput(String(fee));
       } catch (err) {
@@ -371,7 +381,7 @@ export default function AdminDashboard() {
     setIsUpdatingAdmin(true);
     setTxPhase(null);
     try {
-      const txHash = await updateAdmin(nextAdmin, {
+      const txHash = await initiateAdminTransfer(nextAdmin, {
         onStatus: ({ phase }) => setTxPhase(phase),
       });
       if (publicKey) {
@@ -383,14 +393,46 @@ export default function AdminDashboard() {
         });
         await refreshAuditLog(publicKey);
       }
-      setAdminAddress(nextAdmin);
+      setPendingAdmin(nextAdmin);
       setNewAdminInput("");
-      showSuccess(t("adminTransferSuccess"));
+      showSuccess(t("adminTransferInitiated"));
       setIsTransferModalOpen(false);
     } catch (err) {
       showError(parseContractError(err));
     } finally {
       setIsUpdatingAdmin(false);
+      setTxPhase(null);
+    }
+  };
+
+  const handleCancelAdminTransfer = async () => {
+    setIsUpdatingAdmin(true);
+    try {
+      const txHash = await cancelAdminTransfer({ onStatus: ({ phase }) => setTxPhase(phase) });
+      setPendingAdmin(null);
+      if (publicKey) await refreshAuditLog(publicKey);
+      showSuccess(t("adminTransferCancelled"));
+      void txHash;
+    } catch (err) {
+      showError(localizeContractError(parseContractError(err)));
+    } finally {
+      setIsUpdatingAdmin(false);
+      setTxPhase(null);
+    }
+  };
+
+  const handleAcceptAdminTransfer = async () => {
+    if (!publicKey) return;
+    setIsAcceptingAdmin(true);
+    try {
+      await acceptAdminTransfer(publicKey, { onStatus: ({ phase }) => setTxPhase(phase) });
+      setAdminAddress(publicKey);
+      setPendingAdmin(null);
+      showSuccess(t("adminTransferAccepted"));
+    } catch (err) {
+      showError(localizeContractError(parseContractError(err)));
+    } finally {
+      setIsAcceptingAdmin(false);
       setTxPhase(null);
     }
   };
@@ -422,6 +464,25 @@ export default function AdminDashboard() {
 
   if (isAdminLoading || isLoading) {
     return <AdminSkeleton />;
+  }
+
+  const isPendingAdmin = !!publicKey && isSameAddress(publicKey, pendingAdmin);
+
+  if (!isAdmin && isPendingAdmin) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center gap-5 p-6 text-center">
+        <h1 className="text-2xl font-bold">{t("pendingAdminTitle")}</h1>
+        <p className="text-zinc-500 dark:text-zinc-400">{t("pendingAdminDesc")}</p>
+        <button
+          type="button"
+          onClick={() => void handleAcceptAdminTransfer()}
+          disabled={isAcceptingAdmin}
+          className="rounded-2xl bg-green-600 px-6 py-3 font-bold text-white disabled:opacity-50"
+        >
+          {isAcceptingAdmin ? (txPhaseLabel ?? t("acceptingAdmin")) : t("acceptAdmin")}
+        </button>
+      </div>
+    );
   }
 
   if (!isAdmin) {
@@ -824,6 +885,22 @@ export default function AdminDashboard() {
               >
                 {isUpdatingAdmin ? (txPhaseLabel ?? t("awaitingSignature")) : t("transferAdmin")}
               </button>
+              {pendingAdmin && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+                  <p className="font-semibold">{t("pendingAdminLabel")}</p>
+                  <p className="mt-1 break-all font-mono text-xs">{pendingAdmin}</p>
+                  <button
+                    type="button"
+                    onClick={() => void handleCancelAdminTransfer()}
+                    disabled={isUpdatingAdmin}
+                    className="mt-3 text-sm font-bold underline disabled:opacity-50"
+                  >
+                    {isUpdatingAdmin
+                      ? (txPhaseLabel ?? t("cancellingAdmin"))
+                      : t("cancelAdminTransfer")}
+                  </button>
+                </div>
+              )}
             </form>
           </section>
 
