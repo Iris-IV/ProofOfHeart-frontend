@@ -493,7 +493,13 @@
     "invalidAmount": "Por favor, ingresa un monto válido.",
     "amountMustBePositive": "El monto debe ser mayor que cero.",
     "invalidNumberFormat": "Formato de número inválido.",
-    "maxDecimalPlaces": "Se permiten máximo 7 decimales."
+    "maxDecimalPlaces": "Se permiten máximo 7 decimales.",
+    "amountExceedsRemainingGoal": "El monto supera el objetivo de financiación restante.",
+    "campaignAlreadyFunded": "Esta causa ya alcanzó su objetivo de financiación.",
+    "amountExceedsAllowance": "El monto supera tu límite de contribución restante.",
+    "limitsLoading": "Comprobando tus límites de contribución…",
+    "limitsUnavailable": "No se pudieron verificar los límites de contribución. Inténtalo de nuevo.",
+    "platformPaused": "La plataforma está pausada temporalmente. Las donaciones están deshabilitadas."
   },
   "WithdrawFunds": {
     "withdrawalSuccessToast": "¡Retiro exitoso! Recibiste {amount} XLM.",
