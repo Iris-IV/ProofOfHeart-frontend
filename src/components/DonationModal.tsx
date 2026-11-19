@@ -3,7 +3,11 @@
 import { useState, useEffect, memo, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import Modal from "./ui/Modal";
-import { contribute, estimateContributeNetworkFee, getCampaign } from "../lib/contractClient";
+import { contribute, estimateContributeNetworkFee, getCampaign, getDonationLimits, getPlatformStatus } from "../lib/contractClient";
+import { calculateDonationAllowance } from "../lib/donationLimits";
+import { useDonationLimits } from "../hooks/useDonationLimits";
+import { usePlatformStatus } from "../hooks/usePlatformStatus";
+import { formatGoalStroops } from "../utils/validators";
 import { getEstimatedContributeNetworkFeeXlm } from "../lib/networkFee";
 import { Campaign, basisPointsToPercentage } from "../types";
 import { xlmToStroops, stroopsToXlmNumber } from "@/lib/stellarAmount";
@@ -46,6 +50,10 @@ type DonationValidationKey =
   | "invalidNumberFormat"
   | "maxDecimalPlaces"
   | "amountExceedsRemainingGoal"
+  | "amountExceedsAllowance"
+  | "limitsLoading"
+  | "limitsUnavailable"
+  | "platformPaused"
   | "campaignAlreadyFunded";
 
 function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModalProps) {
@@ -53,8 +61,16 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
   const tModal = useTranslations("DonationModal");
   const tContractErrors = useTranslations("ContractErrors");
   const { publicKey } = useWallet();
+  const { isPaused, isWriteDisabled } = usePlatformStatus();
+  const { limits, isLoading: limitsLoading, error: limitsError, refetch: refetchLimits } =
+    useDonationLimits(campaign.id, publicKey);
   const { showError } = useToast();
   const { platformFeeBps } = usePlatformFee();
+
+  // TODO #1758: Replace with dynamic token from get_campaign_token
+  // For now, default to XLM but allows easy transition to per-campaign tokens
+  const tokenSymbol = "XLM";
+
   const [estimatedNetworkFeeXlm, setEstimatedNetworkFeeXlm] = useState(
     getEstimatedContributeNetworkFeeXlm,
   );
@@ -126,6 +142,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
   const locale = useLocale();
   const goal = stroopsToXlmNumber(liveCampaign.funding_goal);
   const raised = stroopsToXlmNumber(liveCampaign.amount_raised);
+  const allowance = limits ? calculateDonationAllowance(liveCampaign, limits) : null;
 
   const validateAmount = (
     value: string,
@@ -161,16 +178,25 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
     if (parts[1] && parts[1].length > 7) {
       return { valid: false, errorKey: "maxDecimalPlaces" };
     }
+    if (!/^\d+(?:\.\d{1,7})?$/.test(trimmed)) {
+      return { valid: false, errorKey: "invalidNumberFormat" };
+    }
 
     const remainingGoal = Math.max(0, goal - raised);
     if (remainingGoal === 0) {
       return { valid: false, errorKey: "campaignAlreadyFunded" };
     }
 
-    if (parsed > remainingGoal) {
+    const amountStroops = xlmToStroops(trimmed);
+    if (amountStroops > liveCampaign.funding_goal - liveCampaign.amount_raised) {
       return { valid: false, errorKey: "amountExceedsRemainingGoal" };
     }
-
+    if (!allowance) {
+      return { valid: false, errorKey: limitsLoading ? "limitsLoading" : "limitsUnavailable" };
+    }
+    if (amountStroops > allowance.remaining) {
+      return { valid: false, errorKey: "amountExceedsAllowance" };
+    }
     return { valid: true, amount: parsed };
   };
 
@@ -195,7 +221,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
   const displayGoal = formatAmount(liveCampaign.funding_goal, locale, { maximumFractionDigits: 2 });
   const fundingProgressText = `${t("percentFunded", {
     percent: displayedPct,
-  })}, ${displayRaised} / ${displayGoal} XLM`;
+  })}, ${displayRaised} / ${displayGoal} ${tokenSymbol}`;
   const totalWalletCost =
     amountNum > 0 ? amountNum + estimatedNetworkFeeXlm : estimatedNetworkFeeXlm;
 
@@ -225,7 +251,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
   }, [amount, campaign.id, publicKey, validation.valid]);
 
   const handleDonate = async () => {
-    if (!publicKey) return;
+    if (!publicKey || isWriteDisabled || !limits) return;
 
     try {
       validateContributorNotCreator(publicKey, campaign.creator);
@@ -244,14 +270,39 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
     }
 
     const amountToSend = amount;
+    const stroops = xlmToStroops(amountToSend);
+    // A fresh read prevents the same wallet from silently exceeding a cap
+    // when another device donated after this modal first opened.
+    try {
+      const [latestStatus, latestLimits, latestCampaign] = await Promise.all([
+        getPlatformStatus(true),
+        getDonationLimits(campaign.id, publicKey, true),
+        getCampaign(campaign.id, true),
+      ]);
+      if (latestStatus.isPaused) {
+        setError("platformPaused");
+        return;
+      }
+      if (!latestCampaign) {
+        setError("limitsUnavailable");
+        return;
+      }
+      const freshAllowance = calculateDonationAllowance(latestCampaign, latestLimits);
+      if (stroops > freshAllowance.remaining || stroops <= 0n) {
+        setError("amountExceedsAllowance");
+        void refetchLimits();
+        return;
+      }
+    } catch {
+      setError("limitsUnavailable");
+      return;
+    }
     setError(null);
     setStep("pending");
     setTxPhase(null);
-
     trackReviewContribution(campaign.id);
 
     try {
-      const stroops = xlmToStroops(amountToSend);
       const hash = await contribute(campaign.id, publicKey, stroops, {
         onStatus: ({ phase }) => {
           setTxPhase(phase);
@@ -277,6 +328,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
       setStep("confirmed");
       trackContributionConfirmed(campaign.id);
       onSuccess();
+      void refetchLimits();
     } catch (err) {
       const msg = parseContractError(err);
       const localized = localizeContractError(msg);
@@ -337,7 +389,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
           <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
             <span>{t("percentFunded", { percent: displayedPct })}</span>
             <span>
-              {displayRaised} / {displayGoal} XLM
+              {displayRaised} / {displayGoal} {tokenSymbol}
             </span>
           </div>
           <div
@@ -382,7 +434,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
                   aria-label={t("amountLabel")}
                   aria-describedby={amountError ? "donation-amount-error" : undefined}
                   aria-invalid={amountError ? "true" : "false"}
-                  disabled={isFullyFunded}
+                  disabled={isFullyFunded || isWriteDisabled}
                   onChange={(e) => {
                     // Feed the raw value to validateAmount so invalid input maps
                     // to its specific i18n error key (scientific notation,
@@ -403,7 +455,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
                   className="w-full px-4 py-3 pr-16 rounded-xl border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-zinc-400">
-                  XLM
+                  {tokenSymbol}
                 </span>
               </div>
 
@@ -417,8 +469,8 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
                       key={preset}
                       type="button"
                       disabled={
-                        BigInt(preset) * 10_000_000n >
-                        liveCampaign.funding_goal - liveCampaign.amount_raised
+                        isWriteDisabled || !allowance ||
+                        BigInt(preset) * 10_000_000n > allowance.remaining
                       }
                       aria-pressed={amount === String(preset)}
                       onClick={() => {
@@ -428,7 +480,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
                       }}
                       className={`tap-target focus-ring min-w-12 flex-1 rounded-control border px-3 py-2 text-sm font-semibold transition-colors duration-[140ms] disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none ${amount === String(preset) ? "border-brand bg-brand-subtle text-brand dark:bg-blue-950 dark:text-blue-200" : "border-zinc-300 text-zinc-700 hover:bg-brand/5 dark:border-zinc-600 dark:text-zinc-200"}`}
                     >
-                      {preset} XLM
+                      {preset} {tokenSymbol}
                     </button>
                   ))}
                 </div>
@@ -437,6 +489,30 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
                 <p id="donation-amount-error" role="alert" className="mt-1 text-xs text-red-500">
                   {formatError(amountError)}
                 </p>
+              )}
+              {isPaused && (
+                <p role="alert" className="mt-2 text-xs text-amber-600">
+                  The platform is temporarily paused. Donations are unavailable.
+                </p>
+              )}
+              {limitsError && (
+                <p role="alert" className="mt-2 text-xs text-amber-600">
+                  Unable to verify your current contribution limits. Try again.
+                </p>
+              )}
+              {allowance && (
+                <div data-testid="donation-remaining-allowance" className="mt-2 text-xs text-zinc-600 dark:text-zinc-300">
+                  Remaining allowance: {formatGoalStroops(allowance.remaining)} XLM
+                  {allowance.remaining > 0n && (
+                    <button
+                      type="button"
+                      className="ms-2 underline underline-offset-2"
+                      onClick={() => { setAmount(formatGoalStroops(allowance.remaining)); setError(null); }}
+                    >
+                      Use maximum
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
@@ -456,7 +532,8 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
                 <div className="flex justify-between gap-4">
                   <dt className="text-zinc-600 dark:text-zinc-400">{t("contributionLine")}</dt>
                   <dd className="font-medium text-zinc-900 dark:text-zinc-50 tabular-nums">
-                    {amountNum.toLocaleString(undefined, { maximumFractionDigits: 7 })} XLM
+                    {amountNum.toLocaleString(undefined, { maximumFractionDigits: 7 })}{" "}
+                    {tokenSymbol}
                   </dd>
                 </div>
                 <div className="flex justify-between gap-4">
@@ -465,7 +542,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
                     {estimatedNetworkFeeXlm.toLocaleString(undefined, {
                       maximumFractionDigits: 7,
                     })}{" "}
-                    XLM
+                    {tokenSymbol}
                   </dd>
                 </div>
                 <div className="flex justify-between gap-4 border-t border-zinc-200 dark:border-zinc-600 pt-2">
@@ -473,7 +550,8 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
                     {t("totalLine")}
                   </dt>
                   <dd className="font-semibold text-zinc-900 dark:text-zinc-50 tabular-nums">
-                    {totalWalletCost.toLocaleString(undefined, { maximumFractionDigits: 7 })} XLM
+                    {totalWalletCost.toLocaleString(undefined, { maximumFractionDigits: 7 })}{" "}
+                    {tokenSymbol}
                   </dd>
                 </div>
               </dl>
@@ -624,7 +702,7 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
         <div className="contribution-footer shrink-0 border-t border-zinc-200 bg-white/95 px-4 pt-3 backdrop-blur-sm sm:px-6 dark:border-zinc-700 dark:bg-zinc-900/95">
           <button
             onClick={handleDonate}
-            disabled={!publicKey || !validation.valid}
+            disabled={!publicKey || !validation.valid || isWriteDisabled || !allowance || allowance.remaining <= 0n}
             className="tap-target focus-ring w-full rounded-control bg-linear-to-r from-brand to-accent py-3 font-semibold text-white transition-opacity duration-[140ms] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
           >
             {amountNum > 0 ? t("donateAmount", { amount: amountNum }) : t("donate")}

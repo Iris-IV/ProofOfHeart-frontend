@@ -57,6 +57,7 @@ export default tseslint.config(
       "@typescript-eslint/no-unsafe-return": "off",
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-floating-promises": "off",
+      "no-restricted-imports": ["error", { name: "vitest", message: "This project uses Jest. Import from jest globals or @testing-library instead." }],
     },
   },
   {

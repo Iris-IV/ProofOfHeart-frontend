@@ -34,9 +34,33 @@ export function validateAmount(amount: number | bigint): void {
   }
 }
 
-export function validateFundingGoal(goal: number | bigint): void {
-  if (Number(goal) <= 0) {
+/** Bounds and amounts are contract-native stroops (1 XLM = 10^7 stroops). */
+export interface FundingGoalLimits { min: bigint; max: bigint }
+
+export function formatGoalStroops(stroops: bigint): string {
+  const negative = stroops < 0n;
+  const absolute = negative ? -stroops : stroops;
+  const whole = (absolute / 10_000_000n).toString();
+  const fractional = (absolute % 10_000_000n).toString().padStart(7, "0").replace(/0+$/, "");
+  return `${negative ? "-" : ""}${whole}${fractional ? "." + fractional : ""}`;
+}
+
+export function fundingGoalBoundsError(goal: bigint, limits: FundingGoalLimits): string | null {
+  if (goal < limits.min || goal > limits.max) {
+    return `Funding goal must be between ${formatGoalStroops(limits.min)} and ${formatGoalStroops(limits.max)} XLM.`;
+  }
+  return null;
+}
+
+/** Optional range keeps the old positive-only check as a fallback. */
+export function validateFundingGoal(goal: number | bigint, limits?: FundingGoalLimits): void {
+  if ((typeof goal === "number" && (!Number.isSafeInteger(goal) || goal <= 0)) ||
+      (typeof goal === "bigint" && goal <= 0n)) {
     throw new ContractErrorException(ContractError.FundingGoalMustBePositive);
+  }
+  if (limits) {
+    const rangeError = fundingGoalBoundsError(BigInt(goal), limits);
+    if (rangeError) throw new Error(rangeError);
   }
 }
 

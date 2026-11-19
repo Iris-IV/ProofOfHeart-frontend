@@ -122,9 +122,25 @@ jest.mock("@/components/WalletContext", () => ({
 }));
 
 const mockCreateCampaign = jest.fn();
+const mockGetFundingGoalBounds = jest.fn();
+const mockGetPlatformStatus = jest.fn();
+let mockIsPaused = false;
+let mockCreationDisabled = false;
+jest.mock("@/hooks/usePlatformStatus", () => ({
+  usePlatformStatus: () => ({
+    isPaused: mockIsPaused,
+    isCreationDisabled: mockCreationDisabled,
+    isCreationBlocked: mockIsPaused || mockCreationDisabled,
+    isWriteDisabled: mockIsPaused,
+    isLoading: false,
+    isError: false,
+  }),
+}));
 
 jest.mock("@/lib/contractClient", () => ({
   createCampaign: (...args: unknown[]) => mockCreateCampaign(...args),
+  getFundingGoalBounds: (...args: unknown[]) => mockGetFundingGoalBounds(...args),
+  getPlatformStatus: (...args: unknown[]) => mockGetPlatformStatus(...args),
 }));
 
 // ---------------------------------------------------------------------------
@@ -181,6 +197,10 @@ beforeEach(() => {
   localStorage.clear();
   setWalletDisconnected();
   mockCreateCampaign.mockResolvedValue({ txHash: "mock_tx_hash", campaignId: 7 });
+  mockIsPaused = false;
+  mockCreationDisabled = false;
+  mockGetFundingGoalBounds.mockResolvedValue({ min: 100_000n, max: 1_000_000_000_000_000n });
+  mockGetPlatformStatus.mockResolvedValue({ isPaused: false, isCreationDisabled: false });
 });
 
 // ---------------------------------------------------------------------------
@@ -999,5 +1019,45 @@ describe("CreateCampaignPage — review modal interactions", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
+  });
+});
+
+describe("Contract policy guards (#1759, #1761, #1762)", () => {
+  it("shows a disabled creation state instead of the form", () => {
+    mockCreationDisabled = true;
+    renderPage();
+    expect(screen.getByRole("alert")).toHaveTextContent("Campaign creation is temporarily disabled");
+    expect(screen.queryByRole("button", { name: /launch campaign/i })).not.toBeInTheDocument();
+  });
+
+  it("blocks creation when the whole platform is paused", () => {
+    mockIsPaused = true;
+    renderPage();
+    expect(screen.getByRole("alert")).toHaveTextContent("platform is temporarily paused");
+    expect(screen.queryByLabelText(/funding goal/i)).not.toBeInTheDocument();
+  });
+
+  it("rejects a goal below the admin-set minimum before review/signing", async () => {
+    setWalletConnected();
+    mockGetFundingGoalBounds.mockResolvedValue({ min: 5_000_000_000n, max: 10_000_000_000n });
+    renderPage();
+    await fillRequiredFields({ fundingGoal: "400" });
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+    expect(screen.getByRole("alert")).toHaveTextContent("between 500 and 1000 XLM");
+    expect(screen.queryByRole("button", { name: /confirm & sign/i })).not.toBeInTheDocument();
+    expect(mockCreateCampaign).not.toHaveBeenCalled();
+  });
+
+  it("rechecks changed bounds at confirmation before invoking the contract", async () => {
+    setWalletConnected();
+    mockGetFundingGoalBounds
+      .mockResolvedValueOnce({ min: 100_000n, max: 1_000_000_000_000_000n })
+      .mockResolvedValueOnce({ min: 20_000_000_000n, max: 40_000_000_000n });
+    renderPage();
+    await fillRequiredFields({ fundingGoal: "1000" });
+    await userEvent.click(screen.getByRole("button", { name: /launch campaign/i }));
+    await userEvent.click(screen.getByRole("button", { name: /confirm & sign/i }));
+    await waitFor(() => expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("between 2000 and 4000 XLM")));
+    expect(mockCreateCampaign).not.toHaveBeenCalled();
   });
 });

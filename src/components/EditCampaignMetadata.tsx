@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import Modal from "./ui/Modal";
+// import { updateCampaign } from "../lib/contractClient"; // TODO #1756: Uncomment when integrating contract update
 
 interface Props {
   campaignId: number;
@@ -69,6 +70,15 @@ export default function EditCampaignMetadata({
     }
 
     setCoverImageError(null);
+
+    // TODO #1756: Call updateCampaign(campaignId, title, description, callerAddress)
+    // from contractClient to persist changes on-chain. This should replace localStorage
+    // for published campaigns. Keep localStorage only for draft/unsaved edits.
+    // Example:
+    // await updateCampaign(campaignId, title, description, publicKey, {
+    //   onStatus: ({ phase }) => setPhase(phase)
+    // });
+
     const data: MetaOverride = {
       title,
       description,

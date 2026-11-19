@@ -16,6 +16,7 @@ import NotificationSettings from "./NotificationSettings";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { useSavedCampaignsCount } from "@/hooks/useSavedCampaigns";
 import { useContractVersion } from "@/hooks/useContractVersion";
+import { usePlatformStatus } from "@/hooks/usePlatformStatus";
 import { IS_MOCK_MODE } from "@/lib/runtimeEnv";
 import { isSwipeUpToClose, type TouchPoint } from "@/lib/mobileMenuGesture";
 
@@ -68,6 +69,7 @@ export default function Navbar() {
   const savedCount = useSavedCampaignsCount();
   const { admin: adminAddress } = useAdmin();
   const { isMismatch, version, expectedVersion } = useContractVersion();
+  const { isPaused, isCreationBlocked, isError: platformStatusError } = usePlatformStatus();
 
   const { campaigns } = useCampaigns();
   const pendingCount = useMemo(() => {
@@ -154,6 +156,16 @@ export default function Navbar() {
           </span>
         </div>
       )}
+      {isPaused && (
+        <div role="alert" data-testid="platform-paused-banner" className="border-b border-amber-300 bg-amber-100 px-4 py-2 text-center text-sm font-semibold text-amber-900 dark:bg-amber-950/70 dark:text-amber-200">
+          The platform is temporarily paused. Donations, voting, campaign creation, and withdrawals are disabled.
+        </div>
+      )}
+      {platformStatusError && (
+        <div role="alert" className="border-b border-amber-300 bg-amber-50 px-4 py-2 text-center text-xs text-amber-900 dark:bg-amber-950/70 dark:text-amber-200">
+          Platform availability cannot be verified. Transactions are temporarily disabled.
+        </div>
+      )}
       {walletNetworkWarning && (
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs font-semibold text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200">
           {walletNetworkWarning}
@@ -175,7 +187,7 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden items-center gap-2 md:flex" aria-label="Primary">
+        <nav className="hidden items-center gap-2 md:flex" aria-label={t("primaryNavigation")}>
           {navLinks.map((link) => {
             const isActive = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
             return (
@@ -245,7 +257,7 @@ export default function Navbar() {
           <button
             onClick={toggleTheme}
             className="flex size-9 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-950 hover:bg-black/5 dark:border-white/15 dark:bg-zinc-800 dark:text-white dark:hover:bg-white/10 transition-colors shadow-sm"
-            aria-label="Toggle theme"
+            aria-label={t("toggleTheme")}
             aria-pressed={mounted && theme === "dark"}
           >
             {!mounted ? (
@@ -270,14 +282,14 @@ export default function Navbar() {
               </button>
             ) : (
               <div className="flex items-center gap-3 ps-2">
-                <Link
+                {!isCreationBlocked && <Link
                   href="/causes/new"
                   className="inline-flex items-center gap-1.5 h-9 px-3 lg:px-4 rounded-full bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/20"
                   title={t("createCampaign")}
                 >
                   <Plus size={14} />
                   <span className="hidden lg:inline">{t("createCampaign")}</span>
-                </Link>
+                </Link>}
                 <div className="flex flex-col items-end">
                   <span className="hidden lg:block text-[10px] uppercase tracking-wider font-bold text-zinc-400 dark:text-zinc-500 leading-none mb-1">
                     {/* #649 — Social users recognise their account name, not a G… address. */}
@@ -308,10 +320,10 @@ export default function Navbar() {
             aria-controls="mobile-menu"
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((o) => !o)}
-            aria-label="Toggle menu"
+            aria-label={t("toggleMenu")}
             className="inline-flex size-11 items-center justify-center rounded-lg border border-black/10 bg-white text-zinc-950 hover:bg-black/5 dark:border-white/15 dark:bg-zinc-900 dark:text-white dark:hover:bg-white/10 md:hidden transition-colors shadow-sm"
           >
-            <span className="sr-only">Toggle menu</span>
+            <span className="sr-only">{t("toggleMenu")}</span>
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
@@ -327,7 +339,7 @@ export default function Navbar() {
           className="border-t border-black/5 dark:border-white/10 md:hidden bg-white dark:bg-zinc-900 motion-safe:animate-in motion-safe:slide-in-from-top duration-300"
         >
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
-            <nav aria-label="Mobile">
+            <nav aria-label={t("mobileNavigation")}>
               <ul className="flex flex-col gap-2">
                 {navLinks.map((link) => {
                   const isActive =
@@ -372,7 +384,7 @@ export default function Navbar() {
 
             <ContrastToggle className="w-full justify-center md:hidden" />
 
-            {isWalletConnected && (
+            {isWalletConnected && !isCreationBlocked && (
               <Link
                 href="/causes/new"
                 onClick={() => setMenuOpen(false)}

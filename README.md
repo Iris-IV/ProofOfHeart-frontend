@@ -26,10 +26,10 @@ The smart contract lives in a separate repository;
 No Freighter wallet is needed to run the app in mock mode — it is only required for
 real testnet/mainnet transactions.
 
-> **Package manager:** use **npm**. CI installs with `npm ci` and the Docker image is
-> built from `package-lock.json`. The repo also contains a `pnpm-workspace.yaml` and a
-> `pnpm-lock.yaml` that mirror the npm overrides, so pnpm works for local development,
-> but do not commit lockfile changes from pnpm.
+> **Package manager:** use **npm**. CI installs with `npm ci`, the Docker image is
+> built from `package-lock.json`, and `package-lock.json` is the only lockfile —
+> `packageManager` in `package.json` pins npm, and CI fails if any other lockfile
+> (pnpm, yarn, bun) is committed.
 >
 > **Rust and the Soroban CLI are not needed here.** This repo is the TypeScript frontend.
 > Contract development (Rust, `cargo`, `stellar` CLI) happens in

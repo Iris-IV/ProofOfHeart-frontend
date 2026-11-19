@@ -152,8 +152,12 @@ NEXT_PUBLIC_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
 ```
 src/
 ├── lib/
-│   └── contractClient.ts       ← single integration point for all contract calls
-│                                  swap mock ↔ live by toggling NEXT_PUBLIC_USE_MOCKS
+│   ├── contractClient.ts       ← single integration point for all contract calls
+│   │                              swap mock ↔ live by toggling NEXT_PUBLIC_USE_MOCKS
+│   └── generated/              ← typed read bindings, regenerated from the contract spec
+│       ├── contract-spec.json  ← normalized read surface (npm run bindings:generate)
+│       ├── client.ts           ← ProofOfHeartGeneratedClient: one method per view entrypoint
+│       └── README.md           ← regeneration instructions
 ├── hooks/
 │   ├── useCampaigns.ts         ← fetch all campaigns (loading / error / refetch)
 │   └── useCampaign.ts          ← fetch one campaign by id (loading / error / notFound)
@@ -168,47 +172,86 @@ src/
 
 **Rule:** pages and components never call the Soroban RPC directly. They go through
 `contractClient.ts` → hooks. This means wiring up the real contract only requires
-editing `contractClient.ts`.
+editing `contractClient.ts`. Inside it, every **read** is delegated to the
+generated client in `src/lib/generated/` (regenerate with `npm run bindings:generate`
+after a contract interface change — see `src/lib/generated/README.md`); **writes**
+build their invocation directly.
 
 ---
 
 ## 5. Contract Function → Frontend Flow Mapping
 
+The contract exposes 139 entrypoints. Their canonical reference is the contract
+repo's [API.md](https://github.com/Iris-IV/ProofOfHeart-stellar/blob/main/docs/API.md).
+The tables below list **every wrapper exported by `contractClient.ts`** — reads
+are delegated to the generated client (`src/lib/generated/client.ts`), writes
+build the invocation directly. Entrypoints with no wrapper yet (delegation,
+multi-token campaign creation, admin configuration, anomaly controls) are
+documented in API.md and can be wired up following section 11.
+
 ### Read functions
 
-| Contract function                               | `contractClient.ts` wrapper                  | Hook                                             | Page / Component                                |
-| ----------------------------------------------- | -------------------------------------------- | ------------------------------------------------ | ----------------------------------------------- |
-| `get_campaign(campaign_id)`                     | `getCampaign(id)`                            | `useCampaign(id)`                                | `/causes/[id]`, `/explore`                      |
-| `get_campaign` × N                              | `getAllCampaigns()`                          | `useCampaigns()`                                 | `/causes`, `/explore`                           |
-| `get_campaign_count()`                          | `getCampaignCount()`                         | (internal)                                       | —                                               |
-| `get_contribution(campaign_id, contributor)`    | `getContribution(campaignId, contributor)`   | `useContribution(...)`, `useRevenueSharing(...)` | `/causes/[id]` (contributor view), `/dashboard` |
-| `get_revenue_pool(campaign_id)`                 | `getRevenuePool(campaignId)`                 | `useRevenueSharing(...)`                         | `/causes/[id]`, `/dashboard`                    |
-| `get_revenue_claimed(campaign_id, contributor)` | `getRevenueClaimed(campaignId, contributor)` | `useRevenueSharing(...)`                         | `/causes/[id]`, `/dashboard`                    |
-| `get_admin()`                                   | `getAdmin()`                                 | `useAdmin()` / server route preload              | `/admin`                                        |
-| `get_platform_fee()`                            | `getPlatformFee()`                           | `usePlatformFee()`                               | `/admin`, `/causes/[id]`                        |
-| `get_approve_votes(campaign_id)`                | _pending_                                    | _pending_                                        | `/causes/[id]` (community vote UI)              |
-| `get_reject_votes(campaign_id)`                 | _pending_                                    | _pending_                                        | `/causes/[id]` (community vote UI)              |
-| `has_voted(campaign_id, voter)`                 | _pending_                                    | _pending_                                        | `/causes/[id]` (community vote UI)              |
-| `get_version()`                                 | `getVersion()`                               | —                                                | admin / debug / footer                          |
+| Contract function                          | `contractClient.ts` wrapper                                     | Generated method        | Hook / Page                                        |
+| ------------------------------------------ | --------------------------------------------------------------- | ----------------------- | -------------------------------------------------- |
+| `list_campaigns`                           | `listCampaigns({ start, limit, category?, creator? })`, `initialCampaignsCursor(filters)` | `listCampaigns`         | `useCampaigns()`, `useInfiniteCampaigns()` — `/causes`, `/explore` |
+| `get_creator_campaigns`                    | `listCampaigns({ creator })`                                    | `getCreatorCampaigns`   | creator listings — `/dashboard`, creator profile   |
+| `get_campaigns_by_category`                | `listCampaigns({ category })`                                   | `getCampaignsByCategory` | category filter — `/explore`                       |
+| `get_campaign(campaign_id)`                | `getCampaign(id)`                                               | `getCampaign`           | `useCampaign(id)` — `/causes/[id]`, `/explore`     |
+| `get_campaign` × N                         | `getAllCampaigns()`                                             | `getCampaign`           | `useCampaigns()` — `/causes`, `/explore`           |
+| `get_campaign_count()`                     | `getCampaignCount()`                                            | `getCampaignCount`      | `/explore` header                                  |
+| `get_platform_stats()`                     | `getPlatformStats()`                                            | `getPlatformStats`      | `usePlatformStats()` — `/`, `/explore`             |
+| `get_contribution(campaign_id, contributor)` | `getContribution(campaignId, contributor)`                    | `getContribution`       | `useContribution(...)`, `useRevenueSharing(...)` — `/causes/[id]`, `/dashboard` |
+| `get_personal_cap(campaign_id, contributor)` | `getPersonalCap(campaignId, contributor)`                      | `getPersonalCap`        | `usePersonalCap()` — contribution form             |
+| `get_revenue_pool(campaign_id)`            | `getRevenuePool(campaignId)`                                    | `getRevenuePool`        | `useRevenueSharing(...)` — `/causes/[id]`, `/dashboard` |
+| `get_revenue_claimed(campaign_id, contributor)` | `getRevenueClaimed(campaignId, contributor)`                | `getRevenueClaimed`     | `useRevenueSharing(...)` — `/causes/[id]`, `/dashboard` |
+| `get_milestones(campaign_id)`              | `getMilestones(campaignId)`                                     | `getMilestones`         | milestones section — `/causes/[id]`                |
+| `is_milestone_claimed(campaign_id, milestone_id)` | `isMilestoneClaimed(campaignId, milestoneId)`              | `isMilestoneClaimed`    | milestone claim UI — `/causes/[id]`                |
+| `get_admin()`                              | `getAdmin()`                                                    | `getAdmin`              | `useAdmin()` — `/admin`                            |
+| `get_platform_fee()`                       | `getPlatformFee()`                                              | `getPlatformFee`        | `usePlatformFee()` — `/admin`, `/causes/[id]`      |
+| `get_version()`                            | `getVersion()`                                                  | `getVersion`            | `useContractVersion()` — footer / debug            |
+| `get_saved_campaigns(user)`                | `getSavedCampaigns(user)`                                       | `getSavedCampaigns`     | `useSavedCampaigns()` — `/dashboard`               |
+| `get_saved_campaigns_count(user)`          | `getSavedCampaignsCount(user)`                                  | `getSavedCampaignsCount` | `useSavedCampaigns()` — `/dashboard`              |
+| `get_approve_votes(campaign_id)`           | `getApproveVotes(campaignId)`                                   | `getApproveVotes`       | `useLiveVoteTallies()` — `/causes/[id]` voting panel |
+| `get_reject_votes(campaign_id)`            | `getRejectVotes(campaignId)`                                    | `getRejectVotes`        | `useLiveVoteTallies()` — `/causes/[id]` voting panel |
+| `has_voted(campaign_id, voter)`            | `hasVoted(campaignId, voter)`                                   | `hasVoted`              | voting panel — `/causes/[id]`                      |
+| `get_min_votes_quorum()`                   | `getMinVotesQuorum()`                                           | `getMinVotesQuorum`     | `/admin` (voting configuration)                    |
+| `get_approval_threshold_bps()`             | `getApprovalThresholdBps()`                                     | `getApprovalThresholdBps` | `/admin` (voting configuration)                  |
+| `is_comment_censured(campaign_id, comment_hash)` | `isCommentCensured(campaignId, commentHash)`                | `isCommentCensured`     | comments — `/causes/[id]`                          |
+| `get_campaign_reserve(campaign_id)`        | `getCampaignReserve(campaignId)`                                | `getCampaignReserve`    | vesting display — creator withdrawal UI            |
+
+Client-side helpers that make no contract call of their own:
+`expectedMilestonePayout()` (pure `payout_bps` math), `estimateContributeNetworkFee()`
+(simulates `contribute` to price the fee), `initialCampaignsCursor()` (pagination seed).
 
 ### Write functions
 
 | Contract function            | Parameters                                                                                                          | Frontend flow                   | Page / Component                            | Auth required        |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------- | -------------------- |
-| `create_campaign`            | `creator, title, description, funding_goal, duration_days, category, has_revenue_sharing, revenue_share_percentage` | Cause submission form           | `/causes/new` _(planned)_                   | Creator wallet       |
+| `init`                       | `admin, token, platform_fee`                                                                                        | One-time deployment setup       | (deploy scripts / CI only)                  | Admin wallet         |
+| `create_campaign`            | `creator, title, description, funding_goal, duration_days, category, has_revenue_sharing, revenue_share_percentage, max_contribution_per_user` (+ `===POH_EXT===` suffix for tags/cover/milestones) | Cause submission form           | `/causes/new`                               | Creator wallet       |
 | `contribute`                 | `campaign_id, contributor, amount`                                                                                  | Donation flow                   | `/causes/[id]`                              | Contributor wallet   |
 | `withdraw_funds`             | `campaign_id`                                                                                                       | Creator withdrawal              | `/causes/[id]` (creator view)               | Creator wallet       |
 | `cancel_campaign`            | `campaign_id`                                                                                                       | Campaign cancellation           | `/causes/[id]` (creator view)               | Creator wallet       |
 | `claim_refund`               | `campaign_id, contributor`                                                                                          | Refund claiming                 | `/causes/[id]` (contributor view)           | Contributor wallet   |
 | `deposit_revenue`            | `campaign_id, amount`                                                                                               | Revenue deposit                 | `/dashboard`, `/causes/[id]` (creator view) | Creator wallet       |
 | `claim_revenue`              | `campaign_id, contributor`                                                                                          | Revenue claim                   | `/causes/[id]` (contributor view)           | Contributor wallet   |
+| `claim_creator_revenue`      | `campaign_id`                                                                                                       | Creator-side revenue claim      | `/dashboard` (creator view)                 | Creator wallet       |
 | `vote_on_campaign`           | `campaign_id, voter, approve`                                                                                       | Community validation vote       | `/causes/[id]` (voting panel)               | Token-holding wallet |
 | `verify_campaign`            | `campaign_id`                                                                                                       | Admin verification              | `/admin`                                    | Admin wallet only    |
+| `verify_campaign_with_votes` | `campaign_id`                                                                                                       | Trigger vote-based verification | `/causes/[id]`                              | Anyone               |
 | `update_platform_fee`        | `platform_fee`                                                                                                      | Platform fee management         | `/admin`                                    | Admin wallet only    |
 | `update_admin`               | `new_admin`                                                                                                         | Admin transfer                  | `/admin`                                    | Admin wallet only    |
-| `verify_campaign_with_votes` | `campaign_id`                                                                                                       | Trigger vote-based verification | `/causes/[id]`                              | Anyone               |
+| `set_personal_cap`           | `campaign_id, cap`                                                                                                  | Per-wallet contribution cap     | contribution form                           | Contributor wallet   |
+| `save_campaign`              | `campaign_id, user`                                                                                                 | Bookmark a campaign             | `/explore`, `/causes/[id]`                   | Wallet               |
+| `batch_save_campaigns`       | `campaign_ids, user`                                                                                                | Bulk bookmark sync              | onboarding / import                          | Wallet               |
+| `remove_saved_campaign`      | `campaign_id, user`                                                                                                 | Remove a bookmark               | `/dashboard`                                | Wallet               |
+| `clear_saved_campaigns`      | `user`                                                                                                              | Clear all bookmarks             | `/dashboard`                                | Wallet               |
+| `verify_milestone`           | `campaign_id, milestone_id`                                                                                         | Milestone review                | `/admin` (or designated verifier)           | Admin / verifier     |
+| `claim_milestone`            | `campaign_id, milestone_id`                                                                                         | Proportional milestone payout   | `/causes/[id]` (creator view)               | Creator wallet       |
+| `extend_campaign_deadline`   | `campaign_id, additional_days`                                                                                      | One-time deadline extension     | `/causes/[id]` (creator view)               | Creator wallet       |
+| `withdraw_reserve`           | `campaign_id` (wrapped as `claimReserve`)                                                                            | Vesting reserve release         | `/causes/[id]` (creator view)               | Creator wallet       |
 
-The cause detail experience now surfaces platform fee transparency in three places:
+The cause detail experience surfaces platform fee transparency in three places:
 
 - Contributor entry: the contribution form explains that the creator pays the platform fee on withdrawal.
 - Creator withdrawal: the confirmation UI shows total raised, fee amount, and creator net proceeds.
@@ -228,6 +271,8 @@ If `get_platform_fee()` is unavailable, the frontend falls back to `300` basis p
 | `revenue_share_percentage` 1–5000 bps (0.01%–50%)          | `InvalidRevenueShare (6)`        |
 | Revenue sharing only for `EducationalStartup` campaigns    | `RevenueShareOnlyForStartup (7)` |
 | `withdraw_funds` only after goal reached                   | `FundingGoalNotReached (12)`     |
+| `withdraw_funds` only after the deadline has passed        | `DeadlineNotPassed (10)`         |
+| Milestone campaigns must use `claim_milestone`, not `withdraw_funds` | `ValidationFailed (15)` |
 | Funds not already withdrawn                                | `FundsAlreadyWithdrawn (11)`     |
 | Refund only after cancel or deadline passed + goal not met | `ValidationFailed (15)`          |
 | Voter must hold the platform token                         | `NotTokenHolder (17)`            |
@@ -239,79 +284,95 @@ If `get_platform_fee()` is unavailable, the frontend falls back to `300` basis p
 
 ### Campaign
 
+The decoded read shape is `SpecCampaign` (`src/lib/generated/client.ts`), which
+`decodeCampaign()` in `contractClient.ts` converts into the UI-facing
+`Campaign` (`src/types/index.ts`).
+
+| Rust `Campaign` (`ProofOfHeart-stellar/src/types.rs`) | TypeScript (`Campaign`) | Notes |
+| ----------------------------------------------------- | ----------------------- | ----- |
+| `id: u32` | `id: number` | |
+| `creator: Address` | `creator: string` | G… address |
+| `first_creator: Address` | `first_creator?: string` | immutable original creator |
+| `pending_creator: MaybePendingCreator` | `pending_creator?: string \| null` | two-step ownership transfer |
+| `pending_creator_expiry: u64` | `pending_creator_expiry?: number` | unix seconds; set only with `pending_creator` |
+| `title: String` | `title: string` | |
+| `description: String` | `description: string` | UI extras travel in the `===POH_EXT===` suffix |
+| `funding_goal: i128` | `funding_goal: bigint` | token smallest units (POH has 7 decimals) |
+| `deadline: u64` | `deadline: number` | unix seconds |
+| `amount_raised: i128` | `amount_raised: bigint` | |
+| `status: u32` | `is_active` / `is_cancelled` / `is_verified` / `funds_withdrawn` + `status` | bitfield — decoded, see below |
+| `category: Category` | `category: Category` | enum discriminant 0–3 |
+| `has_revenue_sharing: bool` | `has_revenue_sharing: boolean` | |
+| `revenue_share_percentage: u32` | `revenue_share_percentage: number` | basis points (300 = 3%) |
+| `max_contribution_per_user: i128` | `max_contribution_per_user?: bigint` | `0` is the explicit "no cap" sentinel |
+| `fee_override: Option<u32>` | `fee_override?: number \| null` | `null` uses the global platform fee |
+| `deadline_extended: bool` | `deadline_extended?: boolean` | extendable exactly once |
+| `effective_amount_raised: i128` | `effective_amount_raised?: bigint` | live raise after refunds (pro-rata base) |
+| _(not stored — read the `campaign_created` event)_ | `created_at?: number` | unix seconds |
+
+> **Amounts:** all contract amounts are `i128` in the campaign token's smallest
+> units and stay `bigint` end to end; convert only at the presentation layer
+> (`POH` has 7 decimals: `1_000_000n` = 0.1 POH).
+
+> **Multi-token campaigns:** `create_campaign` denominates in the platform token
+> set by `init`; the contract also offers per-campaign tokens
+> (`create_campaign_with_token` plus the admin token allowlist). Those
+> entrypoints have no frontend wrapper yet — see the contract's
+> [API.md](https://github.com/Iris-IV/ProofOfHeart-stellar/blob/main/docs/API.md).
+
+### Status bitfield
+
+The contract replaced the old booleans with one `status: u32` bitfield. Decoding
+lives in `src/lib/campaignStatusFlags.ts`:
+
+| Bit | Constant | Contract meaning | Decoded boolean |
+| --- | -------- | ---------------- | --------------- |
+| `1 << 0` | `CAMPAIGN_ACTIVE` | accepting contributions | `is_active` |
+| `1 << 1` | `CAMPAIGN_PAUSED` | contract calls it "paused"; means cancelled | `is_cancelled` |
+| `1 << 2` | `CAMPAIGN_VALIDATED` | admin-verified | `is_verified` |
+| `1 << 3` | `CAMPAIGN_SUCCEEDED` | funds withdrawn | `funds_withdrawn` |
+
+`deriveStatus()` (`src/types/index.ts`) then collapses those four booleans into
+the UI's `CampaignStatus`, in priority order:
+`cancelled > funded > failed > verified > active`.
+
+```ts
+import { decodeCampaignStatusFlags } from "@/lib/campaignStatusFlags";
+
+const flags = decodeCampaignStatusFlags(specCampaign.status);
+// → { is_active, is_cancelled, is_verified, funds_withdrawn }
 ```
-Rust (lib.rs)                          TypeScript (src/types/index.ts)
-─────────────────────────────────────  ──────────────────────────────────────────
-pub struct Campaign {                  export interface Campaign {
-  pub id: u32,                ──────►    id: number;
-  pub creator: Address,       ──────►    creator: string;        // G… address
-  pub title: String,          ──────►    title: string;
-  pub description: String,    ──────►    description: string;
-  pub funding_goal: i128,     ──────►    targetAmount: number;   // ⚠ see note 1
-  pub deadline: u64,          ──────►    createdAt: number;      // ⚠ see note 2
-  pub amount_raised: i128,    ──────►    currentAmount: number;  // ⚠ see note 1
-  pub is_active: bool,        ──────►    status: 'pending'|'approved'|'rejected'; // note 3
-  pub is_cancelled: bool,     ──┐
-  pub is_verified: bool,      ──┘
-  pub funds_withdrawn: bool,  ──────►    funds_withdrawn: boolean;
-  pub category: Category,     ──────►    category: Category;     // ⚠ see note 4
-  pub has_revenue_sharing: bool,──────►  has_revenue_sharing: boolean;
-  pub revenue_share_percentage: u32,──►  revenue_share_percentage: number;
-  // no upvotes/downvotes/totalVotes     upvotes: number;        // ⚠ see note 5
-}                                        downvotes: number;
-                                         totalVotes: number;
-                                       }
-```
 
-> **Note 1 — amounts:** The contract stores amounts as `i128` **stroops**
-> (1 XLM = 10,000,000 stroops). The current TypeScript type uses plain `number`
-> in XLM units. When the real client is wired up, convert:
-> `xlm = Number(stroops) / 10_000_000`.
+### UI extensions (`===POH_EXT===`)
 
-> **Note 2 — timestamps:** The TypeScript `createdAt` field stores the creation
-> Unix timestamp (seconds). The contract stores `deadline` (not creation time).
-> Creation time should be recorded when `create_campaign` is called
-> (`env.ledger().timestamp()` in Rust). The TypeScript type will need a
-> `deadline: number` field added alongside `createdAt`.
+`CreateCampaignParams` has no fields for tags, cover images or milestones, so
+`createCampaign()` appends a `===POH_EXT===` JSON suffix to the description and
+`decodeCampaign()` splits it back out into `tags`, `cover_image_url` and
+`milestones`. Without the suffix those fields are silently dropped. The contract
+also has native tag entrypoints (`add_campaign_tag`, and friends) that are not
+wrapped yet.
 
-> **Note 3 — status derivation:** The contract has no single `status` field.
-> Derive it from boolean flags:
->
-> ```ts
-> function deriveStatus(c: RawCampaign): Campaign["status"] {
->   if (c.is_cancelled) return "rejected";
->   if (c.is_verified) return "approved";
->   return "pending";
-> }
-> ```
+### Milestones
 
-> **Note 4 — Category enum:** The contract uses a Rust enum. Map it to a string:
->
-> ```ts
-> const CATEGORY_LABELS: Record<number, string> = {
->   0: "learner",
->   1: "startup",
->   2: "educator",
->   3: "publisher",
-> };
-> ```
-
-> **Note 5 — votes:** `upvotes` / `downvotes` / `totalVotes` in the TypeScript type
-> come from the community voting system (`vote_on_campaign`), not from the campaign
-> struct itself. They map to `get_approve_votes` + `get_reject_votes` view calls.
+`get_milestones(campaign_id)` returns `ContractMilestone[]`
+(`id`, `description`, `payout_bps`, `verified`); a plan's `payout_bps` values
+sum to 10 000. Milestone campaigns must claim through `claim_milestone` —
+`withdraw_funds` reverts on them (`ValidationFailed (15)`).
 
 ### Category enum
 
 ```
-Rust                         TypeScript (add to src/types/index.ts)
-────────────────────────     ──────────────────────────────────────
-pub enum Category {          export enum CampaignCategory {
-  Learner = 0,      ──────►    Learner           = 0,
-  EducationalStartup = 1, ─►   EducationalStartup = 1,
-  Educator = 2,     ──────►    Educator           = 2,
-  Publisher = 3,    ──────►    Publisher          = 3,
-}                            }
+Rust                              TypeScript (src/types/index.ts)
+--------------------------------  --------------------------------------
+pub enum Category {               export enum Category {
+  Learner = 0,               ->     Learner             = 0,
+  EducationalStartup = 1,    ->     EducationalStartup  = 1,
+  Educator = 2,              ->     Educator            = 2,
+  Publisher = 3,             ->     Publisher           = 3,
+}                                 }
 ```
+
+`CATEGORY_LABELS` in the same file provides the display labels.
 
 ---
 
@@ -504,25 +565,46 @@ layer and toast system will handle it identically to a real contract error.
 
 Follow these steps when wiring up a new contract function (e.g. `contribute`):
 
-1. **Add a `contractClient.ts` function:**
+1. **Decide read vs. write:**
 
-   ```ts
-   export async function contribute(
-     campaignId: number,
-     contributor: string,
-     amount: bigint,
-   ): Promise<void> {
-     if (USE_MOCKS) {
-       /* simulate success */ return;
+   - **Read (view) function** — regenerate the typed bindings first with
+     `npm run bindings:generate` (see `src/lib/generated/README.md`). That adds
+     a method to `ProofOfHeartGeneratedClient`, and the wrapper in
+     `contractClient.ts` becomes a thin delegate:
+
+     ```ts
+     export async function getMinVotesQuorum(): Promise<number> {
+       if (USE_MOCKS) return MOCK_MIN_VOTES_QUORUM;
+       return generated.getMinVotesQuorum();
      }
-     try {
-       const client = new ProofOfHeartClient({ contractId: CONTRACT_ID, rpc: RPC_URL });
-       await client.contribute({ campaign_id: campaignId, contributor, amount });
-     } catch (err) {
-       throw new Error(parseContractError(err));
+     ```
+
+   - **Write (invocation) function** — build the operation and submit it with
+     `buildAndSubmitTransaction`:
+
+     ```ts
+     export async function contribute(
+       campaignId: number,
+       contributor: string,
+       amount: bigint,
+     ): Promise<void> {
+       validateAmount(amount);
+       if (USE_MOCKS) {
+         /* simulate success */ return;
+       }
+       const contract = new Contract(CONTRACT_ADDRESS);
+       const op = contract.call(
+         "contribute",
+         nativeToScVal(campaignId, { type: "u32" }),
+         new Address(contributor).toScVal(),
+         nativeToScVal(amount, { type: "i128" }),
+       );
+       await buildAndSubmitTransaction(contributor, op, { operation: "contribute" });
      }
-   }
-   ```
+     ```
+
+   Keep the wrapper's signature UI-friendly (`bigint` amounts, plain numbers)
+   and do all contract encoding inside the wrapper.
 
 2. **Create a hook if the call is reactive** (data-fetching):
 
@@ -550,4 +632,6 @@ Follow these steps when wiring up a new contract function (e.g. `contribute`):
    contract errors before the transaction is even built (see business rules table in
    section 5).
 
-5. **Update this document** — add the new function to the mapping table in section 5.
+5. **Update this document** — add the new function to the mapping tables in
+   section 5, and if it changes the decoded shape, the type mapping in
+   section 6.

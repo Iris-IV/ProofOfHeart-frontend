@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo } from "react";
+import { createElement, lazy, Suspense, useMemo } from "react";
 import type { ComponentType } from "react";
 
 interface LazyModalOptions {
@@ -7,28 +7,18 @@ interface LazyModalOptions {
 
 export function useLazyModal<P extends Record<string, any>>(
   loader: () => Promise<{ default: ComponentType<P> }>,
-  options: LazyModalOptions = {}
+  options: LazyModalOptions = {},
 ) {
   return useMemo(() => {
     const Component = lazy(loader);
 
     return {
-      Component: (props: P) => (
-        <Suspense fallback={options.fallback || <div>Loading...</div>}>
-          <Component {...props} />
-        </Suspense>
-      ),
+      Component: (props: P) =>
+        createElement(
+          Suspense,
+          { fallback: options.fallback || createElement("div", null, "Loading...") },
+          createElement(Component, props),
+        ),
     };
   }, [loader, options.fallback]);
 }
-
-// Pre-configured lazy modals for common heavy components
-export const TaxReceiptModal = useLazyModal(
-  () => import("../components/modals/TaxReceiptModal").then(m => ({ default: m.TaxReceiptModal })),
-  { fallback: <div>Loading tax receipt...</div> }
-);
-
-export const RevenueSplitModal = useLazyModal(
-  () => import("../components/modals/RevenueSplitModal").then(m => ({ default: m.RevenueSplitModal })),
-  { fallback: <div>Loading revenue split...</div> }
-);

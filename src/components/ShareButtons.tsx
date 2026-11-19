@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useToast } from "@/components/ToastProvider";
 
 interface ShareButtonsProps {
@@ -10,6 +11,7 @@ interface ShareButtonsProps {
 }
 
 export default function ShareButtons({ url, title, walletAddress }: ShareButtonsProps) {
+  const t = useTranslations("Accessibility");
   const { showSuccess } = useToast();
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
@@ -65,7 +67,7 @@ export default function ShareButtons({ url, title, walletAddress }: ShareButtons
         <button
           type="button"
           onClick={isMobile ? handleNativeShare : handleCopy}
-          aria-label="Copy link"
+          aria-label={t("copyLink")}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
         >
           {copied ? (
@@ -106,7 +108,7 @@ export default function ShareButtons({ url, title, walletAddress }: ShareButtons
           href={`https://x.com/intent/tweet?text=${encodedTitle}&url=${encoded}`}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Share on X"
+          aria-label={t("shareOnX")}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -120,7 +122,7 @@ export default function ShareButtons({ url, title, walletAddress }: ShareButtons
           href={`https://www.linkedin.com/sharing/share-offsite/?url=${encoded}`}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Share on LinkedIn"
+          aria-label={t("shareOnLinkedIn")}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -135,7 +137,7 @@ export default function ShareButtons({ url, title, walletAddress }: ShareButtons
           onClick={() => setQrOpen((prev) => !prev)}
           aria-expanded={qrOpen}
           aria-controls="qr-panel"
-          aria-label="Show QR code"
+          aria-label={t("showQrCode")}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
         >
           <svg
@@ -163,13 +165,13 @@ export default function ShareButtons({ url, title, walletAddress }: ShareButtons
         <div
           id="qr-panel"
           role="region"
-          aria-label="QR codes"
+          aria-label={t("qrCodes")}
           className="flex flex-col gap-4 p-4 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900"
         >
-          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">QR Codes</h3>
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{t("qrCodesTitle")}</h3>
           <div className={`flex gap-6 ${walletAddress ? "flex-wrap sm:flex-nowrap" : ""}`}>
             <div className="flex flex-col items-center gap-2 flex-1">
-              <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Campaign URL</p>
+              <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{t("campaignUrl")}</p>
               <img
                 src={`${qrBase}${encodeURIComponent(url)}`}
                 alt="QR code for campaign URL"

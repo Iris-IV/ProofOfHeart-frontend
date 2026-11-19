@@ -10,6 +10,7 @@ import {
   ReactNode,
   type CSSProperties,
 } from "react";
+import { useTranslations } from "next-intl";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -120,6 +121,7 @@ export const TOAST_DURATIONS: Record<ToastType, number> = {
 const EXIT_MS = 120;
 
 function Toast({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: string) => void }) {
+  const t = useTranslations("Accessibility");
   const [leaving, setLeaving] = useState(false);
   const [paused, setPaused] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -219,7 +221,7 @@ function Toast({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: string)
         <button
           type="button"
           onClick={handleDismiss}
-          aria-label="Dismiss notification"
+          aria-label={t("dismissNotification")}
           className="-m-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg leading-none opacity-60 transition-opacity duration-(--duration-snappy) hover:opacity-100 focus-ring"
         >
           <span aria-hidden="true">×</span>
@@ -249,6 +251,7 @@ function ToastContainer({
   toasts: ToastItem[];
   onDismiss: (id: string) => void;
 }) {
+  const t = useTranslations("Accessibility");
   if (toasts.length === 0) return null;
 
   const hasError = toasts.some((t) => t.type === "error");
@@ -258,7 +261,7 @@ function ToastContainer({
       aria-live={hasError ? "assertive" : "polite"}
       aria-atomic="true"
       aria-relevant="additions"
-      aria-label="Notifications"
+      aria-label={t("notifications")}
       role="status"
       className="fixed bottom-[calc(env(safe-area-inset-bottom)_+_1.25rem)] left-1/2 -translate-x-1/2 w-full px-4 sm:w-auto sm:px-0 sm:left-auto sm:right-5 sm:translate-x-0 z-50 flex flex-col gap-2 items-center sm:items-end pointer-events-none"
     >

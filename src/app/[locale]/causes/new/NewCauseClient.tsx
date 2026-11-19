@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import SafeMarkdown from "@/components/SafeMarkdown";
 import CampaignReviewModal from "@/components/CampaignReviewModal";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { validateImageFile } from "@/lib/imageValidation";
 import { optimizeCoverImage } from "@/lib/imageOptimization";
 import { cropCoverToAspect } from "@/lib/coverCrop";
@@ -13,6 +13,8 @@ import { useWallet } from "@/components/WalletContext";
 import { useRouter } from "@/i18n/routing";
 import {
   createCampaign,
+  getFundingGoalBounds,
+  getPlatformStatus,
   setMilestones,
   milestoneFormEntriesToInputs,
   addCampaignTag,
@@ -21,7 +23,10 @@ import {
 import { invalidateCampaignsList } from "@/lib/cacheInvalidation";
 import { Category, CATEGORY_LABELS } from "@/types";
 import { xlmToStroops } from "@/lib/stellarAmount";
+import { fundingGoalBoundsError, formatGoalStroops } from "@/utils/validators";
+import { usePlatformStatus } from "@/hooks/usePlatformStatus";
 import { parseContractError } from "@/utils/contractErrors";
+import { signOffchainPayload } from "@/lib/offchainApiClient";
 import { useCampaignFormDraft } from "@/hooks/useCampaignFormDraft";
 import { CheckCircle2 } from "lucide-react";
 import {
@@ -37,10 +42,19 @@ import {
 
 export default function CreateCampaignPage() {
   const t = useTranslations("CreateCampaign");
+  const tAccessibility = useTranslations("Accessibility");
   const router = useRouter();
   const queryClient = useQueryClient();
   const { publicKey, isWalletConnected, connectWallet, isLoading: walletLoading } = useWallet();
   const { showError, showSuccess, showWarning } = useToast();
+  const { isPaused, isCreationDisabled, isCreationBlocked, isLoading: statusLoading, isError: statusError } =
+    usePlatformStatus();
+  const { data: goalBounds, isPending: goalBoundsLoading, isError: goalBoundsLoadError } = useQuery({
+    queryKey: ["campaignFundingGoalBounds"],
+    queryFn: () => getFundingGoalBounds(),
+    staleTime: 30_000,
+    retry: 1,
+  });
 
   // ── Form state ──
   const [title, setTitle] = useState("");
@@ -48,6 +62,7 @@ export default function CreateCampaignPage() {
   const [descriptionEs, setDescriptionEs] = useState("");
   const [creatorEmail, setCreatorEmail] = useState("");
   const [fundingGoal, setFundingGoal] = useState("");
+  const [campaignToken, setCampaignToken] = useState("");
   const [durationDays, setDurationDays] = useState("");
   // Optional per-wallet cap in XLM. Blank means no cap, which the contract stores as 0.
   const [maxContributionPerWallet, setMaxContributionPerWallet] = useState("");
@@ -55,11 +70,14 @@ export default function CreateCampaignPage() {
   const [hasRevenueSharing, setHasRevenueSharing] = useState(false);
   const [revenueSharePercentage, setRevenueSharePercentage] = useState(5);
   const [errorKeys, setErrorKeys] = useState<FormErrorKeys>({});
+  const [goalRangeError, setGoalRangeError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [reviewData, setReviewData] = useState<ReviewData | null>(null);
   const [tags, setTags] = useState<string[]>([]);
-  const [milestones, setMilestones] = useState<{ targetAmount: string; description: string }[]>([]);
+  const [milestones, setMilestoneForm] = useState<{ targetAmount: string; description: string }[]>(
+    [],
+  );
   const [tagInput, setTagInput] = useState("");
   const [descriptionTab, setDescriptionTab] = useState<"write" | "preview">("write");
   const [coverImageUrl, setCoverImageUrl] = useState("");
@@ -93,7 +111,7 @@ export default function CreateCampaignPage() {
       setRevenueSharePercentage,
       setTags,
       setCoverImageUrl,
-      setMilestones,
+      setMilestones: setMilestoneForm,
       setMaxContributionPerWallet,
     });
     // Restore must run once on mount; the setters are stable.
@@ -221,15 +239,26 @@ export default function CreateCampaignPage() {
     ) => {
       if (!email) return;
       try {
+        const payload = { email, campaignId, campaignTitle, creatorAddress };
+        const signed = await signOffchainPayload(
+          {
+            path: "/api/notify-creator",
+            method: "POST",
+            timestamp: Math.floor(Date.now() / 1000),
+            payload,
+          },
+          "notify-creator",
+        );
         const res = await fetch("/api/notify-creator", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email,
-            campaignId,
-            campaignTitle,
-            creatorAddress,
-          }),
+          headers: {
+            "Content-Type": "application/json",
+            "X-Wallet-Address": signed.walletAddress,
+            "X-Request-Signature": signed.signature,
+            "X-Request-Timestamp": String(signed.timestamp),
+            "X-Request-Purpose": "notify-creator",
+          },
+          body: JSON.stringify(payload),
         });
         if (!res.ok) {
           const data = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -244,7 +273,7 @@ export default function CreateCampaignPage() {
 
   // ── Submission handlers ──
   const handleConfirmAndSign = useCallback(async () => {
-    if (!reviewData) return;
+    if (!reviewData || isCreationBlocked) return;
     if (!isWalletConnected || !publicKey) {
       showError(t("walletRequiredError"));
       return;
@@ -254,36 +283,80 @@ export default function CreateCampaignPage() {
 
     try {
       const fundingGoalStroops = xlmToStroops(reviewData.fundingGoalXlm.toString());
+      // Fresh reads prevent an admin limit or pause change between form review
+      // and the wallet signing step. Never sign when the status cannot be read.
+      const [latestStatus, latestBounds] = await Promise.all([
+        getPlatformStatus(true), getFundingGoalBounds(true),
+      ]);
+      if (latestStatus.isPaused || latestStatus.isCreationDisabled) {
+        showError(latestStatus.isPaused
+          ? "The platform is temporarily paused. Campaign creation is unavailable."
+          : "Campaign creation is temporarily disabled.");
+        setIsReviewOpen(false);
+        setIsSubmitting(false);
+        setTxPhase(null);
+        return;
+      }
+      const latestRangeError = fundingGoalBoundsError(fundingGoalStroops, latestBounds);
+      if (latestRangeError) {
+        setGoalRangeError(latestRangeError);
+        setIsReviewOpen(false);
+        showError(latestRangeError);
+        setIsSubmitting(false);
+        setTxPhase(null);
+        return;
+      }
       const basisPoints = reviewData.hasRevenueSharing
         ? Math.round(reviewData.revenueSharePercentage * 100)
         : 0;
 
       const maxContributionStroops = xlmToStroops(reviewData.maxContributionPerWallet ?? "");
 
-      const { campaignId: newCampaignId } = await createCampaign(
-        publicKey,
-        reviewData.title,
-        reviewData.description,
-        fundingGoalStroops,
-        reviewData.durationDays,
-        reviewData.category,
-        reviewData.hasRevenueSharing,
-        basisPoints,
-        reviewData.tags,
-        maxContributionStroops,
-        {
-          onStatus: ({ phase }) => setTxPhase(phase),
-          coverImageUrl: reviewData.coverImageUrl,
-          milestones: reviewData.milestones,
-        },
-      );
+      let created;
+      if (campaignToken.trim()) {
+        if (!(await isTokenAllowed(campaignToken.trim()))) {
+          throw new Error(t("tokenNotAllowed"));
+        }
+        created = await createCampaignWithToken(
+          publicKey,
+          campaignToken.trim(),
+          reviewData.title,
+          reviewData.description,
+          fundingGoalStroops,
+          reviewData.durationDays,
+          reviewData.category,
+          reviewData.hasRevenueSharing,
+          basisPoints,
+          maxContributionStroops,
+          { onStatus: ({ phase }) => setTxPhase(phase) },
+        );
+      } else {
+        created = await createCampaign(
+          publicKey,
+          reviewData.title,
+          reviewData.description,
+          fundingGoalStroops,
+          reviewData.durationDays,
+          reviewData.category,
+          reviewData.hasRevenueSharing,
+          basisPoints,
+          reviewData.tags,
+          maxContributionStroops,
+          {
+            onStatus: ({ phase }) => setTxPhase(phase),
+            coverImageUrl: reviewData.coverImageUrl,
+            milestones: reviewData.milestones,
+          },
+        );
+      }
+      const { campaignId: newCampaignId } = created;
 
       // Issue #1765 — register milestone payout plan on-chain if any milestones were provided
       if (newCampaignId !== null && reviewData.milestones && reviewData.milestones.length > 0) {
         const milestoneInputs = milestoneFormEntriesToInputs(reviewData.milestones);
         if (milestoneInputs.length > 0) {
           try {
-            await setMilestones(newCampaignId, milestoneInputs, {
+            await setMilestonesOnChain(newCampaignId, milestoneInputs, {
               onStatus: ({ phase }) => setTxPhase(phase),
             });
           } catch (milestoneErr) {
@@ -337,10 +410,16 @@ export default function CreateCampaignPage() {
     notifyEmailOptIn,
     clearDraft,
     router,
+    isCreationBlocked,
   ]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isCreationBlocked) return;
+    if (!goalBounds) {
+      showError("Unable to verify the allowed funding-goal range. Try again.");
+      return;
+    }
 
     if (!isWalletConnected || !publicKey) {
       showError(t("walletRequiredError"));
@@ -365,6 +444,19 @@ export default function CreateCampaignPage() {
       setErrorKeys(keys);
       return;
     }
+
+    // Check exact stroops rather than float XLM; 0.0000001 XLM must not
+    // bypass admin-adjusted minimums or fail only during simulation.
+    let goalStroops: bigint;
+    try {
+      goalStroops = xlmToStroops(fundingGoal);
+    } catch {
+      setErrorKeys({ fundingGoal: "validationFundingGoalInvalid" });
+      return;
+    }
+    const rangeError = fundingGoalBoundsError(goalStroops, goalBounds);
+    setGoalRangeError(rangeError);
+    if (rangeError) return;
 
     setErrorKeys({});
     const parsedGoal = parseFloat(fundingGoal);
@@ -407,6 +499,28 @@ export default function CreateCampaignPage() {
       delete next[key];
       return next;
     });
+
+  // Stop at the route rather than letting users complete a form that the
+  // contract's admin flags forbid them from submitting (ZV-1762).
+  if (isCreationBlocked) {
+    const reason = statusLoading
+      ? "Checking campaign creation availability…"
+      : statusError
+        ? "Campaign creation availability cannot be verified. Please retry later."
+        : isPaused
+          ? "The platform is temporarily paused. Campaign creation is unavailable."
+          : isCreationDisabled
+            ? "Campaign creation is temporarily disabled."
+            : "Campaign creation is unavailable.";
+    return (
+      <main className="mx-auto max-w-2xl px-4 py-16">
+        <h1 className="mb-4 text-3xl font-bold">{t("pageTitle")}</h1>
+        <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-6 text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
+          {reason}
+        </div>
+      </main>
+    );
+  }
 
   // ── Render ──
   return (
@@ -551,7 +665,7 @@ export default function CreateCampaignPage() {
                       {description}
                     </SafeMarkdown>
                   ) : (
-                    <span className="italic text-zinc-400">Nothing to preview</span>
+                    <span className="italic text-zinc-400">{tAccessibility("nothingToPreview")}</span>
                   )}
                 </div>
               )}
@@ -664,11 +778,12 @@ export default function CreateCampaignPage() {
                   onChange={(e) => {
                     setFundingGoal(e.target.value);
                     clearError("fundingGoal");
+                    setGoalRangeError(null);
                   }}
                   min="0.0000001"
                   step="any"
-                  aria-invalid={Boolean(errorKeys.fundingGoal)}
-                  aria-describedby={errorKeys.fundingGoal ? "funding-goal-error" : undefined}
+                  aria-invalid={Boolean(errorKeys.fundingGoal || goalRangeError)}
+                  aria-describedby={errorKeys.fundingGoal || goalRangeError ? "funding-goal-error" : undefined}
                   placeholder="e.g. 1000"
                   className={`w-full ps-12 pe-3 py-2 rounded-lg border text-sm bg-zinc-50 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
                     errorKeys.fundingGoal
@@ -677,11 +792,26 @@ export default function CreateCampaignPage() {
                   }`}
                 />
               </div>
-              {err("fundingGoal") && (
-                <p id="funding-goal-error" className="text-xs text-red-500 mt-1">
-                  {err("fundingGoal")}
+              {(err("fundingGoal") || goalRangeError) && (
+                <p id="funding-goal-error" role="alert" className="text-xs text-red-500 mt-1">
+                  {goalRangeError ?? err("fundingGoal")}
                 </p>
               )}
+              {goalBounds && !goalRangeError && (
+                <p className="mt-1 text-xs text-zinc-500">
+                  Allowed range: {formatGoalStroops(goalBounds.min)}–{formatGoalStroops(goalBounds.max)} XLM
+                </p>
+              )}
+              <label htmlFor="campaignToken" className="mt-4 block text-sm font-semibold">
+                {t("campaignTokenOptional")}
+              </label>
+              <input
+                id="campaignToken"
+                value={campaignToken}
+                onChange={(event) => setCampaignToken(event.target.value)}
+                placeholder="G..."
+                className="mt-2 w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 font-mono text-xs dark:border-zinc-700 dark:bg-zinc-950"
+              />
             </div>
 
             <div>
@@ -1030,7 +1160,7 @@ export default function CreateCampaignPage() {
               <button
                 type="button"
                 onClick={() =>
-                  setMilestones([...milestones, { targetAmount: "", description: "" }])
+                  setMilestoneForm([...milestones, { targetAmount: "", description: "" }])
                 }
                 className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline"
               >
@@ -1058,7 +1188,7 @@ export default function CreateCampaignPage() {
                           value={m.targetAmount}
                           onChange={(e) => {
                             const value = e.target.value;
-                            setMilestones(
+                            setMilestoneForm(
                               milestones.map((ms, i) =>
                                 i === idx ? { ...ms, targetAmount: value } : ms,
                               ),
@@ -1082,7 +1212,7 @@ export default function CreateCampaignPage() {
                           value={m.description}
                           onChange={(e) => {
                             const value = e.target.value;
-                            setMilestones(
+                            setMilestoneForm(
                               milestones.map((ms, i) =>
                                 i === idx ? { ...ms, description: value } : ms,
                               ),
@@ -1095,7 +1225,7 @@ export default function CreateCampaignPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setMilestones(milestones.filter((_, i) => i !== idx))}
+                      onClick={() => setMilestoneForm(milestones.filter((_, i) => i !== idx))}
                       className="text-zinc-400 hover:text-red-500 p-1 transition-colors"
                       aria-label="Remove milestone"
                     >
@@ -1118,7 +1248,7 @@ export default function CreateCampaignPage() {
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !isWalletConnected}
+              disabled={isSubmitting || !isWalletConnected || goalBoundsLoading || goalBoundsLoadError || !goalBounds || isCreationBlocked}
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isSubmitting && (
