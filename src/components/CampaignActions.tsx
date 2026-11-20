@@ -12,6 +12,7 @@ import WithdrawFunds from "./WithdrawFunds";
 import { useAdmin } from "../hooks/useAdmin";
 import { useContribution } from "../hooks/useContribution";
 import { usePlatformFee } from "../hooks/usePlatformFee";
+import { useLedgerNow } from "../hooks/useLedgerNow";
 import {
   contribute,
   cancelCampaign,
@@ -36,6 +37,7 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
   const { admin } = useAdmin();
   const { contribution } = useContribution(campaign.id, publicKey);
   const { platformFeeBps } = usePlatformFee();
+  const ledgerNow = useLedgerNow();
   const locale = useLocale();
   const { showSuccess, showError, showWarning } = useToast();
   const { invoke, isPending } = useWriteGuard();
@@ -94,7 +96,7 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
     setShowRevenueInput(false);
   };
 
-  const isExpired = Math.floor(Date.now() / 1000) > campaign.deadline;
+  const isExpired = ledgerNow > campaign.deadline;
   const contributionDisabledReason = isCreator
     ? "Creators cannot contribute to their own campaign."
     : campaign.is_cancelled
@@ -367,8 +369,20 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
                   "Refund claimed!",
                 )
               }
-              disabled={isPending("claimRefund", campaign.id) || (campaign.is_active && !isExpired)}
-              title={campaign.is_active && !isExpired ? "Cannot refund while active" : ""}
+              disabled={
+                isPending("claimRefund", campaign.id) ||
+                !isContributor ||
+                (!campaign.is_cancelled && !(isExpired && campaign.amount_raised < campaign.funding_goal))
+              }
+              title={
+                !isContributor
+                  ? "You have no contribution to refund"
+                  : campaign.is_cancelled
+                    ? ""
+                    : isExpired && campaign.amount_raised < campaign.funding_goal
+                      ? ""
+                      : "Refund only available for cancelled campaigns or expired campaigns below goal"
+              }
               className="w-full py-3 min-h-[44px] bg-amber-600 hover:bg-amber-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
             >
               <AsyncButtonContent

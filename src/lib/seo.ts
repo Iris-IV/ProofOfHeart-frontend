@@ -45,6 +45,14 @@ interface CauseJsonLdStrings {
 }
 
 /**
+ * Escapes a string to prevent breaking out of a JSON-LD script tag.
+ * Specifically escapes </script> sequences that could terminate the script tag early.
+ */
+function escapeJsonLdString(str: string): string {
+  return str.replace(/<\/script/gi, "<\\/script");
+}
+
+/**
  * Builds Schema.org JSON-LD for campaign page.
  * Flattened hierarchy for improved browser rendering performance.
  */
@@ -66,8 +74,8 @@ export function buildCauseJsonLd(
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Project",
-    name: campaign.title,
-    description: campaign.description,
+    name: escapeJsonLdString(campaign.title),
+    description: escapeJsonLdString(campaign.description),
     url,
     inLanguage: locale,
     dateCreated: createdDate,

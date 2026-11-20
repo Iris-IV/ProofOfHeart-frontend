@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Clock } from "lucide-react";
 import { useLocale } from "next-intl";
 import { subscribeToCountdownTick } from "@/hooks/useCountdownTick";
+import { useLedgerNow } from "@/hooks/useLedgerNow";
 
 interface DeadlineCountdownProps {
   deadline: number; // Unix timestamp in seconds
@@ -15,8 +16,8 @@ interface TimeLeft {
   minutes: number;
 }
 
-function getTimeLeft(deadline: number): TimeLeft | null {
-  const diff = deadline - Math.floor(Date.now() / 1000);
+function getTimeLeft(deadline: number, now: number): TimeLeft | null {
+  const diff = deadline - now;
   if (diff <= 0) return null;
 
   return {
@@ -27,8 +28,13 @@ function getTimeLeft(deadline: number): TimeLeft | null {
 }
 
 export default function DeadlineCountdown({ deadline }: DeadlineCountdownProps) {
-  const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(() => getTimeLeft(deadline));
+  const ledgerNow = useLedgerNow();
+  const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(() => getTimeLeft(deadline, ledgerNow));
   const locale = useLocale();
+
+  useEffect(() => {
+    setTimeLeft(getTimeLeft(deadline, ledgerNow));
+  }, [deadline, ledgerNow]);
 
   useEffect(() => {
     return subscribeToCountdownTick(() => {
@@ -36,7 +42,7 @@ export default function DeadlineCountdown({ deadline }: DeadlineCountdownProps) 
         // Already ended — cheap no-op on future ticks
         if (prev === null) return null;
 
-        const next = getTimeLeft(deadline);
+        const next = getTimeLeft(deadline, ledgerNow);
         if (!next) return null;
 
         // When days ≥ 1, the display shows "Xd Xh" only (no minutes).
@@ -53,7 +59,7 @@ export default function DeadlineCountdown({ deadline }: DeadlineCountdownProps) 
         return next;
       });
     });
-  }, [deadline]);
+  }, [deadline, ledgerNow]);
 
   // Base classes shared by both states. `glass-surface` is the frosted panel from globals.css.
   // Text sizes step up at sm (640px) so the pill stays readable from 320px to desktop.
