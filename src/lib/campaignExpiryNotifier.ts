@@ -27,7 +27,7 @@ function markNotified(campaignId: number): void {
 
 export function shouldNotifyExpiry(
   campaign: Campaign,
-  nowSeconds = Math.floor(Date.now() / 1000),
+  nowSeconds: number = Math.floor(Date.now() / 1000),
 ): boolean {
   if (campaign.is_cancelled || campaign.funds_withdrawn || !campaign.is_active) return false;
   const secondsLeft = campaign.deadline - nowSeconds;
