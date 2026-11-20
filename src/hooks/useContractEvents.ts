@@ -22,7 +22,7 @@ import { eventSubscriber, EventHandler } from "../lib/eventSubscriber";
  * @example
  * ```tsx
  * useContractEvents("campaign_created", (event) => {
- *   console.log("New campaign:", event);
+ *   handleCampaignEvent(event);
  * });
  * ```
  */

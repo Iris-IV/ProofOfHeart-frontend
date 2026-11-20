@@ -126,10 +126,6 @@ function sendAnalyticsEvent(eventName: string, data: Record<string, unknown>): v
     return;
   }
 
-  if (process.env.NODE_ENV === "development") {
-    console.log("[Analytics]", eventName, data);
-  }
-
   if (deliver(eventName, data)) {
     return;
   }
