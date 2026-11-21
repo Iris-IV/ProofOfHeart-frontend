@@ -986,16 +986,44 @@ export async function listCampaigns({
   const pageLimit = Math.max(1, Math.min(limit, LIST_MAX_LIMIT));
 
   if (USE_MOCKS) {
-    const source = filtered
-      ? MOCK_CAMPAIGNS.filter(
+    const allCampaigns = MOCK_CAMPAIGNS;
+    let campaigns: Campaign[];
+    let nextIndex: number;
+
+    if (filtered) {
+      // For filtered lists, position is a 0-based offset in the full index.
+      // Filter to get matching campaigns, then slice.
+      const filtered_campaigns = allCampaigns.filter(
+        (c) =>
+          (category === undefined || c.category === category) &&
+          (!creator || c.creator === creator),
+      );
+      campaigns = filtered_campaigns.slice(position, position + pageLimit);
+      nextIndex = position + campaigns.length;
+    } else {
+      // For unfiltered lists, position is a 1-based ID cursor.
+      // Convert to 0-based index and slice.
+      const startIndex = position - 1;
+      campaigns = allCampaigns.slice(startIndex, startIndex + pageLimit);
+      nextIndex = startIndex + campaigns.length;
+    }
+
+    // Check if there are more campaigns after this batch.
+    const allFiltered = filtered
+      ? allCampaigns.filter(
           (c) =>
             (category === undefined || c.category === category) &&
             (!creator || c.creator === creator),
         )
-      : MOCK_CAMPAIGNS;
-    const startIndex = filtered ? position : position - 1;
-    const campaigns = source.slice(startIndex, startIndex + pageLimit);
-    const nextCursor = startIndex + pageLimit < source.length ? position + pageLimit : null;
+      : allCampaigns;
+    const hasMore = filtered ? nextIndex < allFiltered.length : nextIndex < allCampaigns.length;
+
+    const nextCursor = hasMore
+      ? filtered
+        ? nextIndex
+        : nextIndex + 1
+      : null;
+
     return { campaigns, nextCursor };
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCampaigns } from "@/hooks/useCampaigns";
+import { useInfiniteCampaigns } from "@/hooks/useInfiniteCampaigns";
 import { getRecommendedCauses } from "@/lib/causeRecommendations";
 import { Category, CATEGORY_LABELS } from "@/types";
 import CauseCard from "./CauseCard";
@@ -25,7 +25,9 @@ export default function RelatedCampaigns({
   onClaimRefund,
   limit = 3,
 }: RelatedCampaignsProps) {
-  const { campaigns, isLoading } = useCampaigns();
+  const { campaigns, isLoading } = useInfiniteCampaigns(50, {
+    category: typeof category === "number" ? category : Number(category),
+  });
 
   if (isLoading) {
     return (

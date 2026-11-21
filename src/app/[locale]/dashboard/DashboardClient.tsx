@@ -7,7 +7,7 @@ import MyContributionsSection from "@/components/MyContributionsSection";
 import TransactionHistoryTab from "@/components/TransactionHistoryTab";
 import { Spinner, DashboardSkeleton } from "@/components/Skeleton";
 import { useWallet } from "@/components/WalletContext";
-import { useCampaigns } from "@/hooks/useCampaigns";
+import { useInfiniteCampaigns } from "@/hooks/useInfiniteCampaigns";
 import { useStellarBalance } from "@/hooks/useStellarBalance";
 import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
 import { isSameAddress } from "@/lib/stellar";
@@ -27,19 +27,20 @@ type DashboardTab = "overview" | "history";
 export default function DashboardPage() {
   const t = useTranslations("Dashboard");
   const { publicKey, isWalletConnected } = useWallet();
-  const { campaigns, isLoading: campaignsLoading } = useCampaigns();
   const { showWarning } = useToast();
+  const { campaigns: creatorCampaigns, isLoading: campaignsLoading } = useInfiniteCampaigns(
+    undefined,
+    { creator: publicKey },
+  );
 
   useEffect(() => {
-    if (campaigns.length === 0 || !publicKey) return;
-    const creatorCampaigns = campaigns.filter((c) => isSameAddress(c.creator, publicKey));
-    if (creatorCampaigns.length === 0) return;
+    if (creatorCampaigns.length === 0 || !publicKey) return;
     return scheduleExpiryChecks(creatorCampaigns, (c) => {
       showWarning(
         `Campaign "${c.title}" expires in under 48 hours — consider extending the deadline.`,
       );
     });
-  }, [campaigns, publicKey, showWarning]);
+  }, [creatorCampaigns, publicKey, showWarning]);
   const {
     balance,
     isLoading: balanceLoading,
@@ -77,14 +78,11 @@ export default function DashboardPage() {
     [],
   );
 
-  const savedCampaigns = useMemo(
-    () => campaigns.filter((c) => savedIds.includes(c.id)),
-    [campaigns, savedIds],
-  );
+  const submittedCampaigns = creatorCampaigns;
 
-  const submittedCampaigns = useMemo(
-    () => campaigns.filter((c) => isSameAddress(c.creator, publicKey)),
-    [campaigns, publicKey],
+  const savedCampaigns = useMemo(
+    () => creatorCampaigns.filter((c) => savedIds.includes(c.id)),
+    [creatorCampaigns, savedIds],
   );
 
   if (!isWalletConnected || !publicKey) {
@@ -235,7 +233,7 @@ export default function DashboardPage() {
                 return (
                   <li key={idx} className="border rounded p-3 bg-zinc-50 dark:bg-zinc-900">
                     <div className="font-medium">
-                      {campaign ? campaign.title : t("campaignFallback", { id: vote.campaignId })}
+                      {campaign?.title ?? t("campaignFallback", { id: vote.campaignId })}
                     </div>
                     <div className="text-sm text-zinc-500 dark:text-zinc-400">
                       {vote.voteType === "upvote"
