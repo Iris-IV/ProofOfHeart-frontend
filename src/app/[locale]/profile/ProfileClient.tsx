@@ -5,7 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { Wallet } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import { useWallet } from "@/components/WalletContext";
-import { useCampaigns } from "@/hooks/useCampaigns";
+import { useInfiniteCampaigns } from "@/hooks/useInfiniteCampaigns";
 import { useContributions } from "@/hooks/useContributions";
 import { useSavedCampaigns } from "@/hooks/useSavedCampaigns";
 import { formatAddress } from "@/lib/formatAddress";
@@ -18,18 +18,16 @@ export default function ProfileClient() {
   const t = useTranslations("Profile");
   const locale = useLocale();
   const { publicKey, isWalletConnected, connectWallet, isLoading: walletLoading } = useWallet();
-  const { campaigns, isLoading: campaignsLoading } = useCampaigns();
+  const { campaigns: createdCampaigns, isLoading: campaignsLoading } = useInfiniteCampaigns(
+    undefined,
+    { creator: publicKey },
+  );
   const { contributions, isLoading: contributionsLoading } = useContributions(publicKey);
   const { savedIds, localBookmarks, syncLocalBookmarks, isSyncing } = useSavedCampaigns();
 
   const savedCampaigns = useMemo(
-    () => campaigns.filter((c) => savedIds.includes(c.id)),
-    [campaigns, savedIds],
-  );
-
-  const createdCampaigns = useMemo(
-    () => campaigns.filter((c) => isSameAddress(c.creator, publicKey)),
-    [campaigns, publicKey],
+    () => createdCampaigns.filter((c) => savedIds.includes(c.id)),
+    [createdCampaigns, savedIds],
   );
 
   const totalContributed = useMemo(
