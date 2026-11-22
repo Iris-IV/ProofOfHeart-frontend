@@ -120,7 +120,7 @@ function CauseCard({
   return (
     <article
       {...tilt}
-      className="group flex h-full flex-col overflow-hidden rounded-[24px] border border-zinc-200/80 bg-gradient-to-b from-white to-zinc-50/90 shadow-[0_20px_50px_-28px_rgba(15,23,42,0.34)] transition-all duration-200 hover:-translate-y-1 hover:border-orange-200 hover:shadow-[0_26px_70px_-28px_rgba(249,115,22,0.28)] dark:border-zinc-700/80 dark:from-zinc-800 dark:to-zinc-900/90 dark:hover:border-orange-800/70">
+      className="group flex h-full flex-col overflow-hidden rounded-[24px] border border-zinc-200/80 bg-gradient-to-b from-white to-zinc-50/90 shadow-[0_20px_50px_-28px_rgba(15,23,42,0.34)] transition-all duration-200 hover:motion-safe:-translate-y-0.5 hover:border-orange-200 dark:border-zinc-700/80 dark:from-zinc-800 dark:to-zinc-900/90 dark:hover:border-orange-800/70">
       {/* ── Cover image ── */}
       <div className="relative aspect-video w-full overflow-hidden bg-zinc-100 dark:bg-zinc-700">
         {campaign.cover_image_url ? (
