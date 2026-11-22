@@ -81,6 +81,9 @@ const GovernanceSection = dynamic(() => import("@/components/admin/GovernanceSec
 const LimitsFeesSection = dynamic(() => import("@/components/admin/LimitsFeesSection"), {
   ssr: false,
 });
+const IncidentControlsSection = dynamic(() => import("@/components/admin/IncidentControlsSection"), {
+  ssr: false,
+});
 import { AdminSkeleton } from "@/components/Skeleton";
 import Pagination from "@/components/Pagination";
 import { Campaign } from "@/types";
@@ -973,6 +976,11 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12 motion-safe:animate-in fade-in slide-in-from-bottom-4 duration-500">
         <LimitsFeesSection />
         <ModerationSection />
+      </div>
+
+      {/* ── Incident controls ── */}
+      <div className="mb-12">
+        <IncidentControlsSection />
       </div>
 
       {/* ── Campaign Map ── */}

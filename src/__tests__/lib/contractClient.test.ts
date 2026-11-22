@@ -46,8 +46,12 @@ function makeScValHelpers() {
     vec(values: unknown[]) {
       return { vec: () => values, toXDR: () => `vec:${values.length}` };
     },
+    bytes(hex: string) {
+      return { bytes: () => Buffer.from(hex, "hex"), toXDR: () => `bytes:${hex}` };
+    },
     map(fields: Record<string, unknown>) {
       return {
+        switch: () => ({ name: "scvMap" }),
         map: () =>
           Object.entries(fields).map(([key, val]) => ({
             key: () => scVal.symbol(key),
@@ -1038,6 +1042,165 @@ describe("contractClient", () => {
         30, Category.Learner, false, 0, [],
       )).rejects.toThrow(/Campaign creation is temporarily disabled/i);
       expect(mockServer.sendTransaction).not.toHaveBeenCalled();
+    });
+  });
+
+
+  describe("proof of impact, campaign stats and incident controls (#1773, #1777, #1778)", () => {
+    const HASH = "ab".repeat(32);
+    type Op = { method?: string; args?: Array<{ toXDR?: () => string } | Buffer | undefined> };
+    const callFor = (mockServer: { simulateTransaction: jest.Mock }, method: string): Op =>
+      mockServer.simulateTransaction.mock.calls
+        .map(([tx]: [{ ops?: Op[] }]) => tx.ops?.[0])
+        .find((op: Op | undefined) => op?.method === method) as Op;
+    const xdrArgs = (op: Op) =>
+      (op.args ?? []).map((a) => (Buffer.isBuffer(a) ? `buf:${a.toString("hex")}` : a?.toXDR?.()));
+
+    it("recordProofOfImpact encodes (u32 campaign, address verifier, 32 raw bytes)", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+      const hash = await module.recordProofOfImpact(7, TEST_ADMIN, HASH.toUpperCase());
+      expect(hash).toMatch(/^hash-/);
+      expect(xdrArgs(callFor(mockServer, "record_proof_of_impact"))).toEqual([
+        "u32:7",
+        `address:${TEST_ADMIN}`,
+        `buf:${HASH}`,
+      ]);
+    });
+
+    it("recordProofOfImpact rejects malformed hashes before touching the network", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+      await expect(module.recordProofOfImpact(7, TEST_ADMIN, "abc")).rejects.toThrow(/SHA-256/);
+      expect(mockServer.sendTransaction).not.toHaveBeenCalled();
+    });
+
+    it("getProofOfImpact decodes the struct and returns null for None", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+      const scVal = makeScValHelpers();
+      mockServer.simulateTransaction.mockImplementation((tx: { ops?: Op[] }) => {
+        const op = tx.ops?.[0];
+        if (op?.method !== "get_proof_of_impact") return { result: { retval: null } };
+        return {
+          result: {
+            retval:
+              xdrArgs(op)[0] === "u32:9"
+                ? scVal.void()
+                : scVal.map({
+                    verifier: scVal.address(TEST_ADMIN),
+                    proof_hash: scVal.bytes(HASH),
+                    timestamp: scVal.bigint(1_900_000_000),
+                  }),
+          },
+        };
+      });
+      await expect(module.getProofOfImpact(1)).resolves.toEqual({
+        verifier: TEST_ADMIN,
+        proofHash: HASH,
+        timestamp: 1_900_000_000,
+      });
+      await expect(module.getProofOfImpact(9)).resolves.toBeNull();
+    });
+
+    it("mock mode records then reads back a proof", async () => {
+      const { module } = await loadClient({ useMocks: true });
+      expect(await module.getProofOfImpact(3)).toBeNull();
+      await module.recordProofOfImpact(3, TEST_ADMIN, HASH);
+      expect((await module.getProofOfImpact(3))?.proofHash).toBe(HASH);
+    });
+
+    it("getCampaignStats sends the u32 campaign id and decodes the struct", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+      const scVal = makeScValHelpers();
+      mockServer.simulateTransaction.mockImplementation((tx: { ops?: Op[] }) => {
+        if (tx.ops?.[0]?.method !== "get_campaign_stats") return { result: { retval: null } };
+        return {
+          result: {
+            retval: scVal.map({
+              contributor_count: scVal.u32(4),
+              top_contributor: scVal.address(TEST_USER),
+              avg_contribution: scVal.bigint(25_000_000),
+              last_contribution_time: scVal.bigint(1_800_000_000),
+            }),
+          },
+        };
+      });
+      await expect(module.getCampaignStats(5)).resolves.toEqual({
+        contributorCount: 4,
+        topContributor: TEST_USER,
+        avgContribution: 25_000_000n,
+        lastContributionTime: 1_800_000_000,
+      });
+      expect(xdrArgs(callFor(mockServer, "get_campaign_stats"))).toEqual(["u32:5"]);
+    });
+
+    it("getCampaignStats maps a missing top contributor to null", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+      const scVal = makeScValHelpers();
+      mockServer.simulateTransaction.mockImplementation(() => ({
+        result: {
+          retval: scVal.map({
+            contributor_count: scVal.u32(0),
+            top_contributor: scVal.void(),
+            avg_contribution: scVal.bigint(0),
+            last_contribution_time: scVal.bigint(0),
+          }),
+        },
+      }));
+      expect((await module.getCampaignStats(5)).topContributor).toBeNull();
+    });
+
+    it("getTotalContributorsCount sends the u32 campaign id", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+      const scVal = makeScValHelpers();
+      mockServer.simulateTransaction.mockImplementation(() => ({ result: { retval: scVal.u32(12) } }));
+      expect(await module.getTotalContributorsCount(8)).toBe(12);
+      expect(xdrArgs(callFor(mockServer, "get_total_contributors_count"))).toEqual(["u32:8"]);
+    });
+
+    it("pause and unpause take no arguments", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+      await module.pausePlatform(TEST_ADMIN);
+      await module.unpausePlatform(TEST_ADMIN);
+      expect(callFor(mockServer, "pause").args).toEqual([]);
+      expect(callFor(mockServer, "unpause").args).toEqual([]);
+    });
+
+    it("emergencyPausePlatform encodes the caller address", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+      await module.emergencyPausePlatform(TEST_USER);
+      expect(xdrArgs(callFor(mockServer, "emergency_pause"))).toEqual([`address:${TEST_USER}`]);
+    });
+
+    it("resumeCampaign encodes (u32 campaign, address caller)", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+      await module.resumeCampaign(11, TEST_ADMIN);
+      expect(xdrArgs(callFor(mockServer, "resume_campaign"))).toEqual([
+        "u32:11",
+        `address:${TEST_ADMIN}`,
+      ]);
+    });
+
+    it("getEmergencyPauseSigners decodes a vec of addresses", async () => {
+      const { module, mockServer } = await loadClient({ useMocks: false });
+      const scVal = makeScValHelpers();
+      mockServer.simulateTransaction.mockImplementation(() => ({
+        result: { retval: scVal.vec([scVal.address(TEST_ADMIN), scVal.address(TEST_USER)]) },
+      }));
+      expect(await module.getEmergencyPauseSigners()).toEqual([TEST_ADMIN, TEST_USER]);
+    });
+
+    it("mock mode tracks the paused state across pause/unpause", async () => {
+      const { module } = await loadClient({ useMocks: true });
+      await module.pausePlatform(TEST_ADMIN);
+      expect((await module.getPlatformStatus()).isPaused).toBe(true);
+      await module.unpausePlatform(TEST_ADMIN);
+      expect((await module.getPlatformStatus()).isPaused).toBe(false);
+    });
+
+    it("maps contract errors for these entrypoints to translation keys", () => {
+      expect(parseContractError(new Error("Error(Contract, #1)"))).toBe("ContractErrors.NotAuthorized");
+      expect(parseContractError(new Error("Error(Contract, #3)"))).toBe("ContractErrors.CampaignNotActive");
+      expect(parseContractError(new Error("Error(Contract, #15)"))).toBe("ContractErrors.ValidationFailed");
+      expect(parseContractError(new Error("Error(Contract, #24)"))).toBe("ContractErrors.ContractPaused");
     });
   });
 

@@ -31,6 +31,8 @@ import ReportModal from "@/components/ReportModal";
 import CampaignActions from "@/components/CampaignActions";
 import ImpactMetricsCard from "@/components/ImpactMetricsCard";
 import PersonalCap from "@/components/PersonalCap";
+import CampaignStatsPanel from "@/components/CampaignStatsPanel";
+import ProofOfImpactPanel from "@/components/ProofOfImpactPanel";
 import DonationMilestones from "@/components/DonationMilestones";
 import AsyncButtonContent from "@/components/AsyncButtonContent";
 import { useToast } from "@/components/ToastProvider";
@@ -837,6 +839,10 @@ export default function CauseDetailClient({ id }: { id: string }) {
             <VestingReservePanel campaign={campaign} onActionSuccess={refetch} />
 
             <PersonalCap campaignId={campaign.id} />
+
+            <CampaignStatsPanel campaignId={campaign.id} />
+
+            <ProofOfImpactPanel campaignId={campaign.id} />
 
             <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3">

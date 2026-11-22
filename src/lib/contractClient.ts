@@ -9,6 +9,7 @@ import {
   TransactionBuilder,
   nativeToScVal,
   rpc,
+  scValToBigInt,
   xdr,
 } from "@stellar/stellar-sdk";
 // #649 — Signing goes through the active wallet signer (Freighter or an
@@ -1534,7 +1535,7 @@ export interface PlatformStatus {
 }
 
 export async function getPlatformStatus(fresh = false): Promise<PlatformStatus> {
-  if (USE_MOCKS) return { isPaused: false, isCreationDisabled: false };
+  if (USE_MOCKS) return { isPaused: mockPaused, isCreationDisabled: false };
   const [paused, creationDisabled] = await Promise.all([
     invokeViewMethod("is_paused", [], { fresh }),
     invokeViewMethod("is_creation_disabled", [], { fresh }),
@@ -3392,6 +3393,278 @@ export async function getCensuredCommentCount(): Promise<number> {
   try {
     const result = await invokeViewMethod("get_censured_comment_count", []);
     return result ? result.u32() : 0;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Proof of impact (issue #1773)
+// ---------------------------------------------------------------------------
+
+export interface ProofOfImpact {
+  /** Address that recorded the proof (the platform admin / verifier). */
+  verifier: string;
+  /** Lowercase hex SHA-256 of the evidence file (64 characters). */
+  proofHash: string;
+  /** Ledger time (unix seconds) at which the proof was recorded. */
+  timestamp: number;
+}
+
+const PROOF_HASH_HEX = /^[0-9a-f]{64}$/;
+const mockProofs = new Map<number, ProofOfImpact>();
+
+/** Normalises a user-supplied SHA-256 hex string; throws when it is not 32 bytes of hex. */
+export function normalizeProofHash(hash: string): string {
+  const normalized = hash.trim().toLowerCase().replace(/^0x/, "");
+  if (!PROOF_HASH_HEX.test(normalized)) {
+    throw new Error("Proof hash must be a 64-character SHA-256 hex string.");
+  }
+  return normalized;
+}
+
+function hexToBytes(hex: string): Buffer {
+  return Buffer.from(hex, "hex");
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Records the SHA-256 of a campaign's impact evidence on-chain.
+ * Contract: record_proof_of_impact(campaign_id: u32, verifier: Address, proof_hash: BytesN<32>).
+ */
+export async function recordProofOfImpact(
+  campaignId: number,
+  verifier: string,
+  proofHash: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(verifier);
+  const hash = normalizeProofHash(proofHash);
+
+  if (USE_MOCKS) {
+    mockProofs.set(campaignId, {
+      verifier,
+      proofHash: hash,
+      timestamp: Math.floor(Date.now() / 1000),
+    });
+    return emitMockLifecycle("mock_tx_record_proof_of_impact", options);
+  }
+
+  const contract = new Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    "record_proof_of_impact",
+    nativeToScVal(campaignId, { type: "u32" }),
+    new Address(verifier).toScVal(),
+    nativeToScVal(hexToBytes(hash)),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(verifier, op, {
+      ...options,
+      operation: "record_proof_of_impact",
+    });
+    clearContractCacheByMethod("get_proof_of_impact");
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/** Reads the recorded proof of impact for a campaign, or null when none exists. */
+export async function getProofOfImpact(
+  campaignId: number,
+  fresh = false,
+): Promise<ProofOfImpact | null> {
+  if (USE_MOCKS) return mockProofs.get(campaignId) ?? null;
+
+  try {
+    const result = await invokeViewMethod(
+      "get_proof_of_impact",
+      [nativeToScVal(campaignId, { type: "u32" })],
+      { fresh },
+    );
+    if (!result || result.switch().name === "scvVoid") return null;
+    const fields = decodeScValMap(result, "ProofOfImpact");
+    const field = (name: string): xdr.ScVal => requiredField(fields, name, "ProofOfImpact");
+    return {
+      verifier: Address.fromScVal(field("verifier")).toString(),
+      proofHash: bytesToHex(field("proof_hash").bytes()),
+      timestamp: Number(scValToBigInt(field("timestamp"))),
+    };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Campaign stats (issue #1777)
+// ---------------------------------------------------------------------------
+
+export interface ContractCampaignStats {
+  contributorCount: number;
+  /** Null when the campaign has no contributions yet. */
+  topContributor: string | null;
+  /** Average contribution in stroops. */
+  avgContribution: bigint;
+  /** Ledger time (unix seconds) of the latest contribution; 0 when there is none. */
+  lastContributionTime: number;
+}
+
+/** Reads get_campaign_stats(campaign_id: u32). */
+export async function getCampaignStats(
+  campaignId: number,
+  fresh = false,
+): Promise<ContractCampaignStats> {
+  if (USE_MOCKS) {
+    return {
+      contributorCount: 7,
+      topContributor: "GTOPCONTRIBUTOR123456789012345678901234567890123456789012345",
+      avgContribution: 25_000_000n,
+      lastContributionTime: 1_900_000_000,
+    };
+  }
+
+  try {
+    const result = await invokeViewMethod(
+      "get_campaign_stats",
+      [nativeToScVal(campaignId, { type: "u32" })],
+      { fresh },
+    );
+    const fields = decodeScValMap(result, "CampaignStats");
+    const field = (name: string): xdr.ScVal => requiredField(fields, name, "CampaignStats");
+    const top = field("top_contributor");
+    return {
+      contributorCount: field("contributor_count").u32(),
+      topContributor: top.switch().name === "scvVoid" ? null : Address.fromScVal(top).toString(),
+      avgContribution: scValToBigInt(field("avg_contribution")),
+      lastContributionTime: Number(scValToBigInt(field("last_contribution_time"))),
+    };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/** Reads get_total_contributors_count(campaign_id: u32). */
+export async function getTotalContributorsCount(
+  campaignId: number,
+  fresh = false,
+): Promise<number> {
+  if (USE_MOCKS) return 7;
+
+  try {
+    const result = await invokeViewMethod(
+      "get_total_contributors_count",
+      [nativeToScVal(campaignId, { type: "u32" })],
+      { fresh },
+    );
+    if (!result) throw new Error("Unable to read contributor count.");
+    return result.u32();
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Incident controls: pause / unpause / emergency pause / resume (issue #1778)
+// ---------------------------------------------------------------------------
+
+let mockPaused = false;
+
+/** Mock-mode view of the platform pause flag, kept in sync with the incident wrappers. */
+export function getMockPausedState(): boolean {
+  return mockPaused;
+}
+
+async function submitIncidentOperation(
+  operation: "pause" | "unpause" | "emergency_pause" | "resume_campaign",
+  caller: string,
+  args: xdr.ScVal[],
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  const contract = new Contract(CONTRACT_ADDRESS);
+  const op = contract.call(operation, ...args);
+  try {
+    const txResult = await buildAndSubmitTransaction(caller, op, { ...options, operation });
+    clearContractCacheByMethod("is_paused");
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/** Admin: pause(). Takes no arguments; the stored admin authorises. */
+export async function pausePlatform(
+  admin: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(admin);
+  if (USE_MOCKS) {
+    mockPaused = true;
+    return emitMockLifecycle("mock_tx_pause", options);
+  }
+  return submitIncidentOperation("pause", admin, [], options);
+}
+
+/** Admin: unpause(). Lifts a manual or automatic pause. */
+export async function unpausePlatform(
+  admin: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(admin);
+  if (USE_MOCKS) {
+    mockPaused = false;
+    return emitMockLifecycle("mock_tx_unpause", options);
+  }
+  return submitIncidentOperation("unpause", admin, [], options);
+}
+
+/** Registered signer: emergency_pause(caller: Address). */
+export async function emergencyPausePlatform(
+  caller: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(caller);
+  if (USE_MOCKS) {
+    mockPaused = true;
+    return emitMockLifecycle("mock_tx_emergency_pause", options);
+  }
+  return submitIncidentOperation(
+    "emergency_pause",
+    caller,
+    [new Address(caller).toScVal()],
+    options,
+  );
+}
+
+/** Creator/admin: resume_campaign(campaign_id: u32, caller: Address). */
+export async function resumeCampaign(
+  campaignId: number,
+  caller: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(caller);
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_resume_campaign", options);
+  const hash = await submitIncidentOperation(
+    "resume_campaign",
+    caller,
+    [nativeToScVal(campaignId, { type: "u32" }), new Address(caller).toScVal()],
+    options,
+  );
+  clearContractCacheByMethod("get_campaign");
+  return hash;
+}
+
+/** Reads get_emergency_pause_signers(): addresses allowed to call emergency_pause. */
+export async function getEmergencyPauseSigners(fresh = false): Promise<string[]> {
+  if (USE_MOCKS) return [];
+
+  try {
+    const result = await invokeViewMethod("get_emergency_pause_signers", [], { fresh });
+    const items = result?.vec();
+    if (!items) return [];
+    return items.map((item) => Address.fromScVal(item).toString());
   } catch (err) {
     throw new Error(parseContractError(err));
   }
