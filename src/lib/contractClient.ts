@@ -357,6 +357,18 @@ interface CachedAccount {
 const _accountCache = new Map<string, CachedAccount>();
 
 /**
+ * Compare two Stellar sequence numbers numerically.
+ *
+ * Sequence numbers are decimal strings, so a plain `>` compares them
+ * lexicographically ("10" < "9"). BigInt keeps the comparison correct across
+ * digit-count boundaries and avoids the precision loss of Number for the
+ * large values Stellar sequences can reach.
+ */
+export function isSequenceAtLeast(current: string, baseline: string): boolean {
+  return BigInt(current) >= BigInt(baseline);
+}
+
+/**
  * Fetch the Stellar account, returning a cached copy if it was fetched within
  * ACCOUNT_CACHE_TTL_MS and the sequence number hasn't diverged.
  * On sequence mismatch the cache entry is discarded and a fresh lookup is made.
@@ -370,7 +382,7 @@ async function getCachedAccount(publicKey: string): Promise<Account> {
     // rapid consecutive transactions (which bump the sequence locally) work
     // correctly without going back to the network each time.
     const currentSeq = cached.account.sequenceNumber();
-    if (currentSeq === cached.sequenceOnFetch || currentSeq > cached.sequenceOnFetch) {
+    if (isSequenceAtLeast(currentSeq, cached.sequenceOnFetch)) {
       return cached.account;
     }
     // Sequence mismatch — evict and re-fetch.
