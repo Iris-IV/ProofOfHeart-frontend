@@ -205,7 +205,7 @@ export function getContractErrorCode(error: unknown): ContractError | null {
       )[code];
       if (specialCode) return specialCode;
       if (code in ContractError) {
-        return code as ContractError;
+        return code;
       }
     }
 
@@ -222,7 +222,7 @@ export function getContractErrorCode(error: unknown): ContractError | null {
       )[code];
       if (specialCode) return specialCode;
       if (code in ContractError) {
-        return code as ContractError;
+        return code;
       }
     }
   }
@@ -286,7 +286,7 @@ export function normalizeContractError(
  */
 export function contractErrorKey(code: number): string {
   if (code in ContractError) {
-    return errorTranslationKeys[code as ContractError] ?? FALLBACK_KEY;
+    return errorTranslationKeys[code] ?? FALLBACK_KEY;
   }
   return FALLBACK_KEY;
 }

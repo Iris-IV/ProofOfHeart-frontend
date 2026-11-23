@@ -13,7 +13,6 @@ import { parseContractError } from "../utils/contractErrors";
 import { explorerTxUrl } from "../utils/explorer";
 import {
   type TransactionLifecyclePhase,
-  type TransactionLifecycleOptions,
 } from "../lib/contractClient";
 import { useWriteGuard } from "../hooks/useWriteGuard";
 import { usePlatformStatus } from "../hooks/usePlatformStatus";
@@ -157,7 +156,7 @@ export default function WithdrawFunds({
       try {
         const hash = await withdrawFunds(campaign.id, {
           onStatus: ({ phase }) => setTxPhase(phase),
-        } as TransactionLifecycleOptions);
+        });
         setTxHash(hash);
         showSuccess(t("withdrawalSuccessToast", { amount: formatXlm(creatorAmount) }));
         onWithdrawSuccess?.();
@@ -244,7 +243,9 @@ export default function WithdrawFunds({
           </p>
           <div className="flex flex-col sm:flex-row gap-2">
             <button
-              onClick={handleWithdraw}
+              onClick={() => {
+                void handleWithdraw();
+              }}
               disabled={isWithdrawing || isWriteDisabled}
               className="flex-1 px-4 py-3 min-h-[44px] bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >

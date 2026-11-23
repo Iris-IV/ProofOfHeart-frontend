@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useServerTimeOffset } from "./useServerTimeOffset";
-import { nowWithOffset, isOffsetTrustworthy } from "@/lib/serverTime";
+import { nowWithOffset } from "@/lib/serverTime";
 
 /**
  * Provides the current time in seconds (Unix timestamp) adjusted for server/ledger time.

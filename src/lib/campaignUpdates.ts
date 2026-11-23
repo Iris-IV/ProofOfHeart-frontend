@@ -82,7 +82,7 @@ export async function getCampaignUpdates(campaignId: number): Promise<CampaignUp
 
   try {
     const raw = await requestOffchainJson<unknown[]>(`/campaigns/${campaignId}/updates`);
-    const updates = raw.map((item) => parseWith(CampaignUpdateSchema, "CampaignUpdateSchema", item) as CampaignUpdate);
+    const updates = raw.map((item) => parseWith(CampaignUpdateSchema, "CampaignUpdateSchema", item));
 
     // Sort by timestamp descending (newest first)
     return updates.sort((a: CampaignUpdate, b: CampaignUpdate) => b.timestamp - a.timestamp);
@@ -167,7 +167,7 @@ export async function createCampaignUpdate(
         notify,
       },
     });
-    return parseWith(CampaignUpdateSchema, "CampaignUpdateSchema", raw) as CampaignUpdate;
+    return parseWith(CampaignUpdateSchema, "CampaignUpdateSchema", raw);
   } catch (error) {
     throw new Error(`Failed to create campaign update: ${parseContractError(error)}`);
   }

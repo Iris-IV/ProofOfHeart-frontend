@@ -21,7 +21,7 @@ import FaqPage, { generateMetadata } from "@/app/[locale]/faq/page";
 const mockedGetTranslations = getTranslations as jest.MockedFunction<typeof getTranslations>;
 
 /** A minimal translation function that returns the key as its value. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const makeMockT = (overrides: Record<string, string> = {}) =>
   jest.fn((key: string) => overrides[key] ?? key) as unknown as Awaited<
     ReturnType<typeof getTranslations>

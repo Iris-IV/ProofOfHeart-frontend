@@ -1,5 +1,7 @@
 // @ts-check
 import js from "@eslint/js";
+import jsxA11y from "eslint-plugin-jsx-a11y";
+import reactHooks from "eslint-plugin-react-hooks";
 import unusedImports from "eslint-plugin-unused-imports";
 import tseslint from "typescript-eslint";
 
@@ -17,6 +19,8 @@ export default tseslint.config(
     },
     plugins: {
       "unused-imports": unusedImports,
+      "react-hooks": reactHooks,
+      "jsx-a11y": jsxA11y,
     },
     rules: {
       "no-unused-vars": "off",

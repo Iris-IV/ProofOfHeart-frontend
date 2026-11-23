@@ -272,7 +272,9 @@ export default function RevenueSharingPanel({
         <div className="mt-4 rounded-2xl border border-dashed border-zinc-300 p-4 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
           <p>Connect your wallet to view your exact contribution share and claim revenue.</p>
           <button
-            onClick={connectWallet}
+            onClick={() => {
+              void connectWallet();
+            }}
             className="mt-3 inline-flex items-center justify-center rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
           >
             Connect Wallet
@@ -294,7 +296,9 @@ export default function RevenueSharingPanel({
               </p>
             </div>
             <button
-              onClick={handleClaim}
+              onClick={() => {
+                void handleClaim();
+              }}
               disabled={isPending || claimable <= BigInt(0) || !hasContribution}
               className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-400"
             >
@@ -316,7 +320,12 @@ export default function RevenueSharingPanel({
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             Add revenue back into the pool so contributors can claim their proportional share.
           </p>
-          <form onSubmit={handleDeposit} className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <form
+            onSubmit={(e) => {
+              void handleDeposit(e);
+            }}
+            className="mt-4 flex flex-col gap-3 sm:flex-row"
+          >
             <label className="flex-1">
               <span className="sr-only">Deposit amount in XLM</span>
               <input

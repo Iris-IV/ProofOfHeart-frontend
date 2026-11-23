@@ -74,7 +74,7 @@ export default function PersonalCap({ campaignId }: PersonalCapProps) {
       await setPersonalCap(campaignId, userWalletAddress, capStroops);
       showSuccess(t("capSetSuccess", { amount: formatXlm(stroopsToXlmNumber(capStroops)) }));
       setCapInput("");
-      refetchCap();
+      await refetchCap();
     } catch (err) {
       showError(localizeContractError(parseContractError(err)));
     } finally {
@@ -177,7 +177,9 @@ export default function PersonalCap({ campaignId }: PersonalCapProps) {
             aria-label={t("amountAriaLabel")}
           />
           <button
-            onClick={handleSetCap}
+            onClick={() => {
+              void handleSetCap();
+            }}
             disabled={isSetting || parsedInput === null || parsedInput <= 0}
             className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-zinc-400 dark:disabled:bg-zinc-600 min-h-[36px] inline-flex items-center gap-1.5"
           >
@@ -201,7 +203,9 @@ export default function PersonalCap({ campaignId }: PersonalCapProps) {
         {/* Remove cap button */}
         {hasCap && (
           <button
-            onClick={handleRemoveCap}
+            onClick={() => {
+              void handleRemoveCap();
+            }}
             disabled={isRemoving}
             className="rounded-lg border border-red-300 dark:border-red-700 bg-white dark:bg-zinc-800 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 transition hover:bg-red-50 dark:hover:bg-red-950/40 disabled:cursor-not-allowed disabled:opacity-60 min-h-[36px] inline-flex items-center justify-center gap-1.5"
           >

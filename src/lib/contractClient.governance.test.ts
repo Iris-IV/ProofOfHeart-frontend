@@ -43,8 +43,8 @@ describe("purgeVotingState cache invalidation", () => {
     const spy = vi.spyOn(client, "clearContractCacheByMethod").mockReturnValue(undefined);
     // Stub buildAndSubmitTransaction via the module to avoid a real RPC call.
     const buildSpy = vi
-      .spyOn(client, "buildAndSubmitTransaction" as never)
-      .mockResolvedValue({ txHash: "FAKE_HASH" } as never);
+      .spyOn(client, "buildAndSubmitTransaction")
+      .mockResolvedValue({ txHash: "FAKE_HASH" });
     // Stub getSignerAddress so no wallet prompt fires.
     vi.mock("./walletSigner", () => ({
       getSignerAddress: async () => "GCTEST000000000000000000000000000000000000000000000000000001",

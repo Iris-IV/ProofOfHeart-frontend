@@ -67,7 +67,7 @@ export default function UpdateItem({ update }: UpdateItemProps) {
       const result = await verifyUpdateSignature(update);
       setIsVerified(result);
     };
-    verify();
+    void verify();
   }, [update]);
 
   const relativeTime = formatRelativeTime(update.timestamp);

@@ -49,13 +49,13 @@ function extractContributorAddress(event: Api): string | null {
  */
 function invalidateCampaignQueries(queryClient: QueryClient, campaignId: number): void {
   // Invalidate the specific campaign (updates amount_raised, status, etc.)
-  queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
+  void queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
 
   // Invalidate campaign updates
-  queryClient.invalidateQueries({ queryKey: ["campaignUpdates", campaignId] });
+  void queryClient.invalidateQueries({ queryKey: ["campaignUpdates", campaignId] });
 
   // Invalidate campaign comments
-  queryClient.invalidateQueries({ queryKey: ["campaignComments", campaignId] });
+  void queryClient.invalidateQueries({ queryKey: ["campaignComments", campaignId] });
 }
 
 /**
@@ -63,7 +63,7 @@ function invalidateCampaignQueries(queryClient: QueryClient, campaignId: number)
  */
 function invalidateContributorQueries(queryClient: QueryClient, walletAddress: string): void {
   // Invalidate user's contributions list
-  queryClient.invalidateQueries({ queryKey: ["contributions", walletAddress] });
+  void queryClient.invalidateQueries({ queryKey: ["contributions", walletAddress] });
 }
 
 /**
@@ -74,7 +74,7 @@ function invalidateRevenueQueries(
   campaignId: number,
   walletAddress: string,
 ): void {
-  queryClient.invalidateQueries({
+  void queryClient.invalidateQueries({
     queryKey: ["revenueSharing", campaignId, walletAddress],
   });
 }
@@ -83,7 +83,7 @@ function invalidateRevenueQueries(
  * Invalidates admin-related queries.
  */
 function invalidateAdminQueries(queryClient: QueryClient): void {
-  queryClient.invalidateQueries({ queryKey: ["admin"] });
+  void queryClient.invalidateQueries({ queryKey: ["admin"] });
 }
 
 /**
@@ -94,7 +94,7 @@ function invalidateAdminQueries(queryClient: QueryClient): void {
  * prefix matching invalidates both from this one call.
  */
 export function invalidateCampaignsList(queryClient: QueryClient): void {
-  queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+  void queryClient.invalidateQueries({ queryKey: ["campaigns"] });
 }
 
 /**
@@ -181,7 +181,7 @@ export function invalidateQueriesForEvent(
 
       // Invalidate revenue sharing for all users
       // We can't target specific users, so we invalidate by campaign id pattern
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ["revenueSharing", campaignId],
         type: "active",
       });

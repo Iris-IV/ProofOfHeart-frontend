@@ -5,13 +5,10 @@ import { useTranslations } from "next-intl";
 import { useToast } from "@/components/ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  adminCancelCampaign,
-  censureComment,
   getCensuredCommentCount,
 } from "@/lib/contractClient";
-import { parseContractError } from "@/utils/contractErrors";
 import type { TransactionLifecyclePhase } from "@/lib/contractClient";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function ModerationSection() {
   const t = useTranslations("Admin");
@@ -24,7 +21,7 @@ export default function ModerationSection() {
   const [showHideCensured, setShowHideCensured] = useState(true);
 
   useEffect(() => {
-    loadCensuredCount();
+    void loadCensuredCount();
   }, []);
 
   const loadCensuredCount = async () => {

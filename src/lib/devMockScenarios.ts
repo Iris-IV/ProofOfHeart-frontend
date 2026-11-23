@@ -1,4 +1,4 @@
-import { Campaign, CampaignStatus } from "@/types";
+import { Campaign } from "@/types";
 import type { MockScenario } from "@/hooks/useDevMockScenario";
 
 /**
@@ -150,7 +150,7 @@ export function applyMockScenario(campaign: Campaign, scenario: MockScenario): C
         is_cancelled: false,
         deadline: now + 86400 * 30, // 30 days from now
         amount_raised: campaign.funding_goal / BigInt(2), // 50% funded
-        status: "active" as CampaignStatus,
+        status: "active",
       };
 
     case "verified":
@@ -163,7 +163,7 @@ export function applyMockScenario(campaign: Campaign, scenario: MockScenario): C
         is_cancelled: false,
         deadline: now + 86400 * 30,
         amount_raised: campaign.funding_goal / BigInt(3), // 33% funded
-        status: "verified" as CampaignStatus,
+        status: "verified",
       };
 
     case "funded":
@@ -176,7 +176,7 @@ export function applyMockScenario(campaign: Campaign, scenario: MockScenario): C
         is_cancelled: false,
         deadline: now - 86400 * 5, // Ended 5 days ago
         amount_raised: campaign.funding_goal,
-        status: "funded" as CampaignStatus,
+        status: "funded",
       };
 
     case "cancelled":
@@ -189,7 +189,7 @@ export function applyMockScenario(campaign: Campaign, scenario: MockScenario): C
         is_cancelled: true,
         deadline: now + 86400 * 30,
         amount_raised: campaign.funding_goal / BigInt(4), // 25% funded
-        status: "cancelled" as CampaignStatus,
+        status: "cancelled",
       };
 
     case "failed":
@@ -202,7 +202,7 @@ export function applyMockScenario(campaign: Campaign, scenario: MockScenario): C
         is_cancelled: false,
         deadline: now - 86400 * 10, // Ended 10 days ago
         amount_raised: campaign.funding_goal / BigInt(5), // 20% funded
-        status: "failed" as CampaignStatus,
+        status: "failed",
       };
 
     case "empty":
@@ -226,7 +226,7 @@ export function applyMockScenario(campaign: Campaign, scenario: MockScenario): C
         is_cancelled: false,
         deadline: now + 86400 * 15, // Still has time
         amount_raised: campaign.funding_goal / BigInt(2), // 50% funded
-        status: "active" as CampaignStatus,
+        status: "active",
         // Contract-level pause (represented by is_active: false but not cancelled)
       };
 
@@ -240,7 +240,7 @@ export function applyMockScenario(campaign: Campaign, scenario: MockScenario): C
         is_cancelled: false,
         deadline: now + 86400 * 10, // Still active
         amount_raised: campaign.funding_goal * BigInt(2), // 200% funded
-        status: "active" as CampaignStatus,
+        status: "active",
       };
 
     case "near_deadline":
@@ -253,7 +253,7 @@ export function applyMockScenario(campaign: Campaign, scenario: MockScenario): C
         is_cancelled: false,
         deadline: now + 86400 * 1 - 3600, // 23 hours remaining
         amount_raised: (campaign.funding_goal * BigInt(95)) / BigInt(100), // 95% funded
-        status: "active" as CampaignStatus,
+        status: "active",
       };
 
     case "empty_state":
@@ -266,7 +266,7 @@ export function applyMockScenario(campaign: Campaign, scenario: MockScenario): C
         is_cancelled: false,
         deadline: now + 86400 * 30,
         amount_raised: BigInt(0), // No contributions yet
-        status: "active" as CampaignStatus,
+        status: "active",
       };
 
     case "error":

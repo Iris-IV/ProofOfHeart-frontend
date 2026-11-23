@@ -14,7 +14,7 @@ export function useServerTimeOffset(): number | null {
   useEffect(() => {
     let cancelled = false;
 
-    getServerTimeOffsetMs().then((offset) => {
+    void getServerTimeOffsetMs().then((offset) => {
       if (!cancelled) setOffsetMs(offset);
     });
 

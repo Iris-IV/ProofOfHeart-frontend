@@ -228,7 +228,9 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
           )}
           {claimableCount > 1 && (
             <button
-              onClick={handleClaimAll}
+              onClick={() => {
+                void handleClaimAll();
+              }}
               disabled={isBatchClaiming}
               aria-label={t("claimAll", { count: claimableCount })}
               aria-busy={isBatchClaiming}
@@ -315,7 +317,9 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                   </Link>
                   {item.canClaimRefund && (
                     <button
-                      onClick={() => handleClaimRefund(item.campaign.id)}
+                      onClick={() => {
+                        void handleClaimRefund(item.campaign.id);
+                      }}
                       disabled={isPending || isBatchClaiming}
                       className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium text-white transition disabled:cursor-not-allowed ${
                         refundStatus === "success"
@@ -338,7 +342,9 @@ export default function MyContributionsSection({ walletAddress }: MyContribution
                   )}
                   {item.canClaimRevenue && (
                     <button
-                      onClick={() => handleClaimRevenue(item.campaign.id)}
+                      onClick={() => {
+                        void handleClaimRevenue(item.campaign.id);
+                      }}
                       disabled={isPending || isBatchClaiming}
                       className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium text-white transition disabled:cursor-not-allowed ${
                         revenueStatus === "success"

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/components/ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
@@ -74,7 +74,7 @@ export default function BatchVerificationSection() {
       }
 
       setSelectedIds(new Set());
-      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
     } catch (err) {
       showError(parseContractError(err));
       setResult(null);
@@ -105,7 +105,12 @@ export default function BatchVerificationSection() {
       {pendingCampaigns.length === 0 ? (
         <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("noPending")}</p>
       ) : (
-        <form onSubmit={handleVerifySelected} className="space-y-6">
+        <form
+          onSubmit={(e) => {
+            void handleVerifySelected(e);
+          }}
+          className="space-y-6"
+        >
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {pendingCampaigns.map((campaign) => (
               <label key={campaign.id} className="flex items-center gap-3 cursor-pointer">

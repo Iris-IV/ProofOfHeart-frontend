@@ -1,4 +1,4 @@
-import { analyticsDispatch, rateWebVital, WEB_VITALS_THRESHOLDS } from "@/lib/analyticsDispatch";
+import { analyticsDispatch, rateWebVital } from "@/lib/analyticsDispatch";
 
 describe("analyticsDispatch Web Vitals Collector Pipeline (#1595)", () => {
   it("rates LCP metric correctly against SLA thresholds", () => {

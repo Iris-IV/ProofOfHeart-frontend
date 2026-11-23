@@ -21,7 +21,7 @@ function subscribe(callback: () => void) {
 
 function getSnapshot(): VisibilityState {
   if (typeof document === "undefined") return "visible";
-  return (document.visibilityState as VisibilityState) || "visible";
+  return (document.visibilityState) || "visible";
 }
 
 function getServerSnapshot(): VisibilityState {

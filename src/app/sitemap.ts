@@ -28,7 +28,7 @@ async function getCampaignSitemapEntries(): Promise<
         lastModified:
           campaign.created_at !== undefined ? new Date(campaign.created_at * 1000) : undefined,
         // Active campaigns may receive contributions — crawl them more often.
-        changeFrequency: (campaign.is_active ? "hourly" : "weekly") as "hourly" | "weekly",
+        changeFrequency: (campaign.is_active ? "hourly" : "weekly"),
         priority: campaign.is_active ? 0.9 : 0.7,
       })),
     );

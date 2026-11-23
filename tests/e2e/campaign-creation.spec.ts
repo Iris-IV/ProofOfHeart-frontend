@@ -67,8 +67,8 @@ test.describe("Campaign Creation E2E Flow", () => {
     await page.selectOption('select[name="category"]', "1"); // Educational Startup
 
     // Verify character counters update
-    await expect(page.locator("text=/\d+\/100/")).toBeVisible(); // Title counter
-    await expect(page.locator("text=/\d+\/1,000/")).toBeVisible(); // Description counter
+    await expect(page.locator("text=/\\d+\\/100/")).toBeVisible(); // Title counter
+    await expect(page.locator("text=/\\d+\\/1,000/")).toBeVisible(); // Description counter
   });
 
   test("should validate funding goal constraints", async ({ page }) => {

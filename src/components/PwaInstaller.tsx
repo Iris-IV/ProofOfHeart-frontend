@@ -17,8 +17,10 @@ export function PwaInstaller() {
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_USE_MOCKS === "true") {
       if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.getRegistrations().then((regs) => {
-          regs.forEach((r) => r.unregister());
+        void navigator.serviceWorker.getRegistrations().then((regs) => {
+          regs.forEach((r) => {
+            void r.unregister();
+          });
         });
       }
       return;
@@ -57,7 +59,7 @@ export function PwaInstaller() {
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
-    deferredPrompt.prompt();
+    void deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === "accepted") {
       setInstalled(true);
@@ -76,7 +78,9 @@ export function PwaInstaller() {
         <p className="text-gray-500 dark:text-gray-400">{t("installSubtitle")}</p>
       </div>
       <button
-        onClick={handleInstall}
+        onClick={() => {
+          void handleInstall();
+        }}
         className="rounded-lg bg-red-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-600"
       >
         {t("installButton")}
