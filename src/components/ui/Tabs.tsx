@@ -157,7 +157,6 @@ export function TabPanel({
       // The WAI-ARIA tabs pattern requires a focusable panel: after activating
       // a tab, Tab must move into the panel even when its first child is not
       // itself focusable. The lint rule does not model that exception.
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
       tabIndex={0}
       className={cn("focus-ring rounded-md", className)}
       {...props}

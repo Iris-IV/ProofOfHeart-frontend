@@ -34,7 +34,7 @@ export function useCampaignUpdates(
     },
     onSuccess: () => {
       // Invalidate and refetch updates after successful creation
-      queryClient.invalidateQueries({ queryKey: ["campaignUpdates", campaignId] });
+      void queryClient.invalidateQueries({ queryKey: ["campaignUpdates", campaignId] });
     },
   });
 
@@ -49,7 +49,7 @@ export function useCampaignUpdates(
     createUpdate,
     isCreating,
     refetch: () => {
-      queryClient.invalidateQueries({ queryKey: ["campaignUpdates", campaignId] });
+      void queryClient.invalidateQueries({ queryKey: ["campaignUpdates", campaignId] });
     },
   };
 }

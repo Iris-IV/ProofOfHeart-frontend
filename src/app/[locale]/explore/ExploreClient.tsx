@@ -159,7 +159,6 @@ export default function ExplorePage() {
   // container stays anchored at the top of the new result set.
   useEffect(() => {
     rowVirtualizer.scrollToOffset(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategory]);
 
   return (

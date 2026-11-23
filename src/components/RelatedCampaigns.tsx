@@ -69,7 +69,7 @@ export default function RelatedCampaigns({
 
   const categoryLabel =
     typeof category === "number"
-      ? (CATEGORY_LABELS[category as Category] ?? String(category))
+      ? (CATEGORY_LABELS[category] ?? String(category))
       : (CATEGORY_LABELS[category as unknown as Category] ?? String(category));
 
   return (

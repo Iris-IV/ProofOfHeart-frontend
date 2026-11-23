@@ -88,7 +88,7 @@ describe("Campaign metadata hash validation (#1534)", () => {
       deadline: Date.now() / 1000 + 86400,
       amount_raised: BigInt(0),
       is_active: true,
-      status: "active" as any,
+      status: "active",
       funds_withdrawn: false,
       is_cancelled: false,
       is_verified: false,

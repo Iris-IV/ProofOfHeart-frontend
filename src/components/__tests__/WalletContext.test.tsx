@@ -37,8 +37,8 @@ const TestComponent = () => {
       <div data-testid="publicKey">{publicKey}</div>
       <div data-testid="isConnected">{isWalletConnected.toString()}</div>
       <div data-testid="isLoading">{isLoading.toString()}</div>
-      <button onClick={connectWallet}>Connect</button>
-      <button onClick={disconnectWallet}>Disconnect</button>
+      <button onClick={() => { void connectWallet(); }}>Connect</button>
+      <button onClick={() => { void disconnectWallet(); }}>Disconnect</button>
     </div>
   );
 };

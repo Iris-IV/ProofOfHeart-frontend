@@ -21,7 +21,7 @@ import {
 // Helpers that mirror the ScVal encoding used in the real contract calls.
 // We import the stellar SDK types directly to verify argument shapes.
 // ---------------------------------------------------------------------------
-import { nativeToScVal, Address, xdr } from "@stellar/stellar-sdk";
+import { nativeToScVal, xdr } from "@stellar/stellar-sdk";
 
 // Force mock mode for all tests in this file.
 beforeAll(() => {

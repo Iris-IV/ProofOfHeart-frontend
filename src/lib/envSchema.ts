@@ -458,7 +458,7 @@ export function refineServerEnv(
  * site. This is the single highest-value check in the module, and it catches a
  * mistake a per-variable schema structurally cannot.
  */
-export function findExposedSecrets(env: EnvRecord = process.env as EnvRecord): EnvIssue[] {
+export function findExposedSecrets(env: EnvRecord = process.env): EnvIssue[] {
   const issues: EnvIssue[] = [];
   for (const entry of ENV_CONTRACT) {
     if (!entry.secret) continue;
@@ -528,7 +528,7 @@ export function validateClientEnv(options: ValidateClientOptions = {}): EnvSecti
     };
   }
   const data = result.data as ClientEnv;
-  const issues = refineClientEnv(data as Record<string, unknown>, { isProduction });
+  const issues = refineClientEnv(data, { isProduction });
   return { scope: "client", data, issues, ok: isOk(issues) };
 }
 
@@ -574,7 +574,7 @@ export function validateServerEnv(options: ValidateServerOptions = {}): EnvSecti
     };
   }
   const data = result.data as ServerEnv;
-  const issues = refineServerEnv(data as Record<string, unknown>, {
+  const issues = refineServerEnv(data, {
     isProduction,
     stellarNetwork: options.stellarNetwork,
   });
@@ -631,7 +631,7 @@ export function validateRuntimeEnv(options: ValidateRuntimeOptions = {}): Runtim
   const exposed =
     options.checkSecretExposure === false
       ? []
-      : findExposedSecrets((source ?? process.env) as EnvRecord);
+      : findExposedSecrets((source ?? process.env));
 
   const issues = [...client.issues, ...server.issues, ...exposed];
   return { ok: isOk(issues), client, server, issues };

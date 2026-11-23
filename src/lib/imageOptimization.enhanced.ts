@@ -1,4 +1,3 @@
-import { imageOptimization } from "./imageOptimization";
 
 export interface OptimizedImageConfig {
   src: string;

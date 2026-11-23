@@ -51,7 +51,7 @@ export default function HomeClient() {
               onClick={(e) => {
                 if (!isWalletConnected) {
                   e.preventDefault();
-                  connectWallet();
+                  void connectWallet();
                 }
               }}
               className="group flex items-center justify-center gap-2 px-6 sm:px-10 py-4 bg-white dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-bold rounded-2xl transition-all shadow-sm hover:shadow-md hover:motion-safe:-translate-y-0.5 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"

@@ -155,6 +155,8 @@ export function useCampaignComments(
       await reportMutation(commentId);
     },
     isReporting,
-    refetch: () => queryClient.invalidateQueries({ queryKey: allQueryKey }),
+    refetch: () => {
+      void queryClient.invalidateQueries({ queryKey: allQueryKey });
+    },
   };
 }

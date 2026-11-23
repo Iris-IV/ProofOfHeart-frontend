@@ -36,7 +36,6 @@ import {
   Campaign,
   Category,
   deriveStatus,
-  CampaignStatus,
   Milestone,
   ContractMilestone,
 } from "../types";
@@ -449,7 +448,7 @@ async function buildAndSubmitTransaction(
   }
 
   const preparedTx = rpc
-    .assembleTransaction(builtTx, simulated as rpc.Api.SimulateTransactionSuccessResponse)
+    .assembleTransaction(builtTx, simulated)
     .build();
 
   // Pause/creation checks are re-read immediately before signing. This is a
@@ -551,7 +550,7 @@ async function buildAndSubmitTransaction(
 
   options?.onStatus?.({ phase: "confirmed", txHash, rpcStatus: getResult.status });
   recordObservabilitySuccess(operation, txHash);
-  return getResult as rpc.Api.GetSuccessfulTransactionResponse;
+  return getResult;
 }
 
 function emitMockLifecycle(txHash: string, options?: TransactionLifecycleOptions): string {
@@ -607,7 +606,7 @@ async function invokeViewMethod(
     throw simulationError;
   }
 
-  const successSim = simulated as rpc.Api.SimulateTransactionSuccessResponse;
+  const successSim = simulated;
   const result = successSim.result?.retval ?? null;
 
   // Cache the result
@@ -693,7 +692,7 @@ function campaignFromSpec(spec: SpecCampaign): Campaign {
     funds_withdrawn,
     is_cancelled,
     is_verified,
-    category: spec.category as Category,
+    category: spec.category,
     has_revenue_sharing: spec.has_revenue_sharing,
     revenue_share_percentage: spec.revenue_share_percentage,
     first_creator: spec.first_creator,
@@ -752,7 +751,7 @@ export const __testUtils = {
 function makeMockCampaign(partial: Omit<Campaign, "status">): Campaign {
   return {
     ...partial,
-    status: deriveStatus(partial) as CampaignStatus,
+    status: deriveStatus(partial),
   };
 }
 
@@ -1943,7 +1942,7 @@ export async function estimateContributeNetworkFee(
   }
 
   const prepared = rpc
-    .assembleTransaction(transaction, simulation as rpc.Api.SimulateTransactionSuccessResponse)
+    .assembleTransaction(transaction, simulation)
     .build();
   return BigInt(prepared.fee);
 }

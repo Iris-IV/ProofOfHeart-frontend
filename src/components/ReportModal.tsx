@@ -30,7 +30,7 @@ export default function ReportModal({
 
     setIsSubmitting(true);
     try {
-      submitReport(campaignId, campaignTitle, reason, notes.trim(), reporterAddress);
+      await submitReport(campaignId, campaignTitle, reason, notes.trim(), reporterAddress);
       showSuccess("Report submitted. Our team will review it shortly.");
       onClose();
     } catch {
@@ -59,7 +59,12 @@ export default function ReportModal({
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+      <form
+        onSubmit={(e) => {
+          void handleSubmit(e);
+        }}
+        className="px-6 py-5 space-y-4"
+      >
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           Reporting:{" "}
           <span className="font-medium text-zinc-900 dark:text-zinc-100">{campaignTitle}</span>

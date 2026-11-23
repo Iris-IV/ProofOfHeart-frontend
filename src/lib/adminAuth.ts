@@ -77,7 +77,10 @@ export async function isPlatformAdmin(address: string): Promise<boolean> {
     const { getAdmin } = await import("@/lib/contractClient");
     const onChainAdmin = await getAdmin().catch(() => null);
     if (onChainAdmin && normalizeAddress(address) === normalizeAddress(onChainAdmin)) return true;
-  } catch {}
+  } catch {
+    // Admin check is best-effort: on any failure we fall through to the
+    // "not admin" result so the caller still sees a stable boolean.
+  }
   return false;
 }
 

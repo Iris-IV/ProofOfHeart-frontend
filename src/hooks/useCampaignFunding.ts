@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { Campaign, Milestone } from "../types";
+import type { Milestone } from "../types";
 import { calculateFundingPercentage } from "../types";
 import { useCampaign } from "./useCampaign";
 

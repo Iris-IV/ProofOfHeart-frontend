@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WalletProvider, useWallet } from "../WalletContext";
 import { isConnected, isAllowed, getAddress, getNetwork } from "@stellar/freighter-api";
 import { useToast } from "../ToastProvider";
-import { saveWalletPreference, clearWalletPreference } from "@/lib/stellar";
+import { saveWalletPreference } from "@/lib/stellar";
 
 // Mock dependencies
 jest.mock("../ToastProvider", () => ({
@@ -158,7 +158,7 @@ describe("WalletContext auto-reconnect (#1532)", () => {
       return (
         <div>
           <TestComponent />
-          <button onClick={connectWallet}>Connect</button>
+          <button onClick={() => { void connectWallet(); }}>Connect</button>
         </div>
       );
     };

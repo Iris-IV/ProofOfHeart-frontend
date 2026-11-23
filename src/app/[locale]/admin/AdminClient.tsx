@@ -57,7 +57,7 @@ import type {
 } from "@/lib/contractClient";
 import { isSameAddress } from "@/lib/stellar";
 import { formatAmount } from "@/lib/formatters";
-import { Category, CATEGORY_LABELS, basisPointsToPercentage } from "@/types";
+import { CATEGORY_LABELS, basisPointsToPercentage } from "@/types";
 import { parseContractError } from "@/utils/contractErrors";
 import { explorerTxUrl } from "@/utils/explorer";
 import {
@@ -194,7 +194,7 @@ export default function AdminDashboard() {
       }
     };
 
-    loadData();
+    void loadData();
     return () => {
       cancelled = true;
     };
@@ -272,7 +272,7 @@ export default function AdminDashboard() {
       showSuccess(t("approveSuccess"));
       setOptimisticPendingIds((prev) => new Set(prev).add(id));
       refetch();
-      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+      await queryClient.invalidateQueries({ queryKey: ["campaign", id] });
     } catch (err) {
       showError(parseContractError(err));
     } finally {
@@ -308,7 +308,7 @@ export default function AdminDashboard() {
       setOptimisticPendingIds((prev) => new Set(prev).add(campaignToReject.id));
       setIsRejectModalOpen(false);
       refetch();
-      queryClient.invalidateQueries({ queryKey: ["campaign", campaignToReject.id] });
+      await queryClient.invalidateQueries({ queryKey: ["campaign", campaignToReject.id] });
     } catch (err) {
       showError(parseContractError(err));
     } finally {
@@ -467,7 +467,9 @@ export default function AdminDashboard() {
         <h1 className="text-3xl font-bold mb-4 tracking-tight">{t("walletRequired")}</h1>
         <p className="text-zinc-500 dark:text-zinc-400 max-w-md mb-8">{t("walletRequiredDesc")}</p>
         <button
-          onClick={connectWallet}
+          onClick={() => {
+            void connectWallet();
+          }}
           disabled={isWalletLoading}
           className="px-8 py-3 bg-zinc-950 dark:bg-amber-400 text-white dark:text-zinc-950 font-bold rounded-2xl transition hover:opacity-90 disabled:opacity-50"
         >
@@ -738,7 +740,7 @@ export default function AdminDashboard() {
                               #{c.id}
                             </span>
                             <span className="text-xs font-bold text-zinc-400 capitalize">
-                              {CATEGORY_LABELS[c.category as Category]}
+                              {CATEGORY_LABELS[c.category]}
                             </span>
                           </div>
                           <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2 group-hover:text-amber-600 transition-colors">
@@ -785,7 +787,9 @@ export default function AdminDashboard() {
                               )}
                             </button>
                             <button
-                              onClick={() => handleApprove(c.id)}
+                              onClick={() => {
+                                void handleApprove(c.id);
+                              }}
                               disabled={verifyingId === c.id || cancellingId === c.id}
                               className="size-12 flex items-center justify-center rounded-xl bg-green-500 text-white shadow-lg shadow-green-500/20 hover:bg-green-600 transition hover:motion-safe:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
                               title={t("approve")}
@@ -822,7 +826,12 @@ export default function AdminDashboard() {
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8 leading-relaxed">
               {t("feeDescription")}
             </p>
-            <form onSubmit={handleUpdateFee} className="space-y-6">
+            <form
+              onSubmit={(e) => {
+                void handleUpdateFee(e);
+              }}
+              className="space-y-6"
+            >
               <div>
                 <label
                   htmlFor="platform-fee-input"
@@ -876,7 +885,12 @@ export default function AdminDashboard() {
             <p className="text-sm text-red-800/70 dark:text-red-400/70 mb-8 leading-relaxed">
               {t("transferAdminDesc")}
             </p>
-            <form onSubmit={handleTransferAdmin} className="space-y-6">
+            <form
+              onSubmit={(e) => {
+                void handleTransferAdmin(e);
+              }}
+              className="space-y-6"
+            >
               <div>
                 <label
                   htmlFor="new-admin-address-input"
@@ -1068,7 +1082,9 @@ export default function AdminDashboard() {
                     {report.status === "pending" && (
                       <button
                         type="button"
-                        onClick={() => handleMarkReportReviewed(report.id)}
+                        onClick={() => {
+                          void handleMarkReportReviewed(report.id);
+                        }}
                         className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-500 text-white rounded-xl text-sm font-medium hover:bg-green-600 transition"
                       >
                         <CheckCircle size={14} /> {t("reviewed")}

@@ -67,7 +67,7 @@ class EventSubscriber {
       // Ignore local storage errors
     }
 
-    this.poll();
+    void this.poll();
   }
 
   public stop() {
@@ -112,7 +112,9 @@ class EventSubscriber {
         } catch (e) {
           // If latest ledger fails, schedule retry instead of silently dropping
           if (this.isPolling) {
-            this.timeoutId = setTimeout(() => this.poll(), this.backoffMs);
+            this.timeoutId = setTimeout(() => {
+        void this.poll();
+      }, this.backoffMs);
           }
           return;
         }
@@ -184,7 +186,9 @@ class EventSubscriber {
     }
 
     if (this.isPolling) {
-      this.timeoutId = setTimeout(() => this.poll(), this.backoffMs);
+      this.timeoutId = setTimeout(() => {
+        void this.poll();
+      }, this.backoffMs);
     }
   }
 }

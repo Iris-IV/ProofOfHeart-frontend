@@ -15,7 +15,6 @@ import {
   createCampaign,
   getFundingGoalBounds,
   getPlatformStatus,
-  setMilestones,
   milestoneFormEntriesToInputs,
   addCampaignTag,
   type TransactionLifecyclePhase,

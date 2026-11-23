@@ -8,12 +8,10 @@ import {
   setCancellationPenaltyBps,
   setMinCampaignFundingGoal,
   setMaxCampaignFundingGoal,
-  setMaxContributionPerTx,
 } from "@/lib/contractClient";
 import { parseContractError } from "@/utils/contractErrors";
 import type { TransactionLifecyclePhase } from "@/lib/contractClient";
 import { Loader2 } from "lucide-react";
-import { CATEGORY_LABELS } from "@/types";
 
 export default function LimitsFeesSection() {
   const t = useTranslations("Admin");
@@ -127,7 +125,7 @@ export default function LimitsFeesSection() {
       setMaxContributionPerTx("");
       setCancellationPenalty("");
 
-      queryClient.invalidateQueries({ queryKey: ["platformStats"] });
+      await queryClient.invalidateQueries({ queryKey: ["platformStats"] });
     } catch (err) {
       showError(parseContractError(err));
     } finally {
@@ -158,7 +156,12 @@ export default function LimitsFeesSection() {
         {t("limitsFees.subtitle")}
       </p>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form
+        onSubmit={(e) => {
+          void handleSubmit(e);
+        }}
+        className="space-y-6"
+      >
         {/* Min Funding Goal */}
         <div>
           <label className="block text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
@@ -313,7 +316,9 @@ export default function LimitsFeesSection() {
                 {t("cancel")}
               </button>
               <button
-                onClick={performUpdate}
+                onClick={() => {
+                  void performUpdate();
+                }}
                 disabled={isUpdating}
                 className="flex-1 py-3 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 rounded-xl font-semibold hover:opacity-90 transition disabled:opacity-50"
               >

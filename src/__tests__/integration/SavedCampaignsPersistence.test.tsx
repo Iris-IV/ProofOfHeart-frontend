@@ -155,7 +155,7 @@ const mockCampaigns: Campaign[] = [
     funds_withdrawn: false,
     is_cancelled: false,
     is_verified: false,
-    category: 0 as Campaign["category"],
+    category: 0,
     has_revenue_sharing: false,
     revenue_share_percentage: 0,
   },
@@ -173,7 +173,7 @@ const mockCampaigns: Campaign[] = [
     funds_withdrawn: false,
     is_cancelled: false,
     is_verified: false,
-    category: 0 as Campaign["category"],
+    category: 0,
     has_revenue_sharing: false,
     revenue_share_percentage: 0,
   },
@@ -187,9 +187,7 @@ describe("Saved campaigns persistence", () => {
 
     // Provide mock campaigns so CausesContent renders CauseCards
     (
-      jest.requireMock("@/hooks/useInfiniteCampaigns") as {
-        useInfiniteCampaigns: () => unknown;
-      }
+      jest.requireMock("@/hooks/useInfiniteCampaigns")
     ).useInfiniteCampaigns = () => ({
       campaigns: mockCampaigns,
       isLoading: false,

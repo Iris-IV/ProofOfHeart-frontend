@@ -116,7 +116,9 @@ export default function UpdateComposer({
 
   return (
     <form
-      onSubmit={handleSubmit}
+      onSubmit={(e) => {
+        void handleSubmit(e);
+      }}
       className="bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-6 shadow-sm ring-1 ring-zinc-900/5 transition-all duration-300"
     >
       <div className="flex items-center justify-between mb-5">

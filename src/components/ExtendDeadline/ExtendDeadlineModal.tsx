@@ -90,7 +90,9 @@ export function ExtendDeadlineModal({
             Cancel
           </button>
           <button
-            onClick={handleExtend}
+            onClick={() => {
+              void handleExtend();
+            }}
             disabled={isSubmitting}
             style={{
               padding: "8px 12px",

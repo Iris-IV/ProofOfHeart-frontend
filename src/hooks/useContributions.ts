@@ -150,8 +150,8 @@ export function useContributions(walletAddress: string | null): UseContributions
     isRefreshing: isFetching && !isLoading,
     error: error?.message ?? null,
     refetch: () => {
-      queryClient.invalidateQueries({ queryKey: ["contributions", walletAddress] });
-      queryClient.invalidateQueries({ queryKey: ["wallet-transactions", walletAddress] });
+      void queryClient.invalidateQueries({ queryKey: ["contributions", walletAddress] });
+      void queryClient.invalidateQueries({ queryKey: ["wallet-transactions", walletAddress] });
     },
   };
 }

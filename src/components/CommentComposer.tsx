@@ -80,7 +80,9 @@ export default function CommentComposer({
 
   return (
     <form
-      onSubmit={handleSubmit}
+      onSubmit={(e) => {
+        void handleSubmit(e);
+      }}
       className={`bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-4 shadow-sm transition-all duration-300 ${
         isReply ? "ml-0 sm:ml-12 mt-2" : ""
       }`}

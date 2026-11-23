@@ -43,7 +43,6 @@ export default function VestingReservePanel({
   // Only show this panel to the campaign creator.
   if (!isCreator) return null;
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
@@ -163,7 +162,9 @@ export default function VestingReservePanel({
             </div>
           ) : (
             <button
-              onClick={handleClaimReserve}
+              onClick={() => {
+                void handleClaimReserve();
+              }}
               disabled={!isReleasable || isPending("claimReserve", campaign.id)}
               title={
                 !isReleasable
