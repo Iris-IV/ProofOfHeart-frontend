@@ -356,6 +356,15 @@ interface CachedAccount {
 const _accountCache = new Map<string, CachedAccount>();
 
 /**
+ * Returns true when the in-memory sequence has not moved backwards relative to
+ * the sequence recorded at fetch time. Sequence numbers are int64 strings, so
+ * they must be compared numerically — a string comparison treats "10" < "9".
+ */
+function isSequenceCurrent(currentSeq: string, sequenceOnFetch: string): boolean {
+  return BigInt(currentSeq) >= BigInt(sequenceOnFetch);
+}
+
+/**
  * Fetch the Stellar account, returning a cached copy if it was fetched within
  * ACCOUNT_CACHE_TTL_MS and the sequence number hasn't diverged.
  * On sequence mismatch the cache entry is discarded and a fresh lookup is made.
@@ -369,7 +378,7 @@ async function getCachedAccount(publicKey: string): Promise<Account> {
     // rapid consecutive transactions (which bump the sequence locally) work
     // correctly without going back to the network each time.
     const currentSeq = cached.account.sequenceNumber();
-    if (currentSeq === cached.sequenceOnFetch || currentSeq > cached.sequenceOnFetch) {
+    if (isSequenceCurrent(currentSeq, cached.sequenceOnFetch)) {
       return cached.account;
     }
     // Sequence mismatch — evict and re-fetch.
@@ -742,6 +751,7 @@ function requiredField(fields: Record<string, xdr.ScVal>, name: string, label: s
 // Exposed for targeted unit tests of XDR decoding behavior.
 export const __testUtils = {
   decodeCampaign,
+  isSequenceCurrent,
 };
 
 // ---------------------------------------------------------------------------
