@@ -14,7 +14,12 @@ jest.mock("@/components/VotingComponent", () => ({
     onVote: (id: number, t: "upvote" | "downvote") => Promise<void>;
     [k: string]: unknown;
   }) => (
-    <button data-testid="voting-component" onClick={() => onVote(campaign.id, "upvote")}>
+    <button
+      data-testid="voting-component"
+      onClick={() => {
+        void onVote(campaign.id, "upvote");
+      }}
+    >
       Vote
     </button>
   ),

@@ -1,11 +1,10 @@
 import {
   Contract,
   nativeToScVal,
-  Address,
 } from "@stellar/stellar-sdk";
 import { getSignerAddress } from "./walletSigner";
 import { parseContractError } from "../utils/contractErrors";
-import { buildAndSubmitTransaction, emitMockLifecycle, TransactionLifecycleOptions } from "./contractClient";
+import { buildAndSubmitTransaction, emitMockLifecycle, TransactionLifecycleOptions, clearContractCacheByMethod } from "./contractClient";
 
 const USE_MOCKS = typeof process !== "undefined" && process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? process.env.NEXT_PUBLIC_CONTRACT_ID ?? "";
@@ -133,19 +132,25 @@ export async function removeCategoryVotingThreshold(
 }
 
 export async function purgeVotingState(
+  beforeId?: number,
   options?: TransactionLifecycleOptions,
 ): Promise<string> {
   if (USE_MOCKS) return emitMockLifecycle("mock_tx_purge_voting_state", options);
 
   const callerAddress = await getSignerAddress();
   const contract = new Contract(CONTRACT_ADDRESS);
-  const op = contract.call("purge_voting_state");
+  const args =
+    beforeId !== undefined ? [nativeToScVal(beforeId, { type: "u32" })] : [];
+  const op = contract.call("purge_voting_state", ...args);
 
   try {
     const txResult = await buildAndSubmitTransaction(callerAddress, op, {
       ...options,
       operation: "purge_voting_state",
     });
+    // Stale voting-state view results are invalid after a purge.
+    clearContractCacheByMethod("get_voting_state");
+    clearContractCacheByMethod("get_vote");
     return txResult.txHash;
   } catch (err) {
     throw new Error(parseContractError(err));

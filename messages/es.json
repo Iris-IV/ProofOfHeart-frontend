@@ -319,6 +319,7 @@
       "currentMinGoal": "Meta Mínima Actual: {value}",
       "currentMaxGoal": "Meta Máxima Actual: {value}"
     },
+ feat/token-admin-emergency-flows
     "contractOps": {
       "title": "Controles de tokens y emergencias",
       "description": "Administra los tokens aceptados para campañas, programa un cambio del token de la plataforma y coordina el bloqueo temporal de retiros de emergencia.",
@@ -365,6 +366,46 @@
       "emergencyProposedSuccess": "Propuesta de retiro de emergencia enviada.",
       "emergencyExecutedSuccess": "Retiro de emergencia ejecutado.",
       "emergencyCancelledSuccess": "Propuesta de retiro de emergencia cancelada."
+
+    "incident": {
+      "title": "Controles de incidentes",
+      "subtitle": "Pausa la plataforma durante un incidente y reanúdala cuando sea seguro.",
+      "currentState": "Estado de la plataforma",
+      "statePaused": "Pausada",
+      "stateActive": "Activa",
+      "loading": "Cargando…",
+      "stateError": "No se pudo leer el estado de la plataforma.",
+      "retry": "Reintentar",
+      "pause": "Pausar plataforma",
+      "unpause": "Reanudar plataforma",
+      "emergencyPause": "Pausa de emergencia",
+      "emergencySignerOnly": "Solo los firmantes de emergencia registrados pueden usar esto.",
+      "resumeLabel": "Reanudar campaña (ID)",
+      "resume": "Reanudar campaña",
+      "invalidCampaignId": "Introduce un ID de campaña válido.",
+      "signersTitle": "Firmantes de pausa de emergencia",
+      "noSigners": "No hay firmantes de emergencia registrados.",
+      "signersError": "No se pudieron cargar los firmantes de emergencia.",
+      "confirm": "Confirmar",
+      "confirmTitle": {
+        "pause": "¿Pausar la plataforma?",
+        "unpause": "¿Reanudar la plataforma?",
+        "emergencyPause": "¿Activar una pausa de emergencia?",
+        "resume": "¿Reanudar esta campaña?"
+      },
+      "confirmBody": {
+        "pause": "Se bloquearán todas las operaciones de usuarios que cambian el estado hasta que un administrador la reanude.",
+        "unpause": "Las operaciones de usuarios se reactivarán de inmediato.",
+        "emergencyPause": "Esto pausa toda la plataforma desde un firmante de emergencia. Solo un administrador puede levantarla.",
+        "resume": "Elimina la pausa automática de la campaña {id}."
+      },
+      "success": {
+        "pause": "Plataforma pausada.",
+        "unpause": "Plataforma reanudada.",
+        "emergencyPause": "Pausa de emergencia activada.",
+        "resume": "Campaña reanudada."
+      }
+ main
     }
   },
   "Milestones": {
@@ -1103,5 +1144,39 @@
     "transactionHistoryTitle": "Historial de transacciones",
     "causeLabel": "Causa:",
     "nothingToPreview": "Nada para previsualizar"
+  },
+  "ProofOfImpact": {
+    "title": "Prueba de impacto",
+    "verifiedBadge": "Impacto verificado",
+    "loading": "Cargando prueba de impacto…",
+    "loadError": "No se pudo cargar la prueba de impacto.",
+    "retry": "Reintentar",
+    "recordedBy": "Registrada por",
+    "recordedOn": "Registrada el",
+    "hashLabel": "SHA-256 registrado en la cadena",
+    "checkLabel": "Comprobar la evidencia con el hash registrado",
+    "checkPlaceholder": "CID de IPFS o enlace de la pasarela",
+    "checkButton": "Comprobar",
+    "viewEvidence": "Ver evidencia en IPFS",
+    "checkFile": "O elige el archivo de evidencia",
+    "hashMatch": "El hash coincide: la evidencia no ha cambiado.",
+    "hashMismatch": "El hash no coincide con la prueba registrada.",
+    "checkError": "No se pudo leer la evidencia para comprobarla.",
+    "invalidReference": "Introduce un CID o enlace de IPFS válido.",
+    "recordHelp": "Elige el archivo de evidencia (ya subido a IPFS). Su SHA-256 se registra en la cadena.",
+    "recordLabel": "Archivo de evidencia",
+    "recording": "Registrando prueba…",
+    "recordSuccess": "Prueba de impacto registrada."
+  },
+  "CampaignStats": {
+    "title": "Estadísticas de la campaña",
+    "loading": "Cargando estadísticas…",
+    "loadError": "No se pudieron cargar las estadísticas de la campaña.",
+    "retry": "Reintentar",
+    "contributors": "Contribuyentes",
+    "topContributor": "Mayor contribuyente",
+    "avgContribution": "Contribución media",
+    "lastContribution": "Última contribución",
+    "none": "—"
   }
 }

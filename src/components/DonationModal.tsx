@@ -111,8 +111,10 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
       }
     };
 
-    poll();
-    const interval = setInterval(poll, 2000);
+    void poll();
+    const interval = setInterval(() => {
+      void poll();
+    }, 2000);
     return () => {
       active = false;
       clearInterval(interval);
@@ -229,19 +231,21 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
     if (!publicKey || !validation.valid || !amount.trim()) return;
 
     let active = true;
-    const timeout = window.setTimeout(async () => {
-      try {
-        const fee = await estimateContributeNetworkFee(
-          campaign.id,
-          publicKey,
-          xlmToStroops(amount),
-        );
-        if (active) setEstimatedNetworkFeeXlm(stroopsToXlmNumber(fee));
-      } catch {
-        // Keep the documented conservative fallback if RPC estimation is
-        // temporarily unavailable. Submission performs its own simulation.
-        if (active) setEstimatedNetworkFeeXlm(getEstimatedContributeNetworkFeeXlm());
-      }
+    const timeout = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const fee = await estimateContributeNetworkFee(
+            campaign.id,
+            publicKey,
+            xlmToStroops(amount),
+          );
+          if (active) setEstimatedNetworkFeeXlm(stroopsToXlmNumber(fee));
+        } catch {
+          // Keep the documented conservative fallback if RPC estimation is
+          // temporarily unavailable. Submission performs its own simulation.
+          if (active) setEstimatedNetworkFeeXlm(getEstimatedContributeNetworkFeeXlm());
+        }
+      })();
     }, 300);
 
     return () => {
@@ -560,7 +564,6 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
             {/* Recurring donation opt-in (#671) */}
             <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 px-4 py-3 space-y-3">
               {/* The associated checkbox and visible text are nested in this label. */}
-              {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
               <label htmlFor="recurring-donation" className="flex items-start gap-3 cursor-pointer">
                 <input
                   id="recurring-donation"
@@ -701,7 +704,9 @@ function DonationModal({ campaign, onClose, onSuccess, onRefetch }: DonationModa
       {step === "input" && (
         <div className="contribution-footer shrink-0 border-t border-zinc-200 bg-white/95 px-4 pt-3 backdrop-blur-sm sm:px-6 dark:border-zinc-700 dark:bg-zinc-900/95">
           <button
-            onClick={handleDonate}
+            onClick={() => {
+              void handleDonate();
+            }}
             disabled={!publicKey || !validation.valid || isWriteDisabled || !allowance || allowance.remaining <= 0n}
             className="tap-target focus-ring w-full rounded-control bg-linear-to-r from-brand to-accent py-3 font-semibold text-white transition-opacity duration-[140ms] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
           >

@@ -38,7 +38,7 @@ export function useCampaigns(): UseCampaignsResult {
     isRefreshing: isFetching && !isLoading,
     error: error?.message ?? null,
     refetch: () => {
-      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      void queryClient.invalidateQueries({ queryKey: ["campaigns"] });
     },
   };
 }

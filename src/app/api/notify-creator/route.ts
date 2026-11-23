@@ -115,9 +115,10 @@ export async function POST(request: Request) {
     const confirmationUrl = new URL("/api/notify-creator", request.url);
     confirmationUrl.searchParams.set("token", token);
 
-    await fetch(webhookUrl, {
+    const webhookRes = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(8_000),
       body: JSON.stringify({
         event: "campaign_creator_email_opt_in",
         status: "pending_confirmation",
@@ -127,6 +128,10 @@ export async function POST(request: Request) {
         timestamp: new Date().toISOString(),
       }),
     });
+    if (!webhookRes.ok) {
+      console.error("[notify-creator] webhook returned non-2xx", webhookRes.status);
+      return NextResponse.json({ error: "Webhook dispatch failed" }, { status: 502 });
+    }
     return NextResponse.json({ ok: true, pendingConfirmation: true }, { status: 202 });
   } catch (e) {
     console.error("[notify-creator] webhook failed", e);
@@ -149,9 +154,10 @@ export async function GET(request: Request) {
   if (!webhookUrl) return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
 
   try {
-    await fetch(webhookUrl, {
+    const confirmRes = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(8_000),
       body: JSON.stringify({
         event: "campaign_creator_email_opt_in",
         status: "confirmed",
@@ -160,6 +166,10 @@ export async function GET(request: Request) {
         timestamp: new Date().toISOString(),
       }),
     });
+    if (!confirmRes.ok) {
+      console.error("[notify-creator] confirmation webhook returned non-2xx", confirmRes.status);
+      return NextResponse.json({ error: "Webhook dispatch failed" }, { status: 502 });
+    }
     await store.delete(key);
     return NextResponse.json({ ok: true, confirmed: true });
   } catch (error) {

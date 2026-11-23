@@ -73,13 +73,17 @@ export function createRateLimiter(name: string, windowMs: number, max: number): 
 }
 
 /**
- * Derive a rate-limit key from a NextRequest, preferring a wallet address
- * and falling back to the client IP.
+ * Derive a rate-limit key from a NextRequest using the client IP address.
+ *
+ * We deliberately ignore any caller-supplied wallet address here. A
+ * self-declared address in the request body is not verified, so using it as
+ * the rate-limit key lets any client rotate through arbitrary addresses to
+ * bypass both the per-request rate limit and the duplicate-report check
+ * (#1880).  The IP is the only unforgeable signal available without an
+ * on-chain signature verification step.
  */
 export function rateLimitKeyFromRequest(
   req: { headers: { get(name: string): string | null }; ip?: string },
-  walletAddress?: string | null,
 ): string {
-  if (walletAddress) return walletAddress;
   return getClientIp(req);
 }

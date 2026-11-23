@@ -66,10 +66,10 @@ export function useInfiniteCampaigns(
     isEmpty,
     error: error?.message ?? null,
     fetchNextPage: () => {
-      fetchNextPage();
+      void fetchNextPage();
     },
     refetch: () => {
-      queryClient.invalidateQueries({ queryKey: ["campaigns", "infinite"] });
+      void queryClient.invalidateQueries({ queryKey: ["campaigns", "infinite"] });
     },
   };
 }

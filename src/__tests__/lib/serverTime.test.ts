@@ -27,7 +27,7 @@ describe("getServerTimeOffsetMs", () => {
     const serverTime = new Date(CLIENT_NOW + 7_200_000).toUTCString();
     const fetchImpl = mockFetchWithDateHeader(serverTime);
 
-    const offset = await getServerTimeOffsetMs(fetchImpl as unknown as typeof fetch);
+    const offset = await getServerTimeOffsetMs(fetchImpl);
 
     // HTTP `Date` has one-second resolution, so allow for the truncation.
     expect(offset).not.toBeNull();
@@ -55,7 +55,7 @@ describe("getServerTimeOffsetMs", () => {
     jest.setSystemTime(skewedClientNow);
 
     const fetchImpl = mockFetchWithDateHeader(new Date(CLIENT_NOW).toUTCString());
-    const offset = await getServerTimeOffsetMs(fetchImpl as unknown as typeof fetch);
+    const offset = await getServerTimeOffsetMs(fetchImpl);
 
     expect(Math.abs((offset as number) + 7_200_000)).toBeLessThanOrEqual(1_000);
   });

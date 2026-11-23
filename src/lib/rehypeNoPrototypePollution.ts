@@ -76,7 +76,7 @@ export function scrubHastTree(node: unknown): void {
   const hastNode = node as HastNodeLike;
 
   if (hastNode.properties && typeof hastNode.properties === "object") {
-    deleteDangerousKeys(hastNode.properties as Record<string, unknown>);
+    deleteDangerousKeys(hastNode.properties);
   }
 
   if (Array.isArray(hastNode.children)) {

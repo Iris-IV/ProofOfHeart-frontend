@@ -12,6 +12,7 @@ import WithdrawFunds from "./WithdrawFunds";
 import { useAdmin } from "../hooks/useAdmin";
 import { useContribution } from "../hooks/useContribution";
 import { usePlatformFee } from "../hooks/usePlatformFee";
+import { useLedgerNow } from "../hooks/useLedgerNow";
 import {
   contribute,
   cancelCampaign,
@@ -36,6 +37,7 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
   const { admin } = useAdmin();
   const { contribution } = useContribution(campaign.id, publicKey);
   const { platformFeeBps } = usePlatformFee();
+  const ledgerNow = useLedgerNow();
   const locale = useLocale();
   const { showSuccess, showError, showWarning } = useToast();
   const { invoke, isPending } = useWriteGuard();
@@ -94,7 +96,7 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
     setShowRevenueInput(false);
   };
 
-  const isExpired = Math.floor(Date.now() / 1000) > campaign.deadline;
+  const isExpired = ledgerNow > campaign.deadline;
   const contributionDisabledReason = isCreator
     ? "Creators cannot contribute to their own campaign."
     : campaign.is_cancelled
@@ -160,7 +162,9 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
           withdrawn by the creator.
         </p>
         <button
-          onClick={connectWallet}
+          onClick={() => {
+            void connectWallet();
+          }}
           className="fixed bottom-4 left-4 right-4 z-50 sm:static sm:w-full py-3 min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full transition-colors"
         >
           Connect Wallet to Contribute
@@ -208,7 +212,9 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
                 className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-zinc-900 outline-none transition focus:border-blue-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50"
               />
               <button
-                onClick={handleContribute}
+                onClick={() => {
+                  void handleContribute();
+                }}
                 disabled={isPending("contribute", campaign.id) || !!contributionDisabledReason}
                 className="fixed bottom-4 left-4 right-4 z-50 justify-center sm:static rounded-lg bg-blue-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-zinc-400 flex items-center gap-2"
               >
@@ -241,13 +247,13 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
             </h3>
             <div className="flex flex-col gap-3">
               <button
-                onClick={() =>
-                  handleAction(
+                onClick={() => {
+                  void handleAction(
                     "cancelCampaign",
                     (options) => cancelCampaign(campaign.id, options),
                     "Campaign cancelled.",
-                  )
-                }
+                  );
+                }}
                 disabled={
                   isPending("cancelCampaign", campaign.id) ||
                   !campaign.is_active ||
@@ -292,7 +298,9 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
                     </div>
                     <div className="flex gap-2">
                       <button
-                        onClick={handleDepositRevenue}
+                        onClick={() => {
+                          void handleDepositRevenue();
+                        }}
                         disabled={isPending("depositRevenue", campaign.id) || !revenueAmount}
                         className="flex-1 py-3 min-h-[44px] bg-purple-600 hover:bg-purple-700 disabled:bg-zinc-400 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                       >
@@ -331,13 +339,13 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-5">
           <h3 className="text-base font-semibold text-blue-600 mb-4">Admin Panel</h3>
           <button
-            onClick={() =>
-              handleAction(
+            onClick={() => {
+              void handleAction(
                 "verifyCampaign",
                 (options) => verifyCampaign(campaign.id, options),
                 "Campaign verified!",
-              )
-            }
+              );
+            }}
             disabled={isPending("verifyCampaign", campaign.id)}
             className="w-full py-3 min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
           >
@@ -360,15 +368,27 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
           </p>
           <div className="flex flex-col gap-3">
             <button
-              onClick={() =>
-                handleAction(
+              onClick={() => {
+                void handleAction(
                   "claimRefund",
                   (options) => claimRefund(campaign.id, publicKey!, options),
                   "Refund claimed!",
-                )
+                );
+              }}
+              disabled={
+                isPending("claimRefund", campaign.id) ||
+                !isContributor ||
+                (!campaign.is_cancelled && !(isExpired && campaign.amount_raised < campaign.funding_goal))
               }
-              disabled={isPending("claimRefund", campaign.id) || (campaign.is_active && !isExpired)}
-              title={campaign.is_active && !isExpired ? "Cannot refund while active" : ""}
+              title={
+                !isContributor
+                  ? "You have no contribution to refund"
+                  : campaign.is_cancelled
+                    ? ""
+                    : isExpired && campaign.amount_raised < campaign.funding_goal
+                      ? ""
+                      : "Refund only available for cancelled campaigns or expired campaigns below goal"
+              }
               className="w-full py-3 min-h-[44px] bg-amber-600 hover:bg-amber-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
             >
               <AsyncButtonContent
@@ -379,13 +399,13 @@ export default function CampaignActions({ campaign, onActionSuccess }: CampaignA
             </button>
             {campaign.has_revenue_sharing && (
               <button
-                onClick={() =>
-                  handleAction(
+                onClick={() => {
+                  void handleAction(
                     "claimRevenue",
                     (options) => claimRevenue(campaign.id, publicKey!, options),
                     "Revenue claimed!",
-                  )
-                }
+                  );
+                }}
                 disabled={isPending("claimRevenue", campaign.id)}
                 className="w-full py-3 min-h-[44px] bg-indigo-600 hover:bg-indigo-700 disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
               >

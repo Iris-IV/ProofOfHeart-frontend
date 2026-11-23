@@ -3,11 +3,15 @@ import { getReportRepository } from "@/lib/reportRepository";
 import { CampaignReport } from "@/lib/campaignReports";
 import { createRateLimiter, rateLimitKeyFromRequest } from "@/lib/rateLimit";
 import { CreateReportBodySchema } from "@/lib/schemas";
+import { requireAdmin } from "@/lib/adminAuth";
 
 const reportRateLimiter = createRateLimiter("campaign_reports", 60_000, 3);
 
 // GET /api/reports  — admin moderation queue
 export async function GET(req: NextRequest) {
+  const auth = await requireAdmin(req);
+  if (!auth.ok) return auth.response;
+
   const url = new URL(req.url);
   const statusParam = url.searchParams.get("status");
   const status = statusParam === "pending" || statusParam === "reviewed" ? statusParam : undefined;
@@ -37,8 +41,10 @@ export async function POST(req: NextRequest) {
   const { campaignId, campaignTitle, reason, notes, reporterAddress } = parsed.data;
   const repository = getReportRepository();
 
-  // Rate limit: keyed by reporter address or IP
-  const rateLimitKey = rateLimitKeyFromRequest(req, reporterAddress);
+  // Rate limit: always keyed by IP — a self-declared reporterAddress is not
+  // verified and must not be used as the key, since rotating it trivially
+  // bypasses the limit (#1880).
+  const rateLimitKey = rateLimitKeyFromRequest(req);
   if (!(await reportRateLimiter.check(rateLimitKey))) {
     return NextResponse.json(
       { message: "Too many reports. Please wait before reporting again." },

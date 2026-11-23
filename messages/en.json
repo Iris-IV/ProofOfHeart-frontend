@@ -319,6 +319,7 @@
       "currentMinGoal": "Current Min Goal: {value}",
       "currentMaxGoal": "Current Max Goal: {value}"
     },
+ feat/token-admin-emergency-flows
     "contractOps": {
       "title": "Token and emergency controls",
       "description": "Manage accepted campaign tokens, schedule a platform token change, and coordinate the contract emergency withdrawal timelock.",
@@ -365,6 +366,46 @@
       "emergencyProposedSuccess": "Emergency withdrawal proposal submitted.",
       "emergencyExecutedSuccess": "Emergency withdrawal executed.",
       "emergencyCancelledSuccess": "Emergency withdrawal proposal cancelled."
+
+    "incident": {
+      "title": "Incident controls",
+      "subtitle": "Pause the platform during an incident and resume it once it is safe.",
+      "currentState": "Platform state",
+      "statePaused": "Paused",
+      "stateActive": "Active",
+      "loading": "Loading…",
+      "stateError": "Could not read the platform state.",
+      "retry": "Retry",
+      "pause": "Pause platform",
+      "unpause": "Unpause platform",
+      "emergencyPause": "Emergency pause",
+      "emergencySignerOnly": "Only registered emergency signers can use this.",
+      "resumeLabel": "Resume campaign (ID)",
+      "resume": "Resume campaign",
+      "invalidCampaignId": "Enter a valid campaign ID.",
+      "signersTitle": "Emergency pause signers",
+      "noSigners": "No emergency signers are registered.",
+      "signersError": "Could not load emergency signers.",
+      "confirm": "Confirm",
+      "confirmTitle": {
+        "pause": "Pause the platform?",
+        "unpause": "Unpause the platform?",
+        "emergencyPause": "Trigger an emergency pause?",
+        "resume": "Resume this campaign?"
+      },
+      "confirmBody": {
+        "pause": "All state-changing user operations will be blocked until an admin unpauses.",
+        "unpause": "User operations will be re-enabled immediately.",
+        "emergencyPause": "This pauses the whole platform from an emergency signer. Only an admin can lift it.",
+        "resume": "Clears the automatic pause on campaign {id}."
+      },
+      "success": {
+        "pause": "Platform paused.",
+        "unpause": "Platform unpaused.",
+        "emergencyPause": "Emergency pause activated.",
+        "resume": "Campaign resumed."
+      }
+ main
     }
   },
   "Milestones": {
@@ -1102,5 +1143,39 @@
     "transactionHistoryTitle": "Transaction History",
     "causeLabel": "Cause:",
     "nothingToPreview": "Nothing to preview"
+  },
+  "ProofOfImpact": {
+    "title": "Proof of impact",
+    "verifiedBadge": "Impact verified",
+    "loading": "Loading proof of impact…",
+    "loadError": "Could not load proof of impact.",
+    "retry": "Retry",
+    "recordedBy": "Recorded by",
+    "recordedOn": "Recorded on",
+    "hashLabel": "SHA-256 recorded on-chain",
+    "checkLabel": "Check evidence against the recorded hash",
+    "checkPlaceholder": "IPFS CID or gateway link",
+    "checkButton": "Check",
+    "viewEvidence": "View evidence on IPFS",
+    "checkFile": "Or choose the evidence file",
+    "hashMatch": "Hash matches: the evidence is unchanged.",
+    "hashMismatch": "Hash does not match the recorded proof.",
+    "checkError": "Could not read the evidence to check it.",
+    "invalidReference": "Enter a valid IPFS CID or link.",
+    "recordHelp": "Choose the evidence file (already uploaded to IPFS). Its SHA-256 is recorded on-chain.",
+    "recordLabel": "Evidence file",
+    "recording": "Recording proof…",
+    "recordSuccess": "Proof of impact recorded."
+  },
+  "CampaignStats": {
+    "title": "Campaign stats",
+    "loading": "Loading stats…",
+    "loadError": "Could not load campaign stats.",
+    "retry": "Retry",
+    "contributors": "Contributors",
+    "topContributor": "Top contributor",
+    "avgContribution": "Average contribution",
+    "lastContribution": "Last contribution",
+    "none": "—"
   }
 }

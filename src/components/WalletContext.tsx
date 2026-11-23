@@ -141,7 +141,6 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     // checkWalletConnection is intentionally omitted from deps -- all its
     // transitive deps (state setters, refs, env constant) are stable across
     // renders, so the function identity is effectively stable.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /** Adopt a restored or freshly created social session as the active wallet. */
@@ -259,12 +258,14 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Invalidate all wallet-scoped queries when account/network changes
+  // Invalidate all wallet-scoped queries when account/network changes.
+  // Fire-and-forget: React Query handles its own refetch retries, and this
+  // runs from a sync React callback that cannot await.
   const invalidateWalletQueries = () => {
-    queryClient.invalidateQueries({ queryKey: ["admin"] });
-    queryClient.invalidateQueries({ queryKey: ["contributions"] });
-    queryClient.invalidateQueries({ queryKey: ["revenue"] });
-    queryClient.invalidateQueries({ queryKey: ["stellarBalance"] });
+    void queryClient.invalidateQueries({ queryKey: ["admin"] });
+    void queryClient.invalidateQueries({ queryKey: ["contributions"] });
+    void queryClient.invalidateQueries({ queryKey: ["revenue"] });
+    void queryClient.invalidateQueries({ queryKey: ["stellarBalance"] });
     // Note: campaigns query is not wallet-scoped, so we don't invalidate it
   };
 
@@ -456,7 +457,9 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
           setShowInstallPrompt(false);
           setIsFreighterLocked(false);
         }}
-        onRetry={handleRetryInstall}
+        onRetry={() => {
+          void handleRetryInstall();
+        }}
         isLocked={isFreighterLocked}
         socialLogin={
           isSocialLoginConfigured() ? (

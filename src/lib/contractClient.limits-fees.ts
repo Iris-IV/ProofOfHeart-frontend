@@ -1,7 +1,6 @@
 import {
   Contract,
   nativeToScVal,
-  xdr,
 } from "@stellar/stellar-sdk";
 import { getSignerAddress } from "./walletSigner";
 import { parseContractError } from "../utils/contractErrors";

@@ -55,7 +55,7 @@ export function useCampaignComments(
   });
 
   const { mutateAsync: createMutation, isPending: isCreating } = useMutation({
-    mutationFn: async ({ content, parentId }: { content: string; parentId: string | null }) => {
+    mutationFn: ({ content, parentId }: { content: string; parentId: string | null }) => {
       if (!userAddress) throw new Error("User address not available");
       return createCampaignComment(campaignId, content, userAddress, parentId);
     },
@@ -155,6 +155,8 @@ export function useCampaignComments(
       await reportMutation(commentId);
     },
     isReporting,
-    refetch: () => queryClient.invalidateQueries({ queryKey: allQueryKey }),
+    refetch: () => {
+      void queryClient.invalidateQueries({ queryKey: allQueryKey });
+    },
   };
 }

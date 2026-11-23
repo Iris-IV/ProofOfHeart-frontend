@@ -6,13 +6,10 @@ import { useToast } from "@/components/ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   setVotingParams,
-  setCategoryVotingThreshold,
-  removeCategoryVotingThreshold,
 } from "@/lib/contractClient";
 import { parseContractError } from "@/utils/contractErrors";
 import type { TransactionLifecyclePhase } from "@/lib/contractClient";
-import { Loader2, ChevronDown } from "lucide-react";
-import { CATEGORY_LABELS } from "@/types";
+import { Loader2 } from "lucide-react";
 
 export default function GovernanceSection() {
   const t = useTranslations("Admin");
@@ -88,7 +85,7 @@ export default function GovernanceSection() {
       setMinVotingBalance("");
       setCategoryOverrides(new Map());
 
-      queryClient.invalidateQueries({ queryKey: ["platformStats"] });
+      await queryClient.invalidateQueries({ queryKey: ["platformStats"] });
     } catch (err) {
       showError(parseContractError(err));
     } finally {
@@ -116,7 +113,12 @@ export default function GovernanceSection() {
         {t("governance.subtitle")}
       </p>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form
+        onSubmit={(e) => {
+          void handleSubmit(e);
+        }}
+        className="space-y-6"
+      >
         {/* Quorum */}
         <div>
           <label className="block text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
@@ -233,7 +235,9 @@ export default function GovernanceSection() {
                 {t("cancel")}
               </button>
               <button
-                onClick={performUpdate}
+                onClick={() => {
+                  void performUpdate();
+                }}
                 disabled={isUpdating}
                 className="flex-1 py-3 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 rounded-xl font-semibold hover:opacity-90 transition disabled:opacity-50"
               >

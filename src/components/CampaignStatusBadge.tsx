@@ -50,6 +50,12 @@ const STATUS_CONFIG: Record<
       "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 border border-purple-300 dark:border-purple-700",
     Icon: ShieldCheck,
   },
+  succeeded_pending_withdrawal: {
+    key: "succeeded_pending_withdrawal",
+    className:
+      "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border border-green-300 dark:border-green-700",
+    Icon: CheckCircle,
+  },
 };
 
 interface CampaignStatusBadgeProps {

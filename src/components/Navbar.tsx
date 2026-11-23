@@ -3,7 +3,7 @@
 import { Menu, X, Moon, Sun, ShieldCheck, Plus, AlertTriangle } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useWallet } from "@/components/WalletContext";
 import { useTheme } from "@/hooks/useTheme";
 import { Link, usePathname } from "@/i18n/routing";
@@ -13,7 +13,7 @@ import LanguageSwitcher from "./LanguageSwitcher";
 import ContrastToggle from "./ContrastToggle";
 import NotificationBell from "./NotificationBell";
 import NotificationSettings from "./NotificationSettings";
-import { useCampaigns } from "@/hooks/useCampaigns";
+import { useUnverifiedCampaignsCount } from "@/hooks/useUnverifiedCampaignsCount";
 import { useSavedCampaignsCount } from "@/hooks/useSavedCampaigns";
 import { useContractVersion } from "@/hooks/useContractVersion";
 import { usePlatformStatus } from "@/hooks/usePlatformStatus";
@@ -71,10 +71,7 @@ export default function Navbar() {
   const { isMismatch, version, expectedVersion } = useContractVersion();
   const { isPaused, isCreationBlocked, isError: platformStatusError } = usePlatformStatus();
 
-  const { campaigns } = useCampaigns();
-  const pendingCount = useMemo(() => {
-    return campaigns.filter((c) => !c.is_verified && c.is_active && !c.is_cancelled).length;
-  }, [campaigns]);
+  const { count: pendingCount } = useUnverifiedCampaignsCount();
 
   const networkPassphrase = process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE || "";
   const isTestnet = networkPassphrase.includes("Test SDF");

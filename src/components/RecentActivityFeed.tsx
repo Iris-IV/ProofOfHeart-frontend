@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Heart, Sparkles } from "lucide-react";
-import { useCampaigns } from "@/hooks/useCampaigns";
+import { useInfiniteCampaigns } from "@/hooks/useInfiniteCampaigns";
 import { formatAmount } from "@/lib/formatters";
 import { useLocale } from "next-intl";
 
@@ -16,11 +16,12 @@ import { useLocale } from "next-intl";
  * preserve privacy (first 4 + last 4 chars only).
  */
 export default function RecentActivityFeed() {
-  const { campaigns, isLoading } = useCampaigns();
+  const { campaigns, isLoading } = useInfiniteCampaigns(50);
   const locale = useLocale();
   const [activeIndex, setActiveIndex] = useState(0);
 
-  // Build activity items from the 5 most recently created campaigns
+  // Build activity items from the most recently created campaigns (from loaded set).
+  // This shows recent campaigns from the current page, sorted by creation time.
   const items = [...campaigns]
     .sort((a, b) => {
       const tA = typeof a.created_at === "number" ? a.created_at : 0;

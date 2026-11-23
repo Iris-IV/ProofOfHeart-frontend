@@ -46,6 +46,11 @@ Minimum interactive size is **44 × 44 CSS px** (WCAG 2.5.5 / Apple HIG). The co
 techniques; pick the one that fits the element.
 
 **1. Give the element the size.** Used for buttons and links that are already visually large:
+const [revenueSharePercentage, setRevenueSharePercentage] = useState(0);
+
+setRevenueSharePercentage(parseFloat(value));
+
+const revenueShareBps = revenueSharePercentage * 100;
 
 ```tsx
 <button className="min-h-[44px] w-full sm:w-auto px-4">Connect wallet</button>

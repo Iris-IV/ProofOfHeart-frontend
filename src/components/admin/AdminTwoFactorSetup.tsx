@@ -38,7 +38,7 @@ export default function AdminTwoFactorSetup({ adminAddress }: Props) {
   const otpauthUrl = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(account)}?secret=${secret.replace(/\s/g, "")}&issuer=${encodeURIComponent(issuer)}`;
 
   function handleCopy() {
-    navigator.clipboard.writeText(secret.replace(/\s/g, "")).then(() => {
+    void navigator.clipboard.writeText(secret.replace(/\s/g, "")).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });

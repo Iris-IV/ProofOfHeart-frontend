@@ -74,7 +74,7 @@ export function parseContributionAmount(event: ApiEventResponse): bigint {
     return (val as { __bigint: bigint }).__bigint;
   }
   try {
-    return BigInt(StellarSdk.scValToNative(val as never));
+    return BigInt(StellarSdk.scValToNative(val));
   } catch {
     return BigInt(0);
   }

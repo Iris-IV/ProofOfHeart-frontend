@@ -26,7 +26,7 @@ export function useCampaignUpdates(
   });
 
   const { mutateAsync: createUpdateMutation, isPending: isCreating } = useMutation({
-    mutationFn: async ({ content, notify }: { content: string; notify: boolean }) => {
+    mutationFn: ({ content, notify }: { content: string; notify: boolean }) => {
       if (!creatorAddress) {
         throw new Error("Creator address not available");
       }
@@ -34,7 +34,7 @@ export function useCampaignUpdates(
     },
     onSuccess: () => {
       // Invalidate and refetch updates after successful creation
-      queryClient.invalidateQueries({ queryKey: ["campaignUpdates", campaignId] });
+      void queryClient.invalidateQueries({ queryKey: ["campaignUpdates", campaignId] });
     },
   });
 
@@ -49,7 +49,7 @@ export function useCampaignUpdates(
     createUpdate,
     isCreating,
     refetch: () => {
-      queryClient.invalidateQueries({ queryKey: ["campaignUpdates", campaignId] });
+      void queryClient.invalidateQueries({ queryKey: ["campaignUpdates", campaignId] });
     },
   };
 }

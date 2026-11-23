@@ -4,6 +4,13 @@ import { createRateLimiter, rateLimitKeyFromRequest } from "@/lib/rateLimit";
 
 const commentReportRateLimiter = createRateLimiter("comment_reports", 60_000, 3);
 
+/**
+ * Number of reports required before a comment is flagged for moderator
+ * review. Below this threshold the comment is shown without restriction
+ * (#1877).
+ */
+export const COMMENT_REPORT_THRESHOLD = 3;
+
 // POST /api/campaigns/[campaignId]/comments/[commentId]/report
 export async function POST(
   req: NextRequest,
@@ -23,8 +30,21 @@ export async function POST(
     );
   }
 
-  const updated = await getCommentRepository().update(campaignId, commentId, {
-    isReported: true,
+  const repo = getCommentRepository();
+  const comment = await repo.find(campaignId, commentId);
+  if (!comment) {
+    return NextResponse.json({ message: "Comment not found" }, { status: 404 });
+  }
+
+  const newCount = (comment.reportCount ?? 0) + 1;
+  const crossedThreshold = newCount >= COMMENT_REPORT_THRESHOLD;
+
+  const updated = await repo.update(campaignId, commentId, {
+    reportCount: newCount,
+    isUnderReview: crossedThreshold || comment.isUnderReview,
+    // Keep legacy flag in sync so old code paths that read isReported still
+    // see a truthy value once the threshold is reached.
+    isReported: crossedThreshold || comment.isReported,
   });
   if (!updated) {
     return NextResponse.json({ message: "Comment not found" }, { status: 404 });

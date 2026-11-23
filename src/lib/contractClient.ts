@@ -36,7 +36,6 @@ import {
   Campaign,
   Category,
   deriveStatus,
-  CampaignStatus,
   Milestone,
   ContractMilestone,
 } from "../types";
@@ -444,7 +443,7 @@ export async function buildAndSubmitTransaction(
   }
 
   const preparedTx = rpc
-    .assembleTransaction(builtTx, simulated as rpc.Api.SimulateTransactionSuccessResponse)
+    .assembleTransaction(builtTx, simulated)
     .build();
 
   // Pause/creation checks are re-read immediately before signing. This is a
@@ -557,7 +556,7 @@ export async function buildAndSubmitTransaction(
 
   options?.onStatus?.({ phase: "confirmed", txHash, rpcStatus: getResult.status });
   recordObservabilitySuccess(operation, txHash);
-  return getResult as rpc.Api.GetSuccessfulTransactionResponse;
+  return getResult;
 }
 
 export function emitMockLifecycle(txHash: string, options?: TransactionLifecycleOptions): string {
@@ -613,7 +612,7 @@ async function invokeViewMethod(
     throw simulationError;
   }
 
-  const successSim = simulated as rpc.Api.SimulateTransactionSuccessResponse;
+  const successSim = simulated;
   const result = successSim.result?.retval ?? null;
 
   // Cache the result
@@ -699,7 +698,7 @@ function campaignFromSpec(spec: SpecCampaign): Campaign {
     funds_withdrawn,
     is_cancelled,
     is_verified,
-    category: spec.category as Category,
+    category: spec.category,
     has_revenue_sharing: spec.has_revenue_sharing,
     revenue_share_percentage: spec.revenue_share_percentage,
     first_creator: spec.first_creator,
@@ -758,7 +757,7 @@ export const __testUtils = {
 function makeMockCampaign(partial: Omit<Campaign, "status">): Campaign {
   return {
     ...partial,
-    status: deriveStatus(partial) as CampaignStatus,
+    status: deriveStatus(partial),
   };
 }
 
@@ -993,16 +992,44 @@ export async function listCampaigns({
   const pageLimit = Math.max(1, Math.min(limit, LIST_MAX_LIMIT));
 
   if (USE_MOCKS) {
-    const source = filtered
-      ? MOCK_CAMPAIGNS.filter(
+    const allCampaigns = MOCK_CAMPAIGNS;
+    let campaigns: Campaign[];
+    let nextIndex: number;
+
+    if (filtered) {
+      // For filtered lists, position is a 0-based offset in the full index.
+      // Filter to get matching campaigns, then slice.
+      const filtered_campaigns = allCampaigns.filter(
+        (c) =>
+          (category === undefined || c.category === category) &&
+          (!creator || c.creator === creator),
+      );
+      campaigns = filtered_campaigns.slice(position, position + pageLimit);
+      nextIndex = position + campaigns.length;
+    } else {
+      // For unfiltered lists, position is a 1-based ID cursor.
+      // Convert to 0-based index and slice.
+      const startIndex = position - 1;
+      campaigns = allCampaigns.slice(startIndex, startIndex + pageLimit);
+      nextIndex = startIndex + campaigns.length;
+    }
+
+    // Check if there are more campaigns after this batch.
+    const allFiltered = filtered
+      ? allCampaigns.filter(
           (c) =>
             (category === undefined || c.category === category) &&
             (!creator || c.creator === creator),
         )
-      : MOCK_CAMPAIGNS;
-    const startIndex = filtered ? position : position - 1;
-    const campaigns = source.slice(startIndex, startIndex + pageLimit);
-    const nextCursor = startIndex + pageLimit < source.length ? position + pageLimit : null;
+      : allCampaigns;
+    const hasMore = filtered ? nextIndex < allFiltered.length : nextIndex < allCampaigns.length;
+
+    const nextCursor = hasMore
+      ? filtered
+        ? nextIndex
+        : nextIndex + 1
+      : null;
+
     return { campaigns, nextCursor };
   }
 
@@ -1432,7 +1459,7 @@ export async function claimMilestone(
   }
 }
 
-export async function extendCampaignDeadline(
+export function extendCampaignDeadline(
   campaignId: number,
   additionalDays: number,
   callerAddress: string,
@@ -1524,7 +1551,7 @@ export interface PlatformStatus {
 }
 
 export async function getPlatformStatus(fresh = false): Promise<PlatformStatus> {
-  if (USE_MOCKS) return { isPaused: false, isCreationDisabled: false };
+  if (USE_MOCKS) return { isPaused: mockPaused, isCreationDisabled: false };
   const [paused, creationDisabled] = await Promise.all([
     invokeViewMethod("is_paused", [], { fresh }),
     invokeViewMethod("is_creation_disabled", [], { fresh }),
@@ -2114,7 +2141,7 @@ export async function estimateContributeNetworkFee(
   }
 
   const prepared = rpc
-    .assembleTransaction(transaction, simulation as rpc.Api.SimulateTransactionSuccessResponse)
+    .assembleTransaction(transaction, simulation)
     .build();
   return BigInt(prepared.fee);
 }
@@ -2420,7 +2447,7 @@ export async function getSavedCampaignsCount(user: string): Promise<number> {
   }
 }
 
-export async function saveCampaign(
+export function saveCampaign(
   user: string,
   campaignId: number,
   options?: TransactionLifecycleOptions,
@@ -2448,7 +2475,7 @@ export async function saveCampaign(
 }
 
 /** Saves many campaigns atomically in one transaction (used for local → wallet migration). */
-export async function batchSaveCampaigns(
+export function batchSaveCampaigns(
   user: string,
   campaignIds: number[],
   options?: TransactionLifecycleOptions,
@@ -2482,7 +2509,7 @@ export async function batchSaveCampaigns(
   );
 }
 
-export async function removeSavedCampaign(
+export function removeSavedCampaign(
   user: string,
   campaignId: number,
   options?: TransactionLifecycleOptions,
@@ -2503,7 +2530,7 @@ export async function removeSavedCampaign(
   );
 }
 
-export async function clearSavedCampaigns(
+export function clearSavedCampaigns(
   user: string,
   options?: TransactionLifecycleOptions,
 ): Promise<string> {
@@ -3537,6 +3564,278 @@ export async function getCensuredCommentCount(): Promise<number> {
   try {
     const result = await invokeViewMethod("get_censured_comment_count", []);
     return result ? result.u32() : 0;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Proof of impact (issue #1773)
+// ---------------------------------------------------------------------------
+
+export interface ProofOfImpact {
+  /** Address that recorded the proof (the platform admin / verifier). */
+  verifier: string;
+  /** Lowercase hex SHA-256 of the evidence file (64 characters). */
+  proofHash: string;
+  /** Ledger time (unix seconds) at which the proof was recorded. */
+  timestamp: number;
+}
+
+const PROOF_HASH_HEX = /^[0-9a-f]{64}$/;
+const mockProofs = new Map<number, ProofOfImpact>();
+
+/** Normalises a user-supplied SHA-256 hex string; throws when it is not 32 bytes of hex. */
+export function normalizeProofHash(hash: string): string {
+  const normalized = hash.trim().toLowerCase().replace(/^0x/, "");
+  if (!PROOF_HASH_HEX.test(normalized)) {
+    throw new Error("Proof hash must be a 64-character SHA-256 hex string.");
+  }
+  return normalized;
+}
+
+function hexToBytes(hex: string): Buffer {
+  return Buffer.from(hex, "hex");
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Records the SHA-256 of a campaign's impact evidence on-chain.
+ * Contract: record_proof_of_impact(campaign_id: u32, verifier: Address, proof_hash: BytesN<32>).
+ */
+export async function recordProofOfImpact(
+  campaignId: number,
+  verifier: string,
+  proofHash: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(verifier);
+  const hash = normalizeProofHash(proofHash);
+
+  if (USE_MOCKS) {
+    mockProofs.set(campaignId, {
+      verifier,
+      proofHash: hash,
+      timestamp: Math.floor(Date.now() / 1000),
+    });
+    return emitMockLifecycle("mock_tx_record_proof_of_impact", options);
+  }
+
+  const contract = new Contract(CONTRACT_ADDRESS);
+  const op = contract.call(
+    "record_proof_of_impact",
+    nativeToScVal(campaignId, { type: "u32" }),
+    new Address(verifier).toScVal(),
+    nativeToScVal(hexToBytes(hash)),
+  );
+  try {
+    const txResult = await buildAndSubmitTransaction(verifier, op, {
+      ...options,
+      operation: "record_proof_of_impact",
+    });
+    clearContractCacheByMethod("get_proof_of_impact");
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/** Reads the recorded proof of impact for a campaign, or null when none exists. */
+export async function getProofOfImpact(
+  campaignId: number,
+  fresh = false,
+): Promise<ProofOfImpact | null> {
+  if (USE_MOCKS) return mockProofs.get(campaignId) ?? null;
+
+  try {
+    const result = await invokeViewMethod(
+      "get_proof_of_impact",
+      [nativeToScVal(campaignId, { type: "u32" })],
+      { fresh },
+    );
+    if (!result || result.switch().name === "scvVoid") return null;
+    const fields = decodeScValMap(result, "ProofOfImpact");
+    const field = (name: string): xdr.ScVal => requiredField(fields, name, "ProofOfImpact");
+    return {
+      verifier: Address.fromScVal(field("verifier")).toString(),
+      proofHash: bytesToHex(field("proof_hash").bytes()),
+      timestamp: Number(scValToBigInt(field("timestamp"))),
+    };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Campaign stats (issue #1777)
+// ---------------------------------------------------------------------------
+
+export interface ContractCampaignStats {
+  contributorCount: number;
+  /** Null when the campaign has no contributions yet. */
+  topContributor: string | null;
+  /** Average contribution in stroops. */
+  avgContribution: bigint;
+  /** Ledger time (unix seconds) of the latest contribution; 0 when there is none. */
+  lastContributionTime: number;
+}
+
+/** Reads get_campaign_stats(campaign_id: u32). */
+export async function getCampaignStats(
+  campaignId: number,
+  fresh = false,
+): Promise<ContractCampaignStats> {
+  if (USE_MOCKS) {
+    return {
+      contributorCount: 7,
+      topContributor: "GTOPCONTRIBUTOR123456789012345678901234567890123456789012345",
+      avgContribution: 25_000_000n,
+      lastContributionTime: 1_900_000_000,
+    };
+  }
+
+  try {
+    const result = await invokeViewMethod(
+      "get_campaign_stats",
+      [nativeToScVal(campaignId, { type: "u32" })],
+      { fresh },
+    );
+    const fields = decodeScValMap(result, "CampaignStats");
+    const field = (name: string): xdr.ScVal => requiredField(fields, name, "CampaignStats");
+    const top = field("top_contributor");
+    return {
+      contributorCount: field("contributor_count").u32(),
+      topContributor: top.switch().name === "scvVoid" ? null : Address.fromScVal(top).toString(),
+      avgContribution: scValToBigInt(field("avg_contribution")),
+      lastContributionTime: Number(scValToBigInt(field("last_contribution_time"))),
+    };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/** Reads get_total_contributors_count(campaign_id: u32). */
+export async function getTotalContributorsCount(
+  campaignId: number,
+  fresh = false,
+): Promise<number> {
+  if (USE_MOCKS) return 7;
+
+  try {
+    const result = await invokeViewMethod(
+      "get_total_contributors_count",
+      [nativeToScVal(campaignId, { type: "u32" })],
+      { fresh },
+    );
+    if (!result) throw new Error("Unable to read contributor count.");
+    return result.u32();
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Incident controls: pause / unpause / emergency pause / resume (issue #1778)
+// ---------------------------------------------------------------------------
+
+let mockPaused = false;
+
+/** Mock-mode view of the platform pause flag, kept in sync with the incident wrappers. */
+export function getMockPausedState(): boolean {
+  return mockPaused;
+}
+
+async function submitIncidentOperation(
+  operation: "pause" | "unpause" | "emergency_pause" | "resume_campaign",
+  caller: string,
+  args: xdr.ScVal[],
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  const contract = new Contract(CONTRACT_ADDRESS);
+  const op = contract.call(operation, ...args);
+  try {
+    const txResult = await buildAndSubmitTransaction(caller, op, { ...options, operation });
+    clearContractCacheByMethod("is_paused");
+    return txResult.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+/** Admin: pause(). Takes no arguments; the stored admin authorises. */
+export function pausePlatform(
+  admin: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(admin);
+  if (USE_MOCKS) {
+    mockPaused = true;
+    return emitMockLifecycle("mock_tx_pause", options);
+  }
+  return submitIncidentOperation("pause", admin, [], options);
+}
+
+/** Admin: unpause(). Lifts a manual or automatic pause. */
+export function unpausePlatform(
+  admin: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(admin);
+  if (USE_MOCKS) {
+    mockPaused = false;
+    return emitMockLifecycle("mock_tx_unpause", options);
+  }
+  return submitIncidentOperation("unpause", admin, [], options);
+}
+
+/** Registered signer: emergency_pause(caller: Address). */
+export function emergencyPausePlatform(
+  caller: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(caller);
+  if (USE_MOCKS) {
+    mockPaused = true;
+    return emitMockLifecycle("mock_tx_emergency_pause", options);
+  }
+  return submitIncidentOperation(
+    "emergency_pause",
+    caller,
+    [new Address(caller).toScVal()],
+    options,
+  );
+}
+
+/** Creator/admin: resume_campaign(campaign_id: u32, caller: Address). */
+export async function resumeCampaign(
+  campaignId: number,
+  caller: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(caller);
+  if (USE_MOCKS) return emitMockLifecycle("mock_tx_resume_campaign", options);
+  const hash = await submitIncidentOperation(
+    "resume_campaign",
+    caller,
+    [nativeToScVal(campaignId, { type: "u32" }), new Address(caller).toScVal()],
+    options,
+  );
+  clearContractCacheByMethod("get_campaign");
+  return hash;
+}
+
+/** Reads get_emergency_pause_signers(): addresses allowed to call emergency_pause. */
+export async function getEmergencyPauseSigners(fresh = false): Promise<string[]> {
+  if (USE_MOCKS) return [];
+
+  try {
+    const result = await invokeViewMethod("get_emergency_pause_signers", [], { fresh });
+    const items = result?.vec();
+    if (!items) return [];
+    return items.map((item) => Address.fromScVal(item).toString());
   } catch (err) {
     throw new Error(parseContractError(err));
   }

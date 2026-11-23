@@ -21,7 +21,7 @@ export const CATEGORY_LABELS: Record<Category, string> = {
 // Campaign status — derived from contract boolean flags
 // ---------------------------------------------------------------------------
 
-export type CampaignStatus = "active" | "cancelled" | "funded" | "failed" | "verified";
+export type CampaignStatus = "active" | "cancelled" | "funded" | "failed" | "verified" | "succeeded_pending_withdrawal";
 
 /**
  * Raw on-chain fields used to derive CampaignStatus.
@@ -39,15 +39,28 @@ export interface RawCampaignFlags {
 
 /**
  * Single canonical status derivation used by every view.
- * Priority: cancelled > funded > failed > verified > active
+ * Priority: cancelled > succeeded_pending_withdrawal > funded > failed > verified > active
+ *
+ * @param flags Raw campaign flags from the contract
+ * @param ledgerNow Unix timestamp in seconds (ledger/server time). Defaults to device clock.
  */
-export function deriveStatus(flags: RawCampaignFlags): CampaignStatus {
+export function deriveStatus(flags: RawCampaignFlags, ledgerNow?: number): CampaignStatus {
   if (flags.is_cancelled) return "cancelled";
   if (flags.funds_withdrawn) return "funded";
-  const now = Math.floor(Date.now() / 1000);
-  if (!flags.is_active && flags.deadline < now && flags.amount_raised < flags.funding_goal) {
+
+  const now = ledgerNow ?? Math.floor(Date.now() / 1000);
+  const isExpired = flags.deadline < now;
+
+  // Expired campaigns that didn't meet their goal and weren't cancelled/withdrawn
+  if (isExpired && flags.amount_raised < flags.funding_goal) {
     return "failed";
   }
+
+  // Expired campaigns that met their goal but funds haven't been withdrawn yet
+  if (isExpired && flags.amount_raised >= flags.funding_goal && !flags.funds_withdrawn) {
+    return "succeeded_pending_withdrawal";
+  }
+
   if (flags.is_verified) return "verified";
   return "active";
 }
@@ -231,7 +244,20 @@ export interface Comment {
   parentId: string | null;
   signature: string;
   isPinned: boolean;
+  /** @deprecated Use `reportCount` / `isUnderReview`. Kept for backwards compat with stored data. */
   isReported: boolean;
+  /**
+   * Number of distinct reports received (#1877). A comment is not hidden
+   * until this reaches `COMMENT_REPORT_THRESHOLD` or a moderator reviews it.
+   */
+  reportCount: number;
+  /**
+   * True when the report threshold has been reached and the comment is
+   * awaiting moderator review (#1877). The comment is still returned by the
+   * GET endpoint, but with `isUnderReview: true` so the UI can display a
+   * "this comment is under review" label.
+   */
+  isUnderReview: boolean;
   /** sha256 of the canonical comment, used to match on-chain censures (#1682). */
   commentHash?: string;
 }
