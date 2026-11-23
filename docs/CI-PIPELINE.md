@@ -92,6 +92,22 @@ npm run start
 # Or use lighthouse-ci CLI
 ```
 
+/**
+ * Validates a Stellar address (G... account or C... contract) and returns an Address.
+ * Throws a readable error instead of the SDK's opaque one.
+ */
+function toAddress(value: string, label = 'address'): Address {
+  const v = typeof value === 'string' ? value.trim() : '';
+  const valid =
+    v !== '' && (StrKey.isValidEd25519PublicKey(v) || StrKey.isValidContract(v));
+  if (!valid) {
+    throw new Error(
+      `Invalid ${label}: expected a Stellar address (starting with G or C), got "${String(value)}".`,
+    );
+  }
+  return new Address(v);
+}
+
 ## Debugging CI Failures
 
 ### Performance Score Below 90
