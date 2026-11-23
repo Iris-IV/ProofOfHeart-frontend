@@ -1447,7 +1447,7 @@ export async function claimMilestone(
   }
 }
 
-export async function extendCampaignDeadline(
+export function extendCampaignDeadline(
   campaignId: number,
   additionalDays: number,
   callerAddress: string,
@@ -2249,7 +2249,7 @@ export async function getSavedCampaignsCount(user: string): Promise<number> {
   }
 }
 
-export async function saveCampaign(
+export function saveCampaign(
   user: string,
   campaignId: number,
   options?: TransactionLifecycleOptions,
@@ -2277,7 +2277,7 @@ export async function saveCampaign(
 }
 
 /** Saves many campaigns atomically in one transaction (used for local → wallet migration). */
-export async function batchSaveCampaigns(
+export function batchSaveCampaigns(
   user: string,
   campaignIds: number[],
   options?: TransactionLifecycleOptions,
@@ -2311,7 +2311,7 @@ export async function batchSaveCampaigns(
   );
 }
 
-export async function removeSavedCampaign(
+export function removeSavedCampaign(
   user: string,
   campaignId: number,
   options?: TransactionLifecycleOptions,
@@ -2332,7 +2332,7 @@ export async function removeSavedCampaign(
   );
 }
 
-export async function clearSavedCampaigns(
+export function clearSavedCampaigns(
   user: string,
   options?: TransactionLifecycleOptions,
 ): Promise<string> {
@@ -3595,7 +3595,7 @@ async function submitIncidentOperation(
 }
 
 /** Admin: pause(). Takes no arguments; the stored admin authorises. */
-export async function pausePlatform(
+export function pausePlatform(
   admin: string,
   options?: TransactionLifecycleOptions,
 ): Promise<string> {
@@ -3608,7 +3608,7 @@ export async function pausePlatform(
 }
 
 /** Admin: unpause(). Lifts a manual or automatic pause. */
-export async function unpausePlatform(
+export function unpausePlatform(
   admin: string,
   options?: TransactionLifecycleOptions,
 ): Promise<string> {
@@ -3621,7 +3621,7 @@ export async function unpausePlatform(
 }
 
 /** Registered signer: emergency_pause(caller: Address). */
-export async function emergencyPausePlatform(
+export function emergencyPausePlatform(
   caller: string,
   options?: TransactionLifecycleOptions,
 ): Promise<string> {
