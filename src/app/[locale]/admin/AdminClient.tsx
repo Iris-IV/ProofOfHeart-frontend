@@ -380,7 +380,7 @@ export default function AdminDashboard() {
     setPendingFee(null);
   };
 
-  const handleTransferAdmin = async (e: FormEvent) => {
+  const handleTransferAdmin = (e: FormEvent) => {
     e.preventDefault();
     if (!isAdmin) return showWarning(t("adminOnlyTransfer"));
 

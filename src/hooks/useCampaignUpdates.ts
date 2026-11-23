@@ -26,7 +26,7 @@ export function useCampaignUpdates(
   });
 
   const { mutateAsync: createUpdateMutation, isPending: isCreating } = useMutation({
-    mutationFn: async ({ content, notify }: { content: string; notify: boolean }) => {
+    mutationFn: ({ content, notify }: { content: string; notify: boolean }) => {
       if (!creatorAddress) {
         throw new Error("Creator address not available");
       }

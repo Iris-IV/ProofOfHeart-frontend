@@ -5,7 +5,7 @@
  * itself uses for local development — no Soroban SDK mocking needed to
  * exercise the pagination contract.
  */
-async function loadMockClient() {
+function loadMockClient() {
   jest.resetModules();
   process.env.NEXT_PUBLIC_USE_MOCKS = "true";
   return import("../../lib/contractClient");
