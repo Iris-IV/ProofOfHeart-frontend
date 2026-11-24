@@ -23,6 +23,7 @@ export default tseslint.config(
       "jsx-a11y": jsxA11y,
     },
     rules: {
+      "no-console": ["error", { allow: ["warn", "error"] }],
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": "off",
       "unused-imports/no-unused-imports": "error",
@@ -61,7 +62,13 @@ export default tseslint.config(
       "@typescript-eslint/no-unsafe-return": "off",
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-floating-promises": "off",
-      "no-restricted-imports": ["error", { name: "vitest", message: "This project uses Jest. Import from jest globals or @testing-library instead." }],
+      "no-restricted-imports": [
+        "error",
+        {
+          name: "vitest",
+          message: "This project uses Jest. Import from jest globals or @testing-library instead.",
+        },
+      ],
     },
   },
   {

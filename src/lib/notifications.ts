@@ -36,8 +36,7 @@ export function announceNotification(message: string): void {
     const region = getAriaLiveRegion();
     region.textContent = message;
   } catch {
-    // Graceful fallback for SSR or missing DOM
-    console.log("[a11y announcement]", message);
+    // The live region is unavailable during SSR or when the DOM is missing.
   }
 }
 

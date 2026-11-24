@@ -43,12 +43,6 @@ export function buildSuccessEvent(operation: string, txHash?: string): Observabi
   };
 }
 
-function logStructured(event: ObservabilityEvent): void {
-  if (process.env.NODE_ENV !== "production") {
-    console.info("[observability]", JSON.stringify(event));
-  }
-}
-
 async function postToBackend(event: ObservabilityEvent): Promise<void> {
   if (typeof window === "undefined") return;
   try {
@@ -59,13 +53,12 @@ async function postToBackend(event: ObservabilityEvent): Promise<void> {
       keepalive: true,
     });
   } catch {
-    // Non-fatal: client metrics still logged locally.
+    // Non-fatal: observability delivery must not interrupt the user flow.
   }
 }
 
-/** Record a structured observability event (console, API ingest; webhook is forwarded server-side by /api/observability/events). */
+/** Record a structured observability event through the API ingest endpoint. */
 export function recordObservabilityEvent(event: ObservabilityEvent): void {
-  logStructured(event);
   void postToBackend(event);
 }
 

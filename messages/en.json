@@ -319,6 +319,54 @@
       "currentMinGoal": "Current Min Goal: {value}",
       "currentMaxGoal": "Current Max Goal: {value}"
     },
+ feat/token-admin-emergency-flows
+    "contractOps": {
+      "title": "Token and emergency controls",
+      "description": "Manage accepted campaign tokens, schedule a platform token change, and coordinate the contract emergency withdrawal timelock.",
+      "connectedAdmin": "Connected admin: {address}",
+      "tokenAllowlist": "Campaign token allowlist",
+      "currentToken": "Current platform token: {address}",
+      "tokenAddress": "Token contract address",
+      "allowToken": "Allow token",
+      "removeToken": "Remove token",
+      "existingCampaignTokensNote": "Changing the allowlist affects new campaigns. Existing campaigns keep the token recorded when they were created.",
+      "campaignTokenUsage": "Tokens used by campaigns",
+      "loadingTokenUsage": "Loading token usage…",
+      "tokenUsageStatus": "{count} campaigns · {status}",
+      "allowed": "allowed",
+      "blocked": "blocked for new campaigns",
+      "noCampaignTokens": "No campaign token usage was returned.",
+      "platformToken": "Platform token update",
+      "tokenDelay": "The contract timelock is {delay}.",
+      "newTokenAddress": "New platform token address",
+      "tokenMustBeAllowed": "Allow this token first before proposing it as the platform token.",
+      "proposeToken": "Propose token change",
+      "proposedToken": "Proposed token: {address}",
+      "tokenCountdown": "Available to accept in {remaining}",
+      "tokenReady": "The contract timelock has elapsed. The proposal can be accepted.",
+      "localProposalNote": "The contract has no public pending-token getter, so this browser saves proposal details locally. Reopen this admin page in the same browser to continue.",
+      "acceptToken": "Accept token change",
+      "cancelToken": "Cancel token change",
+      "tokenAllowedSuccess": "Token allowlist updated.",
+      "tokenRemovedSuccess": "Token removed from the allowlist.",
+      "tokenProposalSuccess": "Token update proposal submitted.",
+      "tokenAcceptedSuccess": "Platform token update accepted.",
+      "tokenCancelledSuccess": "Platform token update cancelled.",
+      "emergencyTitle": "Emergency campaign withdrawal",
+      "emergencyDescription": "Propose a withdrawal recipient for a campaign. The contract enforces the waiting period before execution.",
+      "noCampaigns": "No campaigns are available.",
+      "pendingRecipient": "Withdrawal recipient: {address}",
+      "emergencyCountdown": "Execution available in {remaining}",
+      "emergencyReady": "Timelock elapsed. The withdrawal can be executed.",
+      "executeEmergency": "Execute withdrawal",
+      "cancelEmergency": "Cancel proposal",
+      "recipientAddressFor": "Emergency withdrawal recipient for {title}",
+      "recipientAddress": "Recipient Stellar address",
+      "proposeEmergency": "Propose withdrawal",
+      "emergencyProposedSuccess": "Emergency withdrawal proposal submitted.",
+      "emergencyExecutedSuccess": "Emergency withdrawal executed.",
+      "emergencyCancelledSuccess": "Emergency withdrawal proposal cancelled."
+
     "incident": {
       "title": "Incident controls",
       "subtitle": "Pause the platform during an incident and resume it once it is safe.",
@@ -357,6 +405,7 @@
         "emergencyPause": "Emergency pause activated.",
         "resume": "Campaign resumed."
       }
+ main
     }
   },
   "Milestones": {
@@ -875,7 +924,12 @@
     "openNotifications": "Open notifications"
   },
   "CauseDetail": {
-    "noDescription": "No description provided by the creator."
+    "noDescription": "No description provided by the creator.",
+    "emergencyWithdrawalPendingTitle": "Emergency withdrawal pending",
+    "emergencyWithdrawalPendingDescription": "An administrator has proposed an emergency withdrawal for this campaign. Execution is delayed by the contract timelock.",
+    "emergencyWithdrawalRecipient": "Proposed recipient: {address}",
+    "emergencyWithdrawalCountdown": "Execution available in {remaining}",
+    "emergencyWithdrawalReady": "The timelock has elapsed; an administrator may execute the withdrawal."
   },
   "FiatOnramp": {
     "buyWithCard": "Buy XLM with card",

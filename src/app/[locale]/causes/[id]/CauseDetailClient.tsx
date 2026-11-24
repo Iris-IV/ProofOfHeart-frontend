@@ -60,6 +60,7 @@ import {
   claimMilestone,
 } from "@/lib/contractClient";
 import { useTranslations, useLocale } from "next-intl";
+import EmergencyWithdrawalBanner from "@/components/EmergencyWithdrawalBanner";
 import { CauseDetailSkeleton } from "@/components/Skeleton";
 import { Campaign, Vote, CATEGORY_LABELS, ContractMilestone } from "@/types";
 import { stroopsToXlmNumber } from "@/lib/stellarAmount";
@@ -487,6 +488,7 @@ export default function CauseDetailClient({ id }: { id: string }) {
               <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4 leading-tight break-words">
                 {campaign.title}
               </h1>
+              <EmergencyWithdrawalBanner campaignId={campaign.id} />
               <div className="relative">
                 {isBlankMarkdown(localizedDescription) ? (
                   <div

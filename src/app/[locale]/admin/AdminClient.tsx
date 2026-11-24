@@ -30,6 +30,7 @@ const CampaignMap = dynamic(() => import("@/components/CampaignMap"), {
 });
 import MapErrorBoundary from "@/components/MapErrorBoundary";
 import MultiSigProposalDashboard from "@/components/MultiSigProposalDashboard";
+import ContractOperationsSection from "@/components/admin/ContractOperationsSection";
 
 const TransferAdminModal = dynamic(() => import("@/components/TransferAdminModal"), {
   ssr: false,
@@ -69,9 +70,12 @@ import {
 const CancelCampaignModal = dynamic(() => import("@/components/cancelCampaignModal"), {
   ssr: false,
 });
-const BatchVerificationSection = dynamic(() => import("@/components/admin/BatchVerificationSection"), {
-  ssr: false,
-});
+const BatchVerificationSection = dynamic(
+  () => import("@/components/admin/BatchVerificationSection"),
+  {
+    ssr: false,
+  },
+);
 const ModerationSection = dynamic(() => import("@/components/admin/ModerationSection"), {
   ssr: false,
 });
@@ -581,6 +585,8 @@ export default function AdminDashboard() {
           </div>
         </div>
       </section>
+
+      <ContractOperationsSection campaigns={campaigns} adminAddress={adminAddress} />
 
       <section className="mb-12 rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">

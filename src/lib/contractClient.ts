@@ -84,12 +84,7 @@ const NETWORK_PASSPHRASE =
   process.env.NEXT_PUBLIC_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
 
 export type TransactionLifecyclePhase =
-  | "building"
-  | "signing"
-  | "submitting"
-  | "confirming"
-  | "confirmed"
-  | "failed";
+  "building" | "signing" | "submitting" | "confirming" | "confirmed" | "failed";
 
 export interface TransactionLifecycleUpdate {
   phase: TransactionLifecyclePhase;
@@ -411,7 +406,7 @@ async function requireExistingCreatorAccount(publicKey: string): Promise<void> {
 // Helpers — transaction building & submission
 // ---------------------------------------------------------------------------
 
-async function buildAndSubmitTransaction(
+export async function buildAndSubmitTransaction(
   sourcePublicKey: string,
   contractOp: xdr.Operation,
   options?: TransactionLifecycleOptions,
@@ -466,8 +461,19 @@ async function buildAndSubmitTransaction(
   // Administrative recovery/configuration transactions remain allowed to
   // change pause state.
   const adminRecoveryOperations = new Set([
-    "init", "unpause", "pause", "set_paused", "emergency_pause",
+    "init",
+    "unpause",
+    "pause",
+    "set_paused",
+    "emergency_pause",
     "set_creation_disabled",
+    "set_token_allowed",
+    "propose_token_update",
+    "accept_token_update",
+    "cancel_token_update",
+    "emergency_withdraw",
+    "execute_emergency_withdrawal",
+    "cancel_emergency_withdrawal",
   ]);
   if (!adminRecoveryOperations.has(operation)) {
     const { isPaused, isCreationDisabled } = await getPlatformStatus(true);
@@ -562,7 +568,7 @@ async function buildAndSubmitTransaction(
   return getResult;
 }
 
-function emitMockLifecycle(txHash: string, options?: TransactionLifecycleOptions): string {
+export function emitMockLifecycle(txHash: string, options?: TransactionLifecycleOptions): string {
   options?.onStatus?.({ phase: "building", txHash });
   options?.onStatus?.({ phase: "signing", txHash });
   options?.onStatus?.({ phase: "submitting", txHash });
@@ -1260,7 +1266,9 @@ export async function getCampaignCount(): Promise<number> {
 export async function getCampaign(id: number, fresh = false): Promise<Campaign | null> {
   if (USE_MOCKS) return MOCK_CAMPAIGNS.find((c) => c.id === id) ?? null;
   try {
-    const result = await invokeViewMethod("get_campaign", [nativeToScVal(id, { type: "u32" })], { fresh });
+    const result = await invokeViewMethod("get_campaign", [nativeToScVal(id, { type: "u32" })], {
+      fresh,
+    });
     if (!result) return null;
     return decodeCampaign(result);
     const spec = await generated.getCampaign(id);
@@ -1304,13 +1312,18 @@ export async function getContribution(campaignId: number, contributor: string): 
  * Fetch the personal contribution cap for a contributor on a specific campaign.
  * Returns the cap in stroops, or 0 if no cap is set (unlimited).
  */
-export async function getPersonalCap(campaignId: number, contributor: string, fresh = false): Promise<bigint> {
+export async function getPersonalCap(
+  campaignId: number,
+  contributor: string,
+  fresh = false,
+): Promise<bigint> {
   if (USE_MOCKS) return mockPersonalCaps.get(contributionKey(campaignId, contributor)) ?? BigInt(0);
   try {
-    const result = await invokeViewMethod("get_personal_cap", [
-      nativeToScVal(campaignId, { type: "u32" }),
-      new Address(contributor).toScVal(),
-    ], { fresh });
+    const result = await invokeViewMethod(
+      "get_personal_cap",
+      [nativeToScVal(campaignId, { type: "u32" }), new Address(contributor).toScVal()],
+      { fresh },
+    );
     if (!result) return BigInt(0);
     return scValToBigInt(result);
   } catch (err) {
@@ -1465,16 +1478,19 @@ export function extendCampaignDeadline(
   if (additionalDays < 1 || additionalDays > 30) throw new Error("additionalDays must be 1..30");
 
   if (USE_MOCKS) {
-    console.log(`[MOCK] Extending campaign ${campaignId} deadline by ${additionalDays} days`);
     return emitMockLifecycle(`mock_extend_${campaignId}_${Date.now()}`, options);
   }
 
-  const args = [
+  const op = new Contract(CONTRACT_ADDRESS).call(
+    "extend_campaign_deadline",
     nativeToScVal(campaignId, { type: "u32" }),
     nativeToScVal(additionalDays, { type: "u64" }),
-  ];
-
-  return buildAndSubmitTransaction("extend_campaign_deadline", args, callerAddress, options);
+  );
+  const txResult = await buildAndSubmitTransaction(callerAddress, op, {
+    ...options,
+    operation: "extend_campaign_deadline",
+  });
+  return txResult.txHash;
 }
 
 export async function getAdmin(): Promise<string> {
@@ -1534,7 +1550,8 @@ export async function getFundingGoalBounds(fresh = false): Promise<FundingGoalBo
   if (!minValue || !maxValue) throw new Error("Unable to read campaign funding-goal bounds.");
   const min = scValToBigInt(minValue);
   const max = scValToBigInt(maxValue);
-  if (min <= 0n || max < min) throw new Error("The contract returned an invalid funding-goal range.");
+  if (min <= 0n || max < min)
+    throw new Error("The contract returned an invalid funding-goal range.");
   return { min, max };
 }
 
@@ -1567,10 +1584,11 @@ export async function getLifetimeContribution(
   fresh = false,
 ): Promise<bigint> {
   if (USE_MOCKS) return mockContributions.get(contributionKey(campaignId, contributor)) ?? 0n;
-  const value = await invokeViewMethod("get_lifetime_contribution", [
-    nativeToScVal(campaignId, { type: "u32" }),
-    new Address(contributor).toScVal(),
-  ], { fresh });
+  const value = await invokeViewMethod(
+    "get_lifetime_contribution",
+    [nativeToScVal(campaignId, { type: "u32" }), new Address(contributor).toScVal()],
+    { fresh },
+  );
   if (!value) throw new Error("Unable to read lifetime contribution.");
   return scValToBigInt(value);
 }
@@ -1839,15 +1857,196 @@ export async function createCampaign(
   }
 }
 
-export async function isTokenAllowed(token: string): Promise<boolean> {
+export async function getPlatformToken(fresh = false): Promise<string> {
+  if (USE_MOCKS) return "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF";
+  try {
+    const result = await invokeViewMethod("get_token", [], { fresh });
+    if (!result || isScValVoid(result)) throw new Error("The contract returned no platform token.");
+    return Address.fromScVal(result).toString();
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function getTokenUpdateDelaySecs(fresh = false): Promise<number> {
+  if (USE_MOCKS) return 7 * 24 * 60 * 60;
+  try {
+    const result = await invokeViewMethod("get_token_update_delay_secs", [], { fresh });
+    if (!result) throw new Error("The contract returned no token update delay.");
+    const delay = Number(result.u64());
+    if (!Number.isSafeInteger(delay)) throw new Error("The token update delay is out of range.");
+    return delay;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function isTokenAllowed(token: string, fresh = false): Promise<boolean> {
   validateStellarAddress(token);
   if (USE_MOCKS) return true;
   try {
-    const result = await invokeViewMethod("is_token_allowed", [new Address(token).toScVal()]);
+    const result = await invokeViewMethod("is_token_allowed", [new Address(token).toScVal()], {
+      fresh,
+    });
     return result?.b() ?? false;
   } catch (err) {
     throw new Error(parseContractError(err));
   }
+}
+
+export interface EmergencyWithdrawal {
+  recipient: string;
+  proposedAt: number;
+  executeAfter: number;
+}
+
+function scValTimestamp(value: xdr.ScVal, field: string): number {
+  const timestamp = Number(value.u64());
+  if (!Number.isSafeInteger(timestamp))
+    throw new Error(`Invalid ${field} in emergency withdrawal.`);
+  return timestamp;
+}
+
+export async function getEmergencyWithdrawal(
+  campaignId: number,
+  fresh = false,
+): Promise<EmergencyWithdrawal | null> {
+  if (!Number.isInteger(campaignId) || campaignId < 0) throw new Error("Invalid campaign ID.");
+  if (USE_MOCKS) return null;
+  try {
+    const result = await invokeViewMethod(
+      "get_emergency_withdrawal",
+      [nativeToScVal(campaignId, { type: "u32" })],
+      { fresh },
+    );
+    if (isScValVoid(result ?? undefined)) return null;
+    const fields = decodeScValMap(result, "EmergencyWithdrawal");
+    return {
+      recipient: Address.fromScVal(
+        requiredField(fields, "recipient", "EmergencyWithdrawal"),
+      ).toString(),
+      proposedAt: scValTimestamp(
+        requiredField(fields, "proposed_at", "EmergencyWithdrawal"),
+        "proposed_at",
+      ),
+      executeAfter: scValTimestamp(
+        requiredField(fields, "execute_after", "EmergencyWithdrawal"),
+        "execute_after",
+      ),
+    };
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+async function submitAdminOperation(
+  method: string,
+  args: xdr.ScVal[],
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (USE_MOCKS) return emitMockLifecycle(`mock_tx_${method}`, options);
+  const admin = await getSignerAddress();
+  const op = new Contract(CONTRACT_ADDRESS).call(method, ...args);
+  try {
+    const result = await buildAndSubmitTransaction(admin, op, { ...options, operation: method });
+    return result.txHash;
+  } catch (err) {
+    throw new Error(parseContractError(err));
+  }
+}
+
+export async function setTokenAllowed(
+  token: string,
+  allowed: boolean,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(token);
+  const txHash = await submitAdminOperation(
+    "set_token_allowed",
+    [new Address(token).toScVal(), nativeToScVal(allowed, { type: "bool" })],
+    options,
+  );
+  clearContractCacheByMethod("is_token_allowed");
+  return txHash;
+}
+
+export async function proposeTokenUpdate(
+  newToken: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(newToken);
+  return submitAdminOperation(
+    "propose_token_update",
+    [new Address(await getSignerAddress()).toScVal(), new Address(newToken).toScVal()],
+    options,
+  );
+}
+
+export async function acceptTokenUpdate(options?: TransactionLifecycleOptions): Promise<string> {
+  const txHash = await submitAdminOperation(
+    "accept_token_update",
+    [new Address(await getSignerAddress()).toScVal()],
+    options,
+  );
+  clearContractCacheByMethod("get_token");
+  return txHash;
+}
+
+export async function cancelTokenUpdate(options?: TransactionLifecycleOptions): Promise<string> {
+  return submitAdminOperation(
+    "cancel_token_update",
+    [new Address(await getSignerAddress()).toScVal()],
+    options,
+  );
+}
+
+export async function emergencyWithdraw(
+  campaignId: number,
+  recipient: string,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  validateStellarAddress(recipient);
+  if (!Number.isInteger(campaignId) || campaignId < 0) throw new Error("Invalid campaign ID.");
+  const txHash = await submitAdminOperation(
+    "emergency_withdraw",
+    [
+      new Address(await getSignerAddress()).toScVal(),
+      nativeToScVal(campaignId, { type: "u32" }),
+      new Address(recipient).toScVal(),
+    ],
+    options,
+  );
+  clearContractCacheByMethod("get_emergency_withdrawal");
+  return txHash;
+}
+
+async function submitEmergencyWithdrawalAction(
+  method: "execute_emergency_withdrawal" | "cancel_emergency_withdrawal",
+  campaignId: number,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  if (!Number.isInteger(campaignId) || campaignId < 0) throw new Error("Invalid campaign ID.");
+  const txHash = await submitAdminOperation(
+    method,
+    [new Address(await getSignerAddress()).toScVal(), nativeToScVal(campaignId, { type: "u32" })],
+    options,
+  );
+  clearContractCacheByMethod("get_emergency_withdrawal");
+  return txHash;
+}
+
+export function executeEmergencyWithdrawal(
+  campaignId: number,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  return submitEmergencyWithdrawalAction("execute_emergency_withdrawal", campaignId, options);
+}
+
+export function cancelEmergencyWithdrawal(
+  campaignId: number,
+  options?: TransactionLifecycleOptions,
+): Promise<string> {
+  return submitEmergencyWithdrawalAction("cancel_emergency_withdrawal", campaignId, options);
 }
 
 export async function createCampaignWithToken(
@@ -3252,10 +3451,7 @@ export async function batchVerifyMilestones(
   const callerAddress = await getSignerAddress();
   const contract = new Contract(CONTRACT_ADDRESS);
 
-  const op = contract.call(
-    "batch_verify_milestones",
-    nativeToScVal(campaignId, { type: "u32" }),
-  );
+  const op = contract.call("batch_verify_milestones", nativeToScVal(campaignId, { type: "u32" }));
 
   try {
     const txResult = await buildAndSubmitTransaction(callerAddress, op, {
@@ -3292,10 +3488,7 @@ export async function adminCancelCampaign(
 
   const callerAddress = await getSignerAddress();
   const contract = new Contract(CONTRACT_ADDRESS);
-  const op = contract.call(
-    "admin_cancel_campaign",
-    nativeToScVal(campaignId, { type: "u32" }),
-  );
+  const op = contract.call("admin_cancel_campaign", nativeToScVal(campaignId, { type: "u32" }));
 
   try {
     const txResult = await buildAndSubmitTransaction(callerAddress, op, {
@@ -3367,27 +3560,6 @@ export async function uncensureComment(
       operation: "uncensure_comment",
     });
     return txResult.txHash;
-  } catch (err) {
-    throw new Error(parseContractError(err));
-  }
-}
-
-/**
- * Check if a comment is censured (view method).
- */
-export async function isCommentCensured(commentHash: string): Promise<boolean> {
-  if (!commentHash || commentHash.length !== 64) {
-    throw new Error("Invalid comment hash format");
-  }
-
-  if (USE_MOCKS) return false;
-
-  try {
-    const hashBuffer = Buffer.from(commentHash, "hex");
-    const hashScVal = xdr.ScVal.scvBytes(hashBuffer);
-
-    const result = await invokeViewMethod("is_comment_censured", [hashScVal]);
-    return result ? result.bool() : false;
   } catch (err) {
     throw new Error(parseContractError(err));
   }

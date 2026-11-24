@@ -319,6 +319,54 @@
       "currentMinGoal": "Meta Mínima Actual: {value}",
       "currentMaxGoal": "Meta Máxima Actual: {value}"
     },
+ feat/token-admin-emergency-flows
+    "contractOps": {
+      "title": "Controles de tokens y emergencias",
+      "description": "Administra los tokens aceptados para campañas, programa un cambio del token de la plataforma y coordina el bloqueo temporal de retiros de emergencia.",
+      "connectedAdmin": "Administrador conectado: {address}",
+      "tokenAllowlist": "Lista de tokens permitidos para campañas",
+      "currentToken": "Token actual de la plataforma: {address}",
+      "tokenAddress": "Dirección del contrato del token",
+      "allowToken": "Permitir token",
+      "removeToken": "Quitar token",
+      "existingCampaignTokensNote": "La lista afecta a las nuevas campañas. Las campañas existentes conservan el token registrado al crearse.",
+      "campaignTokenUsage": "Tokens usados por campañas",
+      "loadingTokenUsage": "Cargando uso de tokens…",
+      "tokenUsageStatus": "{count} campañas · {status}",
+      "allowed": "permitido",
+      "blocked": "bloqueado para nuevas campañas",
+      "noCampaignTokens": "No se encontraron tokens usados por campañas.",
+      "platformToken": "Cambio del token de la plataforma",
+      "tokenDelay": "El bloqueo temporal del contrato es de {delay}.",
+      "newTokenAddress": "Dirección del nuevo token de la plataforma",
+      "tokenMustBeAllowed": "Permite este token antes de proponerlo como token de la plataforma.",
+      "proposeToken": "Proponer cambio de token",
+      "proposedToken": "Token propuesto: {address}",
+      "tokenCountdown": "Disponible para aceptar en {remaining}",
+      "tokenReady": "El bloqueo temporal terminó. Se puede aceptar la propuesta.",
+      "localProposalNote": "El contrato no ofrece una consulta pública del token pendiente, por eso este navegador guarda los detalles localmente. Vuelve a esta página en el mismo navegador para continuar.",
+      "acceptToken": "Aceptar cambio de token",
+      "cancelToken": "Cancelar cambio de token",
+      "tokenAllowedSuccess": "Lista de tokens actualizada.",
+      "tokenRemovedSuccess": "Token quitado de la lista permitida.",
+      "tokenProposalSuccess": "Propuesta de cambio de token enviada.",
+      "tokenAcceptedSuccess": "Cambio del token de la plataforma aceptado.",
+      "tokenCancelledSuccess": "Cambio del token de la plataforma cancelado.",
+      "emergencyTitle": "Retiro de emergencia de campaña",
+      "emergencyDescription": "Propón un destinatario para retirar fondos de una campaña. El contrato impone un periodo de espera antes de ejecutar.",
+      "noCampaigns": "No hay campañas disponibles.",
+      "pendingRecipient": "Destinatario del retiro: {address}",
+      "emergencyCountdown": "Ejecución disponible en {remaining}",
+      "emergencyReady": "Terminó el bloqueo temporal. Se puede ejecutar el retiro.",
+      "executeEmergency": "Ejecutar retiro",
+      "cancelEmergency": "Cancelar propuesta",
+      "recipientAddressFor": "Destinatario del retiro de emergencia para {title}",
+      "recipientAddress": "Dirección Stellar del destinatario",
+      "proposeEmergency": "Proponer retiro",
+      "emergencyProposedSuccess": "Propuesta de retiro de emergencia enviada.",
+      "emergencyExecutedSuccess": "Retiro de emergencia ejecutado.",
+      "emergencyCancelledSuccess": "Propuesta de retiro de emergencia cancelada."
+
     "incident": {
       "title": "Controles de incidentes",
       "subtitle": "Pausa la plataforma durante un incidente y reanúdala cuando sea seguro.",
@@ -357,6 +405,7 @@
         "emergencyPause": "Pausa de emergencia activada.",
         "resume": "Campaña reanudada."
       }
+ main
     }
   },
   "Milestones": {
@@ -876,7 +925,12 @@
     "openNotifications": "Abrir notificaciones"
   },
   "CauseDetail": {
-    "noDescription": "El creador no proporcionó una descripción."
+    "noDescription": "El creador no proporcionó una descripción.",
+    "emergencyWithdrawalPendingTitle": "Retiro de emergencia pendiente",
+    "emergencyWithdrawalPendingDescription": "Un administrador propuso un retiro de emergencia para esta campaña. El contrato retrasa su ejecución mediante un bloqueo temporal.",
+    "emergencyWithdrawalRecipient": "Destinatario propuesto: {address}",
+    "emergencyWithdrawalCountdown": "Ejecución disponible en {remaining}",
+    "emergencyWithdrawalReady": "Terminó el bloqueo temporal; un administrador puede ejecutar el retiro."
   },
   "FiatOnramp": {
     "buyWithCard": "Compra XLM con tarjeta",

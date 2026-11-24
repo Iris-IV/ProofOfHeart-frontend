@@ -150,13 +150,34 @@ async function loadClient(options: LoadClientOptions) {
         if (method === "get_revenue_claimed")
           return { result: { retval: scVal.bigint(25_000_000) } };
         if (method === "get_admin") return { result: { retval: scVal.address(TEST_ADMIN) } };
+        if (method === "get_token") return { result: { retval: scVal.address(TEST_NEW_ADMIN) } };
+        if (method === "get_token_update_delay_secs")
+          return { result: { retval: scVal.u64(604800) } };
+        if (method === "is_token_allowed") return { result: { retval: scVal.bool(true) } };
+        if (method === "get_emergency_withdrawal") {
+          return {
+            result: {
+              retval: scVal.map({
+                recipient: scVal.address(TEST_USER),
+                proposed_at: scVal.u64(1_800_000_000),
+                execute_after: scVal.u64(1_800_604_800),
+              }),
+            },
+          };
+        }
         if (method === "get_platform_fee") return { result: { retval: scVal.u32(250) } };
-        if (method === "is_paused") return { result: { retval: scVal.bool(options.paused ?? false) } };
-        if (method === "is_creation_disabled") return { result: { retval: scVal.bool(options.creationDisabled ?? false) } };
-        if (method === "get_min_campaign_funding_goal") return { result: { retval: scVal.bigint(100_000n) } };
-        if (method === "get_max_campaign_funding_goal") return { result: { retval: scVal.bigint(1_000_000_000_000_000n) } };
-        if (method === "get_max_contribution_per_tx") return { result: { retval: scVal.bigint(0n) } };
-        if (method === "get_lifetime_contribution") return { result: { retval: scVal.bigint(100_000_000n) } };
+        if (method === "is_paused")
+          return { result: { retval: scVal.bool(options.paused ?? false) } };
+        if (method === "is_creation_disabled")
+          return { result: { retval: scVal.bool(options.creationDisabled ?? false) } };
+        if (method === "get_min_campaign_funding_goal")
+          return { result: { retval: scVal.bigint(100_000n) } };
+        if (method === "get_max_campaign_funding_goal")
+          return { result: { retval: scVal.bigint(1_000_000_000_000_000n) } };
+        if (method === "get_max_contribution_per_tx")
+          return { result: { retval: scVal.bigint(0n) } };
+        if (method === "get_lifetime_contribution")
+          return { result: { retval: scVal.bigint(100_000_000n) } };
         if (method === "get_personal_cap") return { result: { retval: scVal.bigint(0n) } };
         if (method === "get_approve_votes") return { result: { retval: scVal.u32(12) } };
         if (method === "get_reject_votes") return { result: { retval: scVal.u32(3) } };
@@ -368,11 +389,17 @@ describe("contractClient", () => {
     expect(await module.getRevenueClaimed(1, TEST_USER)).toBe(BigInt(0));
     expect(await module.getAdmin()).toContain("GADMIN");
     expect(await module.getPlatformFee()).toBe(250);
-    expect(await module.getFundingGoalBounds()).toEqual({ min: 100_000n, max: 1_000_000_000_000_000n });
-    expect(await module.getPlatformStatus()).toEqual({ isPaused: false, isCreationDisabled: false });
+    expect(await module.getFundingGoalBounds()).toEqual({
+      min: 100_000n,
+      max: 1_000_000_000_000_000n,
+    });
+    expect(await module.getPlatformStatus()).toEqual({
+      isPaused: false,
+      isCreationDisabled: false,
+    });
     expect(await module.getDonationLimits(1, TEST_USER)).toEqual({
       maxPerTx: 0n,
-      lifetime: 100_000_000n,
+      lifetime: 0n,
       personalCap: 0n,
     });
 
@@ -393,6 +420,70 @@ describe("contractClient", () => {
     expect(await module.getApprovalThresholdBps()).toBe(5000);
     expect(await module.voteOnCampaign(1, TEST_USER, true)).toBe("mock_tx_vote_1_approve");
     expect(await module.verifyCampaignWithVotes(1)).toBe("mock_tx_verify_with_votes");
+  });
+
+  it("builds token and emergency withdrawal operations with the contract ScVal argument shapes", async () => {
+    const { module, mockServer } = await loadClient({ useMocks: false });
+
+    await module.setTokenAllowed(TEST_NEW_ADMIN, false);
+    await module.proposeTokenUpdate(TEST_USER);
+    await module.acceptTokenUpdate();
+    await module.cancelTokenUpdate();
+    await module.emergencyWithdraw(7, TEST_USER);
+    await module.executeEmergencyWithdrawal(7);
+    await module.cancelEmergencyWithdrawal(7);
+    await module.extendCampaignDeadline(7, 3, TEST_ADMIN);
+
+    const operations = mockServer.simulateTransaction.mock.calls
+      .map(
+        ([transaction]: [{ ops: Array<{ method: string; args: unknown[] }> }]) =>
+          transaction.ops[0]!,
+      )
+      .filter(({ method }) => method !== "is_paused" && method !== "is_creation_disabled");
+    expect(operations.map(({ method }) => method)).toEqual([
+      "set_token_allowed",
+      "propose_token_update",
+      "accept_token_update",
+      "cancel_token_update",
+      "emergency_withdraw",
+      "execute_emergency_withdrawal",
+      "cancel_emergency_withdrawal",
+      "extend_campaign_deadline",
+    ]);
+    expect(operations[0]!.args).toEqual([
+      expect.objectContaining({ __address: TEST_NEW_ADMIN }),
+      expect.objectContaining({ toXDR: expect.any(Function) }),
+    ]);
+    expect(operations[1]!.args).toEqual([
+      expect.objectContaining({ __address: TEST_ADMIN }),
+      expect.objectContaining({ __address: TEST_USER }),
+    ]);
+    expect(operations[4]!.args).toEqual([
+      expect.objectContaining({ __address: TEST_ADMIN }),
+      expect.objectContaining({ u32: expect.any(Function) }),
+      expect.objectContaining({ __address: TEST_USER }),
+    ]);
+    expect(operations[5]!.args).toEqual([
+      expect.objectContaining({ __address: TEST_ADMIN }),
+      expect.objectContaining({ u32: expect.any(Function) }),
+    ]);
+    expect(operations[7]!.args).toEqual([
+      expect.objectContaining({ u32: expect.any(Function) }),
+      expect.objectContaining({ u64: expect.any(Function) }),
+    ]);
+  });
+
+  it("decodes platform token and pending emergency withdrawal views", async () => {
+    const { module } = await loadClient({ useMocks: false });
+
+    expect(await module.getPlatformToken()).toBe(TEST_NEW_ADMIN);
+    expect(await module.getTokenUpdateDelaySecs()).toBe(604800);
+    expect(await module.isTokenAllowed(TEST_NEW_ADMIN)).toBe(true);
+    expect(await module.getEmergencyWithdrawal(7)).toEqual({
+      recipient: TEST_USER,
+      proposedAt: 1_800_000_000,
+      executeAfter: 1_800_604_800,
+    });
   });
 
   it("decodeCampaign round-trips a fixture map", async () => {
@@ -1024,8 +1115,9 @@ describe("contractClient", () => {
   describe("pre-sign administrative policy (#1759, #1761, #1762)", () => {
     it("rejects paused contract writes before wallet signing", async () => {
       const { module, mockServer } = await loadClient({ useMocks: false, paused: true });
-      await expect(module.contribute(1, TEST_USER, 10_000_000n))
-        .rejects.toThrow(/platform is temporarily paused/i);
+      await expect(module.contribute(1, TEST_USER, 10_000_000n)).rejects.toThrow(
+        /platform is temporarily paused/i,
+      );
       const methods = mockServer.simulateTransaction.mock.calls.map(
         ([tx]: [{ ops?: Array<{ method?: string }> }]) => tx.ops?.[0]?.method,
       );
@@ -1035,15 +1127,27 @@ describe("contractClient", () => {
     it("allows normal status reads while blocking creation when admin disables it", async () => {
       const { module, mockServer } = await loadClient({ useMocks: false, creationDisabled: true });
       await expect(module.getPlatformStatus()).resolves.toEqual({
-        isPaused: false, isCreationDisabled: true,
+        isPaused: false,
+        isCreationDisabled: true,
       });
-      await expect(module.createCampaign(
-        TEST_USER, "Test", "A description", 1_000_000_000n,
-        30, Category.Learner, false, 0, [],
-      )).rejects.toThrow(/Campaign creation is temporarily disabled/i);
+      await expect(
+        module.createCampaign(
+          TEST_USER,
+          "Test",
+          "A description",
+          1_000_000_000n,
+          30,
+          Category.Learner,
+          false,
+          0,
+          [],
+        ),
+      ).rejects.toThrow(/Campaign creation is temporarily disabled/i);
       expect(mockServer.sendTransaction).not.toHaveBeenCalled();
     });
   });
+ feat/token-admin-emergency-flows
+
 
 
   describe("proof of impact, campaign stats and incident controls (#1773, #1777, #1778)", () => {
@@ -1204,4 +1308,5 @@ describe("contractClient", () => {
     });
   });
 
+ main
 });
